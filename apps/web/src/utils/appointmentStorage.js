@@ -1,6 +1,6 @@
 
-import { 
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
+import { 
   syncAppointmentRecordsWithSupabase, 
   saveAppointmentRecordToSupabase,
   uploadAllAppointmentsToSupabase,

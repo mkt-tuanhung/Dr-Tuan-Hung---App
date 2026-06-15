@@ -78,7 +78,7 @@ export const getDefaultUserPermissions = () => {
 
 export const getRolePermissions = (role) => {
   try {
-    const stored = JSON.parse(getStorageItem(ROLE_PERMISSIONS_KEY) || '{}');
+    const stored = getStorageItem(ROLE_PERMISSIONS_KEY, {});
     if (stored[role]) return stored[role];
   } catch (e) {
     console.error("Error parsing role permissions", e);
@@ -89,7 +89,7 @@ export const getRolePermissions = (role) => {
 
 export const getUserPermissions = (userId) => {
   try {
-    const stored = JSON.parse(getStorageItem(USER_PERMISSIONS_KEY) || '{}');
+    const stored = getStorageItem(USER_PERMISSIONS_KEY, {});
     if (stored[userId]) return stored[userId];
   } catch (e) {
     console.error("Error parsing user permissions", e);
@@ -99,7 +99,7 @@ export const getUserPermissions = (userId) => {
 
 export const saveRolePermissions = (role, permissions) => {
   try {
-    const stored = JSON.parse(getStorageItem(ROLE_PERMISSIONS_KEY) || '{}');
+    const stored = getStorageItem(ROLE_PERMISSIONS_KEY, {});
     stored[role] = permissions;
     setStorageItem(ROLE_PERMISSIONS_KEY, stored);
     window.dispatchEvent(new Event('permissionsUpdated'));
@@ -110,7 +110,7 @@ export const saveRolePermissions = (role, permissions) => {
 
 export const saveUserPermissions = (userId, permissions) => {
   try {
-    const stored = JSON.parse(getStorageItem(USER_PERMISSIONS_KEY) || '{}');
+    const stored = getStorageItem(USER_PERMISSIONS_KEY, {});
     stored[userId] = permissions;
     setStorageItem(USER_PERMISSIONS_KEY, stored);
     window.dispatchEvent(new Event('permissionsUpdated'));
@@ -139,7 +139,7 @@ export const hasPermission = (user, module, action = 'view') => {
   if (module === 'Doanh thu' && (isTelesale(user) || isSaleOffline(user))) return true;
 
   try {
-    const storedUsers = JSON.parse(getStorageItem(USER_PERMISSIONS_KEY) || '{}');
+    const storedUsers = getStorageItem(USER_PERMISSIONS_KEY, {});
     const userId = user.id || user.employeeId;
     if (storedUsers[userId] && storedUsers[userId][module] && typeof storedUsers[userId][module][action] === 'boolean') {
       return storedUsers[userId][module][action];
@@ -147,7 +147,7 @@ export const hasPermission = (user, module, action = 'view') => {
   } catch(e) {}
 
   try {
-    const storedRoles = JSON.parse(getStorageItem(ROLE_PERMISSIONS_KEY) || '{}');
+    const storedRoles = getStorageItem(ROLE_PERMISSIONS_KEY, {});
     if (storedRoles[user.role] && storedRoles[user.role][module] && typeof storedRoles[user.role][module][action] === 'boolean') {
       return storedRoles[user.role][module][action];
     }
@@ -205,7 +205,7 @@ export const getAccessibleMenus = (user) => {
 
 export const resetRolePermissionsToDefault = (role) => {
   try {
-    const stored = JSON.parse(getStorageItem(ROLE_PERMISSIONS_KEY) || '{}');
+    const stored = getStorageItem(ROLE_PERMISSIONS_KEY, {});
     delete stored[role];
     setStorageItem(ROLE_PERMISSIONS_KEY, stored);
     window.dispatchEvent(new Event('permissionsUpdated'));
@@ -214,7 +214,7 @@ export const resetRolePermissionsToDefault = (role) => {
 
 export const resetUserPermissionsToDefault = (userId) => {
   try {
-    const stored = JSON.parse(getStorageItem(USER_PERMISSIONS_KEY) || '{}');
+    const stored = getStorageItem(USER_PERMISSIONS_KEY, {});
     delete stored[userId];
     setStorageItem(USER_PERMISSIONS_KEY, stored);
     window.dispatchEvent(new Event('permissionsUpdated'));

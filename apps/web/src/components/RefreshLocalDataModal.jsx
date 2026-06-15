@@ -64,9 +64,9 @@ const RefreshLocalDataModal = ({ isOpen, onClose }) => {
       toast.success('Đã làm mới toàn bộ dữ liệu từ Supabase');
       onClose();
       
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      window.dispatchEvent(new Event('supabase-data-updated'));
+      window.dispatchEvent(new Event('notificationsUpdated'));
+      window.dispatchEvent(new Event('permissionsUpdated'));
 
     } catch (error) {
       console.error('Lỗi khi tải lại dữ liệu từ Supabase:', error);
