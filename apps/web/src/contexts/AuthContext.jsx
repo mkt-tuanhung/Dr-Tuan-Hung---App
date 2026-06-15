@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getUsers, getCurrentUser, setCurrentUser, clearCurrentUser, initializeUsers, normalizeAllKpiTargets } from '@/utils/userStorage.js';
+import { mergeClinicUsersWithSupabase } from '@/services/dataService.js';
 
 const AuthContext = createContext();
 
@@ -40,6 +41,13 @@ export const AuthProvider = ({ children }) => {
     // Artificial delay to simulate network request
     await new Promise(resolve => setTimeout(resolve, 500));
     
+    // Sync with Supabase first so remote devices get the latest users
+    try {
+      await mergeClinicUsersWithSupabase();
+    } catch (e) {
+      console.error("Failed to sync users before login", e);
+    }
+
     const cleanEmployeeId = employeeId.trim().toLowerCase();
     const cleanPassword = password.trim();
 
