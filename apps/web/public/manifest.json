@@ -1,0 +1,32 @@
+
+{
+  "name": "Dr Tuấn Hùng",
+  "short_name": "Dr Hùng",
+  "description": "Hệ thống quản lý KPI, lương, lịch hẹn, doanh thu",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0F766E",
+  "background_color": "#F3FFFA",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
