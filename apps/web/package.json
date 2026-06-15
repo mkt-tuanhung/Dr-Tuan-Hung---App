@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite --host :: --port 3000",
-    "build": "node tools/generate-llms.js || true; NODE_OPTIONS=--max_old_space_size=4096 vite build",
+    "build": "node tools/generate-llms.js || true && NODE_OPTIONS=--max_old_space_size=800 vite build",
     "start": "vite preview --host :: --port 3000",
     "lint": "eslint . --quiet",
     "lint:warn": "eslint ."
