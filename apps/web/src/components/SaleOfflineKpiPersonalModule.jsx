@@ -11,6 +11,7 @@ import { format, parseISO } from 'date-fns';
 import { getKpiTargetsFromSupabase, syncRevenueRecordsWithSupabase } from '@/services/dataService.js';
 import { calculateSaleOfflineCommission } from '@/utils/PayrollCalculationEngine.js';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#64748b'];
 
@@ -53,7 +54,7 @@ const SaleOfflineKpiPersonalModule = ({ currentUser }) => {
     return () => window.removeEventListener('supabase-data-updated', loadData);
   }, [loadData]);
 
-  const customerAppointments = JSON.parse(localStorage.getItem("customerAppointments") || "[]");
+  const customerAppointments = getStorageItem('customerAppointments', []);
 
   const currentEmployeeId = currentUser?.employeeId?.trim().toLowerCase();
   

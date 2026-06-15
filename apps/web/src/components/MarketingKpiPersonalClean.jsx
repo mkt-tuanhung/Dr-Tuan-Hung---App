@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { getKpiTargets } from '@/utils/userStorage.js';
 import { formatVND } from '@/utils/currencyFormat.js';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PLATFORM_COLORS = {
   'Facebook': '#1877F2',
@@ -59,7 +60,7 @@ const MarketingKpiPersonalClean = ({ currentUser }) => {
 
   // Load Daily Reports
   const myReports = useMemo(() => {
-    const allReports = JSON.parse(localStorage.getItem('marketingDailyReports') || '[]');
+    const allReports = getStorageItem('marketingDailyReports', []);
     return allReports
       .filter(r => 
         r.employeeId?.trim().toLowerCase() === currentEmployeeId && 
@@ -153,7 +154,7 @@ const MarketingKpiPersonalClean = ({ currentUser }) => {
     if (!reportForm.date) return toast.error('Vui lòng chọn ngày báo cáo');
     if (!reportForm.platform) return toast.error('Vui lòng chọn Nền tảng');
 
-    const allReports = JSON.parse(localStorage.getItem('marketingDailyReports') || '[]');
+    const allReports = getStorageItem('marketingDailyReports', []);
     const reportMonth = reportForm.date.substring(0, 7);
     
     const payload = {
@@ -184,7 +185,7 @@ const MarketingKpiPersonalClean = ({ currentUser }) => {
       toast.success('Thêm báo cáo Marketing mới thành công');
     }
 
-    localStorage.setItem('marketingDailyReports', JSON.stringify(allReports));
+    setStorageItem('marketingDailyReports', allReports);
     resetForm();
     setRefreshKey(k => k + 1);
   };
@@ -196,8 +197,8 @@ const MarketingKpiPersonalClean = ({ currentUser }) => {
 
   const handleDeleteReport = (id) => {
     if (window.confirm('Bạn có chắc muốn xóa báo cáo này?')) {
-      const allReports = JSON.parse(localStorage.getItem('marketingDailyReports') || '[]');
-      localStorage.setItem('marketingDailyReports', JSON.stringify(allReports.filter(r => r.id !== id)));
+      const allReports = getStorageItem('marketingDailyReports', []);
+      setStorageItem('marketingDailyReports', allReports.filter(r => r.id !== id));
       toast.success('Đã xóa báo cáo Marketing');
       setRefreshKey(k => k + 1);
     }

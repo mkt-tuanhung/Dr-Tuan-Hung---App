@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Target, Users, CheckCircle, AlertTriangle, TrendingUp, Megaphone, Magnet, CalendarCheck, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatVND } from '@/utils/currencyFormat.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const normalize = (val) => String(val || '').trim().toLowerCase();
 const getRecordMonth = (record) => record.month || String(record.date || record.createdAt || '').substring(0, 7);
@@ -53,8 +54,8 @@ const MetricCell = ({ actual, target, isCurrency = false, isDecimal = false }) =
 
 const KpiMarketingAdminProgressModule = ({ selectedMonth }) => {
   const data = useMemo(() => {
-    const kpiTargets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
-    const marketingDailyReports = JSON.parse(localStorage.getItem('marketingDailyReports') || '[]');
+    const kpiTargets = getStorageItem('kpiTargets', []);
+    const marketingDailyReports = getStorageItem('marketingDailyReports', []);
 
     const targets = kpiTargets.filter(t => t.targetType === 'marketing' && t.month === selectedMonth);
 

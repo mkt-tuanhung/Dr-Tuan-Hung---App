@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAttendance } from '@/hooks/useAttendance.js';
 import { isBefore, isAfter, startOfDay, format } from 'date-fns';
 import { toast } from 'sonner';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const STATUS_OPTIONS = [
   { value: 'present', label: 'Đã check in' },
@@ -134,7 +135,7 @@ const AttendanceDetailSheet = ({ isOpen, onClose, date, employeeId, onSaved, isA
       return;
     }
 
-    const allReqs = JSON.parse(localStorage.getItem('attendanceRequests') || '[]');
+    const allReqs = getStorageItem('attendanceRequests', []);
     const dateStr = format(date, 'yyyy-MM-dd');
     
     const newReq = {
@@ -149,7 +150,7 @@ const AttendanceDetailSheet = ({ isOpen, onClose, date, employeeId, onSaved, isA
       updatedAt: new Date().toISOString()
     };
     
-    localStorage.setItem('attendanceRequests', JSON.stringify([...allReqs, newReq]));
+    setStorageItem('attendanceRequests', [...allReqs, newReq]);
     toast.success('Gửi yêu cầu thành công.');
     if (onSaved) onSaved();
     onClose();

@@ -3,12 +3,13 @@ import { supabase } from './supabaseClient.js';
 import { mergeApprovalNotificationsFromSupabase } from '@/utils/ApprovalNotificationHelper.js';
 import { mergeSurgicalAssignmentsFromSupabase } from '@/services/dataService.js';
 import { mergePagePhoneAssignmentsFromSupabase } from '@/services/dataService.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 let channel = null;
 
 const processPayload = (payload, storageKey, matchFn) => {
   const { eventType, new: newRow, old: oldRow } = payload;
-  const localData = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const localData = getStorageItem(storageKey, []);
 
   if (eventType === 'INSERT' || eventType === 'UPDATE') {
     const incomingData = newRow.data;
@@ -29,11 +30,11 @@ const processPayload = (payload, storageKey, matchFn) => {
       // Prioritize newer updatedAt
       if (incomingTime >= localTime) {
         localData[existingIndex] = { ...existing, ...incomingData };
-        localStorage.setItem(storageKey, JSON.stringify(localData));
+        setStorageItem(storageKey, localData);
       }
     } else {
       localData.push(incomingData);
-      localStorage.setItem(storageKey, JSON.stringify(localData));
+      setStorageItem(storageKey, localData);
     }
   } else if (eventType === 'DELETE') {
     // Hard delete fallback (though we mostly use soft deletes)
@@ -41,7 +42,7 @@ const processPayload = (payload, storageKey, matchFn) => {
     if (existingIndex >= 0) {
       localData[existingIndex].isDeleted = true;
       localData[existingIndex].deleted_at = new Date().toISOString();
-      localStorage.setItem(storageKey, JSON.stringify(localData));
+      setStorageItem(storageKey, localData);
     }
   }
 };
@@ -91,12 +92,12 @@ export const startRealtimeSync = () => {
         const sbRow = { id: payload.new.id, data: payload.new.data, _row: payload.new };
         mergeApprovalNotificationsFromSupabase([sbRow]);
       } else if (payload.eventType === 'DELETE') {
-        const localData = JSON.parse(localStorage.getItem('approvalNotifications') || '[]');
+        const localData = getStorageItem('approvalNotifications', []);
         const existingIndex = localData.findIndex(item => String(item.id) === String(payload.old.id));
         if (existingIndex >= 0) {
           localData[existingIndex].isDeleted = true;
           localData[existingIndex].deleted_at = new Date().toISOString();
-          localStorage.setItem('approvalNotifications', JSON.stringify(localData));
+          setStorageItem('approvalNotifications', localData);
         }
       }
       window.dispatchEvent(new CustomEvent('supabase-data-updated', { detail: { table: 'approval_notifications' } }));
@@ -105,16 +106,16 @@ export const startRealtimeSync = () => {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'surgical_care_assignments' }, (payload) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         const sbRow = { id: payload.new.id, data: payload.new.data, _row: payload.new };
-        const localData = JSON.parse(localStorage.getItem('surgicalCareAssignments') || '[]');
+        const localData = getStorageItem('surgicalCareAssignments', []);
         const merged = mergeSurgicalAssignmentsFromSupabase(localData, [sbRow]);
-        localStorage.setItem('surgicalCareAssignments', JSON.stringify(merged));
+        setStorageItem('surgicalCareAssignments', merged);
       } else if (payload.eventType === 'DELETE') {
-        const localData = JSON.parse(localStorage.getItem('surgicalCareAssignments') || '[]');
+        const localData = getStorageItem('surgicalCareAssignments', []);
         const existingIndex = localData.findIndex(item => String(item.id) === String(payload.old.id));
         if (existingIndex >= 0) {
           localData[existingIndex].isDeleted = true;
           localData[existingIndex].deleted_at = new Date().toISOString();
-          localStorage.setItem('surgicalCareAssignments', JSON.stringify(localData));
+          setStorageItem('surgicalCareAssignments', localData);
         }
       }
       window.dispatchEvent(new CustomEvent('supabase-data-updated', { detail: { table: 'surgical_care_assignments' } }));
@@ -123,16 +124,16 @@ export const startRealtimeSync = () => {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'page_phone_assignments' }, (payload) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         const sbRow = { id: payload.new.id, data: payload.new.data, _row: payload.new };
-        const localData = JSON.parse(localStorage.getItem('pagePhoneAssignments') || '[]');
+        const localData = getStorageItem('pagePhoneAssignments', []);
         const merged = mergePagePhoneAssignmentsFromSupabase(localData, [sbRow]);
-        localStorage.setItem('pagePhoneAssignments', JSON.stringify(merged));
+        setStorageItem('pagePhoneAssignments', merged);
       } else if (payload.eventType === 'DELETE') {
-        const localData = JSON.parse(localStorage.getItem('pagePhoneAssignments') || '[]');
+        const localData = getStorageItem('pagePhoneAssignments', []);
         const existingIndex = localData.findIndex(item => String(item.id) === String(payload.old.id));
         if (existingIndex >= 0) {
           localData[existingIndex].isDeleted = true;
           localData[existingIndex].deleted_at = new Date().toISOString();
-          localStorage.setItem('pagePhoneAssignments', JSON.stringify(localData));
+          setStorageItem('pagePhoneAssignments', localData);
         }
       }
       window.dispatchEvent(new CustomEvent('supabase-data-updated', { detail: { table: 'page_phone_assignments' } }));

@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Target, Users, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { getKpiTargetsByMonth, getPageDailyReports, getRevenueRecords } from '@/utils/userStorage.js';
 import { formatVND } from '@/utils/currencyFormat.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const getStatusDisplay = (progress) => {
   if (progress < 50) return { label: 'Chưa đạt', className: 'bg-rose-100 text-rose-700 border-rose-200' };
@@ -71,11 +73,11 @@ const KpiTelesaleAdminProgressModule = () => {
   });
 
   const data = useMemo(() => {
-    const kpiTargets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
-    const pagePhoneAssignments = JSON.parse(localStorage.getItem('pagePhoneAssignments') || '[]');
-    const customerAppointments = JSON.parse(localStorage.getItem('customerAppointments') || '[]');
-    const revenueRecords = JSON.parse(localStorage.getItem('revenueRecords') || '[]');
-    const allUsers = JSON.parse(localStorage.getItem('clinic_users') || '[]');
+    const kpiTargets = getStorageItem('kpiTargets', []);
+    const pagePhoneAssignments = getStorageItem('pagePhoneAssignments', []);
+    const customerAppointments = getStorageItem('customerAppointments', []);
+    const revenueRecords = getRevenueRecords(true);
+    const allUsers = getStorageItem('clinic_users', []);
 
     const targets = kpiTargets.filter(t => String(t.targetType).trim().toLowerCase() === 'telesale' && t.month === selectedMonth);
 

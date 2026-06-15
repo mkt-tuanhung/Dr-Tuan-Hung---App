@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 import KPIEditModal from './KPIEditModal.jsx';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const KPIPageDailyReportTable = ({ records, month, onDataChange }) => {
   const [editingRecord, setEditingRecord] = useState(null);
@@ -17,20 +18,20 @@ const KPIPageDailyReportTable = ({ records, month, onDataChange }) => {
 
   const handleDelete = (id) => {
     if (window.confirm('Bạn có chắc muốn xóa số liệu ngày này không?')) {
-      const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+      const allRecords = getStorageItem('pageDailyReports', []);
       const filtered = allRecords.filter(r => r.id !== id);
-      localStorage.setItem('pageDailyReports', JSON.stringify(filtered));
+      setStorageItem('pageDailyReports', filtered);
       toast.success('Đã xóa số liệu.');
       if (onDataChange) onDataChange();
     }
   };
 
   const handleSaveEdit = (updatedData) => {
-    const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+    const allRecords = getStorageItem('pageDailyReports', []);
     const index = allRecords.findIndex(r => r.id === editingRecord.id);
     if (index !== -1) {
       allRecords[index] = { ...allRecords[index], ...updatedData, updatedAt: new Date().toISOString() };
-      localStorage.setItem('pageDailyReports', JSON.stringify(allRecords));
+      setStorageItem('pageDailyReports', allRecords);
       if (onDataChange) onDataChange();
     }
     setEditingRecord(null);

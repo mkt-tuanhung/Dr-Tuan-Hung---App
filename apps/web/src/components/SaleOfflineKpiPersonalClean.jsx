@@ -9,6 +9,7 @@ import { Target, Coins, CalendarCheck, Banknote, Percent, TrendingUp, ArrowUpCir
 import { formatVND } from '@/utils/currencyFormat.js';
 import { format, parseISO } from 'date-fns';
 import { 
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
   normalize, matchId, getMonth, getStatus, isSurgery, isDeposit, isBong, 
   calculateKpiProgress, getKpiSeverity 
 } from '@/utils/kpiPayrollHelper.js';
@@ -32,7 +33,7 @@ const getStatusLabel = (status) => {
 
 const safeParse = (key) => {
   try {
-    return JSON.parse(localStorage.getItem(key) || '[]');
+    return getStorageItem(key, []);
   } catch {
     return [];
   }

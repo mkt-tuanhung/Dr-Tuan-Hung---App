@@ -6,6 +6,7 @@ import {
   softDeleteSurgicalAssignmentFromSupabase 
 } from '@/services/dataService.js';
 import { toast } from 'sonner';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 export const SURGICAL_ASSIGNMENTS_KEY = 'surgicalCareAssignments';
 
@@ -28,7 +29,7 @@ export const isSurgeryCustomer = (appointment) => {
 
 export const getSurgicalAssignments = () => {
   try {
-    const assignments = JSON.parse(localStorage.getItem(SURGICAL_ASSIGNMENTS_KEY) || '[]');
+    const assignments = getStorageItem(SURGICAL_ASSIGNMENTS_KEY, []);
     return assignments.filter(a => !a.isDeleted);
   } catch (e) {
     console.error('Error parsing surgical assignments', e);
@@ -42,7 +43,7 @@ export const getSurgicalAssignmentByAppointmentId = (appointmentId) => {
 };
 
 export const saveSurgicalAssignment = async (assignment) => {
-  const assignments = JSON.parse(localStorage.getItem(SURGICAL_ASSIGNMENTS_KEY) || '[]');
+  const assignments = getStorageItem(SURGICAL_ASSIGNMENTS_KEY, []);
   const existingIndex = assignments.findIndex(a => a.appointmentId === assignment.appointmentId);
   
   const timestamp = new Date().toISOString();
@@ -60,7 +61,7 @@ export const saveSurgicalAssignment = async (assignment) => {
     assignments.push(payload);
   }
   
-  localStorage.setItem(SURGICAL_ASSIGNMENTS_KEY, JSON.stringify(assignments));
+  setStorageItem(SURGICAL_ASSIGNMENTS_KEY, assignments);
   
   try {
     await saveSurgicalAssignmentToSupabase(payload);
@@ -72,13 +73,13 @@ export const saveSurgicalAssignment = async (assignment) => {
 };
 
 export const deleteSurgicalAssignment = async (id) => {
-  const assignments = JSON.parse(localStorage.getItem(SURGICAL_ASSIGNMENTS_KEY) || '[]');
+  const assignments = getStorageItem(SURGICAL_ASSIGNMENTS_KEY, []);
   const index = assignments.findIndex(a => a.id === id);
   if (index !== -1) {
     assignments[index].isDeleted = true;
     assignments[index].deleted_at = new Date().toISOString();
     assignments[index].updatedAt = new Date().toISOString();
-    localStorage.setItem(SURGICAL_ASSIGNMENTS_KEY, JSON.stringify(assignments));
+    setStorageItem(SURGICAL_ASSIGNMENTS_KEY, assignments);
     
     try {
       await softDeleteSurgicalAssignmentFromSupabase(id);
@@ -119,14 +120,14 @@ export const getSurgicalAssignmentsByMonth = (month) => {
 
 export const mergeSurgicalAssignmentsWithSupabase = async () => {
   try {
-    const local = JSON.parse(localStorage.getItem(SURGICAL_ASSIGNMENTS_KEY) || '[]');
+    const local = getStorageItem(SURGICAL_ASSIGNMENTS_KEY, []);
     const sbRecords = await getSurgicalCareAssignmentsFromSupabase();
     const merged = mergeSurgicalAssignmentsFromSupabase(local, sbRecords);
-    localStorage.setItem(SURGICAL_ASSIGNMENTS_KEY, JSON.stringify(merged));
+    setStorageItem(SURGICAL_ASSIGNMENTS_KEY, merged);
     return merged;
   } catch (error) {
     console.error('Error merging surgical assignments:', error);
     toast.error('Lỗi đồng bộ phân công phẫu thuật');
-    return JSON.parse(localStorage.getItem(SURGICAL_ASSIGNMENTS_KEY) || '[]');
+    return getStorageItem(SURGICAL_ASSIGNMENTS_KEY, []);
   }
 };

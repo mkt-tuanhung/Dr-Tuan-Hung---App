@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const KPIAdminPageTargetForm = ({ employees, month, year, onSaveSuccess }) => {
   const [kpiForm, setKpiForm] = useState({
@@ -24,7 +25,7 @@ const KPIAdminPageTargetForm = ({ employees, month, year, onSaveSuccess }) => {
       return;
     }
 
-    const allTargets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
+    const allTargets = getStorageItem('kpiTargets', []);
     const index = allTargets.findIndex(t => t.employeeId === kpiForm.employeeId && t.month === month && t.year === year);
     
     const now = new Date().toISOString();
@@ -51,7 +52,7 @@ const KPIAdminPageTargetForm = ({ employees, month, year, onSaveSuccess }) => {
       });
     }
     
-    localStorage.setItem('kpiTargets', JSON.stringify(allTargets));
+    setStorageItem('kpiTargets', allTargets);
     toast.success('Đã lưu KPI mục tiêu.');
     setKpiForm({ employeeId: '', targetPhones: '', targetConversionRate: '10', note: '' });
     if (onSaveSuccess) onSaveSuccess();

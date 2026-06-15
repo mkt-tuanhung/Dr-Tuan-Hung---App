@@ -8,9 +8,10 @@ import { Progress } from '@/components/ui/progress';
 import { PhoneCall, Target, CalendarCheck, Banknote, Percent, AlertCircle } from 'lucide-react';
 import { formatVND } from '@/utils/currencyFormat.js';
 import { format, parseISO } from 'date-fns';
-import { normalizeKpiTargets } from '@/utils/userStorage.js';
+import { getKpiTargetByEmployeeAndMonth, getRevenueRecords } from '@/utils/userStorage.js';
 import { calculateTotalPhonesReceivedFromPageAssignments, getPagePhoneAssignmentsForTelesale } from '@/utils/telesaleKpiUtils.js';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#64748b'];
 
@@ -41,9 +42,9 @@ const TelesaleKpiPersonalModule = ({ currentUser }) => {
     normalizeKpiTargets();
   }, []);
 
-  const kpiTargets = JSON.parse(localStorage.getItem("kpiTargets") || "[]");
-  const customerAppointments = JSON.parse(localStorage.getItem("customerAppointments") || "[]");
-  const revenueRecords = JSON.parse(localStorage.getItem("revenueRecords") || "[]");
+  const kpiTargets = getStorageItem('kpiTargets', []);
+  const customerAppointments = getStorageItem('customerAppointments', []);
+  const revenueRecords = getRevenueRecords(true);
 
   const currentEmployeeId = currentUser?.employeeId?.trim().toLowerCase();
   

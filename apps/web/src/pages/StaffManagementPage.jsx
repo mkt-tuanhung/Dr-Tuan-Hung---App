@@ -19,6 +19,7 @@ import StaffFormModal from '@/components/StaffFormModal.jsx';
 import ResetPasswordModal from '@/components/ResetPasswordModal.jsx';
 import ConfirmActionModal from '@/components/ConfirmActionModal.jsx';
 import ResponsiveStaffCard from '@/components/ResponsiveStaffCard.jsx';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const StaffManagementPage = () => {
   const { user: currentUser } = useAuth();
@@ -54,7 +55,7 @@ const StaffManagementPage = () => {
   // Lắng nghe sự kiện realtime từ Supabase
   useEffect(() => {
     const handleRealtimeUpdate = () => {
-      setUsers(JSON.parse(localStorage.getItem('clinic_users') || '[]'));
+      setUsers(getStorageItem('clinic_users', []));
     };
     
     window.addEventListener('supabase-data-updated', handleRealtimeUpdate);

@@ -1,12 +1,13 @@
 
 import { getPayrollsFromSupabase, savePayrollRecordToSupabase, softDeletePayrollFromSupabase } from '@/services/dataService.js';
 import { toast } from 'sonner';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PAYROLL_KEY = 'monthlyPayrolls';
 
 export const getMonthlyPayrolls = () => {
   try {
-    return JSON.parse(localStorage.getItem(PAYROLL_KEY) || '[]');
+    return getStorageItem(PAYROLL_KEY, []);
   } catch {
     return [];
   }
@@ -43,7 +44,7 @@ export const syncPayrollsWithSupabase = async () => {
     });
 
     const mergedArr = Array.from(mergedMap.values());
-    localStorage.setItem(PAYROLL_KEY, JSON.stringify(mergedArr));
+    setStorageItem(PAYROLL_KEY, mergedArr);
     return mergedArr;
   } catch (error) {
     console.error('syncPayrollsWithSupabase error:', error);
@@ -80,7 +81,7 @@ export const savePayroll = (payrollData) => {
     ...payrollData
   };
   payrolls.push(newPayroll);
-  localStorage.setItem(PAYROLL_KEY, JSON.stringify(payrolls));
+  setStorageItem(PAYROLL_KEY, payrolls);
   return newPayroll;
 };
 
@@ -93,7 +94,7 @@ export const updatePayroll = (id, updates) => {
       ...updates, 
       updatedAt: new Date().toISOString() 
     };
-    localStorage.setItem(PAYROLL_KEY, JSON.stringify(payrolls));
+    setStorageItem(PAYROLL_KEY, payrolls);
     return payrolls[index];
   }
   return null;
@@ -126,7 +127,7 @@ export const lockPayrollInSupabase = async (id, locked = true, lockedByUserId = 
 export const deletePayroll = (id) => {
   const payrolls = getMonthlyPayrolls();
   const filtered = payrolls.filter(p => p.id !== id);
-  localStorage.setItem(PAYROLL_KEY, JSON.stringify(filtered));
+  setStorageItem(PAYROLL_KEY, filtered);
 };
 
 export const deletePayrollFromSupabase = async (payrollId) => {
@@ -135,7 +136,7 @@ export const deletePayrollFromSupabase = async (payrollId) => {
   if (idx !== -1) {
     payrolls[idx].isDeleted = true;
     payrolls[idx].deleted_at = new Date().toISOString();
-    localStorage.setItem(PAYROLL_KEY, JSON.stringify(payrolls));
+    setStorageItem(PAYROLL_KEY, payrolls);
   }
   return await softDeletePayrollFromSupabase(payrollId);
 };

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { parseISO, format } from 'date-fns';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const REPORTS_KEY = 'pageDailyReports';
 const TARGETS_KEY = 'kpiTargets';
@@ -8,8 +9,8 @@ const COMMISSION_RATE = 20000; // 20k VND per phone
 
 export const useKPIPersonal = () => {
   const initStorage = () => {
-    if (!localStorage.getItem(REPORTS_KEY)) localStorage.setItem(REPORTS_KEY, JSON.stringify([]));
-    if (!localStorage.getItem(TARGETS_KEY)) localStorage.setItem(TARGETS_KEY, JSON.stringify([]));
+    if (!getStorageItem(REPORTS_KEY)) setStorageItem(REPORTS_KEY, []);
+    if (!getStorageItem(TARGETS_KEY)) setStorageItem(TARGETS_KEY, []);
   };
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export const useKPIPersonal = () => {
 
   const getDailyRecords = (employeeId, month, year) => {
     initStorage();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
     return allRecords.filter(r => {
       const d = parseISO(r.date);
       return r.employeeId === employeeId && (d.getMonth() + 1) === month && d.getFullYear() === year;
@@ -27,7 +28,7 @@ export const useKPIPersonal = () => {
 
   const getMonthlyStats = (employeeId, month, year) => {
     const records = getDailyRecords(employeeId, month, year);
-    const targets = JSON.parse(localStorage.getItem(TARGETS_KEY) || '[]');
+    const targets = getStorageItem(TARGETS_KEY, []);
     const target = targets.find(t => t.employeeId === employeeId && t.month === month && t.year === year) || { targetPhones: 0, targetConversionRate: 0 };
 
     let totalMessages = 0;
@@ -55,7 +56,7 @@ export const useKPIPersonal = () => {
 
   const saveDailyRecord = (recordData) => {
     initStorage();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
     const existingIndex = allRecords.findIndex(r => r.employeeId === recordData.employeeId && r.date === recordData.date);
 
     const now = new Date().toISOString();
@@ -75,14 +76,14 @@ export const useKPIPersonal = () => {
       });
     }
 
-    localStorage.setItem(REPORTS_KEY, JSON.stringify(allRecords));
+    setStorageItem(REPORTS_KEY, allRecords);
   };
 
   const deleteDailyRecord = (recordId) => {
     initStorage();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
     const filtered = allRecords.filter(r => r.id !== recordId);
-    localStorage.setItem(REPORTS_KEY, JSON.stringify(filtered));
+    setStorageItem(REPORTS_KEY, filtered);
   };
 
   return {

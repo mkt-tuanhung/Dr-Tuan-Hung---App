@@ -6,6 +6,7 @@ import {
   saveOrUpdatePayroll
 } from '@/utils/PayrollCalculationEngine.js';
 import { normalize } from '@/utils/userMatchHelper.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 export const usePayroll = () => {
   const [payrolls, setPayrolls] = useState([]);
@@ -45,7 +46,7 @@ export const usePayroll = () => {
       allPayrolls[index].lockedAt = new Date().toISOString();
       allPayrolls[index].lockedBy = lockedByUserId;
       
-      localStorage.setItem('monthlyPayrolls', JSON.stringify(allPayrolls));
+      setStorageItem('monthlyPayrolls', allPayrolls);
       setPayrolls(allPayrolls.filter(p => p.month === month));
       
       return allPayrolls[index];
@@ -62,7 +63,7 @@ export const usePayroll = () => {
       allPayrolls[index].lockedAt = null;
       allPayrolls[index].lockedBy = null;
       
-      localStorage.setItem('monthlyPayrolls', JSON.stringify(allPayrolls));
+      setStorageItem('monthlyPayrolls', allPayrolls);
       setPayrolls(allPayrolls.filter(p => p.month === month));
       
       return allPayrolls[index];

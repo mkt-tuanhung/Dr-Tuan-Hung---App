@@ -12,6 +12,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { toast } from 'sonner';
 import { getKpiTargets } from '@/utils/userStorage.js';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
@@ -51,7 +52,7 @@ const CskhKpiPersonalClean = ({ currentUser }) => {
 
   // Load Daily Reports
   const myReports = useMemo(() => {
-    const allReports = JSON.parse(localStorage.getItem('cskhDailyReports') || '[]');
+    const allReports = getStorageItem('cskhDailyReports', []);
     return allReports
       .filter(r => 
         r.employeeId?.trim().toLowerCase() === currentEmployeeId && 
@@ -140,7 +141,7 @@ const CskhKpiPersonalClean = ({ currentUser }) => {
     e.preventDefault();
     if (!reportForm.date) return toast.error('Vui lòng chọn ngày báo cáo');
 
-    const allReports = JSON.parse(localStorage.getItem('cskhDailyReports') || '[]');
+    const allReports = getStorageItem('cskhDailyReports', []);
     const reportMonth = reportForm.date.substring(0, 7);
     
     const payload = {
@@ -172,7 +173,7 @@ const CskhKpiPersonalClean = ({ currentUser }) => {
       toast.success('Thêm báo cáo CSKH mới thành công');
     }
 
-    localStorage.setItem('cskhDailyReports', JSON.stringify(allReports));
+    setStorageItem('cskhDailyReports', allReports);
     setReportForm({
       id: null,
       date: format(new Date(), 'yyyy-MM-dd'),
@@ -189,8 +190,8 @@ const CskhKpiPersonalClean = ({ currentUser }) => {
 
   const handleDeleteReport = (id) => {
     if (window.confirm('Bạn có chắc muốn xóa báo cáo này?')) {
-      const allReports = JSON.parse(localStorage.getItem('cskhDailyReports') || '[]');
-      localStorage.setItem('cskhDailyReports', JSON.stringify(allReports.filter(r => r.id !== id)));
+      const allReports = getStorageItem('cskhDailyReports', []);
+      setStorageItem('cskhDailyReports', allReports.filter(r => r.id !== id));
       toast.success('Đã xóa báo cáo CSKH');
       setRefreshKey(k => k + 1);
     }

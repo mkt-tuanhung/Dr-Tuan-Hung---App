@@ -32,6 +32,7 @@ import { Search, CheckCircle, XCircle, FileEdit, UserCircle, CalendarDays, Refre
 import ResponsiveAttendanceCard from '@/components/ResponsiveAttendanceCard.jsx';
 import ResponsiveAttendanceRequestCard from '@/components/ResponsiveAttendanceRequestCard.jsx';
 import AttendanceCalendar from '@/components/AttendanceCalendar.jsx';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const STATUS_MAP = {
   present: { label: 'Có mặt', class: 'bg-emerald-100 text-emerald-700' },
@@ -80,10 +81,10 @@ const AttendanceAdminPage = () => {
   });
 
   const loadData = () => {
-    const allUsers = JSON.parse(localStorage.getItem('clinic_users') || '[]');
+    const allUsers = getStorageItem('clinic_users', []);
     setUsers(allUsers.filter(u => u.role === 'Nhân viên'));
-    setRecords(JSON.parse(localStorage.getItem('attendanceRecords') || '[]'));
-    setRequests(JSON.parse(localStorage.getItem('attendanceRequests') || '[]'));
+    setRecords(getStorageItem('attendanceRecords', []));
+    setRequests(getStorageItem('attendanceRequests', []));
   };
 
   useEffect(() => { 
@@ -179,8 +180,8 @@ const AttendanceAdminPage = () => {
       targetRequest = allRequests[reqIndex];
     }
 
-    localStorage.setItem('attendanceRecords', JSON.stringify(allRecords));
-    localStorage.setItem('attendanceRequests', JSON.stringify(allRequests));
+    setStorageItem('attendanceRecords', allRecords);
+    setStorageItem('attendanceRequests', allRequests);
     
     if (targetRecord) saveAttendanceRecordToSupabase(targetRecord);
     if (targetRequest) saveAttendanceRequestToSupabase(targetRequest);
@@ -202,7 +203,7 @@ const AttendanceAdminPage = () => {
       targetRequest = allRequests[reqIndex];
     }
 
-    localStorage.setItem('attendanceRequests', JSON.stringify(allRequests));
+    setStorageItem('attendanceRequests', allRequests);
     
     if (targetRequest) saveAttendanceRequestToSupabase(targetRequest);
     
@@ -234,7 +235,7 @@ const AttendanceAdminPage = () => {
       allRecords.push(targetRecord);
     }
 
-    localStorage.setItem('attendanceRecords', JSON.stringify(allRecords));
+    setStorageItem('attendanceRecords', allRecords);
     
     if (targetRecord) saveAttendanceRecordToSupabase(targetRecord);
     

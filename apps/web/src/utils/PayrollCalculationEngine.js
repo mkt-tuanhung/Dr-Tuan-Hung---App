@@ -1,10 +1,10 @@
-
 import { normalize, matchId, getMonth, isSurgery, isDeposit, isBong, calculateSaleOfflineKPI } from '@/utils/kpiPayrollHelper.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 export const safeParse = (key) => {
   try {
-    return JSON.parse(localStorage.getItem(key) || '[]');
-  } catch {
+    return getStorageItem(key, []);
+  } catch (e) {
     return [];
   }
 };
@@ -314,7 +314,7 @@ export const saveOrUpdatePayroll = (payrollData) => {
     payrolls.push(payrollData);
   }
   
-  localStorage.setItem('monthlyPayrolls', JSON.stringify(payrolls));
+  setStorageItem('monthlyPayrolls', payrolls);
   return payrollData;
 };
 

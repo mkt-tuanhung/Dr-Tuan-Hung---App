@@ -1,12 +1,13 @@
 
 import { getRevenueRecordsByEmployee, getPagePhoneAssignments } from './userStorage.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 export const CUSTOMER_APPOINTMENTS_KEY = 'customerAppointments';
 export const TELESALE_DAILY_REPORTS_KEY = 'telesaleDailyReports';
 
 // --- Telesale Daily Reports CRUD ---
 export const getTelesaleDailyReports = () => {
-  return JSON.parse(localStorage.getItem(TELESALE_DAILY_REPORTS_KEY) || '[]');
+  return getStorageItem(TELESALE_DAILY_REPORTS_KEY, []);
 };
 
 export const saveTelesaleDailyReport = (report) => {
@@ -17,7 +18,7 @@ export const saveTelesaleDailyReport = (report) => {
     updatedAt: new Date().toISOString(),
     ...report
   });
-  localStorage.setItem(TELESALE_DAILY_REPORTS_KEY, JSON.stringify(reports));
+  setStorageItem(TELESALE_DAILY_REPORTS_KEY, reports);
 };
 
 export const updateTelesaleDailyReport = (id, updates) => {
@@ -25,18 +26,18 @@ export const updateTelesaleDailyReport = (id, updates) => {
   const index = reports.findIndex(r => r.id === id);
   if (index !== -1) {
     reports[index] = { ...reports[index], ...updates, updatedAt: new Date().toISOString() };
-    localStorage.setItem(TELESALE_DAILY_REPORTS_KEY, JSON.stringify(reports));
+    setStorageItem(TELESALE_DAILY_REPORTS_KEY, reports);
   }
 };
 
 export const deleteTelesaleDailyReport = (id) => {
   const reports = getTelesaleDailyReports();
-  localStorage.setItem(TELESALE_DAILY_REPORTS_KEY, JSON.stringify(reports.filter(r => r.id !== id)));
+  setStorageItem(TELESALE_DAILY_REPORTS_KEY, reports.filter(r => r.id !== id));
 };
 
 // --- Customer Appointments CRUD ---
 export const getCustomerAppointments = () => {
-  return JSON.parse(localStorage.getItem(CUSTOMER_APPOINTMENTS_KEY) || '[]');
+  return getStorageItem(CUSTOMER_APPOINTMENTS_KEY, []);
 };
 
 export const saveCustomerAppointment = (appointment) => {
@@ -47,7 +48,7 @@ export const saveCustomerAppointment = (appointment) => {
     updatedAt: new Date().toISOString(),
     ...appointment
   });
-  localStorage.setItem(CUSTOMER_APPOINTMENTS_KEY, JSON.stringify(appointments));
+  setStorageItem(CUSTOMER_APPOINTMENTS_KEY, appointments);
 };
 
 export const updateCustomerAppointment = (id, updates) => {
@@ -55,13 +56,13 @@ export const updateCustomerAppointment = (id, updates) => {
   const index = appointments.findIndex(a => a.id === id);
   if (index !== -1) {
     appointments[index] = { ...appointments[index], ...updates, updatedAt: new Date().toISOString() };
-    localStorage.setItem(CUSTOMER_APPOINTMENTS_KEY, JSON.stringify(appointments));
+    setStorageItem(CUSTOMER_APPOINTMENTS_KEY, appointments);
   }
 };
 
 export const deleteCustomerAppointment = (id) => {
   const appointments = getCustomerAppointments();
-  localStorage.setItem(CUSTOMER_APPOINTMENTS_KEY, JSON.stringify(appointments.filter(a => a.id !== id)));
+  setStorageItem(CUSTOMER_APPOINTMENTS_KEY, appointments.filter(a => a.id !== id));
 };
 
 // --- Page to Telesale Phone Assignments ---

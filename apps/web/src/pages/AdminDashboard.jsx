@@ -12,7 +12,7 @@ import DashboardStatsCard from '@/components/DashboardStatsCard.jsx';
 import DashboardChart from '@/components/DashboardChart.jsx';
 import RefreshLocalDataModal from '@/components/RefreshLocalDataModal.jsx';
 
-import { getKpiTargetsByMonth } from '@/utils/userStorage.js';
+import { getKpiTargetsByMonth, getRevenueRecords } from '@/utils/userStorage.js';
 import { getCustomerAppointments } from '@/utils/appointmentStorage.js';
 import { getSurgicalAssignmentsByMonth } from '@/utils/surgicalCareAssignments.js';
 import { getClaims } from '@/utils/staffExpenseClaimsStorage.js';
@@ -55,7 +55,7 @@ const AdminOverview = ({ user, setActiveTab }) => {
 
   useEffect(() => {
     const loadStats = () => {
-      const allRevenues = JSON.parse(localStorage.getItem('revenueRecords') || '[]');
+      const allRevenues = getRevenueRecords(true);
       const currentMonthRevenues = allRevenues.filter(r => {
         const recMonth = r.month || String(r.revenueDate || r.date || r.createdAt || '').slice(0, 7);
         return recMonth === currentMonth;

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { parseISO } from 'date-fns';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const REPORTS_KEY = 'pageDailyReports';
 const TARGETS_KEY = 'kpiTargets';
@@ -9,8 +10,8 @@ const COMMISSION_RATE = 20000;
 
 export const useKPIAdmin = () => {
   const initStorage = () => {
-    if (!localStorage.getItem(REPORTS_KEY)) localStorage.setItem(REPORTS_KEY, JSON.stringify([]));
-    if (!localStorage.getItem(TARGETS_KEY)) localStorage.setItem(TARGETS_KEY, JSON.stringify([]));
+    if (!getStorageItem(REPORTS_KEY)) setStorageItem(REPORTS_KEY, []);
+    if (!getStorageItem(TARGETS_KEY)) setStorageItem(TARGETS_KEY, []);
   };
 
   useEffect(() => {
@@ -18,13 +19,13 @@ export const useKPIAdmin = () => {
   }, []);
 
   const getPageEmployees = () => {
-    const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    const allUsers = getStorageItem(USERS_KEY, []);
     return allUsers.filter(u => u.role === 'Nhân viên' && u.departmentPosition === 'Trực page');
   };
 
   const getDailyRecords = (employeeId, month, year) => {
     initStorage();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
     return allRecords.filter(r => {
       const d = parseISO(r.date);
       return r.employeeId === employeeId && (d.getMonth() + 1) === month && d.getFullYear() === year;
@@ -33,24 +34,24 @@ export const useKPIAdmin = () => {
 
   const updateDailyRecord = (recordId, data) => {
     initStorage();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
     const index = allRecords.findIndex(r => r.id === recordId);
     if (index !== -1) {
       allRecords[index] = { ...allRecords[index], ...data, updatedAt: new Date().toISOString() };
-      localStorage.setItem(REPORTS_KEY, JSON.stringify(allRecords));
+      setStorageItem(REPORTS_KEY, allRecords);
     }
   };
 
   const deleteDailyRecord = (recordId) => {
     initStorage();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
     const filtered = allRecords.filter(r => r.id !== recordId);
-    localStorage.setItem(REPORTS_KEY, JSON.stringify(filtered));
+    setStorageItem(REPORTS_KEY, filtered);
   };
 
   const assignKPI = (employeeId, month, year, targetPhones, targetConversionRate, note) => {
     initStorage();
-    const allTargets = JSON.parse(localStorage.getItem(TARGETS_KEY) || '[]');
+    const allTargets = getStorageItem(TARGETS_KEY, []);
     const index = allTargets.findIndex(t => t.employeeId === employeeId && t.month === month && t.year === year);
     
     const now = new Date().toISOString();
@@ -77,13 +78,13 @@ export const useKPIAdmin = () => {
       });
     }
     
-    localStorage.setItem(TARGETS_KEY, JSON.stringify(allTargets));
+    setStorageItem(TARGETS_KEY, allTargets);
   };
 
   const getEmployeeSummary = (month, year, employeeIdFilter = 'all') => {
     const employees = getPageEmployees();
-    const allRecords = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
-    const allTargets = JSON.parse(localStorage.getItem(TARGETS_KEY) || '[]');
+    const allRecords = getStorageItem(REPORTS_KEY, []);
+    const allTargets = getStorageItem(TARGETS_KEY, []);
 
     const summaries = employees
       .filter(e => employeeIdFilter === 'all' || e.id === employeeIdFilter)

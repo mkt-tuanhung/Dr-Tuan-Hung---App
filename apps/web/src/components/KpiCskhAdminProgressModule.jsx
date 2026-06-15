@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Target, Users, CheckCircle, AlertTriangle, PhoneCall, MessageSquare, ShieldAlert, HeartHandshake } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const normalize = (val) => String(val || '').trim().toLowerCase();
 const getRecordMonth = (record) => record.month || String(record.date || record.createdAt || '').substring(0, 7);
@@ -49,8 +50,8 @@ const MetricCell = ({ actual, target }) => {
 
 const KpiCskhAdminProgressModule = ({ selectedMonth }) => {
   const data = useMemo(() => {
-    const kpiTargets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
-    const cskhDailyReports = JSON.parse(localStorage.getItem('cskhDailyReports') || '[]');
+    const kpiTargets = getStorageItem('kpiTargets', []);
+    const cskhDailyReports = getStorageItem('cskhDailyReports', []);
 
     const targets = kpiTargets.filter(t => t.targetType === 'cskh' && t.month === selectedMonth);
 

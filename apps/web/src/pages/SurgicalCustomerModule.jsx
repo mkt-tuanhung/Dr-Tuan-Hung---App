@@ -16,6 +16,7 @@ import { Users, PhoneCall } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const SurgicalCustomerModule = () => {
   const { user } = useAuth();
@@ -59,9 +60,9 @@ const SurgicalCustomerModule = () => {
       updatedAt: d.toISOString()
     };
 
-    const localReports = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+    const localReports = getStorageItem('pageDailyReports', []);
     localReports.push(payload);
-    localStorage.setItem('pageDailyReports', JSON.stringify(localReports));
+    setStorageItem('pageDailyReports', localReports);
 
     const success = await savePageDailyReportToSupabase(payload);
     if (success) {

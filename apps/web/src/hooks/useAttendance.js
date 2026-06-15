@@ -7,6 +7,7 @@ import {
   saveAttendanceRequestToSupabase
 } from '@/services/dataService.js';
 import { createApprovalNotificationIfNotExists, updateApprovalNotificationStatus, getApprovalNotifications } from '@/utils/ApprovalNotificationHelper.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const RECORDS_KEY = 'attendanceRecords';
 const REQUESTS_KEY = 'attendanceRequests';
@@ -15,8 +16,8 @@ export const useAttendance = () => {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const initStorage = useCallback(() => {
-    if (!localStorage.getItem(RECORDS_KEY)) localStorage.setItem(RECORDS_KEY, JSON.stringify([]));
-    if (!localStorage.getItem(REQUESTS_KEY)) localStorage.setItem(REQUESTS_KEY, JSON.stringify([]));
+    if (!getStorageItem(RECORDS_KEY)) setStorageItem(RECORDS_KEY, []);
+    if (!getStorageItem(REQUESTS_KEY)) setStorageItem(REQUESTS_KEY, []);
   }, []);
 
   const syncData = useCallback(async () => {
@@ -35,7 +36,7 @@ export const useAttendance = () => {
 
   const getAttendanceRecords = useCallback((filters = {}) => {
     initStorage();
-    let records = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+    let records = getStorageItem(RECORDS_KEY, []);
     
     if (filters.employeeId) records = records.filter(r => r.employeeId === filters.employeeId);
     if (filters.date) records = records.filter(r => r.date === filters.date);
@@ -56,7 +57,7 @@ export const useAttendance = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    localStorage.setItem(RECORDS_KEY, JSON.stringify([...records, newRecord]));
+    setStorageItem(RECORDS_KEY, [...records, newRecord]);
     saveAttendanceRecordToSupabase(newRecord);
     return newRecord;
   }, [getAttendanceRecords]);
@@ -71,7 +72,7 @@ export const useAttendance = () => {
       }
       return r;
     });
-    localStorage.setItem(RECORDS_KEY, JSON.stringify(updated));
+    setStorageItem(RECORDS_KEY, updated);
     if (updatedRecord) {
       saveAttendanceRecordToSupabase(updatedRecord);
     }
@@ -79,7 +80,7 @@ export const useAttendance = () => {
 
   const getAttendanceRequests = useCallback((filters = {}) => {
     initStorage();
-    let requests = JSON.parse(localStorage.getItem(REQUESTS_KEY) || '[]');
+    let requests = getStorageItem(REQUESTS_KEY, []);
     
     if (filters.employeeId) requests = requests.filter(r => r.employeeId === filters.employeeId);
     if (filters.status) requests = requests.filter(r => r.status === filters.status);
@@ -102,7 +103,7 @@ export const useAttendance = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    localStorage.setItem(REQUESTS_KEY, JSON.stringify([...requests, newRequest]));
+    setStorageItem(REQUESTS_KEY, [...requests, newRequest]);
     saveAttendanceRequestToSupabase(newRequest);
 
     createApprovalNotificationIfNotExists(
@@ -129,7 +130,7 @@ export const useAttendance = () => {
       }
       return r;
     });
-    localStorage.setItem(REQUESTS_KEY, JSON.stringify(updated));
+    setStorageItem(REQUESTS_KEY, updated);
     if (updatedRequest) {
       saveAttendanceRequestToSupabase(updatedRequest);
       

@@ -5,6 +5,7 @@ import { parseISO } from 'date-fns';
 import KPIPageStatsCard from './KPIPageStatsCard.jsx';
 import KPIPageDailyReportForm from './KPIPageDailyReportForm.jsx';
 import KPIPageDailyReportTable from './KPIPageDailyReportTable.jsx';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const KPIPersonalPageModule = ({ employeeId }) => {
   const today = new Date();
@@ -17,7 +18,7 @@ const KPIPersonalPageModule = ({ employeeId }) => {
   });
 
   const loadData = () => {
-    const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+    const allRecords = getStorageItem('pageDailyReports', []);
     const monthRecords = allRecords.filter(r => {
       const d = parseISO(r.date);
       return r.employeeId === employeeId && (d.getMonth() + 1) === month && d.getFullYear() === year;
@@ -25,7 +26,7 @@ const KPIPersonalPageModule = ({ employeeId }) => {
 
     setRecords(monthRecords);
 
-    const targets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
+    const targets = getStorageItem('kpiTargets', []);
     const target = targets.find(t => t.employeeId === employeeId && t.month === month && t.year === year) || { targetPhones: 0 };
 
     let totalMessages = 0;

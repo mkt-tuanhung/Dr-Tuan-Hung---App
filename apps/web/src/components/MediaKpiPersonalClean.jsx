@@ -11,6 +11,7 @@ import { Target, Video, PenTool, FileText, CheckCircle, Eye, Pencil, Trash2, Lin
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { getKpiTargets } from '@/utils/userStorage.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const MediaKpiPersonalClean = ({ currentUser }) => {
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -46,7 +47,7 @@ const MediaKpiPersonalClean = ({ currentUser }) => {
 
   // Load Daily Reports
   const myReports = useMemo(() => {
-    const allReports = JSON.parse(localStorage.getItem('mediaDailyReports') || '[]');
+    const allReports = getStorageItem('mediaDailyReports', []);
     return allReports
       .filter(r => 
         r.employeeId?.trim().toLowerCase() === currentEmployeeId && 
@@ -105,7 +106,7 @@ const MediaKpiPersonalClean = ({ currentUser }) => {
     e.preventDefault();
     if (!reportForm.date) return toast.error('Vui lòng chọn ngày báo cáo');
 
-    const allReports = JSON.parse(localStorage.getItem('mediaDailyReports') || '[]');
+    const allReports = getStorageItem('mediaDailyReports', []);
     const reportMonth = reportForm.date.substring(0, 7);
     
     const payload = {
@@ -134,7 +135,7 @@ const MediaKpiPersonalClean = ({ currentUser }) => {
       toast.success('Thêm báo cáo mới thành công');
     }
 
-    localStorage.setItem('mediaDailyReports', JSON.stringify(allReports));
+    setStorageItem('mediaDailyReports', allReports);
     setReportForm({
       id: null,
       date: format(new Date(), 'yyyy-MM-dd'),
@@ -156,8 +157,8 @@ const MediaKpiPersonalClean = ({ currentUser }) => {
 
   const handleDeleteReport = (id) => {
     if (window.confirm('Bạn có chắc muốn xóa báo cáo này?')) {
-      const allReports = JSON.parse(localStorage.getItem('mediaDailyReports') || '[]');
-      localStorage.setItem('mediaDailyReports', JSON.stringify(allReports.filter(r => r.id !== id)));
+      const allReports = getStorageItem('mediaDailyReports', []);
+      setStorageItem('mediaDailyReports', allReports.filter(r => r.id !== id));
       toast.success('Đã xóa báo cáo');
       setRefreshKey(k => k + 1);
     }

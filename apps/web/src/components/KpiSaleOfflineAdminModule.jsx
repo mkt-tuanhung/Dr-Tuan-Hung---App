@@ -17,12 +17,13 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { normalize, calculateSaleOfflineKPI } from '@/utils/kpiPayrollHelper.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#64748b'];
 
 const safeParse = (key) => {
   try {
-    return JSON.parse(localStorage.getItem(key) || '[]');
+    return getStorageItem(key, []);
   } catch {
     return [];
   }

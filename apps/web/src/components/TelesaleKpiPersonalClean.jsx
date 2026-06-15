@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { PhoneCall, Target, Coins, CalendarCheck, Banknote, Percent, AlertCircle } from 'lucide-react';
+import { getKpiTargetByEmployeeAndMonth, getRevenueRecords } from '@/utils/userStorage.js';
 import { formatVND } from '@/utils/currencyFormat.js';
 import { format, parseISO } from 'date-fns';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const STATUS_COLORS = {
   'surgery': '#10b981', 'phẫu thuật': '#10b981', 'phau thuat': '#10b981',
@@ -29,8 +31,8 @@ const getStatusLabel = (status) => {
 };
 
 export const calculateTelesaleKPI = (user, month) => {
-  const customerAppointments = JSON.parse(localStorage.getItem("customerAppointments") || "[]");
-  const revenueRecords = JSON.parse(localStorage.getItem("revenueRecords") || "[]");
+  const customerAppointments = getStorageItem('customerAppointments', []);
+  const revenueRecords = getRevenueRecords(true);
 
   const uId = normalizeStr(user.id);
   const uEmpId = normalizeStr(user.employeeId);
@@ -76,8 +78,8 @@ const TelesaleKpiPersonalClean = ({ currentUser }) => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  const kpiTargets = JSON.parse(localStorage.getItem("kpiTargets") || "[]");
-  const pagePhoneAssignments = JSON.parse(localStorage.getItem("pagePhoneAssignments") || "[]");
+  const kpiTargets = getStorageItem('kpiTargets', []);
+  const pagePhoneAssignments = getStorageItem('pagePhoneAssignments', []);
 
   const kpiData = calculateTelesaleKPI(currentUser, selectedMonth);
 

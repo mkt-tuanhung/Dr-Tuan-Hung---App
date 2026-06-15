@@ -1,8 +1,9 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, Users, CheckCircle, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { getRevenueRecords } from '@/utils/userStorage.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const PIE_COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#a855f7'];
 
@@ -11,17 +12,17 @@ const getRecordMonth = (record) => record.month || String(record.date || record.
 
 const KpiOverallAdminDashboard = ({ selectedMonth }) => {
   const data = useMemo(() => {
-    const kpiTargets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
+    const kpiTargets = getStorageItem('kpiTargets', []);
     const targets = kpiTargets.filter(t => t.month === selectedMonth);
 
     // Fetch all relevant data sets
-    const pageReports = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
-    const phoneAssigns = JSON.parse(localStorage.getItem('pagePhoneAssignments') || '[]');
-    const appointments = JSON.parse(localStorage.getItem('customerAppointments') || '[]');
-    const revenues = JSON.parse(localStorage.getItem('revenueRecords') || '[]');
-    const mediaReports = JSON.parse(localStorage.getItem('mediaDailyReports') || '[]');
-    const cskhReports = JSON.parse(localStorage.getItem('cskhDailyReports') || '[]');
-    const marketingReports = JSON.parse(localStorage.getItem('marketingDailyReports') || '[]');
+    const pageReports = getStorageItem('pageDailyReports', []);
+    const phoneAssigns = getStorageItem('pagePhoneAssignments', []);
+    const appointments = getStorageItem('customerAppointments', []);
+    const revenues = getRevenueRecords(true);
+    const mediaReports = getStorageItem('mediaDailyReports', []);
+    const cskhReports = getStorageItem('cskhDailyReports', []);
+    const marketingReports = getStorageItem('marketingDailyReports', []);
 
     let departmentStats = {
       'page': { name: 'Trực page', sumProgress: 0, count: 0 },

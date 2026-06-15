@@ -10,6 +10,7 @@ import KPIAdminPageStatsCard from './KPIAdminPageStatsCard.jsx';
 import KPIAdminPageTargetForm from './KPIAdminPageTargetForm.jsx';
 import KPIAdminPageTable from './KPIAdminPageTable.jsx';
 import KPIDetailModal from './KPIDetailModal.jsx';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const TABS = ['Tổng quan', 'Trực page', 'Telesale', 'Sale Offline', 'Marketing', 'CSKH', 'Media', 'Điều dưỡng'];
 
@@ -29,12 +30,12 @@ const KPIAdminPageModule = () => {
   const [detailRecords, setDetailRecords] = useState([]);
 
   const loadData = () => {
-    const allUsers = JSON.parse(localStorage.getItem('clinic_users') || '[]');
+    const allUsers = getStorageItem('clinic_users', []);
     const trucPageEmps = allUsers.filter(u => u.role === 'Nhân viên' && u.departmentPosition?.toLowerCase().trim() === 'trực page');
     setEmployees(trucPageEmps);
 
-    const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
-    const allTargets = JSON.parse(localStorage.getItem('kpiTargets') || '[]');
+    const allRecords = getStorageItem('pageDailyReports', []);
+    const allTargets = getStorageItem('kpiTargets', []);
 
     const summaries = trucPageEmps
       .filter(e => selectedEmployeeFilter === 'all' || e.id === selectedEmployeeFilter)
@@ -105,7 +106,7 @@ const KPIAdminPageModule = () => {
 
   const openDetails = (emp) => {
     setSelectedDetailEmp(emp);
-    const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+    const allRecords = getStorageItem('pageDailyReports', []);
     const empRecords = allRecords.filter(r => {
       const d = parseISO(r.date);
       return r.employeeId === emp.id && (d.getMonth() + 1) === month && d.getFullYear() === year;
@@ -115,20 +116,20 @@ const KPIAdminPageModule = () => {
   };
 
   const handleEditDetailRecord = (recordId, updatedData) => {
-    const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+    const allRecords = getStorageItem('pageDailyReports', []);
     const index = allRecords.findIndex(r => r.id === recordId);
     if (index !== -1) {
       allRecords[index] = { ...allRecords[index], ...updatedData, updatedAt: new Date().toISOString() };
-      localStorage.setItem('pageDailyReports', JSON.stringify(allRecords));
+      setStorageItem('pageDailyReports', allRecords);
       loadData();
       openDetails(selectedDetailEmp); // refresh details
     }
   };
 
   const handleDeleteDetailRecord = (recordId) => {
-    const allRecords = JSON.parse(localStorage.getItem('pageDailyReports') || '[]');
+    const allRecords = getStorageItem('pageDailyReports', []);
     const filtered = allRecords.filter(r => r.id !== recordId);
-    localStorage.setItem('pageDailyReports', JSON.stringify(filtered));
+    setStorageItem('pageDailyReports', filtered);
     loadData();
     openDetails(selectedDetailEmp); // refresh details
   };

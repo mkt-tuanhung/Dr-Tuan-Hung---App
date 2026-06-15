@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const REQUEST_TYPES = [
   { value: 'leave_full', label: 'Xin nghỉ cả ngày' },
@@ -49,8 +50,8 @@ const AttendanceEmployeePage = () => {
 
   const loadData = () => {
     const empId = user.employeeId || user.id;
-    const allRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    const allRequests = JSON.parse(localStorage.getItem('attendanceRequests') || '[]');
+    const allRecords = getStorageItem('attendanceRecords', []);
+    const allRequests = getStorageItem('attendanceRequests', []);
     setRecords(allRecords.filter(r => r.employeeId === empId));
     setRequests(allRequests.filter(r => r.employeeId === empId));
   };
@@ -124,7 +125,7 @@ const AttendanceEmployeePage = () => {
       return;
     }
 
-    const allRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+    const allRecords = getStorageItem('attendanceRecords', []);
     const empId = user.employeeId || user.id;
 
     const existingAny = allRecords.find(r => r.date === dateStr && r.employeeId === empId);
@@ -135,7 +136,7 @@ const AttendanceEmployeePage = () => {
       existingAny.checkInTime = format(new Date(), 'HH:mm');
       existingAny.workUnit = 1;
       existingAny.updatedAt = new Date().toISOString();
-      localStorage.setItem('attendanceRecords', JSON.stringify(allRecords));
+      setStorageItem('attendanceRecords', allRecords);
       targetRecord = existingAny;
     } else {
       targetRecord = {
@@ -149,7 +150,7 @@ const AttendanceEmployeePage = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      localStorage.setItem('attendanceRecords', JSON.stringify([...allRecords, targetRecord]));
+      setStorageItem('attendanceRecords', [...allRecords, targetRecord]);
     }
 
     if (targetRecord) {
@@ -181,7 +182,7 @@ const AttendanceEmployeePage = () => {
       return;
     }
 
-    const allRequests = JSON.parse(localStorage.getItem('attendanceRequests') || '[]');
+    const allRequests = getStorageItem('attendanceRequests', []);
     const newRequest = {
       id: crypto.randomUUID(),
       employeeId: empId,
@@ -194,7 +195,7 @@ const AttendanceEmployeePage = () => {
       updatedAt: new Date().toISOString()
     };
 
-    localStorage.setItem('attendanceRequests', JSON.stringify([...allRequests, newRequest]));
+    setStorageItem('attendanceRequests', [...allRequests, newRequest]);
     await saveAttendanceRequestToSupabase(newRequest);
     
     const reqTypeLabel = REQUEST_TYPES.find(t => t.value === requestForm.type)?.label || requestForm.type;

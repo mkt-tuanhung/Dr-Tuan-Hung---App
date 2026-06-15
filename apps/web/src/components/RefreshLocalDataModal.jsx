@@ -14,6 +14,7 @@ import {
 } from '@/services/dataService.js';
 import { mergeSurgicalAssignmentsWithSupabase } from '@/utils/surgicalCareAssignments.js';
 import { mergePagePhoneAssignmentsWithSupabase } from '@/utils/userStorage.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const RefreshLocalDataModal = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -41,11 +42,11 @@ const RefreshLocalDataModal = ({ isOpen, onClose }) => {
       const localAppointments = apptRes.data.map(row => row.data);
       const localRevenues = revRes.data.map(row => row.data);
 
-      localStorage.setItem('clinic_users', JSON.stringify(localUsers));
-      localStorage.setItem('attendanceRecords', JSON.stringify(localAttRecords));
-      localStorage.setItem('attendanceRequests', JSON.stringify(localAttRequests));
-      localStorage.setItem('customerAppointments', JSON.stringify(localAppointments));
-      localStorage.setItem('revenueRecords', JSON.stringify(localRevenues));
+      setStorageItem('clinic_users', localUsers);
+      setStorageItem('attendanceRecords', localAttRecords);
+      setStorageItem('attendanceRequests', localAttRequests);
+      setStorageItem('customerAppointments', localAppointments);
+      setStorageItem('revenueRecords', localRevenues);
 
       // Refresh KPI & Others
       await getKpiTargetsFromSupabase();
@@ -53,7 +54,7 @@ const RefreshLocalDataModal = ({ isOpen, onClose }) => {
       await refreshExpenseClaimsFromSupabase();
       
       // Refresh Notifications
-      localStorage.removeItem('approvalNotifications');
+      removeStorageItem('approvalNotifications');
       await refreshApprovalNotificationsFromSupabase();
       
       // Refresh Assignments
@@ -88,8 +89,8 @@ const RefreshLocalDataModal = ({ isOpen, onClose }) => {
   const handleRefreshKPI = async () => {
     setIsLoading(true);
     try {
-      localStorage.removeItem('kpiTargets');
-      localStorage.removeItem('pageDailyReports');
+      removeStorageItem('kpiTargets');
+      removeStorageItem('pageDailyReports');
       
       await getKpiTargetsFromSupabase();
       await getPageDailyReportsFromSupabase();

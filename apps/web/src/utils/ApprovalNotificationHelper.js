@@ -1,5 +1,6 @@
 
 import { toast } from 'sonner';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const NOTIFICATIONS_KEY = 'approvalNotifications';
 const EVENT_NAME = 'notificationsUpdated';
@@ -10,7 +11,7 @@ export const notifyChange = () => {
 
 export const getApprovalNotifications = () => {
   try {
-    const data = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+    const data = getStorageItem(NOTIFICATIONS_KEY, []);
     return data.filter(n => !n.isDeleted && !n.deleted_at);
   } catch (e) {
     console.error('Error parsing notifications', e);
@@ -19,7 +20,7 @@ export const getApprovalNotifications = () => {
 };
 
 export const saveApprovalNotifications = (notifications) => {
-  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+  setStorageItem(NOTIFICATIONS_KEY, notifications);
   notifyChange();
 };
 
@@ -53,7 +54,7 @@ export const getApprovalNotificationsByStatus = (status, userId, userRole) => {
 };
 
 export const mergeApprovalNotificationsFromSupabase = (supabaseNotifications) => {
-  const localNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+  const localNotifications = getStorageItem(NOTIFICATIONS_KEY, []);
   const mergedMap = new Map();
   
   localNotifications.forEach(n => mergedMap.set(String(n.id), n));
@@ -84,7 +85,7 @@ export const mergeApprovalNotificationsFromSupabase = (supabaseNotifications) =>
 };
 
 export const createApprovalNotification = async (sourceId, sourceTable, type, title, message, senderId = null, senderName = null, receiverRoles = [], receiverEmployeeId = null) => {
-  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+  const notifications = getStorageItem(NOTIFICATIONS_KEY, []);
   
   // Prevent duplicates
   const exists = notifications.find(n => n.sourceId === sourceId && n.type === type);
@@ -121,7 +122,7 @@ export const createApprovalNotification = async (sourceId, sourceTable, type, ti
 export const createApprovalNotificationIfNotExists = createApprovalNotification;
 
 export const updateNotificationStatus = async (notificationId, status, processedBy) => {
-  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+  const notifications = getStorageItem(NOTIFICATIONS_KEY, []);
   const index = notifications.findIndex(n => n.id === notificationId || n.sourceId === notificationId); // Fallback to sourceId for legacy calls
   
   if (index !== -1) {
@@ -145,7 +146,7 @@ export const updateApprovalNotificationStatus = updateNotificationStatus;
 export const syncNotificationStatus = (sourceId, status = 'completed') => updateNotificationStatus(sourceId, status, 'System');
 
 export const markAsRead = (notificationId) => {
-  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+  const notifications = getStorageItem(NOTIFICATIONS_KEY, []);
   const index = notifications.findIndex(n => n.id === notificationId);
   if (index !== -1) {
     notifications[index].isRead = true;
@@ -159,7 +160,7 @@ export const markAsRead = (notificationId) => {
 };
 
 export const markAllAsRead = (userId, userRole) => {
-  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+  const notifications = getStorageItem(NOTIFICATIONS_KEY, []);
   let changed = false;
   
   const updated = notifications.map(n => {
@@ -183,7 +184,7 @@ export const markAllAsRead = (userId, userRole) => {
 };
 
 export const deleteNotification = (notificationId) => {
-  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
+  const notifications = getStorageItem(NOTIFICATIONS_KEY, []);
   const index = notifications.findIndex(n => n.id === notificationId);
   if (index !== -1) {
     notifications[index].isDeleted = true;

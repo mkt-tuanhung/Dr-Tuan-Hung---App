@@ -1,5 +1,6 @@
 
 import { 
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
   syncAppointmentRecordsWithSupabase, 
   saveAppointmentRecordToSupabase,
   uploadAllAppointmentsToSupabase,
@@ -10,7 +11,7 @@ const APPOINTMENTS_KEY = 'customerAppointments';
 
 export const getAppointments = (includeDeleted = false) => {
   try {
-    const all = JSON.parse(localStorage.getItem(APPOINTMENTS_KEY) || '[]');
+    const all = getStorageItem(APPOINTMENTS_KEY, []);
     if (includeDeleted) return all;
     return all.filter(a => !a.isDeleted);
   } catch (e) {
@@ -34,7 +35,7 @@ export const saveAppointment = (appointment) => {
     ...appointment
   };
   appointments.push(newAppointment);
-  localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+  setStorageItem(APPOINTMENTS_KEY, appointments);
   return newAppointment;
 };
 
@@ -47,7 +48,7 @@ export const updateAppointment = (id, updates) => {
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+    setStorageItem(APPOINTMENTS_KEY, appointments);
     return appointments[index];
   }
   return null;
@@ -57,7 +58,7 @@ export const updateAppointment = (id, updates) => {
 export const deleteAppointment = (id) => {
   const appointments = getAppointments(true);
   const filtered = appointments.filter(a => a.id !== id);
-  localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(filtered));
+  setStorageItem(APPOINTMENTS_KEY, filtered);
 };
 
 export const markAppointmentAsDeleted = async (id) => {
@@ -70,7 +71,7 @@ export const markAppointmentAsDeleted = async (id) => {
       deleted_at: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+    setStorageItem(APPOINTMENTS_KEY, appointments);
     // Non-blocking Supabase sync
     saveAppointmentRecordToSupabase(appointments[index]);
     return true;

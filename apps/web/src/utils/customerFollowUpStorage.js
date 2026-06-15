@@ -1,5 +1,6 @@
 
 import { normalize, matchUser } from '@/utils/userMatchHelper.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
 
 const FOLLOW_UPS_KEY = 'customerFollowUps';
 
@@ -45,7 +46,7 @@ export const canConvertToSurgery = (appointment, currentUser) => {
 // CRUD Operations
 export const getFollowUps = () => {
   try {
-    return JSON.parse(localStorage.getItem(FOLLOW_UPS_KEY) || '[]');
+    return getStorageItem(FOLLOW_UPS_KEY, []);
   } catch {
     return [];
   }
@@ -65,7 +66,7 @@ export const saveFollowUp = (followUpData) => {
     ...followUpData
   };
   followUps.push(newFollowUp);
-  localStorage.setItem(FOLLOW_UPS_KEY, JSON.stringify(followUps));
+  setStorageItem(FOLLOW_UPS_KEY, followUps);
   return newFollowUp;
 };
 
@@ -78,7 +79,7 @@ export const updateFollowUp = (id, followUpData) => {
       ...followUpData, 
       updatedAt: new Date().toISOString() 
     };
-    localStorage.setItem(FOLLOW_UPS_KEY, JSON.stringify(followUps));
+    setStorageItem(FOLLOW_UPS_KEY, followUps);
     return followUps[index];
   }
   return null;
@@ -96,11 +97,11 @@ export const saveOrUpdateFollowUpByAppointmentId = (appointmentId, followUpData)
 export const deleteFollowUp = (id) => {
   const followUps = getFollowUps();
   const filtered = followUps.filter(f => f.id !== id);
-  localStorage.setItem(FOLLOW_UPS_KEY, JSON.stringify(filtered));
+  setStorageItem(FOLLOW_UPS_KEY, filtered);
 };
 
 export const getFollowUpCustomers = (month, currentUser) => {
-  const customerAppointments = JSON.parse(localStorage.getItem('customerAppointments') || '[]');
+  const customerAppointments = getStorageItem('customerAppointments', []);
   
   return customerAppointments.filter(app => {
     if (month && app.month !== month && (!app.appointmentDate || !app.appointmentDate.startsWith(month))) {
