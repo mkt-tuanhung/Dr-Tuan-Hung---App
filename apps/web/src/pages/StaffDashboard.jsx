@@ -1,13 +1,23 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Clock, Target, Wallet, CalendarCheck } from 'lucide-react';
+import {
+  LogOut, CalendarCheck, Target, Wallet, Clock,
+  ChevronRight, Bell, User
+} from 'lucide-react';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
   truc_page: 'Trực Page', media: 'Media', marketing: 'Marketing',
   dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin',
 };
+
+const MODULES = [
+  { label: 'Chấm công', sub: 'Điểm danh & lịch sử', icon: CalendarCheck, soon: true },
+  { label: 'KPI của tôi', sub: 'Tiến độ tháng này', icon: Target, soon: true },
+  { label: 'Bảng lương', sub: 'Xem chi tiết lương', icon: Wallet, soon: true },
+  { label: 'Lịch làm việc', sub: 'Ca & lịch ca', icon: Clock, soon: true },
+];
 
 const StaffDashboard = () => {
   const { profile, logout } = useAuth();
@@ -18,88 +28,126 @@ const StaffDashboard = () => {
     navigate('/', { replace: true });
   };
 
-  const cards = [
-    { label: 'Chấm công', sub: 'Xem lịch sử chấm công', icon: CalendarCheck, color: 'from-emerald-400 to-teal-500' },
-    { label: 'KPI của tôi', sub: 'Xem tiến độ KPI tháng này', icon: Target, color: 'from-blue-400 to-blue-500' },
-    { label: 'Bảng lương', sub: 'Xem bảng lương của tôi', icon: Wallet, color: 'from-violet-400 to-purple-500' },
-    { label: 'Lịch làm việc', sub: 'Xem lịch ca làm việc', icon: Clock, color: 'from-amber-400 to-orange-500' },
-  ];
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Chào buổi sáng';
+    if (h < 18) return 'Chào buổi chiều';
+    return 'Chào buổi tối';
+  };
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%)' }}>
-      {/* Header */}
-      <header className="bg-white border-b border-emerald-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center font-bold text-white text-sm shadow-md">
-            DTH
+    <div className="min-h-screen bg-[#f8faf9] flex flex-col">
+
+      {/* Top bar */}
+      <header className="bg-white border-b border-gray-100 px-5 py-3.5 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">DTH</span>
           </div>
-          <div>
-            <div className="font-bold text-slate-800 text-sm">Dr Tuấn Hùng</div>
-            <div className="text-xs text-emerald-500">Internal System</div>
-          </div>
+          <span className="text-sm font-semibold text-gray-800">Dr Tuấn Hùng</span>
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-red-500 transition-colors">
-          <LogOut className="w-4 h-4" /> Đăng xuất
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100">
+            <Bell className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleLogout}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
-      <main className="p-4 max-w-lg mx-auto space-y-5 pb-10">
-        {/* Profile card */}
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg shadow-emerald-200 mt-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-7 h-7 text-white" />
-              )}
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-6 space-y-6">
+
+        {/* Profile section */}
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-6 h-6 text-emerald-400" />
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-medium">{greeting()}</p>
+            <h1 className="text-xl font-bold text-gray-900 mt-0.5">{profile?.full_name}</h1>
+            <p className="text-sm text-emerald-600 font-medium mt-0.5">
+              {ROLE_LABELS[profile?.role] || profile?.role}
+              {profile?.position ? ` · ${profile.position}` : ''}
+            </p>
+          </div>
+        </div>
+
+        {/* Status card */}
+        <div className="bg-emerald-600 rounded-2xl p-5 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-200 text-xs font-medium uppercase tracking-wider">Trạng thái hợp đồng</p>
+              <p className="text-lg font-bold mt-1">
+                {profile?.employment_status === 'probation' ? 'Thử việc · 85%' : 'Nhân viên chính thức'}
+              </p>
+              <p className="text-emerald-300 text-xs mt-1">{profile?.employee_id}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+              <User className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-emerald-500 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-emerald-300 text-xs">Lương cơ bản</p>
+              <p className="text-white font-semibold text-sm mt-0.5">
+                {profile?.base_salary
+                  ? new Intl.NumberFormat('vi-VN').format(profile.base_salary) + 'đ'
+                  : '—'}
+              </p>
             </div>
             <div>
-              <p className="text-emerald-100 text-xs">Xin chào 👋</p>
-              <h2 className="text-lg font-bold">{profile?.full_name}</h2>
-              <p className="text-emerald-200 text-xs mt-0.5">
-                {ROLE_LABELS[profile?.role] || profile?.role} · {profile?.employee_id}
+              <p className="text-emerald-300 text-xs">Phụ cấp</p>
+              <p className="text-white font-semibold text-sm mt-0.5">
+                {profile?.allowance
+                  ? new Intl.NumberFormat('vi-VN').format(profile.allowance) + 'đ'
+                  : '—'}
               </p>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="bg-white/15 rounded-2xl px-3 py-2">
-              <div className="text-xs text-emerald-200">Trạng thái</div>
-              <div className="text-sm font-semibold mt-0.5">
-                {profile?.employment_status === 'probation' ? '🟡 Thử việc' : '🟢 Chính thức'}
-              </div>
-            </div>
-            <div className="bg-white/15 rounded-2xl px-3 py-2">
-              <div className="text-xs text-emerald-200">Vị trí</div>
-              <div className="text-sm font-semibold mt-0.5 truncate">{profile?.position || ROLE_LABELS[profile?.role] || '—'}</div>
-            </div>
-          </div>
         </div>
 
-        {/* Quick access */}
+        {/* Modules */}
         <div>
-          <h3 className="font-semibold text-slate-700 mb-3 px-1">Truy cập nhanh</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {cards.map(c => (
-              <div key={c.label} className="bg-white rounded-2xl p-4 shadow-sm border border-emerald-50 space-y-3">
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.color} flex items-center justify-center shadow-md`}>
-                  <c.icon className="w-5 h-5 text-white" />
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Tính năng</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
+            {MODULES.map((m, i) => (
+              <button
+                key={i}
+                className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                  <m.icon className="w-4.5 h-4.5 text-emerald-600" />
                 </div>
-                <div>
-                  <div className="font-semibold text-slate-800 text-sm">{c.label}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{c.sub}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800">{m.label}</span>
+                    {m.soon && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400">
+                        Sắp ra mắt
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{m.sub}</p>
                 </div>
-              </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Coming soon notice */}
-        <div className="bg-white rounded-2xl p-4 border border-emerald-100 text-center shadow-sm">
-          <div className="text-2xl mb-2">🚧</div>
-          <div className="text-sm font-medium text-slate-600">Các tính năng đang được xây dựng</div>
-          <div className="text-xs text-slate-400 mt-1">Sẽ sớm ra mắt trong thời gian tới</div>
-        </div>
+        {/* Date */}
+        <p className="text-center text-xs text-gray-300 pb-2">
+          {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
+
       </main>
     </div>
   );
