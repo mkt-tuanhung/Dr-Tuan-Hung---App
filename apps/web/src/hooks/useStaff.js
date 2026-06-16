@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 export const useStaff = () => {
@@ -11,12 +11,14 @@ export const useStaff = () => {
     try {
       setLoading(true);
       setError(null);
-      const records = await pb.collection('staff').getFullList({
-        sort: '-created',
-        $autoCancel: false
-      });
-      setStaff(records);
-      return records;
+      const { data, error: err } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (err) throw err;
+      setStaff(data || []);
+      return data || [];
     } catch (err) {
       setError(err.message);
       toast.error('Lỗi khi tải danh sách nhân sự: ' + err.message);
@@ -26,85 +28,85 @@ export const useStaff = () => {
     }
   }, []);
 
-  const buildFormData = (data, isCreate = false) => {
-    const formData = new FormData();
-    
-    if (data.username !== undefined) formData.append('username', data.username.trim());
-    if (data.name !== undefined) formData.append('name', data.name.trim());
-    if (data.position !== undefined) formData.append('position', data.position.trim());
-    if (data.active !== undefined) formData.append('active', data.active);
-    
-    if (data.password) {
-      formData.append('password', data.password);
-      formData.append('passwordConfirm', data.password); // In case staff becomes an auth collection
-    }
-
-    if (Array.isArray(data.specialties)) {
-      if (data.specialties.length === 0) {
-        formData.append('specialties', ''); 
-      } else {
-        data.specialties.forEach(spec => formData.append('specialties', spec));
-      }
-    }
-
-    if (data.avatarFile instanceof File) {
-      formData.append('avatar', data.avatarFile);
-    }
-
-    if (data.basic_salary !== undefined && data.basic_salary !== '') {
-      formData.append('basic_salary', Number(data.basic_salary) || 0);
-    } else if (isCreate) {
-      formData.append('basic_salary', 0);
-    }
-    
-    if (data.allowances) {
-      formData.append('allowances', JSON.stringify(data.allowances));
-    }
-
-    return formData;
-  };
-
-  const extractPocketBaseError = (err) => {
-    if (err?.response?.data) {
-      const details = Object.entries(err.response.data)
-        .map(([key, value]) => `${key}: ${value.message}`)
-        .join(', ');
-      return details || err.message;
-    }
-    return err.message || 'Lỗi không xác định';
-  };
-
+  // Admin tạo nhân sự: tạo auth user + profile
   const createStaff = async (data) => {
     try {
-      const formData = buildFormData(data, true);
-      const record = await pb.collection('staff').create(formData, { $autoCancel: false });
+      const email = `${data.employee_id.trim().toLowerCase()}@drtuanhung.internal`;
+
+      // 1. Tạo tài khoản auth
+      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+        email,
+        password: data.password,
+        email_confirm: true,
+      });
+      if (authErr) throw authErr;
+
+      // 2. Tạo profile
+      const { data: profileData, error: profileErr } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          employee_id: data.employee_id.trim(),
+          full_name: data.full_name.trim(),
+          role: data.role,
+          position: data.position,
+          base_salary: Number(data.base_salary) || 0,
+          allowance: Number(data.allowance) || 0,
+          phone: data.phone,
+          employment_status: data.is_probation ? 'probation' : 'official',
+          probation_started_at: data.is_probation ? new Date().toISOString().split('T')[0] : null,
+        })
+        .select()
+        .single();
+      if (profileErr) throw profileErr;
+
       toast.success('Thêm nhân sự mới thành công');
       fetchStaff();
-      return record;
+      return profileData;
     } catch (err) {
       console.error('Create staff error:', err);
-      const errMsg = extractPocketBaseError(err);
-      throw new Error(errMsg);
+      toast.error('Lỗi khi tạo nhân sự: ' + err.message);
+      throw err;
     }
   };
 
   const updateStaff = async (id, data) => {
     try {
-      const formData = buildFormData(data, false);
-      const record = await pb.collection('staff').update(id, formData, { $autoCancel: false });
+      const updates = {};
+      if (data.full_name !== undefined) updates.full_name = data.full_name.trim();
+      if (data.role !== undefined) updates.role = data.role;
+      if (data.position !== undefined) updates.position = data.position;
+      if (data.base_salary !== undefined) updates.base_salary = Number(data.base_salary) || 0;
+      if (data.allowance !== undefined) updates.allowance = Number(data.allowance) || 0;
+      if (data.phone !== undefined) updates.phone = data.phone;
+      if (data.is_active !== undefined) updates.is_active = data.is_active;
+
+      const { data: updated, error: err } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err) throw err;
+
       toast.success('Cập nhật hồ sơ nhân sự thành công');
       fetchStaff();
-      return record;
+      return updated;
     } catch (err) {
       console.error('Update staff error:', err);
-      const errMsg = extractPocketBaseError(err);
-      throw new Error(errMsg);
+      toast.error('Lỗi khi cập nhật nhân sự: ' + err.message);
+      throw err;
     }
   };
 
+  // Soft delete — không xóa thật, chỉ đánh dấu inactive
   const deleteStaff = async (id) => {
     try {
-      await pb.collection('staff').delete(id, { $autoCancel: false });
+      const { error: err } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', id);
+      if (err) throw err;
       toast.success('Đã xóa nhân sự thành công');
       fetchStaff();
       return true;
@@ -115,25 +117,49 @@ export const useStaff = () => {
     }
   };
 
-  const startTrialPeriod = async (staffId, basicSalary) => {
+  // Bắt đầu thử việc (85% lương)
+  const startTrialPeriod = async (staffId, baseSalary) => {
     try {
-      const trialSalary = Number(basicSalary) * 0.85;
-      const trialStartDate = new Date().toISOString();
-
-      const record = await pb.collection('staff').update(staffId, {
-        trial_status: 'on_trial',
-        trial_salary: trialSalary,
-        trial_start_date: trialStartDate
-      }, { $autoCancel: false });
-
+      const { data, error: err } = await supabase
+        .from('profiles')
+        .update({
+          employment_status: 'probation',
+          probation_started_at: new Date().toISOString().split('T')[0],
+          base_salary: Math.round(Number(baseSalary) * 0.85),
+        })
+        .eq('id', staffId)
+        .select()
+        .single();
+      if (err) throw err;
       toast.success('Bắt đầu thời gian thử việc thành công');
       fetchStaff();
-      return record;
+      return data;
     } catch (err) {
-      console.error('Start trial period error:', err);
-      const errMsg = extractPocketBaseError(err);
-      toast.error('Lỗi khi bắt đầu thử việc: ' + errMsg);
-      throw new Error(errMsg);
+      toast.error('Lỗi khi bắt đầu thử việc: ' + err.message);
+      throw err;
+    }
+  };
+
+  // Kết thúc thử việc → nhân sự chính thức (100% lương gốc)
+  const endTrialPeriod = async (staffId, originalBaseSalary) => {
+    try {
+      const { data, error: err } = await supabase
+        .from('profiles')
+        .update({
+          employment_status: 'official',
+          official_started_at: new Date().toISOString().split('T')[0],
+          base_salary: Number(originalBaseSalary),
+        })
+        .eq('id', staffId)
+        .select()
+        .single();
+      if (err) throw err;
+      toast.success('Kết thúc thử việc — nhân sự đã chính thức');
+      fetchStaff();
+      return data;
+    } catch (err) {
+      toast.error('Lỗi khi kết thúc thử việc: ' + err.message);
+      throw err;
     }
   };
 
@@ -145,6 +171,7 @@ export const useStaff = () => {
     createStaff,
     updateStaff,
     deleteStaff,
-    startTrialPeriod
+    startTrialPeriod,
+    endTrialPeriod,
   };
 };

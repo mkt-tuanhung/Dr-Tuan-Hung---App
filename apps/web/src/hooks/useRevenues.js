@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 export const useRevenues = (filters = {}) => {
@@ -12,36 +11,33 @@ export const useRevenues = (filters = {}) => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Fetch staff first for mapping
-      const staffRecords = await pb.collection('staff').getFullList({ $autoCancel: false });
-      setStaff(staffRecords);
 
-      // Build filter string
-      let filterStr = [];
+      // Fetch staff
+      const { data: staffData } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, position')
+        .eq('is_active', true);
+      setStaff(staffData || []);
+
+      // Build query
+      let query = supabase
+        .from('customer_appointments')
+        .select('*, telesale:telesale_id(full_name), sale_offline:sale_offline_id(full_name)')
+        .in('status', ['coc', 'phau_thuat'])
+        .order('appointment_date', { ascending: false });
+
       if (filters.search) {
-        filterStr.push(`(customer_name ~ "${filters.search}" || phone ~ "${filters.search}")`);
-      }
-      if (filters.service_group && filters.service_group !== 'ALL') {
-        filterStr.push(`service_group = "${filters.service_group}"`);
-      }
-      if (filters.customer_source && filters.customer_source !== 'ALL') {
-        filterStr.push(`customer_source = "${filters.customer_source}"`);
+        query = query.or(`customer_name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`);
       }
       if (filters.dateRange?.start && filters.dateRange?.end) {
-        // Adjust end date to include the full day
-        const end = new Date(filters.dateRange.end);
-        end.setDate(end.getDate() + 1);
-        filterStr.push(`date >= "${filters.dateRange.start}" && date < "${end.toISOString().split('T')[0]}"`);
+        query = query
+          .gte('appointment_date', filters.dateRange.start)
+          .lte('appointment_date', filters.dateRange.end);
       }
 
-      const records = await pb.collection('revenues').getFullList({
-        filter: filterStr.join(' && '),
-        sort: '-date',
-        $autoCancel: false
-      });
-      
-      setRevenues(records);
+      const { data, error: err } = await query;
+      if (err) throw err;
+      setRevenues(data || []);
     } catch (err) {
       console.error(err);
       setError(err);
@@ -57,7 +53,11 @@ export const useRevenues = (filters = {}) => {
 
   const deleteRevenue = async (id) => {
     try {
-      await pb.collection('revenues').delete(id, { $autoCancel: false });
+      const { error: err } = await supabase
+        .from('customer_appointments')
+        .delete()
+        .eq('id', id);
+      if (err) throw err;
       setRevenues(prev => prev.filter(r => r.id !== id));
       toast.success('Đã xóa bản ghi doanh thu.');
       return true;

@@ -8,10 +8,10 @@ import { Progress } from '@/components/ui/progress';
 import { Target, Coins, CalendarCheck, Banknote, Percent, TrendingUp, ArrowUpCircle, Wallet, AlertCircle } from 'lucide-react';
 import { formatVND } from '@/utils/currencyFormat.js';
 import { format, parseISO } from 'date-fns';
-import { 
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
-  normalize, matchId, getMonth, getStatus, isSurgery, isDeposit, isBong, 
-  calculateKpiProgress, getKpiSeverity 
+import {
+  normalize, matchId, getMonth, getStatus, isSurgery, isDeposit, isBong,
+  calculateKpiProgress, getKpiSeverity
 } from '@/utils/kpiPayrollHelper.js';
 
 const STATUS_COLORS = {

@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Target, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { 
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
-  normalize, matchId, getKpiSeverity, calculateSaleOfflineKPI 
+import {
+  normalize, matchId, getKpiSeverity, calculateSaleOfflineKPI
 } from '@/utils/kpiPayrollHelper.js';
 
 const safeParse = (key) => {

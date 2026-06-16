@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables - KHÔNG commit lên GitHub
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Build output
+dist/
+build/
+.next/
+
+# OS
+.DS_Store
+*.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# Misc
+*.command

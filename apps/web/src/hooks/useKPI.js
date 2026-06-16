@@ -1,6 +1,5 @@
-
 import { useState, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export const useKPI = () => {
   const [kpiData, setKpiData] = useState([]);
@@ -9,43 +8,53 @@ export const useKPI = () => {
   const fetchAndCalculateKPI = useCallback(async (month, year) => {
     try {
       setLoading(true);
-      const staffList = await pb.collection('staff').getFullList({ filter: 'active = true', $autoCancel: false });
-      
-      const startDate = new Date(year, month - 1, 1).toISOString().replace('T', ' ');
-      const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().replace('T', ' ');
-      
-      // Get revenues to calculate actual KPI
-      const revenues = await pb.collection('revenues').getFullList({
-        filter: `date >= "${startDate}" && date <= "${endDate}"`,
-        $autoCancel: false
-      });
 
-      // Get existing KPI targets
-      const existingKPIs = await pb.collection('kpi').getFullList({
-        filter: `month = ${month} && year = ${year}`,
-        $autoCancel: false
-      });
+      // Lấy danh sách nhân sự active
+      const { data: staffList } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, position')
+        .eq('is_active', true);
 
-      const processedData = staffList.map(staff => {
-        const staffRevs = revenues.filter(r => r.sale_staff === staff.id || r.telesale_staff === staff.id);
+      // Lấy doanh thu trong tháng
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+      const { data: appointments } = await supabase
+        .from('customer_appointments')
+        .select('telesale_id, sale_offline_id, revenue, upsale_revenue, status')
+        .in('status', ['coc', 'phau_thuat'])
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate);
+
+      // Lấy KPI targets đã set
+      const { data: existingKPIs } = await supabase
+        .from('kpi_targets')
+        .select('*')
+        .eq('month', month)
+        .eq('year', year);
+
+      const processedData = (staffList || []).map(s => {
+        const staffRevs = (appointments || []).filter(
+          r => r.telesale_id === s.id || r.sale_offline_id === s.id
+        );
         const actualKpi = staffRevs.reduce((sum, r) => sum + (Number(r.revenue) || 0), 0);
-        
-        const existingRecord = existingKPIs.find(k => k.staff_id === staff.id);
-        const targetKpi = existingRecord ? existingRecord.target_kpi : 0;
-        
+
+        const existingRecord = (existingKPIs || []).find(k => k.staff_id === s.id);
+        const targetKpi = existingRecord?.target_revenue || 0;
         const completion = targetKpi > 0 ? (actualKpi / targetKpi) * 100 : 0;
 
         return {
           id: existingRecord?.id || null,
-          staff_id: staff.id,
-          staff_name: staff.name,
-          specialties: staff.specialties || [],
+          staff_id: s.id,
+          staff_name: s.full_name,
+          role: s.role,
+          position: s.position,
           month,
           year,
           target_kpi: targetKpi,
           actual_kpi: actualKpi,
           completion_percentage: Number(completion.toFixed(2)),
-          status: completion >= 100 ? 'achieved' : 'not_achieved'
+          status: completion >= 100 ? 'achieved' : 'not_achieved',
         };
       });
 
@@ -60,11 +69,23 @@ export const useKPI = () => {
   }, []);
 
   const updateTargetKPI = async (staffId, month, year, target, recordId) => {
-    const data = { staff_id: staffId, month, year, target_kpi: target };
     if (recordId) {
-      return await pb.collection('kpi').update(recordId, data, { $autoCancel: false });
+      const { data, error } = await supabase
+        .from('kpi_targets')
+        .update({ target_revenue: target })
+        .eq('id', recordId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
     } else {
-      return await pb.collection('kpi').create(data, { $autoCancel: false });
+      const { data, error } = await supabase
+        .from('kpi_targets')
+        .insert({ staff_id: staffId, month, year, target_revenue: target })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
     }
   };
 

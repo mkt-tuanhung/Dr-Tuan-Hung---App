@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import { supabase } from '@/lib/supabaseClient.js';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,31 +14,38 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Receipt, Plus, Trash2, Pencil } from 'lucide-react';
 
+const CATEGORIES = ['MKT', 'Vat_tu', 'Van_phong', 'Nhan_cong', 'Khac'];
+const CATEGORY_LABELS = { MKT: 'Marketing', Vat_tu: 'Vật tư', Van_phong: 'Văn phòng', Nhan_cong: 'Nhân công', Khac: 'Khác' };
+
 const ExpensePage = () => {
-  const { currentStaff } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
-  
+
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  
+
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [category, setCategory] = useState('Văn phòng');
+  const [category, setCategory] = useState('Van_phong');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [isAdvance, setIsAdvance] = useState(false);
 
   const fetchRecords = async () => {
     try {
       const today = new Date();
-      const res = await pb.collection('expense').getFullList({
-        filter: `staff_id = "${currentStaff.id}" && expense_date >= "${format(startOfMonth(today), 'yyyy-MM-dd')}"`,
-        sort: '-expense_date',
-        $autoCancel: false
-      });
-      setRecords(res);
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('staff_id', profile.id)
+        .gte('date', format(startOfMonth(today), 'yyyy-MM-dd'))
+        .lte('date', format(endOfMonth(today), 'yyyy-MM-dd'))
+        .is('deleted_at', null)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      setRecords(data || []);
     } catch (err) {
       toast.error('Lỗi tải dữ liệu chi phí');
     } finally {
@@ -47,57 +53,48 @@ const ExpensePage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchRecords();
-  }, []);
+  useEffect(() => { fetchRecords(); }, []);
 
-  const totalAmount = useMemo(() => records.reduce((sum, r) => sum + r.amount, 0), [records]);
+  const totalAmount = useMemo(() => records.reduce((sum, r) => sum + Number(r.amount), 0), [records]);
   const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
   const openModal = (record = null) => {
     if (record) {
       setEditingId(record.id);
-      setDate(record.expense_date.split(' ')[0]);
+      setDate(record.date);
       setCategory(record.category);
       setAmount(record.amount.toString());
       setDescription(record.description || '');
+      setIsAdvance(record.is_advance || false);
     } else {
       setEditingId(null);
       setDate(format(new Date(), 'yyyy-MM-dd'));
-      setCategory('Văn phòng');
+      setCategory('Van_phong');
       setAmount('');
       setDescription('');
+      setIsAdvance(false);
     }
     setModalOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!date || !category || !amount) {
-      toast.error('Vui lòng điền đủ thông tin');
-      return;
-    }
+    if (!date || !category || !amount) { toast.error('Vui lòng điền đủ thông tin'); return; }
     setSubmitting(true);
     try {
-      const payload = {
-        staff_id: currentStaff.id,
-        expense_date: date + " 00:00:00.000Z",
-        category,
-        amount: Number(amount),
-        description
-      };
-      
+      const payload = { staff_id: profile.id, date, category, amount: Number(amount), description, is_advance: isAdvance };
       if (editingId) {
-        await pb.collection('expense').update(editingId, payload, { $autoCancel: false });
+        const { error } = await supabase.from('expenses').update(payload).eq('id', editingId);
+        if (error) throw error;
         toast.success('Cập nhật thành công');
       } else {
-        await pb.collection('expense').create(payload, { $autoCancel: false });
+        const { error } = await supabase.from('expenses').insert(payload);
+        if (error) throw error;
         toast.success('Thêm chi phí thành công');
       }
-      
       setModalOpen(false);
       fetchRecords();
     } catch (err) {
-      toast.error('Lỗi lưu chi phí');
+      toast.error('Lỗi lưu chi phí: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -106,7 +103,8 @@ const ExpensePage = () => {
   const handleDelete = async (id) => {
     if (!confirm('Xóa khoản chi phí này?')) return;
     try {
-      await pb.collection('expense').delete(id, { $autoCancel: false });
+      const { error } = await supabase.from('expenses').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      if (error) throw error;
       toast.success('Đã xóa');
       fetchRecords();
     } catch (err) {
@@ -116,8 +114,7 @@ const ExpensePage = () => {
 
   return (
     <>
-      <Helmet><title>Kê khai chi phí - HR Portal</title></Helmet>
-      
+      <Helmet><title>Kê khai chi phí - Dr Tuấn Hùng</title></Helmet>
       <div className="min-h-screen bg-background pb-12">
         <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-4">
@@ -134,7 +131,6 @@ const ExpensePage = () => {
         </header>
 
         <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
-          {/* Summary Card */}
           <div className="bg-gradient-to-br from-destructive to-red-600 rounded-3xl p-8 text-white shadow-lg flex items-center justify-between">
             <div>
               <p className="opacity-90 font-medium mb-1">Tổng chi phí (Tháng này)</p>
@@ -161,23 +157,21 @@ const ExpensePage = () => {
                     <TableHead>Danh mục</TableHead>
                     <TableHead>Số tiền</TableHead>
                     <TableHead className="hidden md:table-cell">Mô tả</TableHead>
+                    <TableHead>Tạm ứng</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {records.map(record => (
                     <TableRow key={record.id}>
-                      <TableCell>{format(new Date(record.expense_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell><span className="bg-muted px-2 py-1 rounded-md text-xs font-medium">{record.category}</span></TableCell>
+                      <TableCell>{format(new Date(record.date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell><span className="bg-muted px-2 py-1 rounded-md text-xs font-medium">{CATEGORY_LABELS[record.category] || record.category}</span></TableCell>
                       <TableCell className="font-semibold">{formatCurrency(record.amount)}</TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground text-sm max-w-[200px] truncate">{record.description}</TableCell>
+                      <TableCell>{record.is_advance ? <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Tạm ứng</span> : '-'}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => openModal(record)}>
-                          <Pencil className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(record.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openModal(record)}><Pencil className="w-4 h-4 text-muted-foreground" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(record.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -202,10 +196,7 @@ const ExpensePage = () => {
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Văn phòng">Văn phòng</SelectItem>
-                    <SelectItem value="Vận chuyển">Vận chuyển</SelectItem>
-                    <SelectItem value="Ăn uống">Ăn uống</SelectItem>
-                    <SelectItem value="Khác">Khác</SelectItem>
+                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -216,6 +207,10 @@ const ExpensePage = () => {
               <div className="space-y-2">
                 <Label>Mô tả chi tiết</Label>
                 <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Nhập ghi chú..." />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="is_advance" checked={isAdvance} onChange={e => setIsAdvance(e.target.checked)} className="rounded" />
+                <Label htmlFor="is_advance">Đây là khoản tạm ứng</Label>
               </div>
             </div>
             <DialogFooter>

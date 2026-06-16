@@ -1,369 +1,468 @@
-
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
-import { useNavigate } from 'react-router-dom';
+import { supabase, supabaseNoSession } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { getUsers, saveUsers } from '@/utils/userStorage.js';
-import { formatVND } from '@/utils/currencyFormat.js';
-import { saveRecord, softDeleteRecord, mergeClinicUsersWithSupabase } from '@/services/dataService.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, UserCheck, UserMinus, UserX, Search, Plus, MoreVertical, ArrowLeft, Edit, Key, Lock, Unlock, Trash2, CheckCircle, KeyRound as UsersRound, Loader2, RefreshCw } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import { Plus, Search, UserCheck, Pencil, UserX } from 'lucide-react';
 
-import StaffFormModal from '@/components/StaffFormModal.jsx';
-import ResetPasswordModal from '@/components/ResetPasswordModal.jsx';
-import ConfirmActionModal from '@/components/ConfirmActionModal.jsx';
-import ResponsiveStaffCard from '@/components/ResponsiveStaffCard.jsx';
-import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storageStore.js';
+// Format số tiền VND có dấu chấm
+const fmtInput = (val) => {
+  const num = val.replace(/\D/g, '');
+  return num ? new Intl.NumberFormat('vi-VN').format(num) : '';
+};
+const parseInput = (val) => Number(val.replace(/\D/g, '')) || 0;
+
+const ROLES = [
+  { value: 'telesale',     label: 'Telesale' },
+  { value: 'sale_offline', label: 'Sale Offline' },
+  { value: 'cskh',         label: 'CSKH' },
+  { value: 'truc_page',    label: 'Trực Page' },
+  { value: 'media',        label: 'Media' },
+  { value: 'marketing',    label: 'Marketing' },
+  { value: 'dieu_duong',   label: 'Điều dưỡng' },
+  { value: 'accountant',   label: 'Kế toán' },
+  { value: 'shareholder',  label: 'Cổ đông' },
+  { value: 'admin',        label: 'Admin' },
+];
+
+const ROLE_LABELS = Object.fromEntries(ROLES.map(r => [r.value, r.label]));
+
+const ROLE_COLORS = {
+  admin:        'bg-red-100 text-red-700',
+  accountant:   'bg-blue-100 text-blue-700',
+  shareholder:  'bg-purple-100 text-purple-700',
+  telesale:     'bg-green-100 text-green-700',
+  sale_offline: 'bg-orange-100 text-orange-700',
+  cskh:         'bg-yellow-100 text-yellow-700',
+  truc_page:    'bg-pink-100 text-pink-700',
+  media:        'bg-cyan-100 text-cyan-700',
+  marketing:    'bg-indigo-100 text-indigo-700',
+  dieu_duong:   'bg-teal-100 text-teal-700',
+};
+
+const EMPTY_FORM = {
+  employee_id: '', password: '', full_name: '', role: 'telesale',
+  position: '', base_salary: '', allowance: '', phone: '',
+  employment_status: 'official', probation_started_at: '',
+};
 
 const StaffManagementPage = () => {
-  const { user: currentUser } = useAuth();
-  const navigate = useNavigate();
-  
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [deptFilter, setDeptFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const { profile: me } = useAuth();
+  const [staff, setStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [isResetPassModalOpen, setIsResetPassModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [confirmAction, setConfirmAction] = useState(null); 
-
-  // Khởi tạo và đồng bộ dữ liệu khi mount
-  useEffect(() => {
-    const initSync = async () => {
-      setIsSyncing(true);
-      const mergedUsers = await mergeClinicUsersWithSupabase();
-      setUsers(mergedUsers);
-      setIsSyncing(false);
-    };
-    initSync();
-  }, []);
-
-  // Lắng nghe sự kiện realtime từ Supabase
-  useEffect(() => {
-    const handleRealtimeUpdate = () => {
-      setUsers(getStorageItem('clinic_users', []));
-    };
-    
-    window.addEventListener('supabase-data-updated', handleRealtimeUpdate);
-    return () => {
-      window.removeEventListener('supabase-data-updated', handleRealtimeUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    let result = users;
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      result = result.filter(u => 
-        u.employeeId.toLowerCase().includes(lowerSearch) ||
-        u.fullName.toLowerCase().includes(lowerSearch) ||
-        (u.phone && u.phone.includes(lowerSearch))
-      );
-    }
-    if (roleFilter !== 'all') result = result.filter(u => u.role === roleFilter);
-    if (deptFilter !== 'all') result = result.filter(u => u.departmentPosition === deptFilter);
-    if (statusFilter !== 'all') result = result.filter(u => u.status === statusFilter);
-    setFilteredUsers(result);
-  }, [users, searchTerm, roleFilter, deptFilter, statusFilter]);
-
-  const totalStaff = users.length;
-  const activeStaff = users.filter(u => u.status === 'active').length;
-  const probationStaff = users.filter(u => u.probationStatus === true && u.status === 'active').length;
-  const inactiveStaff = users.filter(u => u.status === 'inactive').length;
-
-  const handleEdit = (user) => { setSelectedUser(user); setIsFormModalOpen(true); };
-  const handleResetPassword = (user) => { setSelectedUser(user); setIsResetPassModalOpen(true); };
-
-  const openConfirmModal = (type, user) => {
-    if (type === 'delete' && user.id === currentUser.id) {
-      toast.error('Không thể xóa tài khoản đang đăng nhập.'); return;
-    }
-    setConfirmAction({ type, user });
-    setIsConfirmModalOpen(true);
+  const loadStaff = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setStaff(data || []);
+    setLoading(false);
   };
 
-  // Xử lý sau khi Modal (Thêm/Sửa/Đổi mật khẩu) lưu thành công vào LocalStorage
-  const handleModalSaveSuccess = async () => {
-    const newLocalUsers = getUsers();
-    
-    // Tìm các user vừa được thêm hoặc sửa (có updatedAt khác với state hiện tại)
-    const changedUsers = newLocalUsers.filter(nlu => {
-      const oldU = users.find(u => u.id === nlu.id);
-      return !oldU || oldU.updatedAt !== nlu.updatedAt;
+  useEffect(() => { loadStaff(); }, []);
+
+  const filtered = staff.filter(s =>
+    s.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    s.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
+    s.phone?.includes(search)
+  );
+
+  const openCreate = () => {
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+    setModalOpen(true);
+  };
+
+  const openEdit = (s) => {
+    setEditTarget(s);
+    setForm({
+      employee_id: s.employee_id,
+      password: '',
+      full_name: s.full_name,
+      role: s.role,
+      position: s.position || '',
+      base_salary: s.base_salary || '',
+      allowance: s.allowance || '',
+      phone: s.phone || '',
+      employment_status: s.employment_status || 'official',
+      probation_started_at: s.probation_started_at || '',
     });
+    setModalOpen(true);
+  };
 
-    // Đồng bộ các user thay đổi lên Supabase
-    for (const cu of changedUsers) {
-      const res = await saveRecord('clinic_users', cu);
-      if (!res) {
-        toast.warning('Cảnh báo: Không đồng bộ Supabase, dữ liệu vẫn lưu trên máy');
+  const handleSave = async () => {
+    if (!form.employee_id || !form.full_name || !form.role) {
+      toast.error('Vui lòng điền đầy đủ ID, họ tên và vị trí');
+      return;
+    }
+    if (!editTarget && !form.password) {
+      toast.error('Vui lòng nhập mật khẩu');
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editTarget) {
+        const { error } = await supabase.from('profiles').update({
+          full_name: form.full_name,
+          role: form.role,
+          position: form.position,
+          base_salary: parseInput(form.base_salary),
+          allowance: parseInput(form.allowance),
+          phone: form.phone,
+          employment_status: form.employment_status,
+          probation_started_at: form.probation_started_at || null,
+        }).eq('id', editTarget.id);
+        if (error) throw error;
+        toast.success('Đã cập nhật nhân sự');
+      } else {
+        const email = `${form.employee_id.trim().toLowerCase()}@drtuanhung.internal`;
+        const { data: authData, error: authErr } = await supabaseNoSession.auth.signUp({
+          email,
+          password: form.password,
+          options: { data: { employee_id: form.employee_id.trim().toUpperCase() } },
+        });
+        if (authErr) throw authErr;
+        if (!authData.user) throw new Error('Không tạo được tài khoản');
+
+        const { error: profileErr } = await supabase.from('profiles').insert({
+          id: authData.user.id,
+          employee_id: form.employee_id.trim().toUpperCase(),
+          full_name: form.full_name,
+          role: form.role,
+          position: form.position,
+          base_salary: parseInput(form.base_salary),
+          allowance: parseInput(form.allowance),
+          phone: form.phone,
+          employment_status: form.employment_status,
+          probation_started_at: form.employment_status === 'probation'
+            ? (form.probation_started_at || new Date().toISOString().split('T')[0])
+            : null,
+          created_by: me?.id,
+        });
+        if (profileErr) throw profileErr;
+        toast.success('Đã tạo nhân sự mới');
       }
+      setModalOpen(false);
+      loadStaff();
+    } catch (err) {
+      toast.error(err.message || 'Có lỗi xảy ra');
+    } finally {
+      setSaving(false);
     }
-    
-    setUsers(newLocalUsers);
   };
 
-  // Xử lý các hành động trực tiếp (Khóa/Mở khóa/Xóa/Kết thúc thử việc)
-  const executeConfirmAction = async () => {
-    if (!confirmAction) return;
-    const { type, user } = confirmAction;
-    let updatedUsers = [...users];
-    let updatedUser = null;
-    const recordId = String(user.employeeId || user.id);
-
-    if (type === 'delete') {
-      updatedUsers = updatedUsers.filter(u => u.id !== user.id);
-      toast.success('Đã xóa nhân sự thành công');
-      
-      // Đồng bộ xóa lên Supabase
-      const res = await softDeleteRecord('clinic_users', recordId);
-      if (!res) toast.warning('Cảnh báo: Không đồng bộ Supabase, dữ liệu vẫn lưu trên máy');
-      
-    } else {
-      if (type === 'lock') {
-        updatedUser = { ...user, status: 'inactive', updatedAt: new Date().toISOString() };
-        toast.success('Đã khóa tài khoản');
-      } else if (type === 'unlock') {
-        updatedUser = { ...user, status: 'active', updatedAt: new Date().toISOString() };
-        toast.success('Đã mở khóa tài khoản');
-      } else if (type === 'endProbation') {
-        updatedUser = { ...user, probationStatus: false, updatedAt: new Date().toISOString() };
-        toast.success('Đã kết thúc thử việc');
-      }
-
-      if (updatedUser) {
-        updatedUsers = updatedUsers.map(u => u.id === user.id ? updatedUser : u);
-        
-        // Đồng bộ cập nhật lên Supabase
-        const res = await saveRecord('clinic_users', updatedUser);
-        if (!res) toast.warning('Cảnh báo: Không đồng bộ Supabase, dữ liệu vẫn lưu trên máy');
-      }
-    }
-
-    saveUsers(updatedUsers);
-    setUsers(updatedUsers);
-    setIsConfirmModalOpen(false);
+  const handleEndProbation = async (s) => {
+    const { error } = await supabase.from('profiles').update({
+      employment_status: 'official',
+      official_started_at: new Date().toISOString().split('T')[0],
+    }).eq('id', s.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${s.full_name} đã trở thành nhân sự chính thức`);
+    loadStaff();
   };
 
-  // Đồng bộ thủ công toàn bộ dữ liệu lên Supabase (Chỉ dành cho Admin)
-  const handleManualSync = async () => {
-    setIsSyncing(true);
-    const localUsers = getUsers();
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const u of localUsers) {
-      const res = await saveRecord('clinic_users', u);
-      if (res) successCount++;
-      else failCount++;
-    }
-
-    if (failCount === 0) {
-      toast.success(`Đã đồng bộ ${successCount} bản ghi thành công`);
-    } else {
-      toast.warning(`Đã đồng bộ ${successCount} thành công, ${failCount} thất bại`);
-    }
-    
-    setIsSyncing(false);
+  const handleToggleActive = async (s) => {
+    const { error } = await supabase.from('profiles').update({
+      is_active: !s.is_active,
+    }).eq('id', s.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(s.is_active ? 'Đã vô hiệu hóa tài khoản' : 'Đã kích hoạt tài khoản');
+    loadStaff();
   };
 
-  const getConfirmModalProps = () => {
-    if (!confirmAction) return {};
-    const { type } = confirmAction;
-    if (type === 'delete') return { title: 'Xóa nhân sự', description: 'Bạn có chắc muốn xóa nhân sự này không?', confirmText: 'Xóa', variant: 'destructive' };
-    if (type === 'lock') return { title: 'Khóa tài khoản', description: 'Bạn có chắc muốn khóa tài khoản nhân sự này không?', confirmText: 'Khóa', variant: 'destructive' };
-    if (type === 'unlock') return { title: 'Mở khóa tài khoản', description: 'Bạn có chắc muốn mở khóa tài khoản nhân sự này?', confirmText: 'Mở khóa', variant: 'default' };
-    if (type === 'endProbation') return { title: 'Kết thúc thử việc', description: 'Bạn có chắc muốn kết thúc thử việc cho nhân sự này không?', confirmText: 'Xác nhận', variant: 'default' };
-    return {};
-  };
+  const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
 
   return (
-    <>
-      <Helmet><title>Quản lý nhân sự - Dr Tuấn Hùng</title></Helmet>
-
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="bg-card border-b border-border px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-30 pt-safe">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin-dashboard')}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-lg md:text-xl font-bold">Quản lý nhân sự</h1>
-            {isSyncing && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin ml-2" />}
-          </div>
-          <div className="hidden md:block text-right">
-            <p className="text-sm font-medium">Xin chào, {currentUser?.fullName}</p>
-            <p className="text-xs text-muted-foreground">{currentUser?.role}</p>
-          </div>
-        </header>
-
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-safe-nav">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-            <Card className="shadow-sm border-none bg-blue-50 text-blue-800">
-              <CardContent className="p-4 md:p-6 flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs md:text-sm font-medium uppercase tracking-wider">Tổng nhân sự</p>
-                  <Users className="w-4 h-4 opacity-80" />
-                </div>
-                <p className="text-2xl md:text-3xl font-bold">{totalStaff}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border-none bg-emerald-50 text-emerald-800">
-              <CardContent className="p-4 md:p-6 flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs md:text-sm font-medium uppercase tracking-wider">Đang hoạt động</p>
-                  <UserCheck className="w-4 h-4 opacity-80" />
-                </div>
-                <p className="text-2xl md:text-3xl font-bold">{activeStaff}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border-none bg-amber-50 text-amber-800">
-              <CardContent className="p-4 md:p-6 flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs md:text-sm font-medium uppercase tracking-wider">Đang thử việc</p>
-                  <UserMinus className="w-4 h-4 opacity-80" />
-                </div>
-                <p className="text-2xl md:text-3xl font-bold">{probationStaff}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border-none bg-rose-50 text-rose-800">
-              <CardContent className="p-4 md:p-6 flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs md:text-sm font-medium uppercase tracking-wider">Đã khóa</p>
-                  <UserX className="w-4 h-4 opacity-80" />
-                </div>
-                <p className="text-2xl md:text-3xl font-bold">{inactiveStaff}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="form-mobile bg-card p-4 rounded-xl border border-border mb-6 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative w-full flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Tìm kiếm ID, Tên, SĐT..." className="pl-9 h-11" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="h-11 w-full md:w-40"><SelectValue placeholder="Vai trò" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả vai trò</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Nhân viên">Nhân viên</SelectItem>
-                  <SelectItem value="Kế toán">Kế toán</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-11 w-full md:w-40"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="active">Đang hoạt động</SelectItem>
-                  <SelectItem value="inactive">Đã khóa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              {currentUser?.role === 'Admin' && (
-                <Button 
-                  onClick={handleManualSync} 
-                  disabled={isSyncing}
-                  variant="outline" 
-                  className="h-11 flex-1 md:flex-none bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
-                >
-                  {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  <span className="hidden md:inline">Đồng bộ Supabase</span>
-                  <span className="md:hidden">Đồng bộ</span>
-                </Button>
-              )}
-              <Button onClick={() => { setSelectedUser(null); setIsFormModalOpen(true); }} className="h-11 flex-1 md:flex-none bg-primary">
-                <Plus className="w-4 h-4 mr-2" /> Thêm nhân sự
-              </Button>
-            </div>
-          </div>
-
-          <div className="hidden md:flex flex-col gap-4">
-            {filteredUsers.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl">Không tìm thấy nhân sự nào</div>
-            ) : (
-              filteredUsers.map((u) => (
-                <div key={u.id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 p-5 flex items-center justify-between transition-all duration-200 group">
-                  <div className="flex items-center gap-6 flex-1">
-                    <div className="w-12 h-12 rounded-full bg-[hsl(var(--mint-100))] text-[hsl(var(--mint-700))] flex items-center justify-center font-bold text-xl uppercase shrink-0">
-                      {u.fullName.charAt(0)}
-                    </div>
-                    <div className="w-[200px]">
-                      <h3 className="font-bold text-lg leading-tight truncate">{u.fullName}</h3>
-                      <p className="text-sm text-muted-foreground mt-0.5">{u.employeeId} • {u.phone || 'Chưa có SĐT'}</p>
-                    </div>
-                    <div className="w-[180px] flex flex-col items-start gap-1.5">
-                      <Badge variant="outline" className="font-medium bg-secondary/20">{u.role}</Badge>
-                      <span className="text-sm text-muted-foreground truncate w-full">{u.departmentPosition || 'Chưa cập nhật vị trí'}</span>
-                    </div>
-                    <div className="w-[180px] flex flex-col items-start gap-1 text-sm">
-                      <div className="flex justify-between w-full">
-                        <span className="text-muted-foreground">LCB:</span>
-                        <span className="font-medium">{formatVND(u.baseSalary)}</span>
-                      </div>
-                      <div className="flex justify-between w-full">
-                        <span className="text-muted-foreground">PC:</span>
-                        <span className="font-medium">{formatVND(u.allowance)}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 flex-1 pr-6">
-                      {u.status === 'active' ? <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-none border-none">Đang hoạt động</Badge> : <Badge variant="destructive" className="font-semibold shadow-none border-none">Đã khóa</Badge>}
-                      {u.status === 'active' && (
-                        u.probationStatus ? <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">Thử việc</span> : <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Chính thức</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="shrink-0 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10"><MoreVertical className="h-5 w-5" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => handleEdit(u)} className="py-2.5"><Edit className="mr-2 h-4 w-4" /> Sửa thông tin</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleResetPassword(u)} className="py-2.5"><Key className="mr-2 h-4 w-4" /> Đổi mật khẩu</DropdownMenuItem>
-                        {u.probationStatus && <DropdownMenuItem onClick={() => openConfirmModal('endProbation', u)} className="py-2.5"><CheckCircle className="mr-2 h-4 w-4" /> Kết thúc thử việc</DropdownMenuItem>}
-                        {u.status === 'active' ? <DropdownMenuItem onClick={() => openConfirmModal('lock', u)} className="text-amber-600 py-2.5"><Lock className="mr-2 h-4 w-4" /> Khóa tài khoản</DropdownMenuItem> : <DropdownMenuItem onClick={() => openConfirmModal('unlock', u)} className="text-emerald-600 py-2.5"><Unlock className="mr-2 h-4 w-4" /> Mở khóa tài khoản</DropdownMenuItem>}
-                        <DropdownMenuItem onClick={() => openConfirmModal('delete', u)} className="text-destructive py-2.5"><Trash2 className="mr-2 h-4 w-4" /> Xóa nhân sự</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="md:hidden space-y-3">
-            {filteredUsers.length === 0 ? (
-              <div className="empty-state-mobile">
-                <UsersRound className="w-10 h-10 mb-3 text-muted-foreground/30" />
-                <p>Không tìm thấy nhân sự nào</p>
-              </div>
-            ) : (
-              filteredUsers.map(u => (
-                <ResponsiveStaffCard key={u.id} u={u} onEdit={handleEdit} onResetPassword={handleResetPassword} openConfirmModal={openConfirmModal} />
-              ))
-            )}
-          </div>
-        </main>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Quản lý nhân sự</h2>
+          <p className="text-muted-foreground text-sm mt-0.5">{staff.length} nhân sự trong hệ thống</p>
+        </div>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="w-4 h-4" /> Thêm nhân sự
+        </Button>
       </div>
 
-      <StaffFormModal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} editingUser={selectedUser} onSaveSuccess={handleModalSaveSuccess} />
-      <ResetPasswordModal isOpen={isResetPassModalOpen} onClose={() => setIsResetPassModalOpen(false)} user={selectedUser} onPasswordReset={handleModalSaveSuccess} />
-      <ConfirmActionModal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} onConfirm={executeConfirmAction} {...getConfirmModalProps()} />
-    </>
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Tìm theo tên, ID, SĐT..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-40 text-muted-foreground">Đang tải...</div>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block border border-border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium">Nhân sự</th>
+                  <th className="text-left px-4 py-3 font-medium">Vị trí</th>
+                  <th className="text-left px-4 py-3 font-medium">Lương cơ bản</th>
+                  <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
+                  <th className="text-left px-4 py-3 font-medium">SĐT</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map(s => (
+                  <tr key={s.id} className={`bg-card hover:bg-muted/30 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-foreground">{s.full_name}</div>
+                      <div className="text-xs text-muted-foreground">{s.employee_id}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[s.role] || 'bg-gray-100 text-gray-700'}`}>
+                        {ROLE_LABELS[s.role] || s.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-foreground">
+                      <div>{fmt(s.base_salary)}</div>
+                      {s.allowance > 0 && <div className="text-xs text-muted-foreground">PC: {fmt(s.allowance)}</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {s.employment_status === 'probation' ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">Thử việc</Badge>
+                          <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleEndProbation(s)}>
+                            <UserCheck className="w-3 h-3 mr-1" /> Kết thúc TV
+                          </Button>
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-green-600 border-green-300">Chính thức</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{s.phone || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 justify-end">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(s)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleToggleActive(s)}>
+                          <UserX className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">Không tìm thấy nhân sự</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 && (
+              <div className="text-center py-10 text-muted-foreground">Không tìm thấy nhân sự</div>
+            )}
+            {filtered.map(s => (
+              <div key={s.id} className={`bg-card border border-border rounded-xl p-4 space-y-3 ${!s.is_active ? 'opacity-50' : ''}`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold text-foreground">{s.full_name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{s.employee_id} · {s.phone || 'Chưa có SĐT'}</div>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[s.role] || 'bg-gray-100 text-gray-700'}`}>
+                    {ROLE_LABELS[s.role] || s.role}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <div className="text-muted-foreground text-xs">Lương cơ bản</div>
+                    <div className="font-medium text-foreground">{fmt(s.base_salary)}</div>
+                  </div>
+                  <div>
+                    {s.employment_status === 'probation' ? (
+                      <Badge variant="outline" className="text-orange-600 border-orange-300">Thử việc (85%)</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-green-600 border-green-300">Chính thức</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-border">
+                  {s.employment_status === 'probation' && (
+                    <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => handleEndProbation(s)}>
+                      <UserCheck className="w-3 h-3 mr-1" /> Kết thúc thử việc
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => openEdit(s)}>
+                    <Pencil className="w-3 h-3 mr-1" /> Sửa
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive" onClick={() => handleToggleActive(s)}>
+                    <UserX className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editTarget ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">ID nhân sự *</label>
+                <Input
+                  placeholder="VD: NV001"
+                  value={form.employee_id}
+                  onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))}
+                  disabled={!!editTarget}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{editTarget ? 'Mật khẩu mới' : 'Mật khẩu *'}</label>
+                {editTarget && <p className="text-xs text-muted-foreground">Bỏ trống = giữ nguyên</p>}
+                <Input
+                  type="password"
+                  placeholder="Nhập mật khẩu"
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Họ và tên *</label>
+              <Input
+                placeholder="Nhập họ và tên"
+                value={form.full_name}
+                onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Vị trí chuyên môn *</label>
+                <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map(r => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Tên vị trí hiển thị</label>
+                <Input
+                  placeholder="VD: Trưởng nhóm Sale"
+                  value={form.position}
+                  onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Lương cơ bản (đ)</label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="VD: 10.000.000"
+                  value={fmtInput(form.base_salary)}
+                  onChange={e => setForm(f => ({ ...f, base_salary: e.target.value.replace(/\D/g, '') }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Phụ cấp (đ)</label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="VD: 500.000"
+                  value={fmtInput(form.allowance)}
+                  onChange={e => setForm(f => ({ ...f, allowance: e.target.value.replace(/\D/g, '') }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Số điện thoại</label>
+              <Input
+                placeholder="VD: 0901234567"
+                value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Trạng thái hợp đồng</label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, employment_status: 'official' }))}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    form.employment_status === 'official'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/50'
+                  }`}
+                >
+                  Chính thức (100% lương)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, employment_status: 'probation' }))}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    form.employment_status === 'probation'
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'border-border text-muted-foreground hover:border-orange-300'
+                  }`}
+                >
+                  Thử việc (85% lương)
+                </button>
+              </div>
+            </div>
+
+            {form.employment_status === 'probation' && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Ngày bắt đầu thử việc</label>
+                <Input
+                  type="date"
+                  value={form.probation_started_at}
+                  onChange={e => setForm(f => ({ ...f, probation_started_at: e.target.value }))}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>Hủy</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Đang lưu...' : (editTarget ? 'Cập nhật' : 'Tạo nhân sự')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

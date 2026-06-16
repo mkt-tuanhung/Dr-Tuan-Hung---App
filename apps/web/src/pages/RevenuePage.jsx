@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import { supabase } from '@/lib/supabaseClient.js';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,30 +15,33 @@ import { toast } from 'sonner';
 import { ArrowLeft, Loader2, TrendingUp, Plus, Trash2, Pencil } from 'lucide-react';
 
 const RevenuePage = () => {
-  const { currentStaff } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
-  
+
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  
+
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [category, setCategory] = useState('Bán hàng');
+  const [category, setCategory] = useState('Dich_vu');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
   const fetchRecords = async () => {
     try {
       const today = new Date();
-      const res = await pb.collection('revenue').getFullList({
-        filter: `staff_id = "${currentStaff.id}" && revenue_date >= "${format(startOfMonth(today), 'yyyy-MM-dd')}"`,
-        sort: '-revenue_date',
-        $autoCancel: false
-      });
-      setRecords(res);
+      const { data, error } = await supabase
+        .from('customer_appointments')
+        .select('*')
+        .or(`telesale_id.eq.${profile.id},sale_offline_id.eq.${profile.id}`)
+        .gte('appointment_date', format(startOfMonth(today), 'yyyy-MM-dd'))
+        .lte('appointment_date', format(endOfMonth(today), 'yyyy-MM-dd'))
+        .in('status', ['coc', 'phau_thuat'])
+        .order('appointment_date', { ascending: false });
+      if (error) throw error;
+      setRecords(data || []);
     } catch (err) {
       toast.error('Lỗi tải dữ liệu doanh thu');
     } finally {
@@ -47,77 +49,17 @@ const RevenuePage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchRecords();
-  }, []);
+  useEffect(() => { fetchRecords(); }, []);
 
-  const totalAmount = useMemo(() => records.reduce((sum, r) => sum + r.amount, 0), [records]);
+  const totalRevenue = useMemo(() => records.reduce((sum, r) => sum + Number(r.revenue || 0), 0), [records]);
   const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
-  const openModal = (record = null) => {
-    if (record) {
-      setEditingId(record.id);
-      setDate(record.revenue_date.split(' ')[0]);
-      setCategory(record.category);
-      setAmount(record.amount.toString());
-      setDescription(record.description || '');
-    } else {
-      setEditingId(null);
-      setDate(format(new Date(), 'yyyy-MM-dd'));
-      setCategory('Bán hàng');
-      setAmount('');
-      setDescription('');
-    }
-    setModalOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!date || !category || !amount) {
-      toast.error('Vui lòng điền đủ thông tin');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const payload = {
-        staff_id: currentStaff.id,
-        revenue_date: date + " 00:00:00.000Z",
-        category,
-        amount: Number(amount),
-        description
-      };
-      
-      if (editingId) {
-        await pb.collection('revenue').update(editingId, payload, { $autoCancel: false });
-        toast.success('Cập nhật thành công');
-      } else {
-        await pb.collection('revenue').create(payload, { $autoCancel: false });
-        toast.success('Thêm doanh thu thành công');
-      }
-      
-      setModalOpen(false);
-      fetchRecords();
-    } catch (err) {
-      toast.error('Lỗi lưu doanh thu');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Xóa khoản doanh thu này?')) return;
-    try {
-      await pb.collection('revenue').delete(id, { $autoCancel: false });
-      toast.success('Đã xóa');
-      fetchRecords();
-    } catch (err) {
-      toast.error('Lỗi khi xóa');
-    }
-  };
+  const STATUS_LABELS = { coc: 'Cọc', phau_thuat: 'Phẫu thuật', bong: 'Bong', scheduled: 'Hẹn' };
+  const STATUS_COLORS = { coc: 'bg-blue-100 text-blue-700', phau_thuat: 'bg-green-100 text-green-700', bong: 'bg-red-100 text-red-700' };
 
   return (
     <>
-      <Helmet><title>Doanh thu - HR Portal</title></Helmet>
-      
+      <Helmet><title>Doanh thu - Dr Tuấn Hùng</title></Helmet>
       <div className="min-h-screen bg-background pb-12">
         <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-4">
@@ -125,19 +67,17 @@ const RevenuePage = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="font-bold text-lg flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-amber-500" /> Quản lý doanh thu
+              <TrendingUp className="w-5 h-5 text-amber-500" /> Doanh thu của tôi
             </h1>
           </div>
-          <Button onClick={() => openModal()} className="bg-amber-500 hover:bg-amber-600 text-white">
-            <Plus className="w-4 h-4 mr-2" /> Ghi nhận mới
-          </Button>
         </header>
 
         <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
           <div className="bg-gradient-to-br from-amber-400 to-amber-600 rounded-3xl p-8 text-white shadow-lg flex items-center justify-between">
             <div>
               <p className="opacity-90 font-medium mb-1">Tổng doanh thu (Tháng này)</p>
-              <h2 className="text-4xl font-bold">{formatCurrency(totalAmount)}</h2>
+              <h2 className="text-4xl font-bold">{formatCurrency(totalRevenue)}</h2>
+              <p className="opacity-80 text-sm mt-1">{records.length} giao dịch</p>
             </div>
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
               <TrendingUp className="w-8 h-8 text-white" />
@@ -150,34 +90,33 @@ const RevenuePage = () => {
             ) : records.length === 0 ? (
               <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
                 <TrendingUp className="w-12 h-12 mb-4 opacity-20" />
-                <p>Chưa có khoản doanh thu nào</p>
+                <p>Chưa có doanh thu tháng này</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Ngày</TableHead>
-                    <TableHead>Danh mục</TableHead>
-                    <TableHead>Số tiền</TableHead>
-                    <TableHead className="hidden md:table-cell">Mô tả</TableHead>
-                    <TableHead className="text-right">Thao tác</TableHead>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Doanh thu</TableHead>
+                    <TableHead className="hidden md:table-cell">Upsale</TableHead>
+                    <TableHead className="hidden md:table-cell">Dịch vụ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {records.map(record => (
                     <TableRow key={record.id}>
-                      <TableCell>{format(new Date(record.revenue_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell><span className="bg-muted px-2 py-1 rounded-md text-xs font-medium">{record.category}</span></TableCell>
-                      <TableCell className="font-semibold text-emerald-600 dark:text-emerald-400">+{formatCurrency(record.amount)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm max-w-[200px] truncate">{record.description}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => openModal(record)}>
-                          <Pencil className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(record.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                      <TableCell>{format(new Date(record.appointment_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell className="font-medium">{record.customer_name}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-md text-xs font-medium ${STATUS_COLORS[record.status] || 'bg-muted'}`}>
+                          {STATUS_LABELS[record.status] || record.status}
+                        </span>
                       </TableCell>
+                      <TableCell className="font-semibold text-emerald-600">{formatCurrency(record.revenue)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(record.upsale_revenue)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm truncate max-w-[150px]">{record.service}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -185,45 +124,6 @@ const RevenuePage = () => {
             )}
           </div>
         </main>
-
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'Cập nhật doanh thu' : 'Ghi nhận doanh thu'}</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label>Ngày</Label>
-                <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Danh mục</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Bán hàng">Bán hàng</SelectItem>
-                    <SelectItem value="Dịch vụ">Dịch vụ</SelectItem>
-                    <SelectItem value="Khác">Khác</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Số tiền (VNĐ)</Label>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="VD: 1500000" />
-              </div>
-              <div className="space-y-2">
-                <Label>Mô tả chi tiết</Label>
-                <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Nhập ghi chú..." />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setModalOpen(false)}>Hủy</Button>
-              <Button onClick={handleSubmit} disabled={submitting} className="bg-amber-500 hover:bg-amber-600 text-white">
-                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Lưu lại
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </>
   );
