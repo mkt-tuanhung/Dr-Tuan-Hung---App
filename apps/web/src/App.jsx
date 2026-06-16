@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 
 import LoginPage from '@/pages/LoginPage.jsx';
 import AdminDashboard from '@/pages/AdminDashboard.jsx';
+import StaffDashboard from '@/pages/StaffDashboard.jsx';
 
 function App() {
   return (
@@ -19,6 +20,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/staff-dashboard"
+            element={
+              <ProtectedRoute>
+                <StaffDashboard />
               </ProtectedRoute>
             }
           />
