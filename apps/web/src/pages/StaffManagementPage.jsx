@@ -398,6 +398,8 @@ const StaffManagementPage = () => {
               </div>
               <p className="text-xs text-slate-400">Ảnh đại diện (JPG, PNG, tối đa 2MB)</p>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">ID nhân sự *</label>
                 <input
