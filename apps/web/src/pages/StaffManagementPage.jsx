@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, supabaseNoSession } from '@/lib/supabaseClient';
+import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +64,8 @@ const StaffManagementPage = () => {
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
 
   const loadStaff = async () => {
     setLoading(true);
@@ -85,6 +88,8 @@ const StaffManagementPage = () => {
   const openCreate = () => {
     setEditTarget(null);
     setForm(EMPTY_FORM);
+    setAvatarFile(null);
+    setAvatarPreview(null);
     setModalOpen(true);
   };
 
@@ -102,6 +107,8 @@ const StaffManagementPage = () => {
       employment_status: s.employment_status || 'official',
       probation_started_at: s.probation_started_at || '',
     });
+    setAvatarFile(null);
+    setAvatarPreview(s.avatar_url || null);
     setModalOpen(true);
   };
 
@@ -116,6 +123,11 @@ const StaffManagementPage = () => {
     }
     setSaving(true);
     try {
+      let avatar_url = editTarget?.avatar_url || null;
+      if (avatarFile) {
+        avatar_url = await uploadToR2(avatarFile, 'avatars');
+      }
+
       if (editTarget) {
         const { error } = await supabase.from('profiles').update({
           full_name: form.full_name,
@@ -126,6 +138,7 @@ const StaffManagementPage = () => {
           phone: form.phone,
           employment_status: form.employment_status,
           probation_started_at: form.probation_started_at || null,
+          avatar_url,
         }).eq('id', editTarget.id);
         if (error) throw error;
         toast.success('Đã cập nhật nhân sự');
@@ -153,6 +166,7 @@ const StaffManagementPage = () => {
             ? (form.probation_started_at || new Date().toISOString().split('T')[0])
             : null,
           created_by: me?.id,
+          avatar_url,
         });
         if (profileErr) throw profileErr;
         toast.success('Đã tạo nhân sự mới');
@@ -235,8 +249,19 @@ const StaffManagementPage = () => {
                 {filtered.map(s => (
                   <tr key={s.id} className={`hover:bg-emerald-50/40 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800">{s.full_name}</div>
-                      <div className="text-xs text-slate-400">{s.employee_id}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                          {s.avatar_url ? (
+                            <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-500">{s.full_name?.charAt(0)}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-800">{s.full_name}</div>
+                          <div className="text-xs text-slate-400">{s.employee_id}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[s.role] || 'bg-gray-100 text-gray-700'}`}>
@@ -287,9 +312,18 @@ const StaffManagementPage = () => {
             {filtered.map(s => (
               <div key={s.id} className={`bg-white border border-emerald-100 rounded-2xl p-4 space-y-3 shadow-sm ${!s.is_active ? 'opacity-50' : ''}`}>
                 <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-semibold text-slate-800">{s.full_name}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{s.employee_id} · {s.phone || 'Chưa có SĐT'}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                      {s.avatar_url ? (
+                        <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-bold text-emerald-500">{s.full_name?.charAt(0)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800">{s.full_name}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{s.employee_id} · {s.phone || 'Chưa có SĐT'}</div>
+                    </div>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[s.role] || 'bg-gray-100 text-gray-700'}`}>
                     {ROLE_LABELS[s.role] || s.role}
@@ -332,7 +366,38 @@ const StaffManagementPage = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
+            {/* Avatar upload */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-bold text-emerald-400">
+                      {form.full_name?.charAt(0)?.toUpperCase() || '?'}
+                    </span>
+                  )}
+                </div>
+                <label className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center cursor-pointer hover:bg-emerald-600 transition-colors">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setAvatarFile(file);
+                        setAvatarPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-slate-400">Ảnh đại diện (JPG, PNG, tối đa 2MB)</p>
+            </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">ID nhân sự *</label>
                 <input
