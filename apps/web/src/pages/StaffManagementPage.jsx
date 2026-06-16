@@ -16,10 +16,10 @@ import { Plus, Search, UserCheck, Pencil, UserX } from 'lucide-react';
 
 // Format số tiền VND có dấu chấm
 const fmtInput = (val) => {
-  const num = val.replace(/\D/g, '');
+  const num = String(val || '').replace(/\D/g, '');
   return num ? new Intl.NumberFormat('vi-VN').format(num) : '';
 };
-const parseInput = (val) => Number(val.replace(/\D/g, '')) || 0;
+const parseInput = (val) => Number(String(val || '').replace(/\D/g, '')) || 0;
 
 const ROLES = [
   { value: 'telesale',     label: 'Telesale' },
