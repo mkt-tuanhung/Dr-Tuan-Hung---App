@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { supabase } from '@/lib/supabaseClient';
 import StaffManagementPage from '@/pages/StaffManagementPage.jsx';
+import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -207,6 +208,7 @@ const AdminDashboard = () => {
     switch (activeTab) {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
       case 'staff': return <StaffManagementPage />;
+      case 'attendance': return <AttendanceManagementPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
