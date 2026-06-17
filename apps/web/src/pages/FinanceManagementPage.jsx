@@ -304,8 +304,8 @@ const FinanceManagementPage = () => {
             stats={stats}
             month={6}
             onViewDetail={() => {
-              toast.info('Chức năng xem chi tiết Ads sẽ sớm được cập nhật');
-            }}
+                window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'ads_report', bubbles: true }));
+              }}
           />
         )}
 
