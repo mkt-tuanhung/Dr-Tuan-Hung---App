@@ -108,6 +108,7 @@ const HauPhauPage = () => {
          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
             Không có khách hàng hậu phẫu nào trong mục này
          </div>
+      ) : (
         <div className="space-y-6">
           {Object.entries(groupedCustomers).map(([date, apps]) => (
             <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
