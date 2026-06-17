@@ -11,10 +11,12 @@ import {
 } from 'lucide-react';
 
 const CATEGORIES = {
-  'MKT': 'Marketing',
-  'Vat_tu': 'Vật tư y tế',
-  'Van_phong': 'Hành chính VP',
-  'Nhan_cong': 'Nhân công',
+  'Vat_tu': 'Mua vật tư/Trang thiết bị',
+  'Van_phong': 'Văn phòng phẩm',
+  'Cong_tac': 'Chi phí công tác',
+  'Tiep_khach': 'Tiếp khách',
+  'MKT': 'Marketing/Quảng cáo',
+  'Tho_cung': 'Đồ thờ/cúng',
   'Khac': 'Khác'
 };
 
@@ -51,7 +53,7 @@ export default function AdvanceExpensePage() {
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    staff_id: '', category: 'Van_phong', amount: '', description: '',
+    staff_id: '', category: 'Vat_tu', amount: '', description: '',
     provider: '', method: 'transfer', proof: ''
   });
 
@@ -426,8 +428,8 @@ export default function AdvanceExpensePage() {
         )}
 
         {isAdminOrAccountant && activeTab === 'stats' && (
-          <div className="p-6 bg-white grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="border rounded-2xl p-6">
+          <div className="p-6 bg-white grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="border rounded-2xl p-6 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-6 text-center">Tỷ trọng chi tiêu theo danh mục</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -445,6 +447,30 @@ export default function AdvanceExpensePage() {
                     </Pie>
                     <RechartsTooltip formatter={(val) => fmt(val)} />
                   </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="border rounded-2xl p-6 shadow-sm">
+              <h3 className="font-bold text-slate-800 mb-6 text-center">Thống kê chi tiêu theo nhân sự</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={(() => {
+                    const staffMap = {};
+                    data.forEach(d => {
+                      if (d.status === 'approved' || d.status === 'paid') {
+                        if (!staffMap[d.staff_id]) staffMap[d.staff_id] = { name: d.profiles?.full_name?.split(' ').pop() || 'Khác', value: 0 };
+                        staffMap[d.staff_id].value += Number(d.amount);
+                      }
+                    });
+                    return Object.values(staffMap).sort((a,b) => b.value - a.value);
+                  })()} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#f1f5f9' }} />
+                    <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
