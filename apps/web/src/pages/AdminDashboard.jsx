@@ -6,6 +6,7 @@ import StaffManagementPage from '@/pages/StaffManagementPage.jsx';
 import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import LeaveManagementPage from '@/pages/LeaveManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
+import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -230,6 +231,7 @@ const AdminDashboard = () => {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
       case 'staff': return <StaffManagementPage />;
       case 'attendance': return <AttendanceManagementPage />;
+      case 'appointments': return <AppointmentManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }

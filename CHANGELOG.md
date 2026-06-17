@@ -11,5 +11,11 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 ## [v1.0.2] - Sửa lỗi hiển thị Đơn xin phép
 - **Fix:** Đơn xin phép đang chờ duyệt (của tháng khác) không hiển thị trong danh sách của tháng hiện tại, dẫn đến sai lệch số lượng đếm trên Menu. Đã sửa để tất cả đơn chờ duyệt luôn luôn hiển thị để Admin không bỏ sót.
 
+## [v1.1.0] - Xây dựng Module Quản lý Lịch hẹn (Appointments)
+- **Thiết kế** giao diện Kanban (Kéo-Thả) 4 trạng thái cho Lịch hẹn chính: Lịch mới, Khách cọc, Đã phẫu thuật, Đã bong.
+- **Thêm** danh sách "Lịch tái khám" phía dưới bảng Kanban giúp chăm sóc khách cũ nhanh chóng.
+- **Tích hợp** Modal tạo lịch hẹn với 2 tùy chọn phân chia rõ ràng: Lịch hẹn mới và Lịch tái khám.
+- **Cập nhật** AdminDashboard để kết nối menu Lịch hẹn.
+
 ## [v1.0.3] - Sửa lỗi cú pháp PostgREST
 - **Fix:** Thay đổi logic fetch dữ liệu để tránh lỗi cú pháp `.or()` làm Supabase trả về rỗng, gây ra hiện tượng không hiển thị được đơn xin phép.
