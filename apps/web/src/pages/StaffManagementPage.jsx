@@ -55,7 +55,7 @@ const EMPTY_FORM = {
   employment_status: 'official', probation_started_at: '',
 };
 
-const StaffManagementPage = () => {
+const StaffManagementPage = ({ isNested = false }) => {
   const { profile: me } = useAuth();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -204,10 +204,12 @@ const StaffManagementPage = () => {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Quản lý nhân sự</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{staff.length} nhân sự trong hệ thống</p>
-        </div>
+        {!isNested && (
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Quản lý nhân sự</h2>
+            <p className="text-slate-400 text-sm mt-0.5">{staff.length} nhân sự trong hệ thống</p>
+          </div>
+        )}
         <button
           onClick={openCreate}
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-emerald-200 hover:from-emerald-600 hover:to-teal-600 transition-all"

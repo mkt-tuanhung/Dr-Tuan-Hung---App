@@ -15,6 +15,7 @@ import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
+import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -25,8 +26,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 
 const MENU = [
   { id: 'overview',      label: 'Tổng quan',        shortLabel: 'Tổng quan',  icon: LayoutDashboard },
-  { id: 'staff',         label: 'Nhân sự',           shortLabel: 'Nhân sự',    icon: Users },
-  { id: 'attendance',    label: 'Chấm công',         shortLabel: 'Chấm công', icon: CalendarCheck },
+  { id: 'hr',            label: 'Quản lý Nhân sự',  shortLabel: 'Nhân sự',    icon: Users },
   { id: 'appointments',  label: 'Lịch hẹn',          shortLabel: 'Lịch hẹn',  icon: CalendarDays },
   { id: 'khach_coc',     label: 'Khách Cọc',         shortLabel: 'Khách Cọc', icon: ClipboardList },
   { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', shortLabel: 'Phẫu thuật', icon: Activity },
@@ -46,7 +46,7 @@ const MENU = [
   { id: 'permissions',   label: 'Phân quyền',        shortLabel: 'Phân quyền',icon: ShieldCheck },
 ];
 
-const BOTTOM_NAV = ['overview', 'staff', 'attendance', 'appointments', 'kpi'];
+const BOTTOM_NAV = ['overview', 'hr', 'appointments', 'kpi'];
 
 // Mock chart data - sẽ thay bằng Supabase sau
 const MOCK_REVENUE = [
@@ -251,8 +251,7 @@ const AdminDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
-      case 'staff': return <StaffManagementPage />;
-      case 'attendance': return <AttendanceManagementPage />;
+      case 'hr': return <HRManagementPage />;
       case 'appointments': return <AppointmentManagementPage />;
       case 'khach_coc': return <KhachCocPage />;
       case 'khach_phau_thuat': return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
