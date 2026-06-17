@@ -27,3 +27,12 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 
 ## [v1.2.1] - Sửa lỗi Embed Data Supabase
 - **Fix:** Xử lý triệt để lỗi `Could not embed because more than one relationship was found` bằng cách bóc tách truy vấn và tự động map dữ liệu Profile thủ công trong LeaveManagementPage.
+
+## [v1.3.0] - Giao diện Lịch hẹn hoàn toàn mới & Chuẩn UX/UI
+- **Database:** Thêm các trường dữ liệu quản lý ca hẹn sâu hơn (Giờ hẹn, Test_status, Telesale/Sale_id, Link social...)
+- **Trang Lịch Hẹn:** 
+  - Hiển thị toàn bộ dữ liệu lịch sử (Kể cả Cọc/Bong/Phẫu thuật) thay vì ẩn đi.
+  - Gom nhóm danh sách lịch hẹn theo từng thẻ Ngày (Group by Date).
+  - Bổ sung 6 module thống kê bằng số trên đầu trang.
+  - Bổ sung biểu đồ tròn tỷ lệ trạng thái và biểu đồ đường biến động theo thời gian.
+- **Form Nhập Liệu:** Nâng cấp form 'Thêm Lịch' và form 'Đánh Giá' thành Modal chi tiết đa trường dữ liệu theo đúng thiết kế.
