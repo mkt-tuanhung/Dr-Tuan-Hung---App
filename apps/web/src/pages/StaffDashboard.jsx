@@ -3,11 +3,17 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
-  Menu, X, User, LayoutDashboard, Bell, ChevronRight
+  Menu, X, User, LayoutDashboard, Bell, ChevronRight,
+  CalendarDays, ClipboardList, Activity, UserX
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
+import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
+import KhachCocPage from '@/pages/KhachCocPage.jsx';
+import KhachBongPage from '@/pages/KhachBongPage.jsx';
+import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
+import HauPhauPage from '@/pages/HauPhauPage.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -15,16 +21,24 @@ const ROLE_LABELS = {
   dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin',
 };
 
-const MENU = [
-  { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard },
-  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck },
-  { id: 'finance',    label: 'Doanh thu',       icon: Banknote },
-  { id: 'kpi',        label: 'KPI của tôi',     icon: Target },
-  { id: 'payroll',    label: 'Bảng lương',      icon: Wallet },
-  { id: 'schedule',   label: 'Lịch làm việc',  icon: Clock },
-];
+const FULL_MENU = [
+  { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'] },
+  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'] },
+  { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'] },
+  { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
 
-const BOTTOM_NAV = ['overview', 'attendance', 'kpi', 'payroll'];
+  // MKT / Finance
+  { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder'] },
+
+  // CRM
+  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['telesale', 'sale_offline', 'cskh', 'truc_page'] },
+  { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'cskh'] },
+  { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
+
+  // Phẫu thuật
+  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity, roles: ['dieu_duong'] },
+  { id: 'hau_phau',      label: 'Hậu phẫu',      icon: ClipboardList, roles: ['dieu_duong'] },
+];
 
 const Overview = ({ profile }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
@@ -69,7 +83,7 @@ const Overview = ({ profile }) => {
         <div className="px-4 py-3 border-b border-slate-50">
           <h3 className="text-sm font-semibold text-slate-700">Tính năng</h3>
         </div>
-        {MENU.filter(m => m.id !== 'overview').map((m, i) => (
+        {FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role)).filter(m => m.id !== 'overview').map((m, i) => (
           <button key={i} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
               <m.icon className="w-4 h-4 text-emerald-600" />
@@ -78,8 +92,7 @@ const Overview = ({ profile }) => {
               <div className="text-sm font-medium text-slate-700">{m.label}</div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Sắp ra mắt</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
           </button>
         ))}
@@ -111,15 +124,23 @@ const StaffDashboard = () => {
     navigate('/', { replace: true });
   };
 
+  const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role));
+
   const renderContent = () => {
     if (activeTab === 'overview') return <Overview profile={profile} />;
     if (activeTab === 'attendance') return <AttendancePage />;
     if (activeTab === 'kpi') return <KPIPage />;
     if (activeTab === 'finance') return <FinanceManagementPage />;
-    return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
+    if (activeTab === 'appointments') return <AppointmentManagementPage />;
+    if (activeTab === 'khach_coc') return <KhachCocPage />;
+    if (activeTab === 'khach_bong') return <KhachBongPage />;
+    if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage />;
+    if (activeTab === 'hau_phau') return <HauPhauPage />;
+    if (activeTab === 'advances') return <ComingSoon label="Tạm ứng chi" />;
+    return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 
-  const activeMenu = MENU.find(m => m.id === activeTab);
+  const activeMenu = allowedMenu.find(m => m.id === activeTab);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -154,7 +175,7 @@ const StaffDashboard = () => {
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5">
-          {MENU.map(item => {
+          {allowedMenu.map(item => {
             const Icon = item.icon;
             const active = activeTab === item.id;
             return (
@@ -233,7 +254,7 @@ const StaffDashboard = () => {
       {/* Bottom nav mobile */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-emerald-100 shadow-lg">
         <div className="flex items-stretch">
-          {MENU.filter(m => BOTTOM_NAV.includes(m.id)).map(item => {
+          {allowedMenu.slice(0, 4).map(item => {
             const Icon = item.icon;
             const active = activeTab === item.id;
             return (
