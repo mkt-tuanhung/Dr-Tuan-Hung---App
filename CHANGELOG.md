@@ -19,3 +19,8 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 
 ## [v1.0.3] - Sửa lỗi cú pháp PostgREST
 - **Fix:** Thay đổi logic fetch dữ liệu để tránh lỗi cú pháp `.or()` làm Supabase trả về rỗng, gây ra hiện tượng không hiển thị được đơn xin phép.
+
+## [v1.2.0] - Cấu trúc lại luồng Khách hàng và Lịch hẹn
+- **Đổi mới:** Thay thế giao diện Kanban bằng giao diện Danh sách tập trung tại Lịch hẹn.
+- **Tính năng 'Đánh giá':** Mở form chuyên sâu tùy theo kết quả (Cọc, Phẫu thuật, Bong).
+- **Bổ sung Module:** Thêm 3 Menu độc lập (Khách Cọc, Khách Phẫu Thuật, Khách Bong) để phân luồng và chăm sóc tự động sau khi đánh giá từ Lịch hẹn.
