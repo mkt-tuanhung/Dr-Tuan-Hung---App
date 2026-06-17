@@ -202,6 +202,15 @@ const AttendancePage = () => {
     return history.find(a => a.date === dateStr);
   };
 
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const handleDayClick = (d) => {
+    const date = new Date(year, month-1, d);
+    const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (isPast) return; // nhân sự không được sửa quá khứ
+    setSelectedDay(d);
+  };
+
   const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -298,49 +307,136 @@ const AttendancePage = () => {
           </div>
         </div>
         <div className="p-3">
-          {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAYS_SHORT.map(d => (
               <div key={d} className={`text-center text-[10px] font-medium py-1 ${d === 'CN' || d === 'T7' ? 'text-slate-300' : 'text-slate-400'}`}>{d}</div>
             ))}
           </div>
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5">
             {calendarDays.map((d, i) => {
               if (!d) return <div key={`empty-${i}`} />;
               const rec = getAttendanceForDay(d);
               const date = new Date(year, month-1, d);
               const isToday = date.toDateString() === today.toDateString();
               const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+              const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
               const isFuture = date > today;
+              const isSelected = selectedDay === d;
               return (
-                <div key={d} className={`aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-medium relative
-                  ${isToday ? 'ring-2 ring-emerald-400 bg-emerald-50' : ''}
-                  ${isWeekend ? 'bg-slate-50' : ''}
-                  ${isFuture ? 'opacity-40' : ''}
-                `}>
-                  <span className={`text-[11px] font-semibold ${isToday ? 'text-emerald-600' : isWeekend ? 'text-slate-300' : 'text-slate-600'}`}>{d}</span>
-                  {rec && (
-                    <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${STATUS_CONFIG[rec.status]?.dot || 'bg-slate-300'}`} />
-                  )}
-                  {!rec && !isFuture && !isWeekend && (
-                    <div className="w-1.5 h-1.5 rounded-full mt-0.5 bg-slate-200" />
-                  )}
-                </div>
+                <button
+                  key={d}
+                  onClick={() => !isPast && handleDayClick(d)}
+                  className={`relative flex flex-col items-center justify-center py-1.5 rounded-lg text-xs transition-all
+                    ${isSelected ? 'ring-2 ring-emerald-400 bg-emerald-50' : ''}
+                    ${isToday && !isSelected ? 'bg-emerald-50 ring-1 ring-emerald-300' : ''}
+                    ${isWeekend ? 'opacity-40' : ''}
+                    ${isPast ? 'cursor-default' : 'cursor-pointer hover:bg-emerald-50/60'}
+                  `}
+                >
+                  <span className={`text-[11px] font-semibold leading-none
+                    ${isToday ? 'text-emerald-600' : isWeekend ? 'text-slate-300' : 'text-slate-600'}
+                  `}>{d}</span>
+                  <div className="mt-0.5 h-1.5 flex items-center justify-center">
+                    {rec ? (
+                      <div className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[rec.status]?.dot || 'bg-slate-300'}`} />
+                    ) : !isFuture && !isWeekend ? (
+                      <div className="w-1 h-1 rounded-full bg-slate-200" />
+                    ) : null}
+                  </div>
+                </button>
               );
             })}
           </div>
-          {/* Legend */}
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-emerald-50">
+          <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-emerald-50">
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <div key={k} className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${v.dot}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${v.dot}`} />
                 <span className="text-[10px] text-slate-400">{v.label}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Day action modal */}
+      {selectedDay && (() => {
+        const selDate = `${year}-${String(month).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`;
+        const selRec = getAttendanceForDay(selectedDay);
+        const isToday = new Date(year, month-1, selectedDay).toDateString() === today.toDateString();
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-xl overflow-hidden">
+              <div className="px-5 pt-5 pb-3 border-b border-slate-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-slate-800">
+                      {new Date(year, month-1, selectedDay).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </h3>
+                    {selRec && (
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${STATUS_CONFIG[selRec.status]?.color}`}>
+                        {STATUS_CONFIG[selRec.status]?.label}
+                        {selRec.check_in && ` · ${fmtTime(selRec.check_in)}${selRec.check_out ? ' → '+fmtTime(selRec.check_out) : ''}`}
+                      </span>
+                    )}
+                  </div>
+                  <button onClick={() => setSelectedDay(null)} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-3 space-y-1.5">
+                {isToday && !selRec && (
+                  <button onClick={() => { setSelectedDay(null); handleCheckIn(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-50 transition-colors text-left">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                      <LogIn className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">Chấm công vào</div>
+                      <div className="text-xs text-slate-400">Ghi nhận GPS + IP tự động</div>
+                    </div>
+                  </button>
+                )}
+                {isToday && selRec && !selRec.check_out && (
+                  <button onClick={() => { setSelectedDay(null); handleCheckOut(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-teal-50 transition-colors text-left">
+                    <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center shrink-0">
+                      <LogOut className="w-4 h-4 text-teal-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">Chấm công ra</div>
+                      <div className="text-xs text-slate-400">Vào lúc {fmtTime(selRec.check_in)}</div>
+                    </div>
+                  </button>
+                )}
+                {[
+                  { type: 'leave', icon: '🏖️', label: 'Xin nghỉ phép cả ngày', sub: 'Nghỉ 1 ngày công' },
+                  { type: 'half_day', icon: '🌓', label: 'Nghỉ nửa ngày', sub: '0.5 công (sáng hoặc chiều)' },
+                  { type: 'late', icon: '⏰', label: 'Xin đi muộn', sub: 'Nhập giờ đến trễ' },
+                  { type: 'early', icon: '🏃', label: 'Xin về sớm', sub: 'Nhập giờ về sớm' },
+                ].map(item => (
+                  <button key={item.type}
+                    onClick={() => {
+                      setSelectedDay(null);
+                      setLeaveForm(f => ({ ...f, type: item.type, date: selDate,
+                        half_day_period: item.type === 'half_day' ? 'morning' : f.half_day_period }));
+                      setShowLeaveForm(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors text-left">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-base">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">{item.label}</div>
+                      <div className="text-xs text-slate-400">{item.sub}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Leave requests */}
       <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
