@@ -161,6 +161,7 @@ const HauPhauPage = () => {
             </div>
           ))}
         </div>
+      )}
 
       {/* Modal */}
       {showNoteModal && (
