@@ -578,8 +578,22 @@ export default function AdvanceExpensePage() {
             <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
               <div>
                 <label className="block text-sm font-semibold mb-2">Chọn phiếu tạm ứng cần hoàn *</label>
-                <select disabled className="w-full border p-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold">
-                  <option>{selectedExpense?.profiles?.full_name} - {fmt(selectedExpense?.amount)} ({CATEGORIES[selectedExpense?.category]})</option>
+                <select 
+                  className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-white text-slate-700 font-semibold"
+                  value={selectedExpense?.id || ''}
+                  onChange={(e) => {
+                    const exp = data.find(d => d.id === e.target.value);
+                    if (exp) {
+                      setSelectedExpense(exp);
+                      setRepayForm(prev => ({...prev, amount: new Intl.NumberFormat('vi-VN').format(exp.amount)}));
+                    }
+                  }}
+                >
+                  {data.filter(d => d.status === 'approved').map(exp => (
+                    <option key={exp.id} value={exp.id}>
+                      {exp.profiles?.full_name} - {fmt(exp.amount)} ({CATEGORIES[exp.category] || exp.category})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
