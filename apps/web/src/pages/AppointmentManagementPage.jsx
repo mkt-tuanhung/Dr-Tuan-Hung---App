@@ -688,7 +688,7 @@ const AppointmentManagementPage = () => {
               <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
                 {evalForm.status === 'phau_thuat' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Ngày phẫu thuật <span className="text-red-500">*</span></label>
                         <input type="date" required value={evalForm.expected_surgery_date} onChange={e => setEvalForm({...evalForm, expected_surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
@@ -711,7 +711,7 @@ const AppointmentManagementPage = () => {
 
                 {evalForm.status === 'coc' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Ngày cọc <span className="text-red-500">*</span></label>
                         <input type="date" required value={evalForm.deposit_date} onChange={e => setEvalForm({...evalForm, deposit_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />

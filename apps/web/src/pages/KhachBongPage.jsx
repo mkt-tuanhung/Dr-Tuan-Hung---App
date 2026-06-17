@@ -259,7 +259,7 @@ const KhachBongPage = () => {
               <button type="button" onClick={() => setShowRevertModal(false)}><X className="w-5 h-5 text-blue-400" /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Ngày hẹn</label>
                   <input required type="date" value={revertForm.appointment_date} onChange={e => setRevertForm({...revertForm, appointment_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" />
@@ -290,7 +290,7 @@ const KhachBongPage = () => {
               <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
             </div>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
                   <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({...surgeryForm, expected_surgery_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
@@ -300,7 +300,7 @@ const KhachBongPage = () => {
                   <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({...surgeryForm, service: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="Nâng mũi..." />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Nhóm dịch vụ</label>
                   <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({...surgeryForm, service_group: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
@@ -326,7 +326,7 @@ const KhachBongPage = () => {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Doanh thu (VNĐ)</label>
                   <input required type="number" value={surgeryForm.revenue} onChange={e => setSurgeryForm({...surgeryForm, revenue: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="0" />

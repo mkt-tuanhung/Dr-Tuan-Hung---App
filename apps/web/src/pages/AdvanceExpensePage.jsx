@@ -500,7 +500,7 @@ export default function AdvanceExpensePage() {
             </div>
             
             <div className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {isAdminOrAccountant && (
                   <div>
                     <label className="block text-sm font-semibold mb-2 text-slate-700">Người yêu cầu *</label>
@@ -531,7 +531,7 @@ export default function AdvanceExpensePage() {
                 <textarea required value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full border p-3 rounded-xl outline-none focus:border-teal-500 h-24 resize-none" placeholder="Nhập chi tiết mục đích chi tiền..." />
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold mb-2 text-slate-700">Nơi mua / Nhà cung cấp</label>
                   <input type="text" value={form.provider} onChange={e => setForm({...form, provider: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Tên cửa hàng, siêu thị..." />
@@ -622,7 +622,7 @@ export default function AdvanceExpensePage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Ngày hoàn tiền *</label>
                   <input required type="date" value={repayForm.date} onChange={e => setRepayForm({...repayForm, date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none" />

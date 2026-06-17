@@ -205,7 +205,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                       </div>
 
                       {/* Phân công */}
-                      <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
                         <div className="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50 flex flex-col items-center justify-center text-center">
                           <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Phụ mổ</span>
                           {app.phu_mo_1_id ? <CheckCircle className="w-4 h-4 text-blue-600" /> : <span className="text-xs text-slate-400">-</span>}
@@ -370,7 +370,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               
               <div>
                 <label className="block text-sm font-semibold mb-2 text-slate-700">Hình thức thanh toán</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
                   <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
                 </div>
