@@ -119,7 +119,7 @@ const AppointmentManagementPage = () => {
       { name: 'Bong', value: st.bong, color: '#ef4444' }
     ].filter(i => i.value > 0);
 
-    return { groupedByDate: groups, stats: st, chartData: cd, pieData: pd };
+    return { groupedByDate: groups, recheckAppointments: rechecks, stats: st, chartData: cd, pieData: pd };
   }, [appointments]);
 
   // Actions
