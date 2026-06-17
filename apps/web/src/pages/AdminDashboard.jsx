@@ -14,6 +14,7 @@ import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
+import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -35,6 +36,7 @@ const MENU = [
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
   { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
   { id: 'advances',      label: 'Tạm ứng chi',       shortLabel: 'Tạm ứng',    icon: Wallet },
+  { id: 'cashflow',      label: 'Kế toán dòng tiền', shortLabel: 'Dòng tiền',  icon: BarChart2 },
   { id: 'marketing',     label: 'Marketing',         shortLabel: 'Marketing',  icon: Target },
 
   { id: 'inventory',     label: 'Kế toán kho',       shortLabel: 'Kho',        icon: ClipboardList },
@@ -261,6 +263,7 @@ const AdminDashboard = () => {
       case 'kpi': return <KPIManagementPage />;
       case 'ads_report': return <AdsReportPage />;
       case 'vien_phi': return <VienPhiPage />;
+      case 'cashflow': return <CashFlowPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
