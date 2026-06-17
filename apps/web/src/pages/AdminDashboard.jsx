@@ -32,7 +32,7 @@ const MENU = [
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
   { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
-  { id: 'ads_report',    label: 'Báo cáo Ads',       shortLabel: 'Báo cáo Ads', icon: BarChart2 },
+
   { id: 'inventory',     label: 'Kế toán kho',       shortLabel: 'Kho',        icon: ClipboardList },
   { id: 'hospital_fee',  label: 'Viện phí',          shortLabel: 'Viện phí',  icon: Activity },
   { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: Bell },
