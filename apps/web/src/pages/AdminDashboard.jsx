@@ -9,6 +9,7 @@ import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
+import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -24,6 +25,7 @@ const MENU = [
   { id: 'appointments',  label: 'Lịch hẹn',          shortLabel: 'Lịch hẹn',  icon: CalendarDays },
   { id: 'khach_coc',     label: 'Khách Cọc',         shortLabel: 'Khách Cọc', icon: ClipboardList },
   { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', shortLabel: 'Phẫu thuật', icon: Activity },
+  { id: 'hau_phau',      label: 'Hậu phẫu',          shortLabel: 'Hậu phẫu',   icon: ClipboardList },
   { id: 'khach_bong',    label: 'Khách Bong',        shortLabel: 'Khách Bong', icon: UserX },
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
@@ -239,8 +241,9 @@ const AdminDashboard = () => {
       case 'attendance': return <AttendanceManagementPage />;
       case 'appointments': return <AppointmentManagementPage />;
       case 'khach_coc': return <KhachCocPage />;
-      case 'khach_phau_thuat': return <KhachPhauThuatPage />;
+      case 'khach_phau_thuat': return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
       case 'khach_bong': return <KhachBongPage />;
+      case 'hau_phau': return <HauPhauPage />;
       case 'kpi': return <KPIManagementPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }

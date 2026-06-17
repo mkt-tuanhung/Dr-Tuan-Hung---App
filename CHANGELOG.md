@@ -43,3 +43,11 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
   - Bổ sung bộ lọc Tabs theo tiến trình chăm sóc (Đang chăm, Làm nơi khác, Chờ lịch...).
   - Thay đổi UI hiển thị rõ chi tiết ghi chú chăm sóc cũ.
   - **Thêm 3 nút thao tác điều hướng:** Ghi chú chăm, Khách Hủy (sang Bong) / Khách Quay Lại (về Lịch hẹn), và Chốt Phẫu Thuật (tự động điều phối luồng dữ liệu sang phân hệ khác).
+
+## [v1.5.0] - Phân công Điều Dưỡng Phẫu thuật & Module Hậu Phẫu CRM
+- **Khách Phẫu Thuật:** 
+  - Thêm nút Đăng ký điều dưỡng mở form chia làm 3 chức năng: Phụ mổ, Trực đêm, Chăm hậu phẫu.
+  - Cho phép chọn loại phẫu thuật (Tiểu/Đại) để tự động tính lương sau này.
+- **Module Hậu Phẫu mới:**
+  - Danh sách chuyên biệt theo dõi khách hàng sau phẫu thuật.
+  - Tính năng CRM ghi chú tiến độ phục hồi qua từng giai đoạn.
