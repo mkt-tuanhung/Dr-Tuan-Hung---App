@@ -124,6 +124,45 @@ const HauPhauPage = () => {
     return acc;
   }, {});
 
+  const renderNotes = (notesString) => {
+    if (!notesString) return null;
+    const lines = notesString.split('\n').filter(l => l.trim() !== '');
+    let currentDate = null;
+    const elements = [];
+    
+    lines.forEach((line, index) => {
+      const match = line.match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2}:\d{2})\]/);
+      if (match) {
+        const date = match[1];
+        if (date !== currentDate) {
+          currentDate = date;
+          elements.push(
+            <div key={`date-${index}`} className="font-extrabold text-teal-700 text-[13px] mt-3 mb-1 uppercase tracking-wide border-b border-teal-100 pb-0.5 inline-block">
+              NGÀY {date} :
+            </div>
+          );
+        }
+      }
+      
+      const parts = line.split(/(\[Ảnh đính kèm:\s*https?:\/\/[^\s\]]+\])/g);
+      const lineContent = parts.map((part, i) => {
+        const imgMatch = part.match(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/);
+        if (imgMatch) {
+          return (
+            <a key={i} href={imgMatch[1]} target="_blank" rel="noreferrer" className="block mt-1.5 mb-2">
+              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover" />
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      });
+
+      elements.push(<div key={`line-${index}`} className="mb-0.5">{lineContent}</div>);
+    });
+    
+    return elements;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -188,13 +227,8 @@ const HauPhauPage = () => {
 
                     {/* Note Box */}
                     {app.post_op_notes && (
-                      <div className="mt-auto mb-3 text-xs text-slate-500 bg-yellow-50/50 p-2.5 rounded-lg border border-yellow-100/50 max-h-40 overflow-y-auto whitespace-pre-wrap">
-                        {app.post_op_notes.split(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/g).map((part, i) => {
-                          if (part.startsWith('http')) {
-                            return <a key={i} href={part} target="_blank" rel="noreferrer" className="block mt-1 mb-2"><img src={part} alt="attachment" className="max-h-24 rounded-lg border border-slate-200 shadow-sm" /></a>
-                          }
-                          return <span key={i}>{part}</span>
-                        })}
+                      <div className="mt-auto mb-3 text-xs text-slate-600 bg-yellow-50/50 p-3 rounded-lg border border-yellow-200/50 max-h-48 overflow-y-auto whitespace-pre-wrap">
+                        {renderNotes(app.post_op_notes)}
                       </div>
                     )}
 

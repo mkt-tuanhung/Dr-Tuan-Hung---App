@@ -28,6 +28,45 @@ const AppointmentManagementPage = () => {
     service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
   });
 
+  const renderNotes = (notesString) => {
+    if (!notesString) return null;
+    const lines = notesString.split('\n').filter(l => l.trim() !== '');
+    let currentDate = null;
+    const elements = [];
+    
+    lines.forEach((line, index) => {
+      const match = line.match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2}:\d{2})\]/);
+      if (match) {
+        const date = match[1];
+        if (date !== currentDate) {
+          currentDate = date;
+          elements.push(
+            <div key={`date-${index}`} className="font-extrabold text-teal-700 text-[13px] mt-4 mb-1.5 uppercase tracking-wide border-b border-teal-100 pb-0.5 inline-block">
+              NGÀY {date} :
+            </div>
+          );
+        }
+      }
+      
+      const parts = line.split(/(\[Ảnh đính kèm:\s*https?:\/\/[^\s\]]+\])/g);
+      const lineContent = parts.map((part, i) => {
+        const imgMatch = part.match(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/);
+        if (imgMatch) {
+          return (
+            <a key={i} href={imgMatch[1]} target="_blank" rel="noreferrer" className="block mt-1.5 mb-2">
+              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover" />
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      });
+
+      elements.push(<div key={`line-${index}`} className="mb-0.5">{lineContent}</div>);
+    });
+    
+    return elements;
+  };
+
   const [evalApp, setEvalApp] = useState(null);
   const [evalForm, setEvalForm] = useState({
     status: 'phau_thuat',
@@ -721,12 +760,7 @@ const AppointmentManagementPage = () => {
             </div>
             <div className="p-6 overflow-y-auto text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 flex-1">
               {viewNoteApp.notes ? (
-                viewNoteApp.notes.split(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/g).map((part, i) => {
-                  if (part.startsWith('http')) {
-                    return <a key={i} href={part} target="_blank" rel="noreferrer" className="block mt-2 mb-3"><img src={part} alt="attachment" className="max-h-40 rounded-xl border border-slate-200 shadow-sm" /></a>
-                  }
-                  return <span key={i}>{part}</span>
-                })
+                renderNotes(viewNoteApp.notes)
               ) : (
                 <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử chăm sóc.</div>
               )}
