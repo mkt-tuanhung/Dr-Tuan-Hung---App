@@ -39,13 +39,13 @@ const LeaveManagementPage = () => {
       const [monthRes, pendingRes] = await Promise.all([
         supabase
           .from('leave_requests')
-          .select('*, profiles(full_name, employee_id, avatar_url, role)')
+          .select('*')
           .gte('date', startDate)
           .lte('date', endDate)
           .order('created_at', { ascending: false }),
         supabase
           .from('leave_requests')
-          .select('*, profiles(full_name, employee_id, avatar_url, role)')
+          .select('*')
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
       ]);
@@ -57,7 +57,29 @@ const LeaveManagementPage = () => {
       
       const uniqueMap = new Map();
       combined.forEach(r => uniqueMap.set(r.id, r));
-      const finalData = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const uniqueData = Array.from(uniqueMap.values());
+
+      // Fetch profiles manually to avoid multiple relationship errors
+      const staffIds = [...new Set(uniqueData.map(r => r.staff_id).filter(Boolean))];
+      let profilesMap = {};
+      
+      if (staffIds.length > 0) {
+        const { data: profilesData, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, full_name, employee_id, avatar_url, role')
+          .in('id', staffIds);
+          
+        if (!profErr && profilesData) {
+          profilesData.forEach(p => {
+            profilesMap[p.id] = p;
+          });
+        }
+      }
+
+      const finalData = uniqueData.map(r => ({
+        ...r,
+        profiles: profilesMap[r.staff_id] || {}
+      })).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
       setRequests(finalData);
     } catch (err) {

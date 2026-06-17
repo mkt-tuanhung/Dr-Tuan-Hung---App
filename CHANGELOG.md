@@ -24,3 +24,6 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 - **Đổi mới:** Thay thế giao diện Kanban bằng giao diện Danh sách tập trung tại Lịch hẹn.
 - **Tính năng 'Đánh giá':** Mở form chuyên sâu tùy theo kết quả (Cọc, Phẫu thuật, Bong).
 - **Bổ sung Module:** Thêm 3 Menu độc lập (Khách Cọc, Khách Phẫu Thuật, Khách Bong) để phân luồng và chăm sóc tự động sau khi đánh giá từ Lịch hẹn.
+
+## [v1.2.1] - Sửa lỗi Embed Data Supabase
+- **Fix:** Xử lý triệt để lỗi `Could not embed because more than one relationship was found` bằng cách bóc tách truy vấn và tự động map dữ liệu Profile thủ công trong LeaveManagementPage.
