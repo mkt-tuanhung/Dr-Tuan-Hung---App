@@ -15,6 +15,7 @@ import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
+import VienPhiPage from '@/pages/VienPhiPage.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -31,6 +32,7 @@ const FULL_MENU = [
   // MKT / Finance / Sales
   { id: 'ads_report', label: 'Báo cáo Ads',     icon: BarChart2, roles: ['marketing', 'admin'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
+  { id: 'vien_phi',   label: 'Viện phí',        icon: Activity, roles: ['accountant', 'admin'] },
 
   // CRM
   { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
@@ -145,6 +147,7 @@ const StaffDashboard = () => {
     if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage />;
     if (activeTab === 'hau_phau') return <HauPhauPage />;
     if (activeTab === 'ads_report') return <AdsReportPage />;
+    if (activeTab === 'vien_phi') return <VienPhiPage />;
     if (activeTab === 'advances') return <ComingSoon label="Tạm ứng chi" />;
     return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };

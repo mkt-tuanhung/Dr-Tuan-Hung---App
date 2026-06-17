@@ -1,17 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Clock, CheckCircle, X, Edit, ClipboardList, Calendar } from 'lucide-react';
+import { Clock, CheckCircle, X, Edit, ClipboardList, Calendar, Banknote, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { uploadToR2 } from '@/lib/r2Client';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
+  const { profile } = useAuth();
+  const isAdminOrAccountant = ['admin', 'accountant'].includes(profile?.role);
+
   const [customers, setCustomers] = useState([]);
   const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal
+  // Modal Phân công
   const [showNurseModal, setShowNurseModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Modal Viện phí
+  const [showFeeModal, setShowFeeModal] = useState(false);
+  const [feeForm, setFeeForm] = useState({ amount: '', method: 'cash', proof: '' });
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   const [form, setForm] = useState({
     activeTab: 'phu_mo',
@@ -86,6 +97,57 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setSaving(false);
   };
 
+  const openFeeModal = (app) => {
+    setSelectedApp(app);
+    setFeeForm({ amount: '', method: 'cash', proof: '' });
+    setShowFeeModal(true);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadToR2(file, 'vien-phi');
+      setFeeForm(prev => ({ ...prev, proof: url }));
+      toast.success('Đã tải ảnh lên!');
+    } catch (err) {
+      toast.error('Lỗi tải ảnh: ' + err.message);
+    }
+    setUploadingImage(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSaveFee = async (e) => {
+    e.preventDefault();
+    if (!feeForm.amount) return toast.error('Vui lòng nhập số tiền');
+    
+    setSaving(true);
+    const numericAmount = parseInt(feeForm.amount.replace(/\./g, ''), 10);
+    
+    const { error } = await supabase.from('customer_appointments')
+      .update({
+        hospital_fee: numericAmount,
+        hospital_fee_method: feeForm.method,
+        hospital_fee_proof: feeForm.proof || null,
+        hospital_fee_date: new Date().toISOString()
+      }).eq('id', selectedApp.id);
+
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Nhập viện phí thành công!');
+      setShowFeeModal(false);
+      loadData();
+    }
+    setSaving(false);
+  };
+
+  const formatCurrencyInput = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    return new Intl.NumberFormat('vi-VN').format(numbers);
+  };
+
   const groupedCustomers = customers.reduce((acc, app) => {
     const date = app.surgery_date 
       ? new Date(app.surgery_date).toLocaleDateString('vi-VN') 
@@ -155,20 +217,37 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="mt-auto flex gap-2 pt-2">
-                        {isAssigned ? (
-                          <>
-                            <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
-                              <Edit className="w-3.5 h-3.5" /> Sửa ca
+                      <div className="mt-auto flex flex-col gap-2 pt-2">
+                        <div className="flex gap-2">
+                          {isAssigned ? (
+                            <>
+                              <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
+                                <Edit className="w-3.5 h-3.5" /> Sửa ca
+                              </button>
+                              <button onClick={() => setActiveTab && setActiveTab('hau_phau')} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
+                                <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
+                              </button>
+                            </>
+                          ) : (
+                            <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
+                              <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
                             </button>
-                            <button onClick={() => setActiveTab && setActiveTab('hau_phau')} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
-                              <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
-                            </button>
-                          </>
-                        ) : (
-                          <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
-                            <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
-                          </button>
+                          )}
+                        </div>
+                        
+                        {/* Nhập viện phí */}
+                        {isAdminOrAccountant && (
+                          <div className="pt-1">
+                            {app.hospital_fee ? (
+                              <div className="w-full flex justify-center items-center py-2 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl border border-blue-200">
+                                <CheckCircle className="w-4 h-4 mr-1.5" /> Đã nhập viện phí
+                              </div>
+                            ) : (
+                              <button onClick={() => openFeeModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm">
+                                <Banknote className="w-4 h-4" /> Nhập viện phí
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -265,8 +344,58 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               )}
             </div>
             
-            <div className="p-4 border-t bg-slate-50 flex justify-end shrink-0">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700">{saving ? 'Đang lưu...' : 'Lưu Phân Công'}</button>
+            <div className="p-6 bg-slate-50 shrink-0 rounded-b-2xl">
+              <button type="submit" disabled={saving} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">
+                {saving ? 'Đang lưu...' : 'Lưu phân công'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal Nhập Viện Phí */}
+      {showFeeModal && selectedApp && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSaveFee} className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50 shrink-0">
+              <h3 className="font-bold text-blue-800">Nhập viện phí</h3>
+              <button type="button" onClick={() => setShowFeeModal(false)}><X className="w-5 h-5 text-blue-400" /></button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền viện phí (VNĐ)</label>
+                <input required type="text" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-700 text-lg" placeholder="1.000.000" />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Hình thức thanh toán</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
+                  <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="block text-sm font-semibold text-slate-700">Hoá đơn / Bill</label>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-blue-100">
+                    {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} {feeForm.proof ? 'Đổi ảnh' : 'Tải ảnh lên'}
+                  </button>
+                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                </div>
+                {feeForm.proof && (
+                  <div className="mt-2 rounded-xl overflow-hidden border border-slate-200">
+                    <img src={feeForm.proof} alt="Bill" className="w-full h-auto object-cover max-h-40" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 shrink-0 border-t border-slate-100">
+              <button type="submit" disabled={saving || uploadingImage} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">
+                {saving ? 'Đang lưu...' : 'Xác nhận thu'}
+              </button>
             </div>
           </form>
         </div>
