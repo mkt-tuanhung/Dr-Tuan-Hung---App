@@ -149,8 +149,10 @@ const LeaveManagementPage = () => {
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y+1); } else setMonth(m => m+1); };
 
   const filtered = requests.filter(r => {
-    const matchSearch = r.profiles?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      r.profiles?.employee_id?.toLowerCase().includes(search.toLowerCase());
+    const searchTerm = search.toLowerCase();
+    const matchSearch = !searchTerm || 
+      (r.profiles?.full_name || '').toLowerCase().includes(searchTerm) ||
+      (r.profiles?.employee_id || '').toLowerCase().includes(searchTerm);
     const matchFilter = filter === 'all' || r.status === filter;
     return matchSearch && matchFilter;
   });
