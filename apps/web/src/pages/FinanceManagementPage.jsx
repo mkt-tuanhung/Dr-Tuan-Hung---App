@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
+import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
 import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
@@ -32,7 +33,10 @@ const FinanceManagementPage = () => {
   const [serviceGroupData, setServiceGroupData] = useState([]);
   
   // Stats
-  const [stats, setStats] = useState({ totalRev: 0, totalUpsale: 0, totalCustomers: 0, adsCustomers: 0, adsRevenue: 0, adsSpent: 0 });
+  const [stats, setStats] = useState({ 
+    totalRev: 0, totalUpsale: 0, totalCustomers: 0, adsCustomers: 0, adsRevenue: 0, adsSpent: 0,
+    hospitalFee: 0, hospitalFeeCash: 0, hospitalFeeTransfer: 0, hospitalFeeCount: 0 
+  });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -65,7 +69,7 @@ const FinanceManagementPage = () => {
       const records = data || [];
       setRevenueData(records);
 
-      let tRev = 0, tUp = 0, adsC = 0;
+      let tRev = 0, tUp = 0, adsC = 0, tFee = 0, tFeeCash = 0, tFeeTransfer = 0, feeCount = 0;
       const srcMap = {};
       const svcMap = {};
 
@@ -79,6 +83,13 @@ const FinanceManagementPage = () => {
 
         const svc = r.service_group || 'Khác';
         svcMap[svc] = (svcMap[svc] || 0) + Number(r.revenue || 0);
+
+        if (r.hospital_fee) {
+          feeCount++;
+          tFee += Number(r.hospital_fee || 0);
+          if (r.hospital_fee_method === 'cash') tFeeCash += Number(r.hospital_fee || 0);
+          if (r.hospital_fee_method === 'transfer') tFeeTransfer += Number(r.hospital_fee || 0);
+        }
       });
 
       // Fetch Ads Spent
@@ -99,7 +110,11 @@ const FinanceManagementPage = () => {
         totalCustomers: records.length,
         adsCustomers: adsC,
         adsRevenue: srcMap['Ads'] || 0,
-        adsSpent: tAdsSpent
+        adsSpent: tAdsSpent,
+        hospitalFee: tFee,
+        hospitalFeeCash: tFeeCash,
+        hospitalFeeTransfer: tFeeTransfer,
+        hospitalFeeCount: feeCount
       });
 
       setSourceData(Object.keys(srcMap).map(name => ({ name, value: srcMap[name] })));
@@ -300,6 +315,7 @@ const FinanceManagementPage = () => {
       )}
 
       {activeTab === 'expenses' && (
+        <div className="space-y-6">
           <FinanceAdsSummary
             stats={stats}
             month={month}
@@ -307,7 +323,15 @@ const FinanceManagementPage = () => {
                 window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'ads_report', bubbles: true }));
               }}
           />
-        )}
+          <FinanceHospitalFeeSummary
+            stats={stats}
+            month={month}
+            onViewDetail={() => {
+                window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'vien_phi', bubbles: true }));
+              }}
+          />
+        </div>
+      )}
 
       {/* Direct Revenue Modal */}
       {showCreateModal && (
