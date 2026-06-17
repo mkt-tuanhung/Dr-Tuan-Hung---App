@@ -168,27 +168,27 @@ const FinanceManagementPage = () => {
           </div>
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-5 rounded-2xl border border-emerald-100">
-              <div className="text-emerald-600 text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
-              <div className="text-2xl font-black text-emerald-800 mt-2">{fmt(stats.totalRev)}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 md:p-5 rounded-2xl border border-emerald-100">
+              <div className="text-emerald-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
+              <div className="text-lg md:text-2xl font-black text-emerald-800 mt-2 truncate" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
             </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-5 rounded-2xl border border-purple-100">
-              <div className="text-purple-600 text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU UPSALE</div>
-              <div className="text-2xl font-black text-purple-800 mt-2">{fmt(stats.totalUpsale)}</div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 md:p-5 rounded-2xl border border-purple-100">
+              <div className="text-purple-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU UPSALE</div>
+              <div className="text-lg md:text-2xl font-black text-purple-800 mt-2 truncate" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-5 rounded-2xl border border-blue-100">
-              <div className="text-blue-600 text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" /> TỔNG SỐ KHÁCH</div>
-              <div className="text-2xl font-black text-blue-800 mt-2">{stats.totalCustomers} <span className="text-sm font-medium text-blue-600">Khách</span></div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 md:p-5 rounded-2xl border border-blue-100">
+              <div className="text-blue-600 text-xs md:text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" /> TỔNG SỐ KHÁCH</div>
+              <div className="text-lg md:text-2xl font-black text-blue-800 mt-2 truncate">{stats.totalCustomers} <span className="text-xs md:text-sm font-medium text-blue-600">Khách</span></div>
             </div>
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 p-5 rounded-2xl border border-amber-100">
-              <div className="text-amber-600 text-sm font-bold flex items-center gap-2"><Filter className="w-4 h-4" /> KHÁCH TỪ ADS</div>
-              <div className="text-2xl font-black text-amber-800 mt-2">{stats.adsCustomers} <span className="text-sm font-medium text-amber-600">Khách</span></div>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 md:p-5 rounded-2xl border border-amber-100">
+              <div className="text-amber-600 text-xs md:text-sm font-bold flex items-center gap-2"><Filter className="w-4 h-4" /> KHÁCH TỪ ADS</div>
+              <div className="text-lg md:text-2xl font-black text-amber-800 mt-2 truncate">{stats.adsCustomers} <span className="text-xs md:text-sm font-medium text-amber-600">Khách</span></div>
             </div>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
               <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><PieChart className="w-5 h-5 text-indigo-500" /> Tỷ trọng Nguồn Khách (VND)</h3>
               <div className="h-64">

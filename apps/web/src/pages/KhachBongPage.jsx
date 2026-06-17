@@ -150,7 +150,8 @@ const KhachBongPage = () => {
          </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto min-w-full">
+            <table className="w-full text-left text-sm min-w-[800px]">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500">
               <tr>
                 <th className="px-6 py-3.5 font-medium w-64">Khách hàng / Liên hệ</th>
@@ -193,6 +194,7 @@ const KhachBongPage = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
