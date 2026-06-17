@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, B
 import { 
   Plus, RefreshCw, Trash2, ArrowDownLeft, FileText, Users, BarChart2,
   Calendar, Filter, Search, CheckCircle, XCircle, Clock, Image as ImageIcon,
-  MoreVertical, X, UploadCloud, Loader2
+  MoreVertical, X, UploadCloud, Loader2, Wallet
 } from 'lucide-react';
 
 const CATEGORIES = {
