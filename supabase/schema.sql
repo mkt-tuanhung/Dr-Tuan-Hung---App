@@ -22,7 +22,7 @@ create type attendance_status as enum ('present', 'absent', 'leave', 'late', 'ea
 
 create type leave_type as enum ('full_day', 'morning', 'afternoon');
 
-create type expense_category as enum ('MKT', 'Vat_tu', 'Van_phong', 'Nhan_cong', 'Khac');
+create type expense_category as enum ('MKT', 'Vat_tu', 'Van_phong', 'Nhan_cong', 'Cong_tac', 'Tiep_khach', 'Tho_cung', 'Khac');
 
 create type expense_status as enum ('pending', 'approved', 'rejected', 'paid');
 
