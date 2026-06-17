@@ -1,17 +1,38 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Calendar, User, Phone, FileText } from 'lucide-react';
+import { Calendar, FileText, Edit3, ArrowUpCircle, RotateCcw, X, MessageCircle } from 'lucide-react';
+
+const CARE_TABS = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'Đang chăm sóc', label: 'Đang chăm sóc' },
+  { id: 'Đã quay lại tư vấn', label: 'Đã quay lại tư vấn' },
+  { id: 'Đã làm dịch vụ bên khác', label: 'Làm nơi khác' },
+  { id: 'Hủy hẳn', label: 'Hủy hẳn' }
+];
 
 const KhachBongPage = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Modals state
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [showCareModal, setShowCareModal] = useState(false);
+  const [showRevertModal, setShowRevertModal] = useState(false);
+  const [showSurgeryModal, setShowSurgeryModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Forms
+  const [careForm, setCareForm] = useState({ care_status: 'Đang chăm sóc', care_notes: '' });
+  const [revertForm, setRevertForm] = useState({ appointment_date: '', appointment_time: '09:00', notes: '' });
+  const [surgeryForm, setSurgeryForm] = useState({ expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('customer_appointments')
-      .select('*, profiles!customer_appointments_created_by_fkey(full_name)')
+      .select('*, telesale:profiles!telesale_id(full_name), sale:profiles!sale_id(full_name)')
       .eq('status', 'bong')
       .order('updated_at', { ascending: false });
 
@@ -25,58 +46,230 @@ const KhachBongPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Handle Care Update
+  const handleCareSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const newNote = careForm.care_notes ? `\n[${new Date().toLocaleDateString('vi-VN')}] ${careForm.care_notes}` : '';
+    const updatedNotes = (selectedApp.care_notes || '') + newNote;
+
+    const { error } = await supabase.from('customer_appointments')
+      .update({ care_status: careForm.care_status, care_notes: updatedNotes })
+      .eq('id', selectedApp.id);
+      
+    if (error) toast.error(error.message);
+    else { toast.success('Cập nhật tiến trình thành công!'); setShowCareModal(false); loadData(); }
+    setSaving(false);
+  };
+
+  // Handle Revert to Scheduled
+  const handleRevertSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.from('customer_appointments')
+      .update({ 
+        status: 'scheduled', 
+        appointment_date: revertForm.appointment_date, 
+        appointment_time: revertForm.appointment_time,
+        notes: (selectedApp.notes || '') + `\n[Hẹn lại] ${revertForm.notes}`
+      }).eq('id', selectedApp.id);
+      
+    if (error) toast.error(error.message);
+    else { toast.success('Khách đã được chuyển về Lịch Hẹn!'); setShowRevertModal(false); loadData(); }
+    setSaving(false);
+  };
+
+  // Handle Move to Surgery
+  const handleSurgerySubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.from('customer_appointments')
+      .update({ 
+        status: 'phau_thuat', 
+        surgery_date: surgeryForm.expected_surgery_date,
+        expected_surgery_date: surgeryForm.expected_surgery_date,
+        revenue: surgeryForm.revenue,
+        upsale_revenue: surgeryForm.upsale_revenue || 0,
+        service: surgeryForm.service
+      }).eq('id', selectedApp.id);
+      
+    if (error) toast.error(error.message);
+    else { toast.success('Khách đã được chuyển sang Phẫu Thuật!'); setShowSurgeryModal(false); loadData(); }
+    setSaving(false);
+  };
+
+  const openCare = (app) => { setSelectedApp(app); setCareForm({ care_status: app.care_status || 'Đang chăm sóc', care_notes: '' }); setShowCareModal(true); };
+  const openRevert = (app) => { setSelectedApp(app); setRevertForm({ appointment_date: new Date().toISOString().split('T')[0], appointment_time: '09:00', notes: '' }); setShowRevertModal(true); };
+  const openSurgery = (app) => { setSelectedApp(app); setSurgeryForm({ expected_surgery_date: new Date().toISOString().split('T')[0], revenue: '', upsale_revenue: '', service: app.service || '' }); setShowSurgeryModal(true); };
+
+  const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.care_status || 'Đang chăm sóc') === activeTab);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Khách Bong (Rớt)</h2>
-          <p className="text-slate-500 text-sm mt-1">Danh sách khách hàng tư vấn không thành công hoặc hẹn lại sau</p>
+          <h2 className="text-2xl font-bold text-slate-800">Khách Bong (Mini-CRM)</h2>
+          <p className="text-slate-500 text-sm mt-1">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
         </div>
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold">
           {customers.length} Khách
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {CARE_TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-red-200 border-t-red-500 rounded-full animate-spin" /></div>
-      ) : customers.length === 0 ? (
+      ) : filteredCustomers.length === 0 ? (
          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
-            Không có khách bong nào
+            Không có khách hàng nào trong mục này
          </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500">
               <tr>
-                <th className="px-6 py-3.5 font-medium">Khách hàng</th>
-                <th className="px-6 py-3.5 font-medium">Số điện thoại</th>
-                <th className="px-6 py-3.5 font-medium">Ngày hẹn cũ</th>
-                <th className="px-6 py-3.5 font-medium">Lý do / Ghi chú</th>
-                <th className="px-6 py-3.5 font-medium">Ngày cập nhật</th>
+                <th className="px-6 py-3.5 font-medium w-64">Khách hàng / Liên hệ</th>
+                <th className="px-6 py-3.5 font-medium">Tiến trình chăm sóc</th>
+                <th className="px-6 py-3.5 font-medium text-right">Điều hướng (CRM)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {customers.map(app => (
+              {filteredCustomers.map(app => (
                 <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-slate-700">{app.customer_name}</td>
-                  <td className="px-6 py-4 text-slate-600">{app.phone}</td>
-                  <td className="px-6 py-4 text-slate-600 flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    {app.appointment_date ? new Date(app.appointment_date).toLocaleDateString('vi-VN') : ''}
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 max-w-[300px]">
-                    <div className="flex items-start gap-2">
-                      <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{app.notes || 'Không có lý do'}</span>
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-slate-800">{app.customer_name}</div>
+                    <div className="text-slate-500 text-xs mt-0.5">{app.phone}</div>
+                    <div className="text-xs text-red-600 bg-red-50 inline-block px-2 py-0.5 rounded mt-2">
+                      Lý do rớt: {app.notes || 'Không rõ'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-500 text-xs">
-                    {app.updated_at ? new Date(app.updated_at).toLocaleDateString('vi-VN') : ''}
+                  <td className="px-6 py-4">
+                    <span className="font-semibold text-teal-700 bg-teal-50 px-2 py-1 rounded-lg text-xs border border-teal-100">
+                      {app.care_status || 'Đang chăm sóc'}
+                    </span>
+                    <div className="mt-2 text-xs text-slate-500 max-h-20 overflow-y-auto whitespace-pre-wrap p-2 bg-slate-50 rounded border">
+                      {app.care_notes || 'Chưa có ghi chú chăm sóc'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex flex-col items-end gap-2">
+                      <button onClick={() => openCare(app)} className="w-40 flex justify-center items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200">
+                        <MessageCircle className="w-3.5 h-3.5" /> Ghi chú chăm
+                      </button>
+                      <button onClick={() => openRevert(app)} className="w-40 flex justify-center items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors border border-blue-200">
+                        <RotateCcw className="w-3.5 h-3.5" /> Khách quay lại
+                      </button>
+                      <button onClick={() => openSurgery(app)} className="w-40 flex justify-center items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition-colors border border-emerald-200">
+                        <ArrowUpCircle className="w-3.5 h-3.5" /> Chốt Phẫu thuật
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal 1: Cập nhật chăm sóc */}
+      {showCareModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleCareSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800">Tiến trình CSKH: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowCareModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Trạng thái hiện tại</label>
+                <select value={careForm.care_status} onChange={e => setCareForm({...careForm, care_status: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  {CARE_TABS.filter(t => t.id !== 'all').map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Ghi chú cuộc gọi / tin nhắn mới nhất</label>
+                <textarea required rows={4} value={careForm.care_notes} onChange={e => setCareForm({...careForm, care_notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none" placeholder="Ví dụ: Khách bảo qua tuần mới lãnh lương..." />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end">
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu lại'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal 2: Chuyển lại Lịch Hẹn */}
+      {showRevertModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleRevertSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
+              <h3 className="font-bold text-blue-800">Đặt Lịch Hẹn Mới: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowRevertModal(false)}><X className="w-5 h-5 text-blue-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Ngày hẹn</label>
+                  <input required type="date" value={revertForm.appointment_date} onChange={e => setRevertForm({...revertForm, appointment_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Giờ hẹn</label>
+                  <input required type="time" value={revertForm.appointment_time} onChange={e => setRevertForm({...revertForm, appointment_time: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Ghi chú cho ca hẹn này</label>
+                <input required type="text" value={revertForm.notes} onChange={e => setRevertForm({...revertForm, notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" placeholder="Khách hẹn tới kiểm tra lại..." />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end">
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700">{saving ? 'Đang lưu...' : 'Xác nhận tạo lịch'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal 3: Chốt Phẫu Thuật */}
+      {showSurgeryModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSurgerySubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
+              <h3 className="font-bold text-emerald-800">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
+                <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({...surgeryForm, expected_surgery_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
+                <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({...surgeryForm, service: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="Nâng mũi..." />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Doanh thu (VNĐ)</label>
+                  <input required type="number" value={surgeryForm.revenue} onChange={e => setSurgeryForm({...surgeryForm, revenue: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Upsale (VNĐ)</label>
+                  <input type="number" value={surgeryForm.upsale_revenue} onChange={e => setSurgeryForm({...surgeryForm, upsale_revenue: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="0" />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end">
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
+            </div>
+          </form>
         </div>
       )}
     </div>

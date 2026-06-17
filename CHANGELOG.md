@@ -36,3 +36,10 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
   - Bổ sung 6 module thống kê bằng số trên đầu trang.
   - Bổ sung biểu đồ tròn tỷ lệ trạng thái và biểu đồ đường biến động theo thời gian.
 - **Form Nhập Liệu:** Nâng cấp form 'Thêm Lịch' và form 'Đánh Giá' thành Modal chi tiết đa trường dữ liệu theo đúng thiết kế.
+
+## [v1.4.0] - Nâng cấp Khách Cọc & Khách Bong thành Mini-CRM
+- **Database:** Thêm các trường `care_status` và `care_notes` để lưu lịch sử và tiến độ chăm sóc.
+- **Khách Bong / Cọc:** 
+  - Bổ sung bộ lọc Tabs theo tiến trình chăm sóc (Đang chăm, Làm nơi khác, Chờ lịch...).
+  - Thay đổi UI hiển thị rõ chi tiết ghi chú chăm sóc cũ.
+  - **Thêm 3 nút thao tác điều hướng:** Ghi chú chăm, Khách Hủy (sang Bong) / Khách Quay Lại (về Lịch hẹn), và Chốt Phẫu Thuật (tự động điều phối luồng dữ liệu sang phân hệ khác).
