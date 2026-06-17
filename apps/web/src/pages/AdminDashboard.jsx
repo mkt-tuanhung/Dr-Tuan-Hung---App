@@ -7,10 +7,12 @@ import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
+import MarketingDashboardPage from '@/pages/MarketingDashboardPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
+import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import {
@@ -33,6 +35,8 @@ const MENU = [
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
   { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
+  { id: 'advances',      label: 'Tạm ứng chi',       shortLabel: 'Tạm ứng',    icon: Wallet },
+  { id: 'marketing',     label: 'Marketing',         shortLabel: 'Marketing',  icon: Target },
 
   { id: 'inventory',     label: 'Kế toán kho',       shortLabel: 'Kho',        icon: ClipboardList },
   { id: 'vien_phi',      label: 'Viện phí',          shortLabel: 'Viện phí',   icon: Activity },
@@ -253,6 +257,7 @@ const AdminDashboard = () => {
       case 'khach_phau_thuat': return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
       case 'khach_bong': return <KhachBongPage />;
       case 'hau_phau': return <HauPhauPage />;
+      case 'advances': return <AdvanceExpensePage />;
       case 'finance': return <FinanceManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       case 'ads_report': return <AdsReportPage />;

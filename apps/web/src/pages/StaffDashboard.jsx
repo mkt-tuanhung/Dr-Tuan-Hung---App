@@ -16,6 +16,7 @@ import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
+import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -148,7 +149,7 @@ const StaffDashboard = () => {
     if (activeTab === 'hau_phau') return <HauPhauPage />;
     if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'vien_phi') return <VienPhiPage />;
-    if (activeTab === 'advances') return <ComingSoon label="Tạm ứng chi" />;
+    if (activeTab === 'advances') return <AdvanceExpensePage />;
     return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 
