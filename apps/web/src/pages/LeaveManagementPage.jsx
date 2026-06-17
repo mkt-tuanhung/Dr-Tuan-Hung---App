@@ -38,8 +38,7 @@ const LeaveManagementPage = () => {
     const { data, error } = await supabase
       .from('leave_requests')
       .select('*, profiles(full_name, employee_id, avatar_url, role)')
-      .gte('date', startDate)
-      .lte('date', endDate)
+      .or(`and(date.gte.${startDate},date.lte.${endDate}),status.eq.pending`)
       .order('created_at', { ascending: false });
 
     if (!error) setRequests(data || []);

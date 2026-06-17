@@ -7,3 +7,6 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 - **Thêm** giao diện dạng Tab (Bảng chấm công / Duyệt đơn) vào trang Quản lý chấm công.
 - **Thêm** Badge đếm số đơn chờ duyệt Real-time trên thanh menu Admin Dashboard.
 - **Cập nhật** logic duyệt đơn: Khi Admin duyệt đơn xin phép, hệ thống tự động điền trạng thái (Có mặt/Đi trễ/Nửa ngày/Nghỉ phép) vào bảng Chấm Công.
+
+## [v1.0.2] - Sửa lỗi hiển thị Đơn xin phép
+- **Fix:** Đơn xin phép đang chờ duyệt (của tháng khác) không hiển thị trong danh sách của tháng hiện tại, dẫn đến sai lệch số lượng đếm trên Menu. Đã sửa để tất cả đơn chờ duyệt luôn luôn hiển thị để Admin không bỏ sót.
