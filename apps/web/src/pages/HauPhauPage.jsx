@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { uploadToR2 } from '@/lib/r2Client';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -21,6 +22,23 @@ const HauPhauPage = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = React.useRef(null);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadToR2(file, 'hau-phau');
+      setForm(prev => ({ ...prev, post_op_notes: prev.post_op_notes + (prev.post_op_notes ? '\n' : '') + `[Ảnh đính kèm: ${url}]` }));
+      toast.success('Đã tải ảnh lên!');
+    } catch (err) {
+      toast.error('Lỗi tải ảnh: ' + err.message);
+    }
+    setUploadingImage(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -170,8 +188,13 @@ const HauPhauPage = () => {
 
                     {/* Note Box */}
                     {app.post_op_notes && (
-                      <div className="mt-auto mb-3 text-xs text-slate-500 bg-yellow-50/50 p-2.5 rounded-lg border border-yellow-100/50 max-h-20 overflow-y-auto whitespace-pre-wrap">
-                        {app.post_op_notes}
+                      <div className="mt-auto mb-3 text-xs text-slate-500 bg-yellow-50/50 p-2.5 rounded-lg border border-yellow-100/50 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                        {app.post_op_notes.split(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/g).map((part, i) => {
+                          if (part.startsWith('http')) {
+                            return <a key={i} href={part} target="_blank" rel="noreferrer" className="block mt-1 mb-2"><img src={part} alt="attachment" className="max-h-24 rounded-lg border border-slate-200 shadow-sm" /></a>
+                          }
+                          return <span key={i}>{part}</span>
+                        })}
                       </div>
                     )}
 
@@ -218,7 +241,13 @@ const HauPhauPage = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-semibold mb-2">Ghi chú theo dõi</label>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="block text-sm font-semibold">Ghi chú theo dõi</label>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-emerald-100">
+                    {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+                  </button>
+                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                </div>
                 <textarea required rows={4} value={form.post_op_notes} onChange={e => setForm({...form, post_op_notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none" placeholder="Vết thương khô, đã cắt chỉ..." />
               </div>
             </div>

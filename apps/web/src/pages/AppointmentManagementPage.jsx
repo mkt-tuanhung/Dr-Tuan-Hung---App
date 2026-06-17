@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const AppointmentManagementPage = () => {
@@ -18,6 +18,7 @@ const AppointmentManagementPage = () => {
   
   // Forms
   const [saving, setSaving] = useState(false);
+  const [viewNoteApp, setViewNoteApp] = useState(null);
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
@@ -338,9 +339,14 @@ const AppointmentManagementPage = () => {
                         <td className="px-6 py-4 font-medium text-slate-700">{app.service?.replace('[Tái khám] ', '')}</td>
                         <td className="px-6 py-4 text-slate-600">{app.sale || 'Không có'}</td>
                         <td className="px-6 py-4">
-                          <button onClick={() => deleteApp(app.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex gap-2">
+                            <button onClick={() => setViewNoteApp(app)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Xem lịch sử chăm sóc">
+                              <FileText className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteApp(app.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Xóa lịch hẹn">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -662,6 +668,32 @@ const AppointmentManagementPage = () => {
                 {saving ? 'Đang lưu...' : `Xác nhận khách ${evalForm.status === 'bong' ? 'Bong' : evalForm.status === 'coc' ? 'Cọc' : 'Phẫu thuật'}`}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal View Note (Lịch sử chăm sóc) */}
+      {viewNoteApp && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-white shrink-0">
+              <h3 className="font-bold text-slate-800 text-lg">Lịch sử chăm sóc: {viewNoteApp.customer_name}</h3>
+              <button onClick={() => setViewNoteApp(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 flex-1">
+              {viewNoteApp.notes ? (
+                viewNoteApp.notes.split(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/g).map((part, i) => {
+                  if (part.startsWith('http')) {
+                    return <a key={i} href={part} target="_blank" rel="noreferrer" className="block mt-2 mb-3"><img src={part} alt="attachment" className="max-h-40 rounded-xl border border-slate-200 shadow-sm" /></a>
+                  }
+                  return <span key={i}>{part}</span>
+                })
+              ) : (
+                <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử chăm sóc.</div>
+              )}
+            </div>
           </div>
         </div>
       )}
