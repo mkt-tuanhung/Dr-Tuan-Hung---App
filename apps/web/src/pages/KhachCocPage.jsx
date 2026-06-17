@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Calendar, FileText, ArrowUpCircle, RotateCcw, X, MessageCircle, AlertCircle, Clock } from 'lucide-react';
+import { Calendar, FileText, ArrowUpCircle, RotateCcw, X, MessageCircle, AlertCircle, Clock, Phone } from 'lucide-react';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -118,6 +118,15 @@ const KhachCocPage = () => {
 
   const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.care_status || 'Đang chăm sóc') === activeTab);
 
+  const groupedCustomers = filteredCustomers.reduce((acc, app) => {
+    const date = app.expected_surgery_date 
+      ? new Date(app.expected_surgery_date).toLocaleDateString('vi-VN') 
+      : 'Chưa xếp lịch';
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(app);
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -147,58 +156,70 @@ const KhachCocPage = () => {
             Không có khách hàng nào trong mục này
          </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100 text-slate-500">
-              <tr>
-                <th className="px-6 py-3.5 font-medium w-64">Khách hàng / Liên hệ</th>
-                <th className="px-6 py-3.5 font-medium">Chi tiết cọc</th>
-                <th className="px-6 py-3.5 font-medium">Tiến trình chăm sóc</th>
-                <th className="px-6 py-3.5 font-medium text-right">Điều hướng (CRM)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredCustomers.map(app => (
-                <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-slate-800">{app.customer_name}</div>
-                    <div className="text-slate-500 text-xs mt-0.5">{app.phone}</div>
-                    <div className="text-xs text-slate-400 mt-1">Tele: {app.telesale?.full_name || 'N/A'}</div>
-                    <div className="text-xs text-slate-400">Sale: {app.sale?.full_name || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-blue-700 bg-blue-50 inline-block px-2 py-0.5 rounded-lg mb-1">{app.service || 'Chưa chọn'}</div>
-                    <div className="text-sm font-bold text-slate-800">Cọc: {Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</div>
-                    <div className="text-xs text-orange-600 flex items-center gap-1 mt-1">
-                      <Clock className="w-3.5 h-3.5" /> 
-                      PT dự kiến: {app.expected_surgery_date ? new Date(app.expected_surgery_date).toLocaleDateString('vi-VN') : 'Chưa xếp lịch'}
+        <div className="space-y-6">
+          {Object.entries(groupedCustomers).map(([date, apps]) => (
+            <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-blue-800 text-lg">{date}</h3>
+                <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {apps.map(app => (
+                  <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-blue-300 transition-colors">
+                    {/* Header: Name + Status */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
+                        <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5" /> {app.phone}
+                        </div>
+                      </div>
+                      <span className="font-semibold text-teal-700 bg-teal-50 px-2 py-1 rounded-lg text-xs border border-teal-100 whitespace-nowrap">
+                        {app.care_status || 'Đang chăm sóc'}
+                      </span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-semibold text-teal-700 bg-teal-50 px-2 py-1 rounded-lg text-xs border border-teal-100">
-                      {app.care_status || 'Đang chăm sóc'}
-                    </span>
-                    <div className="mt-2 text-xs text-slate-500 max-h-20 overflow-y-auto whitespace-pre-wrap p-2 bg-slate-50 rounded border">
-                      {app.care_notes || 'Chưa có ghi chú chăm sóc'}
+
+                    {/* Compact Info Grid */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm bg-slate-50 p-3 rounded-xl">
+                      <div className="text-slate-500 text-xs">Dịch vụ:</div>
+                      <div className="font-semibold text-slate-800 text-right truncate">{app.service || 'Chưa chọn'}</div>
+                      <div className="text-slate-500 text-xs">Đã cọc:</div>
+                      <div className="font-bold text-blue-600 text-right">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</div>
+                      <div className="text-slate-500 text-xs">Telesale:</div>
+                      <div className="text-slate-700 text-right truncate">{app.telesale?.full_name || 'N/A'}</div>
+                      <div className="text-slate-500 text-xs">Sale:</div>
+                      <div className="text-slate-700 text-right truncate">{app.sale?.full_name || 'N/A'}</div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex flex-col items-end gap-2">
-                      <button onClick={() => openCare(app)} className="w-40 flex justify-center items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200">
-                        <MessageCircle className="w-3.5 h-3.5" /> Ghi chú chăm
+
+                    {/* Note Box */}
+                    {app.care_notes && (
+                      <div className="mt-auto mb-3 text-xs text-slate-500 bg-yellow-50/50 p-2.5 rounded-lg border border-yellow-100/50 max-h-20 overflow-y-auto whitespace-pre-wrap">
+                        {app.care_notes}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="mt-auto grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+                      <button onClick={() => openCare(app)} className="flex flex-col items-center justify-center gap-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-colors">
+                        <MessageCircle className="w-4 h-4" />
+                        <span className="text-[10px] font-semibold">Ghi chú</span>
                       </button>
-                      <button onClick={() => openSurgery(app)} className="w-40 flex justify-center items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition-colors border border-emerald-200">
-                        <ArrowUpCircle className="w-3.5 h-3.5" /> Lên Phẫu thuật
+                      <button onClick={() => openSurgery(app)} className="flex flex-col items-center justify-center gap-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-colors">
+                        <ArrowUpCircle className="w-4 h-4" />
+                        <span className="text-[10px] font-semibold">Lên PT</span>
                       </button>
-                      <button onClick={() => openBong(app)} className="w-40 flex justify-center items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg transition-colors border border-red-200">
-                        <AlertCircle className="w-3.5 h-3.5" /> Khách hủy cọc
+                      <button onClick={() => openBong(app)} className="flex flex-col items-center justify-center gap-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-[10px] font-semibold">Hủy cọc</span>
                       </button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

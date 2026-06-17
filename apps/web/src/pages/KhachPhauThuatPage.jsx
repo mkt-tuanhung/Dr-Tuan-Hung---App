@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Clock, CheckCircle, X, Edit, ClipboardList } from 'lucide-react';
+import { Clock, CheckCircle, X, Edit, ClipboardList, Calendar } from 'lucide-react';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
   const [customers, setCustomers] = useState([]);
@@ -83,7 +83,17 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       loadData();
     }
     setSaving(false);
+    setSaving(false);
   };
+
+  const groupedCustomers = customers.reduce((acc, app) => {
+    const date = app.surgery_date 
+      ? new Date(app.surgery_date).toLocaleDateString('vi-VN') 
+      : 'Không rõ';
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(app);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -104,59 +114,69 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
             Không có khách phẫu thuật nào
          </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto min-w-full">
-            <table className="w-full text-left text-sm min-w-[800px]">
-            <thead className="bg-slate-50 border-b border-slate-100 text-slate-500">
-              <tr>
-                <th className="px-6 py-3.5 font-medium">Khách hàng</th>
-                <th className="px-6 py-3.5 font-medium">Ngày PT</th>
-                <th className="px-6 py-3.5 font-medium">Dịch vụ</th>
-                <th className="px-6 py-3.5 font-medium">Phân công điều dưỡng</th>
-                <th className="px-6 py-3.5 font-medium text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {customers.map(app => {
-                const isAssigned = app.hau_phau_id;
-                return (
-                  <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-slate-700">{app.customer_name}</td>
-                    <td className="px-6 py-4 text-slate-600 flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      {app.surgery_date ? new Date(app.surgery_date).toLocaleDateString('vi-VN') : ''}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-slate-800 font-medium">{app.service}</div>
-                      <div className="text-xs text-purple-600 font-semibold">{Number(app.revenue || 0).toLocaleString('vi-VN')} đ</div>
-                    </td>
-                    <td className="px-6 py-4">
-                       {app.phu_mo_1_id ? <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded mr-1">Đã xếp phụ mổ</span> : null}
-                       {app.truc_dem_id ? <span className="inline-block px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded mr-1">Đã xếp trực đêm</span> : null}
-                       {!app.phu_mo_1_id && !app.truc_dem_id && <span className="text-slate-400 text-xs">Chưa phân công</span>}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {isAssigned ? (
-                        <div className="flex justify-end gap-2">
-                          <button onClick={() => setActiveTab && setActiveTab('hau_phau')} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200 w-32">
-                            <ClipboardList className="w-3.5 h-3.5" /> Xem hậu phẫu
-                          </button>
-                          <button onClick={() => openModal(app)} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 rounded-lg transition-colors">
-                            <Edit className="w-4 h-4" />
-                          </button>
+        <div className="space-y-6">
+          {Object.entries(groupedCustomers).map(([date, apps]) => (
+            <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                <Calendar className="w-5 h-5 text-purple-600" />
+                <h3 className="font-bold text-purple-800 text-lg">Ngày mổ: {date}</h3>
+                <span className="px-2.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full ml-auto">{apps.length} ca</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {apps.map(app => {
+                  const isAssigned = app.hau_phau_id;
+                  return (
+                    <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-purple-300 transition-colors">
+                      {/* Header */}
+                      <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
+                          <div className="text-slate-500 text-sm mt-0.5">
+                            {app.service}
+                          </div>
                         </div>
-                      ) : (
-                        <button onClick={() => openModal(app)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 font-semibold text-xs rounded-lg hover:bg-purple-100 transition-colors border border-purple-200 ml-auto w-36">
-                          <CheckCircle className="w-3.5 h-3.5" /> Đăng ký điều dưỡng
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
+                        <div className="text-right">
+                          <div className="text-xs text-slate-500 mb-0.5">Doanh thu</div>
+                          <div className="text-sm font-bold text-purple-600">{Number(app.revenue || 0).toLocaleString('vi-VN')} đ</div>
+                        </div>
+                      </div>
+
+                      {/* Phân công */}
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50 flex flex-col items-center justify-center text-center">
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Phụ mổ</span>
+                          {app.phu_mo_1_id ? <CheckCircle className="w-4 h-4 text-blue-600" /> : <span className="text-xs text-slate-400">-</span>}
+                        </div>
+                        <div className="bg-orange-50/50 p-2 rounded-xl border border-orange-100/50 flex flex-col items-center justify-center text-center">
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Trực đêm</span>
+                          {app.truc_dem_id ? <CheckCircle className="w-4 h-4 text-orange-600" /> : <span className="text-xs text-slate-400">-</span>}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="mt-auto flex gap-2 pt-2">
+                        {isAssigned ? (
+                          <>
+                            <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
+                              <Edit className="w-3.5 h-3.5" /> Sửa ca
+                            </button>
+                            <button onClick={() => setActiveTab && setActiveTab('hau_phau')} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
+                              <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
+                            <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

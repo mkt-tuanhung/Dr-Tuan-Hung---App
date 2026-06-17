@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone } from 'lucide-react';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -71,6 +71,15 @@ const HauPhauPage = () => {
 
   const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
 
+  const groupedCustomers = filteredCustomers.reduce((acc, app) => {
+    const date = app.surgery_date 
+      ? new Date(app.surgery_date).toLocaleDateString('vi-VN') 
+      : 'Không rõ';
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(app);
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -99,52 +108,58 @@ const HauPhauPage = () => {
          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
             Không có khách hàng hậu phẫu nào trong mục này
          </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto min-w-full">
-            <table className="w-full text-left text-sm min-w-[800px]">
-            <thead className="bg-slate-50 border-b border-slate-100 text-slate-500">
-              <tr>
-                <th className="px-6 py-3.5 font-medium w-64">Khách hàng</th>
-                <th className="px-6 py-3.5 font-medium">Chi tiết phẫu thuật</th>
-                <th className="px-6 py-3.5 font-medium">Tiến trình phục hồi</th>
-                <th className="px-6 py-3.5 font-medium text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredCustomers.map(app => (
-                <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-slate-800">{app.customer_name}</div>
-                    <div className="text-slate-500 text-xs mt-0.5">{app.phone}</div>
-                    <div className="text-xs text-slate-400 mt-1">Phụ trách: {app.hau_phau?.full_name || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-purple-700 bg-purple-50 inline-block px-2 py-0.5 rounded-lg mb-1">{app.service || 'Chưa rõ'}</div>
-                    <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" /> Mổ: {app.surgery_date ? new Date(app.surgery_date).toLocaleDateString('vi-VN') : 'N/A'}
+        <div className="space-y-6">
+          {Object.entries(groupedCustomers).map(([date, apps]) => (
+            <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                <Calendar className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-emerald-800 text-lg">Mổ ngày: {date}</h3>
+                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {apps.map(app => (
+                  <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-emerald-300 transition-colors">
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
+                        <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5" /> {app.phone}
+                        </div>
+                      </div>
+                      <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg text-xs border border-emerald-100 whitespace-nowrap">
+                        {app.post_op_status || 'Đang theo dõi'}
+                      </span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg text-xs border border-emerald-100">
-                      {app.post_op_status || 'Đang theo dõi'}
-                    </span>
-                    <div className="mt-2 text-xs text-slate-500 max-h-20 overflow-y-auto whitespace-pre-wrap p-2 bg-slate-50 rounded border">
-                      {app.post_op_notes || 'Chưa có ghi chú'}
+
+                    {/* Compact Info Grid */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm bg-slate-50 p-3 rounded-xl">
+                      <div className="text-slate-500 text-xs">Dịch vụ:</div>
+                      <div className="font-semibold text-slate-800 text-right truncate">{app.service || 'Chưa rõ'}</div>
+                      <div className="text-slate-500 text-xs">Phụ trách hậu phẫu:</div>
+                      <div className="text-slate-700 text-right truncate">{app.hau_phau?.full_name || 'N/A'}</div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button onClick={() => openNote(app)} className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-200 transition-colors border border-slate-200">
-                      <MessageCircle className="w-3.5 h-3.5" /> Ghi chú chăm
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+
+                    {/* Note Box */}
+                    {app.post_op_notes && (
+                      <div className="mt-auto mb-3 text-xs text-slate-500 bg-yellow-50/50 p-2.5 rounded-lg border border-yellow-100/50 max-h-20 overflow-y-auto whitespace-pre-wrap">
+                        {app.post_op_notes}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="mt-auto pt-2">
+                      <button onClick={() => openNote(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl transition-colors border border-slate-200">
+                        <MessageCircle className="w-4 h-4" /> Cập nhật tình trạng & Ghi chú
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
 
       {/* Modal */}
       {showNoteModal && (
