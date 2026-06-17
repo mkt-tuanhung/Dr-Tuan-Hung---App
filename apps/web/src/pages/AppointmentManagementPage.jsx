@@ -21,7 +21,8 @@ const AppointmentManagementPage = () => {
   const [createForm, setCreateForm] = useState({
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
     customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
-    expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: ''
+    expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
+    service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
   });
 
   const [evalApp, setEvalApp] = useState(null);
@@ -136,6 +137,9 @@ const AppointmentManagementPage = () => {
         sale_id: createForm.sale_id || null,
         social_link: createForm.social_link,
         notes: createForm.notes,
+        service_group: createForm.service_group,
+        customer_source: createForm.customer_source,
+        customer_type: createForm.customer_type,
         status: 'scheduled',
         created_by: profile.id
       });
@@ -388,6 +392,26 @@ const AppointmentManagementPage = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Tên khách hàng <span className="text-red-500">*</span></label>
                     <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập tên..." />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                    <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập SĐT..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
+                    <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                      <option value="Ads">Ads</option>
+                      <option value="Người quen">Người quen</option>
+                      <option value="CTV">CTV</option>
+                      <option value="CSKH">CSKH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách hàng <span className="text-red-500">*</span></label>
+                    <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                      <option value="Mới">Khách Mới</option>
+                      <option value="Cũ">Khách Cũ</option>
+                    </select>
+                  </div>
                 </div>
               </section>
 
@@ -398,6 +422,14 @@ const AppointmentManagementPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ <span className="text-red-500">*</span></label>
                     <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Chọn dịch vụ" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
+                    <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                      <option value="Hàm mặt">Hàm mặt</option>
+                      <option value="Body">Body</option>
+                      <option value="Tiểu phẫu">Tiểu phẫu</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Tình trạng xét nghiệm</label>

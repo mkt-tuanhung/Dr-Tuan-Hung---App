@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import {
-  LogOut, CalendarCheck, Target, Wallet, Clock,
+  LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
+import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -17,6 +18,7 @@ const ROLE_LABELS = {
 const MENU = [
   { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard },
   { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck },
+  { id: 'finance',    label: 'Doanh thu',       icon: Banknote },
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target },
   { id: 'payroll',    label: 'Bảng lương',      icon: Wallet },
   { id: 'schedule',   label: 'Lịch làm việc',  icon: Clock },
@@ -113,6 +115,7 @@ const StaffDashboard = () => {
     if (activeTab === 'overview') return <Overview profile={profile} />;
     if (activeTab === 'attendance') return <AttendancePage />;
     if (activeTab === 'kpi') return <KPIPage />;
+    if (activeTab === 'finance') return <FinanceManagementPage />;
     return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 

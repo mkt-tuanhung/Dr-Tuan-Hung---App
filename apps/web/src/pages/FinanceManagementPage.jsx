@@ -1,18 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search } from 'lucide-react';
+import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
 const FinanceManagementPage = () => {
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState('revenue');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
   const [revenueData, setRevenueData] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    surgery_date: new Date().toISOString().split('T')[0],
+    customer_name: '', phone: '', service: '',
+    service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
+    revenue: '', upsale_revenue: '', sale_id: '', telesale_id: '', notes: ''
+  });
   
   // Charts Data
   const [sourceData, setSourceData] = useState([]);
@@ -26,13 +38,25 @@ const FinanceManagementPage = () => {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
     const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('customer_appointments')
       .select('*, profiles!customer_appointments_created_by_fkey(full_name)')
       .eq('status', 'phau_thuat')
       .gte('surgery_date', startDate)
-      .lte('surgery_date', endDate)
-      .order('surgery_date', { ascending: false });
+      .lte('surgery_date', endDate);
+
+    // Phân quyền hiển thị
+    if (profile?.role === 'telesale') {
+      query = query.eq('telesale_id', profile.id);
+    } else if (profile?.role === 'sale_offline') {
+      query = query.eq('sale_id', profile.id);
+    }
+
+    const { data, error } = await query.order('surgery_date', { ascending: false });
+
+    // Fetch staff for dropdown
+    const { data: staffData } = await supabase.from('profiles').select('id, full_name, role');
+    if (staffData) setStaffList(staffData);
 
     if (error) {
       toast.error('Lỗi tải dữ liệu: ' + error.message);
@@ -70,8 +94,43 @@ const FinanceManagementPage = () => {
   }, [month, year]);
 
   useEffect(() => {
-    if (activeTab === 'revenue') loadData();
-  }, [loadData, activeTab]);
+    if (activeTab === 'revenue' && profile) loadData();
+  }, [loadData, activeTab, profile]);
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!createForm.phone || !createForm.customer_name) {
+      toast.error('Vui lòng nhập Tên và SĐT khách hàng'); return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('customer_appointments').insert({
+        customer_name: createForm.customer_name,
+        phone: createForm.phone,
+        appointment_date: createForm.surgery_date,
+        surgery_date: createForm.surgery_date,
+        service: createForm.service,
+        service_group: createForm.service_group,
+        customer_source: createForm.customer_source,
+        customer_type: createForm.customer_type,
+        revenue: createForm.revenue || 0,
+        upsale_revenue: createForm.upsale_revenue || 0,
+        sale_id: createForm.sale_id || null,
+        telesale_id: createForm.telesale_id || null,
+        notes: createForm.notes,
+        status: 'phau_thuat',
+        created_by: profile.id
+      });
+      if (error) throw error;
+      toast.success('Đã thêm doanh thu thành công!');
+      setShowCreateModal(false);
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const fmt = (val) => new Intl.NumberFormat('vi-VN').format(val) + 'đ';
 
@@ -88,7 +147,7 @@ const FinanceManagementPage = () => {
             <Banknote className="w-4 h-4 inline-block mr-2" /> Doanh Thu
           </button>
           <button onClick={() => setActiveTab('expenses')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
-            <Wallet className="w-4 h-4 inline-block mr-2" /> Chi Phí & Tạm Ứng
+            <Wallet className="w-4 h-4 inline-block mr-2" /> Tài chính
           </button>
         </div>
       </div>
@@ -164,9 +223,11 @@ const FinanceManagementPage = () => {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                <h3 className="font-bold text-slate-800">Danh sách Giao dịch Doanh Thu</h3>
-               <button className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
-                 + Nhập doanh thu trực tiếp
-               </button>
+               {(profile?.role === 'admin' || profile?.role === 'marketing') && (
+                 <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
+                   + Nhập doanh thu trực tiếp
+                 </button>
+               )}
              </div>
              {loading ? (
                 <div className="p-10 text-center text-slate-400">Đang tải...</div>
@@ -224,8 +285,113 @@ const FinanceManagementPage = () => {
       {activeTab === 'expenses' && (
         <div className="bg-white p-10 rounded-2xl border border-dashed border-slate-300 text-center">
            <Wallet className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-           <h3 className="text-lg font-bold text-slate-700">Module Tài chính & Tạm ứng</h3>
-           <p className="text-slate-500 mt-2">Tính năng ghi nhận dòng tiền chi phí và tạm ứng của nhân viên đang được tích hợp.</p>
+           <h3 className="text-lg font-bold text-slate-700">Module Tài chính</h3>
+           <p className="text-slate-500 mt-2">Tính năng quản lý dòng tiền chi tiết đang được xây dựng.</p>
+        </div>
+      )}
+
+      {/* Direct Revenue Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
+            <div className="px-6 py-4 border-b flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-xl">Nhập doanh thu trực tiếp</h3>
+              <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ngày <span className="text-red-500">*</span></label>
+                  <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Họ tên khách hàng <span className="text-red-500">*</span></label>
+                  <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" placeholder="Nhập tên..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                  <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" placeholder="Nhập SĐT..." />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ sử dụng <span className="text-red-500">*</span></label>
+                  <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" placeholder="Ví dụ: Nâng mũi" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
+                  <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                    <option value="Hàm mặt">Hàm mặt</option>
+                    <option value="Body">Body</option>
+                    <option value="Tiểu phẫu">Tiểu phẫu</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
+                  <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                    <option value="Ads">Ads</option>
+                    <option value="CTV">CTV</option>
+                    <option value="Người quen">Người quen</option>
+                    <option value="CSKH">CSKH</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách <span className="text-red-500">*</span></label>
+                  <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                    <option value="Mới">Khách Mới</option>
+                    <option value="Cũ">Khách Cũ</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu tổng (VNĐ) <span className="text-red-500">*</span></label>
+                  <input required type="number" value={createForm.revenue} onChange={e => setCreateForm({...createForm, revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none text-emerald-700 font-bold" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu Upsale (VNĐ)</label>
+                  <input type="number" value={createForm.upsale_revenue} onChange={e => setCreateForm({...createForm, upsale_revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none text-purple-700 font-bold" placeholder="0" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
+                  <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                    <option value="">-- Không có --</option>
+                    {staffList.filter(s => s.role === 'sale_offline' || s.role === 'admin').map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
+                  <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                    <option value="">-- Không có --</option>
+                    {staffList.filter(s => s.role === 'telesale' || s.role === 'admin').map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Ghi chú thêm</label>
+                <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none resize-none" placeholder="Nhập ghi chú..."></textarea>
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
+                  {saving ? 'Đang lưu...' : 'Nhập Doanh Thu'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
