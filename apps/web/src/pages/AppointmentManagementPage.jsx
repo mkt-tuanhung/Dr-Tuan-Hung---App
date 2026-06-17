@@ -356,9 +356,11 @@ const AppointmentManagementPage = () => {
                       </div>
 
                       <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2">
-                        <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
-                          <Edit className="w-4 h-4" /> Đánh giá
-                        </button>
+                        {['admin', 'sale_offline'].includes(profile?.role) && (
+                          <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
+                            <Edit className="w-4 h-4" /> Đánh giá
+                          </button>
+                        )}
                         <button className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
                           <Edit className="w-4 h-4" />
                         </button>

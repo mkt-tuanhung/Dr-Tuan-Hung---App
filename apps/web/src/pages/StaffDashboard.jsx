@@ -27,11 +27,11 @@ const FULL_MENU = [
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'] },
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
 
-  // MKT / Finance
-  { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder'] },
+  // MKT / Finance / Sales
+  { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
 
   // CRM
-  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['telesale', 'sale_offline', 'cskh', 'truc_page'] },
+  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
   { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'cskh'] },
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
