@@ -324,51 +324,68 @@ const AppointmentManagementPage = () => {
           {/* Tab Content */}
           {activeViewTab === 'rechecks' ? (
             recheckAppointments.length > 0 ? (
-              <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden mb-8">
-                <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
-                  <Stethoscope className="w-6 h-6 text-orange-600" />
-                  <h3 className="font-bold text-orange-800 text-lg">Danh sách Lịch Tái Khám</h3>
-                  <span className="bg-orange-200 text-orange-800 text-xs font-bold px-3 py-1 rounded-full">{recheckAppointments.length} lịch</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-orange-50/50 text-slate-700">
-                      <tr>
-                        <th className="px-6 py-3">Ngày & Giờ</th>
-                        <th className="px-6 py-3">Khách hàng</th>
-                        <th className="px-6 py-3">Dịch vụ tái khám</th>
-                        <th className="px-6 py-3">Phụ trách</th>
-                        <th className="px-6 py-3">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recheckAppointments.sort((a,b) => new Date(b.appointment_date) - new Date(a.appointment_date)).map(app => (
-                        <tr key={app.id} className="border-b border-slate-100 hover:bg-slate-50">
-                          <td className="px-6 py-4 font-semibold text-orange-700">
-                            {new Date(app.appointment_date).toLocaleDateString('vi-VN')} <br/>
-                            <span className="text-xs text-slate-500">{app.appointment_time?.substring(0,5)}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-slate-800">{app.customer_name}</div>
-                            <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3"/> {app.phone}</div>
-                          </td>
-                          <td className="px-6 py-4 font-medium text-slate-700">{app.service?.replace('[Tái khám] ', '')}</td>
-                          <td className="px-6 py-4 text-slate-600">{app.sale || 'Không có'}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                              <button onClick={() => setViewNoteApp(app)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Xem lịch sử chăm sóc">
-                                <FileText className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => deleteApp(app.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Xóa lịch hẹn">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+              <div className="space-y-6">
+                {Object.entries(
+                  recheckAppointments.reduce((acc, app) => {
+                    if (!acc[app.appointment_date]) acc[app.appointment_date] = [];
+                    acc[app.appointment_date].push(app);
+                    return acc;
+                  }, {})
+                ).sort(([a], [b]) => new Date(b) - new Date(a)).map(([dateStr, apps]) => (
+                  <div key={dateStr} className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden mb-6">
+                    <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
+                      <div className="flex items-center gap-2 text-orange-800 font-bold">
+                        <Stethoscope className="w-5 h-5" />
+                        {new Date(dateStr).toLocaleDateString('vi-VN')}
+                      </div>
+                      <span className="bg-orange-200 text-orange-800 text-xs font-bold px-2 py-1 rounded-full">{apps.length} lịch</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {apps.map(app => (
+                        <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <User className="w-5 h-5 text-orange-600" />
+                              <span className="font-bold text-slate-800 text-base">{app.customer_name}</span>
                             </div>
-                          </td>
-                        </tr>
+                            <span className="px-3 py-1 bg-orange-100 text-orange-700 font-semibold rounded-full text-xs">Tái khám</span>
+                          </div>
+                          
+                          <div className="p-4 space-y-4 flex-1">
+                            <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                              <Phone className="w-4 h-4 text-slate-400" />
+                              <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-orange-700">{app.service?.replace('[Tái khám] ', '') || 'Chưa chọn dịch vụ'}</span>
+                            </div>
+
+                            <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3 space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Phụ trách:</span>
+                                <span className="font-semibold text-orange-700">{app.sale || 'Không có'}</span>
+                              </div>
+                            </div>
+                            
+                            {app.social_link && (
+                              <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
+                                <LinkIcon className="w-3 h-3" /> Xem link tham khảo
+                              </a>
+                            )}
+                          </div>
+
+                          <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
+                            <button onClick={() => setViewNoteApp(app)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm py-2 rounded-xl hover:bg-blue-100 transition-colors">
+                              <FileText className="w-4 h-4" /> Lịch sử chăm sóc
+                            </button>
+                            <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 font-medium">
