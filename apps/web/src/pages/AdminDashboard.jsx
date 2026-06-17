@@ -17,7 +17,6 @@ const MENU = [
   { id: 'overview',      label: 'Tổng quan',        shortLabel: 'Tổng quan',  icon: LayoutDashboard },
   { id: 'staff',         label: 'Nhân sự',           shortLabel: 'Nhân sự',    icon: Users },
   { id: 'attendance',    label: 'Chấm công',         shortLabel: 'Chấm công', icon: CalendarCheck },
-  { id: 'leave',         label: 'Đơn xin phép',      shortLabel: 'Xin phép',  icon: ClipboardList },
   { id: 'appointments',  label: 'Lịch hẹn',          shortLabel: 'Lịch hẹn',  icon: CalendarDays },
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
@@ -201,6 +200,25 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingLeaves, setPendingLeaves] = useState(0);
+
+  useEffect(() => {
+    // Fetch initial count
+    const fetchPendingLeaves = async () => {
+      const { count } = await supabase.from('leave_requests').select('id', { count: 'exact' }).eq('status', 'pending');
+      setPendingLeaves(count || 0);
+    };
+    fetchPendingLeaves();
+
+    // Subscribe to real-time changes
+    const sub = supabase.channel('leave_requests_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => {
+        fetchPendingLeaves();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(sub); };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -212,7 +230,6 @@ const AdminDashboard = () => {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
       case 'staff': return <StaffManagementPage />;
       case 'attendance': return <AttendanceManagementPage />;
-      case 'leave': return <LeaveManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
@@ -262,15 +279,22 @@ const AdminDashboard = () => {
                 key={item.id}
                 onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
+                  w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
                   ${active
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200'
                     : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
                   }
                 `}
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                {item.label}
+                <div className="flex items-center gap-3">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {item.label}
+                </div>
+                {item.id === 'attendance' && pendingLeaves > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                    {pendingLeaves}
+                  </span>
+                )}
               </button>
             );
           })}

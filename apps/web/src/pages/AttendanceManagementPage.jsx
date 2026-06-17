@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users } from 'lucide-react';
+import LeaveManagementPage from './LeaveManagementPage.jsx';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'bg-emerald-100 text-emerald-700' },
@@ -22,6 +23,7 @@ const fmtDate = (d) => {
 
 const AttendanceManagementPage = () => {
   const today = new Date();
+  const [activeTab, setActiveTab] = useState('attendance');
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [staff, setStaff] = useState([]);
@@ -124,24 +126,45 @@ const AttendanceManagementPage = () => {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Chấm công</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month-1]} {year}</p>
+      {/* Header & Tabs */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Chấm công & Nghỉ phép</h2>
+            {activeTab === 'attendance' && <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month-1]} {year}</p>}
+          </div>
+          {activeTab === 'attendance' && (
+            <div className="flex items-center gap-2">
+              <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
+                <ChevronLeft className="w-4 h-4 text-slate-500" />
+              </button>
+              <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month-1]} {year}</span>
+              <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronLeft className="w-4 h-4 text-slate-500" />
+        
+        <div className="flex items-center gap-6 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('attendance')}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'attendance' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            Bảng chấm công
           </button>
-          <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month-1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronRight className="w-4 h-4 text-slate-500" />
+          <button
+            onClick={() => setActiveTab('leave')}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'leave' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            Duyệt đơn xin phép
           </button>
         </div>
       </div>
 
-      {/* Stats */}
+      {activeTab === 'attendance' ? (
+        <>
+          {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
           <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center mb-2">
@@ -375,6 +398,10 @@ const AttendanceManagementPage = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
+      ) : (
+        <LeaveManagementPage />
       )}
     </div>
   );

@@ -50,12 +50,43 @@ const LeaveManagementPage = () => {
 
   const handleApprove = async (id) => {
     setSaving(id);
+    const req = requests.find(r => r.id === id);
+    if (!req) { setSaving(null); return; }
+
     const { error } = await supabase.from('leave_requests').update({
       status: 'approved',
       reviewed_at: new Date().toISOString(),
     }).eq('id', id);
-    if (error) { toast.error(error.message); }
-    else { toast.success('Đã duyệt đơn'); loadData(); }
+
+    if (error) { toast.error(error.message); setSaving(null); return; }
+
+    let attStatus = 'present';
+    if (req.type === 'leave') attStatus = 'leave';
+    else if (req.type === 'half_day') attStatus = 'half_day';
+    else if (req.type === 'late') attStatus = 'late';
+    else if (req.type === 'early') attStatus = 'early_leave'; // using 'early_leave' based on schema
+
+    const { data: existingAtt } = await supabase.from('attendance')
+      .select('id').eq('staff_id', req.staff_id).eq('date', req.date).maybeSingle();
+
+    if (existingAtt) {
+      await supabase.from('attendance').update({
+        status: attStatus,
+        leave_type: req.type === 'half_day' ? req.half_day_period : null,
+        note: `Đã duyệt đơn: ${req.reason}`
+      }).eq('id', existingAtt.id);
+    } else {
+      await supabase.from('attendance').insert({
+        staff_id: req.staff_id,
+        date: req.date,
+        status: attStatus,
+        leave_type: req.type === 'half_day' ? req.half_day_period : null,
+        note: `Đã duyệt đơn: ${req.reason}`
+      });
+    }
+
+    toast.success('Đã duyệt đơn và cập nhật chấm công');
+    loadData();
     setSaving(null);
   };
 
@@ -85,9 +116,9 @@ const LeaveManagementPage = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mt-2">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Đơn xin phép</h2>
+          <h3 className="text-lg font-semibold text-slate-800">Danh sách đơn</h3>
           <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month-1]} {year}</p>
         </div>
         <div className="flex items-center gap-2">
