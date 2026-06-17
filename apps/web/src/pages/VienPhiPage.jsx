@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-const VienPhiPage = () => {
+const VienPhiPage = ({ isNested = false }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewImage, setViewImage] = useState(null);
@@ -43,12 +43,14 @@ const VienPhiPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Quản lý Viện phí</h2>
-          <p className="text-slate-500 text-sm mt-1">Theo dõi các khoản thu viện phí từ khách hàng phẫu thuật</p>
+      {!isNested && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Quản lý Viện phí</h2>
+            <p className="text-slate-500 text-sm mt-1">Theo dõi các khoản thu viện phí từ khách hàng phẫu thuật</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" /></div>

@@ -16,6 +16,7 @@ import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import HRManagementPage from '@/pages/HRManagementPage.jsx';
+import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -38,9 +39,7 @@ const MENU = [
   { id: 'advances',      label: 'Tạm ứng chi',       shortLabel: 'Tạm ứng',    icon: Wallet },
   { id: 'cashflow',      label: 'Kế toán dòng tiền', shortLabel: 'Dòng tiền',  icon: BarChart2 },
   { id: 'marketing',     label: 'Marketing',         shortLabel: 'Marketing',  icon: Target },
-
-  { id: 'inventory',     label: 'Kế toán kho',       shortLabel: 'Kho',        icon: ClipboardList },
-  { id: 'vien_phi',      label: 'Viện phí',          shortLabel: 'Viện phí',   icon: Activity },
+  { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', shortLabel: 'VP/VT', icon: Activity },
   { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: Bell },
   { id: 'notifications', label: 'Thông báo',         shortLabel: 'Thông báo', icon: AlertCircle },
   { id: 'permissions',   label: 'Phân quyền',        shortLabel: 'Phân quyền',icon: ShieldCheck },
@@ -261,7 +260,7 @@ const AdminDashboard = () => {
       case 'finance': return <FinanceManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       case 'ads_report': return <AdsReportPage />;
-      case 'vien_phi': return <VienPhiPage />;
+      case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
