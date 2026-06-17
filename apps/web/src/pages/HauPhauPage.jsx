@@ -20,7 +20,7 @@ const HauPhauPage = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '' });
+  const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -45,7 +45,9 @@ const HauPhauPage = () => {
     setSelectedApp(app);
     setForm({
       post_op_status: app.post_op_status || 'Đang theo dõi',
-      post_op_notes: ''
+      post_op_notes: '',
+      recheck_date: new Date().toISOString().split('T')[0],
+      recheck_time: '09:00'
     });
     setShowNoteModal(true);
   };
@@ -62,6 +64,30 @@ const HauPhauPage = () => {
       
     if (error) toast.error(error.message);
     else { 
+      if (form.post_op_status === 'Tái khám') {
+        const { error: insertError } = await supabase.from('customer_appointments').insert({
+          customer_name: selectedApp.customer_name,
+          phone: selectedApp.phone,
+          appointment_date: form.recheck_date,
+          appointment_time: form.recheck_time,
+          service: `[Tái khám] ${selectedApp.service || 'Hậu phẫu'}`,
+          test_status: 'Không cần',
+          expected_bill: 0,
+          deposit_amount: 0,
+          telesale_id: null,
+          sale_id: selectedApp.sale_id || selectedApp.hau_phau_id || null,
+          surgery_date: selectedApp.surgery_date,
+          customer_source: 'CSKH',
+          customer_type: 'Cũ',
+          status: 'scheduled',
+          notes: `[Lịch sử chăm sóc Hậu Phẫu]${updatedNotes}`,
+        });
+        if (insertError) {
+          toast.error('Lỗi khi tạo lịch hẹn tái khám: ' + insertError.message);
+        } else {
+          toast.success('Đã tự động tạo Lịch Tái Khám!');
+        }
+      }
       toast.success('Cập nhật chăm sóc hậu phẫu thành công!'); 
       setShowNoteModal(false); 
       loadData(); 
@@ -178,6 +204,19 @@ const HauPhauPage = () => {
                   {TABS.filter(t => t.id !== 'all').map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
               </div>
+
+              {form.post_op_status === 'Tái khám' && (
+                <div className="grid grid-cols-2 gap-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-emerald-800">Ngày hẹn tái khám</label>
+                    <input type="date" required value={form.recheck_date} onChange={e => setForm({...form, recheck_date: e.target.value})} className="w-full border border-emerald-200 p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-emerald-800">Giờ hẹn</label>
+                    <input type="time" required value={form.recheck_time} onChange={e => setForm({...form, recheck_time: e.target.value})} className="w-full border border-emerald-200 p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold mb-2">Ghi chú theo dõi</label>
                 <textarea required rows={4} value={form.post_op_notes} onChange={e => setForm({...form, post_op_notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none" placeholder="Vết thương khô, đã cắt chỉ..." />
