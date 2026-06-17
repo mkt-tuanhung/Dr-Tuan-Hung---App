@@ -7,7 +7,6 @@ import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
-import MarketingDashboardPage from '@/pages/MarketingDashboardPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
