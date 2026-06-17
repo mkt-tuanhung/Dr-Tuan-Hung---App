@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
 import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X } from 'lucide-react';
@@ -35,7 +36,8 @@ const FinanceManagementPage = () => {
   // Stats
   const [stats, setStats] = useState({ 
     totalRev: 0, totalUpsale: 0, totalCustomers: 0, adsCustomers: 0, adsRevenue: 0, adsSpent: 0,
-    hospitalFee: 0, hospitalFeeCash: 0, hospitalFeeTransfer: 0, hospitalFeeCount: 0 
+    hospitalFee: 0, hospitalFeeCash: 0, hospitalFeeTransfer: 0, hospitalFeeCount: 0,
+    totalCocRev: 0, totalCocCustomers: 0
   });
 
   const loadData = useCallback(async () => {
@@ -104,6 +106,25 @@ const FinanceManagementPage = () => {
         adsData.forEach(ad => { tAdsSpent += Number(ad.amount_spent || 0); });
       }
 
+      // Fetch Coc Data
+      let cocQuery = supabase
+        .from('customer_appointments')
+        .select('deposit_amount')
+        .eq('status', 'coc')
+        .gte('deposit_date', startDate)
+        .lte('deposit_date', endDate);
+      
+      if (profile?.role === 'telesale') cocQuery = cocQuery.eq('telesale_id', profile.id);
+      else if (profile?.role === 'sale_offline') cocQuery = cocQuery.eq('sale_id', profile.id);
+
+      const { data: cocData } = await cocQuery;
+      let tCocRev = 0;
+      let cocCustomers = 0;
+      if (cocData) {
+        cocCustomers = cocData.length;
+        cocData.forEach(c => { tCocRev += Number(c.deposit_amount || 0); });
+      }
+
       setStats({
         totalRev: tRev,
         totalUpsale: tUp,
@@ -114,7 +135,9 @@ const FinanceManagementPage = () => {
         hospitalFee: tFee,
         hospitalFeeCash: tFeeCash,
         hospitalFeeTransfer: tFeeTransfer,
-        hospitalFeeCount: feeCount
+        hospitalFeeCount: feeCount,
+        totalCocRev: tCocRev,
+        totalCocCustomers: cocCustomers
       });
 
       setSourceData(Object.keys(srcMap).map(name => ({ name, value: srcMap[name] })));
@@ -316,6 +339,11 @@ const FinanceManagementPage = () => {
 
       {activeTab === 'expenses' && (
         <div className="space-y-6">
+          <FinanceRevenueSummary
+            stats={stats}
+            month={month}
+            onViewDetail={() => setActiveTab('revenue')}
+          />
           <FinanceAdsSummary
             stats={stats}
             month={month}
