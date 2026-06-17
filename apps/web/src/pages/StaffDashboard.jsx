@@ -6,6 +6,7 @@ import {
   Menu, X, User, LayoutDashboard, Bell, ChevronRight
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
+import KPIPage from '@/pages/KPIPage.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -111,6 +112,7 @@ const StaffDashboard = () => {
   const renderContent = () => {
     if (activeTab === 'overview') return <Overview profile={profile} />;
     if (activeTab === 'attendance') return <AttendancePage />;
+    if (activeTab === 'kpi') return <KPIPage />;
     return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 

@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { supabase } from '@/lib/supabaseClient';
 import StaffManagementPage from '@/pages/StaffManagementPage.jsx';
 import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
+import LeaveManagementPage from '@/pages/LeaveManagementPage.jsx';
+import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -15,6 +17,7 @@ const MENU = [
   { id: 'overview',      label: 'Tổng quan',        shortLabel: 'Tổng quan',  icon: LayoutDashboard },
   { id: 'staff',         label: 'Nhân sự',           shortLabel: 'Nhân sự',    icon: Users },
   { id: 'attendance',    label: 'Chấm công',         shortLabel: 'Chấm công', icon: CalendarCheck },
+  { id: 'leave',         label: 'Đơn xin phép',      shortLabel: 'Xin phép',  icon: ClipboardList },
   { id: 'appointments',  label: 'Lịch hẹn',          shortLabel: 'Lịch hẹn',  icon: CalendarDays },
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
@@ -209,6 +212,8 @@ const AdminDashboard = () => {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
       case 'staff': return <StaffManagementPage />;
       case 'attendance': return <AttendanceManagementPage />;
+      case 'leave': return <LeaveManagementPage />;
+      case 'kpi': return <KPIManagementPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
