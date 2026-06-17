@@ -309,55 +309,66 @@ const AppointmentManagementPage = () => {
                   </div>
                   <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">{groupedByDate[dateStr].length} lịch</span>
                 </div>
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-slate-100 text-slate-500 font-medium">
-                    <tr>
-                      <th className="px-6 py-3">Giờ</th>
-                      <th className="px-6 py-3">Khách hàng</th>
-                      <th className="px-6 py-3">Dịch vụ</th>
-                      <th className="px-6 py-3">Phụ trách</th>
-                      <th className="px-6 py-3">Trạng thái</th>
-                      <th className="px-6 py-3 text-right">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {groupedByDate[dateStr].map(app => (
-                      <tr key={app.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-800">{app.appointment_time?.substring(0,5) || '--:--'}</td>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-800">{app.customer_name}</div>
-                          {app.social_link ? (
-                            <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline mt-1">
-                              <LinkIcon className="w-3 h-3" /> Có link
-                            </a>
-                          ) : (
-                            <span className="text-xs text-slate-400 mt-1 block">Không có link</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-teal-700 bg-teal-50 inline-block px-2 py-0.5 rounded-lg mb-1">{app.service || 'Chưa chọn'}</div>
-                          <div className="text-xs text-slate-500">Bill: {Number(app.expected_bill||0).toLocaleString('vi-VN')}đ | Cọc: {Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</div>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-slate-600 space-y-1">
-                          <div><span className="text-slate-400">Tele:</span> {app.telesale}</div>
-                          <div><span className="text-slate-400">Sale:</span> {app.sale}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusBadge status={app.status} />
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openEval(app)} className="bg-teal-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal-700 transition-colors">
-                              Đánh giá
-                            </button>
-                            <button className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg"><Edit className="w-4 h-4" /></button>
-                            <button onClick={() => deleteApp(app.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {groupedByDate[dateStr].map(app => (
+                    <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <User className="w-5 h-5 text-teal-600" />
+                          <span className="font-bold text-slate-800 text-base">{app.customer_name}</span>
+                        </div>
+                        <StatusBadge status={app.status} />
+                      </div>
+                      
+                      <div className="p-4 space-y-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                          <Phone className="w-4 h-4 text-slate-400" />
+                          <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-teal-700">{app.service || 'Chưa chọn dịch vụ'}</span>
+                        </div>
+
+                        <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Telesale:</span>
+                            <span className="font-semibold text-blue-700">{app.telesale}</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Sale Offline:</span>
+                            <span className="font-semibold text-purple-700">{app.sale}</span>
+                          </div>
+                          <div className="border-t border-emerald-100/60 my-1 pt-1" />
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Dự kiến:</span>
+                            <span className="font-bold text-emerald-700">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Đã cọc:</span>
+                            <span className="font-bold text-emerald-700">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
+                          </div>
+                        </div>
+                        
+                        {app.social_link && (
+                          <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
+                            <LinkIcon className="w-3 h-3" /> Xem link tham khảo
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2">
+                        <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
+                          <Edit className="w-4 h-4" /> Đánh giá
+                        </button>
+                        <button className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
