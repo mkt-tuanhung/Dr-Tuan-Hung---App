@@ -2,7 +2,37 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle } from 'lucide-react';
+
+// Tọa độ văn phòng Dr Tuấn Hùng - 10 ngõ 168 Hào Nam, Hà Nội
+const OFFICE_LAT = 21.0285;
+const OFFICE_LNG = 105.8412;
+const OFFICE_RADIUS_M = 200; // bán kính cho phép 200m
+
+const calcDistance = (lat1, lng1, lat2, lng2) => {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+
+const getLocation = () => new Promise((resolve, reject) => {
+  if (!navigator.geolocation) { reject(new Error('Thiết bị không hỗ trợ GPS')); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+    err => reject(new Error('Không lấy được vị trí. Vui lòng bật GPS.')),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
+
+const getPublicIP = async () => {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    return data.ip;
+  } catch { return null; }
+};
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
@@ -45,6 +75,7 @@ const AttendancePage = () => {
   const [now, setNow] = useState(new Date());
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [leaveForm, setLeaveForm] = useState({ type: 'late', date: todayStr, half_day_period: 'morning', reason: '' });
+  const [locationInfo, setLocationInfo] = useState(null); // { lat, lng, distance, inOffice, ip }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -78,8 +109,25 @@ const AttendancePage = () => {
     try {
       const checkInTime = now.toTimeString().slice(0, 8);
       const status = checkInTime > '08:30:00' ? 'late' : 'present';
+
+      // Lấy GPS và IP đồng thời
+      let lat = null, lng = null, ip = null, location_status = 'unknown';
+      try {
+        const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
+        lat = pos.lat; lng = pos.lng; ip = ipAddr;
+        const dist = calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
+        location_status = dist <= OFFICE_RADIUS_M ? 'in_office' : 'outside';
+        setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: location_status === 'in_office', ip });
+        if (location_status === 'outside') {
+          toast.warning(`Bạn đang cách văn phòng ${Math.round(dist)}m`);
+        }
+      } catch (gpsErr) {
+        toast.warning('Không lấy được vị trí — chấm công không có GPS');
+      }
+
       const { error } = await supabase.from('attendance').insert({
         staff_id: profile.id, date: todayStr, check_in: checkInTime, status,
+        latitude: lat, longitude: lng, ip_address: ip, location_status,
       });
       if (error) throw error;
       toast.success('Đã chấm công vào!');
@@ -92,9 +140,19 @@ const AttendancePage = () => {
     if (!todayRecord?.id) return;
     setSaving(true);
     try {
+      let lat = null, lng = null, ip = null;
+      try {
+        const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
+        lat = pos.lat; lng = pos.lng; ip = ipAddr;
+      } catch {}
+
       const { error } = await supabase.from('attendance').update({
         check_out: now.toTimeString().slice(0, 8),
         updated_at: new Date().toISOString(),
+        // Lưu GPS checkout vào note nếu khác vị trí
+        ...(lat && calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG) > OFFICE_RADIUS_M
+          ? { note: `Check-out ngoài văn phòng (${Math.round(calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG))}m)` }
+          : {}),
       }).eq('id', todayRecord.id);
       if (error) throw error;
       toast.success('Đã chấm công ra!');
@@ -161,10 +219,20 @@ const AttendancePage = () => {
         {loading ? (
           <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
         ) : !todayRecord ? (
-          <button onClick={handleCheckIn} disabled={saving}
-            className="flex items-center gap-2 mx-auto px-8 py-3 rounded-2xl bg-white text-emerald-600 font-semibold text-sm shadow-lg hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-50">
-            <LogIn className="w-4 h-4" /> Chấm công vào
-          </button>
+          <div className="space-y-3">
+            {locationInfo && (
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium ${locationInfo.inOffice ? 'bg-white/20 text-white' : 'bg-red-400/30 text-white'}`}>
+                {locationInfo.inOffice ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                {locationInfo.inOffice ? 'Trong văn phòng' : `Ngoài văn phòng (${locationInfo.distance}m)`}
+                {locationInfo.ip && <span className="text-white/60 text-[10px]">· {locationInfo.ip}</span>}
+              </div>
+            )}
+            <button onClick={handleCheckIn} disabled={saving}
+              className="flex items-center gap-2 mx-auto px-8 py-3 rounded-2xl bg-white text-emerald-600 font-semibold text-sm shadow-lg hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-50">
+              <LogIn className="w-4 h-4" /> Chấm công vào
+            </button>
+            <p className="text-emerald-200 text-[11px]">GPS + IP sẽ được ghi nhận tự động</p>
+          </div>
         ) : !todayRecord.check_out ? (
           <div className="space-y-3">
             <div className="bg-white/15 rounded-xl px-4 py-2 inline-flex items-center gap-2">
