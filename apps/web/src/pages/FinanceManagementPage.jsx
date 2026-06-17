@@ -202,15 +202,7 @@ const FinanceManagementPage = () => {
             </div>
           </div>
 
-          {['admin', 'marketing'].includes(profile?.role) && (
-            <FinanceAdsSummary
-              stats={stats}
-              month={month}
-              onViewDetail={() => {
-                toast.info('Chức năng xem chi tiết Ads sẽ sớm được cập nhật');
-              }}
-            />
-          )}
+          
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -308,12 +300,14 @@ const FinanceManagementPage = () => {
       )}
 
       {activeTab === 'expenses' && (
-        <div className="bg-white p-10 rounded-2xl border border-dashed border-slate-300 text-center">
-           <Wallet className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-           <h3 className="text-lg font-bold text-slate-700">Module Tài chính</h3>
-           <p className="text-slate-500 mt-2">Tính năng quản lý dòng tiền chi tiết đang được xây dựng.</p>
-        </div>
-      )}
+          <FinanceAdsSummary
+            stats={stats}
+            month={6}
+            onViewDetail={() => {
+              toast.info('Chức năng xem chi tiết Ads sẽ sớm được cập nhật');
+            }}
+          />
+        )}
 
       {/* Direct Revenue Modal */}
       {showCreateModal && (
