@@ -35,14 +35,37 @@ const LeaveManagementPage = () => {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
     const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-    const { data, error } = await supabase
-      .from('leave_requests')
-      .select('*, profiles(full_name, employee_id, avatar_url, role)')
-      .or(`and(date.gte.${startDate},date.lte.${endDate}),status.eq.pending`)
-      .order('created_at', { ascending: false });
+    try {
+      const [monthRes, pendingRes] = await Promise.all([
+        supabase
+          .from('leave_requests')
+          .select('*, profiles(full_name, employee_id, avatar_url, role)')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('leave_requests')
+          .select('*, profiles(full_name, employee_id, avatar_url, role)')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+      ]);
 
-    if (!error) setRequests(data || []);
-    setLoading(false);
+      if (monthRes.error) throw monthRes.error;
+      if (pendingRes.error) throw pendingRes.error;
+
+      const combined = [...(monthRes.data || []), ...(pendingRes.data || [])];
+      
+      const uniqueMap = new Map();
+      combined.forEach(r => uniqueMap.set(r.id, r));
+      const finalData = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      setRequests(finalData);
+    } catch (err) {
+      toast.error('Lỗi tải dữ liệu: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, [year, month]);
 
   useEffect(() => { loadData(); }, [loadData]);
