@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
-  CalendarDays, ClipboardList, Activity, UserX
+  CalendarDays, ClipboardList, Activity, UserX, BarChart2
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -14,6 +14,7 @@ import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
+import AdsReportPage from '@/pages/AdsReportPage.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -28,6 +29,7 @@ const FULL_MENU = [
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
 
   // MKT / Finance / Sales
+  { id: 'ads_report', label: 'Báo cáo Ads',     icon: BarChart2, roles: ['marketing', 'admin'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
 
   // CRM
@@ -124,6 +126,12 @@ const StaffDashboard = () => {
     navigate('/', { replace: true });
   };
 
+  useEffect(() => {
+    const handleNav = (e) => setActiveTab(e.detail);
+    window.addEventListener('NAVIGATE', handleNav);
+    return () => window.removeEventListener('NAVIGATE', handleNav);
+  }, []);
+
   const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role));
 
   const renderContent = () => {
@@ -136,6 +144,7 @@ const StaffDashboard = () => {
     if (activeTab === 'khach_bong') return <KhachBongPage />;
     if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage />;
     if (activeTab === 'hau_phau') return <HauPhauPage />;
+    if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'advances') return <ComingSoon label="Tạm ứng chi" />;
     return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };

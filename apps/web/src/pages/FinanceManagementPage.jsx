@@ -31,7 +31,7 @@ const FinanceManagementPage = () => {
   const [serviceGroupData, setServiceGroupData] = useState([]);
   
   // Stats
-  const [stats, setStats] = useState({ totalRev: 0, totalUpsale: 0, totalCustomers: 0, adsCustomers: 0 });
+  const [stats, setStats] = useState({ totalRev: 0, totalUpsale: 0, totalCustomers: 0, adsCustomers: 0, adsRevenue: 0, adsSpent: 0 });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -80,11 +80,25 @@ const FinanceManagementPage = () => {
         svcMap[svc] = (svcMap[svc] || 0) + Number(r.revenue || 0);
       });
 
+      // Fetch Ads Spent
+      const { data: adsData } = await supabase
+        .from('marketing_ads_performance')
+        .select('amount_spent')
+        .gte('date', startDate)
+        .lte('date', endDate);
+        
+      let tAdsSpent = 0;
+      if (adsData) {
+        adsData.forEach(ad => { tAdsSpent += Number(ad.amount_spent || 0); });
+      }
+
       setStats({
         totalRev: tRev,
         totalUpsale: tUp,
         totalCustomers: records.length,
-        adsCustomers: adsC
+        adsCustomers: adsC,
+        adsRevenue: srcMap['Ads'] || 0,
+        adsSpent: tAdsSpent
       });
 
       setSourceData(Object.keys(srcMap).map(name => ({ name, value: srcMap[name] })));
@@ -186,6 +200,54 @@ const FinanceManagementPage = () => {
               <div className="text-lg md:text-2xl font-black text-amber-800 mt-2 truncate">{stats.adsCustomers} <span className="text-xs md:text-sm font-medium text-amber-600">Khách</span></div>
             </div>
           </div>
+
+          {/* Tóm tắt Báo cáo Ads (Chỉ hiện cho admin/marketing) */}
+          {['admin', 'marketing'].includes(profile?.role) && (
+            <div className="bg-slate-900 rounded-2xl p-5 md:p-6 shadow-lg text-white border border-slate-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+              
+              <div className="relative z-10 w-full md:w-auto flex-1">
+                <h3 className="font-bold text-lg text-blue-400 mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" /> Tóm tắt Hiệu quả Ads Tháng {month}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+                  <div>
+                    <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Chi phí Ads</div>
+                    <div className="text-xl font-bold">{fmt(stats.adsSpent)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Doanh thu từ Ads</div>
+                    <div className="text-xl font-bold text-emerald-400">{fmt(stats.adsRevenue)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">ROI (Lợi nhuận)</div>
+                    <div className={`text-xl font-bold ${stats.adsRevenue >= stats.adsSpent ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {stats.adsSpent > 0 ? ((stats.adsRevenue / stats.adsSpent) * 100).toFixed(0) : 0}%
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Lãi Gộp</div>
+                    <div className={`text-xl font-bold ${stats.adsRevenue - stats.adsSpent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {fmt(stats.adsRevenue - stats.adsSpent)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="relative z-10 w-full md:w-auto shrink-0 flex justify-end">
+                <button 
+                  onClick={() => {
+                    // Nếu ở Admin Dashboard thì không cần reload, còn nếu không thì có thể bị hạn chế,
+                    // tạm thời dùng cách phát custom event hoặc reload.
+                    window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'ads_report' }));
+                  }}
+                  className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors shadow-md flex justify-center items-center gap-2"
+                >
+                  Xem Báo cáo chi tiết <TrendingUp className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

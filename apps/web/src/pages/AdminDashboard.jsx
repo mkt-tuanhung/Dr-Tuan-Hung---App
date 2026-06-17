@@ -11,11 +11,12 @@ import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
+import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -31,6 +32,7 @@ const MENU = [
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
   { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
+  { id: 'ads_report',    label: 'Báo cáo Ads',       shortLabel: 'Báo cáo Ads', icon: BarChart2 },
   { id: 'inventory',     label: 'Kế toán kho',       shortLabel: 'Kho',        icon: ClipboardList },
   { id: 'hospital_fee',  label: 'Viện phí',          shortLabel: 'Viện phí',  icon: Activity },
   { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: Bell },
@@ -234,6 +236,12 @@ const AdminDashboard = () => {
     navigate('/', { replace: true });
   };
 
+  useEffect(() => {
+    const handleNav = (e) => setActiveTab(e.detail);
+    window.addEventListener('NAVIGATE', handleNav);
+    return () => window.removeEventListener('NAVIGATE', handleNav);
+  }, []);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
@@ -246,6 +254,7 @@ const AdminDashboard = () => {
       case 'hau_phau': return <HauPhauPage />;
       case 'finance': return <FinanceManagementPage />;
       case 'kpi': return <KPIManagementPage />;
+      case 'ads_report': return <AdsReportPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };

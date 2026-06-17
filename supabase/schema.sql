@@ -485,3 +485,34 @@ create trigger trg_appointments_updated before update on customer_appointments f
 create trigger trg_expenses_updated before update on expenses for each row execute function update_updated_at();
 create trigger trg_payroll_updated before update on payroll for each row execute function update_updated_at();
 create trigger trg_finance_updated before update on finance_transactions for each row execute function update_updated_at();
+
+-- ============================================================
+-- MARKETING ADS MODULE
+-- ============================================================
+
+create table marketing_monthly_targets (
+  month date primary key, -- First day of the month
+  budget numeric not null default 0,
+  target_leads integer not null default 0,
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+create table marketing_ads_performance (
+  id uuid primary key default uuid_generate_v4(),
+  date date unique not null,
+  amount_spent numeric not null default 0,
+  impressions text,
+  leads integer not null default 0,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Policies (allow marketing, admin, etc to access)
+alter table marketing_monthly_targets enable row level security;
+alter table marketing_ads_performance enable row level security;
+
+create policy "Cho phép tất cả đọc marketing_monthly_targets" on marketing_monthly_targets for select using (true);
+create policy "Cho phép tất cả sửa marketing_monthly_targets" on marketing_monthly_targets for all using (true);
+
+create policy "Cho phép tất cả đọc marketing_ads_performance" on marketing_ads_performance for select using (true);
+create policy "Cho phép tất cả sửa marketing_ads_performance" on marketing_ads_performance for all using (true);
