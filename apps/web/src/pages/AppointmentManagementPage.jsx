@@ -18,6 +18,7 @@ const AppointmentManagementPage = () => {
   
   // Forms
   const [saving, setSaving] = useState(false);
+  const [activeViewTab, setActiveViewTab] = useState('appointments');
   const [viewNoteApp, setViewNoteApp] = useState(null);
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
@@ -306,133 +307,151 @@ const AppointmentManagementPage = () => {
             </div>
           </div>
 
-          {/* Lịch Tái Khám */}
-          {recheckAppointments.length > 0 && (
-            <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden mt-6 mb-8">
-              <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
-                <Stethoscope className="w-6 h-6 text-orange-600" />
-                <h3 className="font-bold text-orange-800 text-lg">Danh sách Lịch Tái Khám</h3>
-                <span className="bg-orange-200 text-orange-800 text-xs font-bold px-3 py-1 rounded-full">{recheckAppointments.length} lịch</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-orange-50/50 text-slate-700">
-                    <tr>
-                      <th className="px-6 py-3">Ngày & Giờ</th>
-                      <th className="px-6 py-3">Khách hàng</th>
-                      <th className="px-6 py-3">Dịch vụ tái khám</th>
-                      <th className="px-6 py-3">Phụ trách</th>
-                      <th className="px-6 py-3">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recheckAppointments.sort((a,b) => new Date(b.appointment_date) - new Date(a.appointment_date)).map(app => (
-                      <tr key={app.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-6 py-4 font-semibold text-orange-700">
-                          {new Date(app.appointment_date).toLocaleDateString('vi-VN')} <br/>
-                          <span className="text-xs text-slate-500">{app.appointment_time?.substring(0,5)}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-800">{app.customer_name}</div>
-                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3"/> {app.phone}</div>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-slate-700">{app.service?.replace('[Tái khám] ', '')}</td>
-                        <td className="px-6 py-4 text-slate-600">{app.sale || 'Không có'}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-2">
-                            <button onClick={() => setViewNoteApp(app)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Xem lịch sử chăm sóc">
-                              <FileText className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => deleteApp(app.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Xóa lịch hẹn">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* View Tabs */}
+          <div className="mt-8 mb-6 bg-white p-1.5 rounded-2xl border border-slate-200 inline-flex shadow-sm">
+            <button 
+              onClick={() => setActiveViewTab('appointments')}
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'appointments' ? 'bg-teal-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+              <CalendarIcon className="w-4 h-4" /> Lịch hẹn tư vấn / phẫu thuật ({stats.total - recheckAppointments.length})
+            </button>
+            <button 
+              onClick={() => setActiveViewTab('rechecks')}
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'rechecks' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+              <Stethoscope className="w-4 h-4" /> Lịch tái khám ({recheckAppointments.length})
+            </button>
+          </div>
 
-          {/* Groups by Date */}
-          <div className="space-y-6">
-            {Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a)).map(dateStr => (
-              <div key={dateStr} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-teal-700 font-bold">
-                    <CalendarIcon className="w-5 h-5" />
-                    {new Date(dateStr).toLocaleDateString('vi-VN')}
-                  </div>
-                  <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">{groupedByDate[dateStr].length} lịch</span>
+          {/* Tab Content */}
+          {activeViewTab === 'rechecks' ? (
+            recheckAppointments.length > 0 ? (
+              <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden mb-8">
+                <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
+                  <Stethoscope className="w-6 h-6 text-orange-600" />
+                  <h3 className="font-bold text-orange-800 text-lg">Danh sách Lịch Tái Khám</h3>
+                  <span className="bg-orange-200 text-orange-800 text-xs font-bold px-3 py-1 rounded-full">{recheckAppointments.length} lịch</span>
                 </div>
-                <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {groupedByDate[dateStr].map(app => (
-                    <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <User className="w-5 h-5 text-teal-600" />
-                          <span className="font-bold text-slate-800 text-base">{app.customer_name}</span>
-                        </div>
-                        <StatusBadge status={app.status} />
-                      </div>
-                      
-                      <div className="p-4 space-y-4">
-                        <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                          <Phone className="w-4 h-4 text-slate-400" />
-                          <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-teal-700">{app.service || 'Chưa chọn dịch vụ'}</span>
-                        </div>
-
-                        <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Telesale:</span>
-                            <span className="font-semibold text-blue-700">{app.telesale}</span>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-orange-50/50 text-slate-700">
+                      <tr>
+                        <th className="px-6 py-3">Ngày & Giờ</th>
+                        <th className="px-6 py-3">Khách hàng</th>
+                        <th className="px-6 py-3">Dịch vụ tái khám</th>
+                        <th className="px-6 py-3">Phụ trách</th>
+                        <th className="px-6 py-3">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recheckAppointments.sort((a,b) => new Date(b.appointment_date) - new Date(a.appointment_date)).map(app => (
+                        <tr key={app.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="px-6 py-4 font-semibold text-orange-700">
+                            {new Date(app.appointment_date).toLocaleDateString('vi-VN')} <br/>
+                            <span className="text-xs text-slate-500">{app.appointment_time?.substring(0,5)}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-slate-800">{app.customer_name}</div>
+                            <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3"/> {app.phone}</div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-slate-700">{app.service?.replace('[Tái khám] ', '')}</td>
+                          <td className="px-6 py-4 text-slate-600">{app.sale || 'Không có'}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex gap-2">
+                              <button onClick={() => setViewNoteApp(app)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Xem lịch sử chăm sóc">
+                                <FileText className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => deleteApp(app.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Xóa lịch hẹn">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 font-medium">
+                Chưa có lịch tái khám nào.
+              </div>
+            )
+          ) : (
+            <div className="space-y-6">
+              {Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a)).map(dateStr => (
+                <div key={dateStr} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-teal-700 font-bold">
+                      <CalendarIcon className="w-5 h-5" />
+                      {new Date(dateStr).toLocaleDateString('vi-VN')}
+                    </div>
+                    <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">{groupedByDate[dateStr].length} lịch</span>
+                  </div>
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {groupedByDate[dateStr].map(app => (
+                      <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <User className="w-5 h-5 text-teal-600" />
+                            <span className="font-bold text-slate-800 text-base">{app.customer_name}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Sale Offline:</span>
-                            <span className="font-semibold text-purple-700">{app.sale}</span>
-                          </div>
-                          <div className="border-t border-emerald-100/60 my-1 pt-1" />
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Dự kiến:</span>
-                            <span className="font-bold text-emerald-700">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Đã cọc:</span>
-                            <span className="font-bold text-emerald-700">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
-                          </div>
+                          <StatusBadge status={app.status} />
                         </div>
                         
-                        {app.social_link && (
-                          <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
-                            <LinkIcon className="w-3 h-3" /> Xem link tham khảo
-                          </a>
-                        )}
-                      </div>
+                        <div className="p-4 space-y-4 flex-1">
+                          <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                            <Phone className="w-4 h-4 text-slate-400" />
+                            <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-teal-700">{app.service || 'Chưa chọn dịch vụ'}</span>
+                          </div>
 
-                      <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2">
-                        {['admin', 'sale_offline'].includes(profile?.role) && (
-                          <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
-                            <Edit className="w-4 h-4" /> Đánh giá
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Telesale:</span>
+                              <span className="font-semibold text-blue-700">{app.telesale}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Sale Offline:</span>
+                              <span className="font-semibold text-purple-700">{app.sale}</span>
+                            </div>
+                            <div className="border-t border-emerald-100/60 my-1 pt-1" />
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Dự kiến:</span>
+                              <span className="font-bold text-emerald-700">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Đã cọc:</span>
+                              <span className="font-bold text-emerald-700">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
+                            </div>
+                          </div>
+                          
+                          {app.social_link && (
+                            <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
+                              <LinkIcon className="w-3 h-3" /> Xem link tham khảo
+                            </a>
+                          )}
+                        </div>
+
+                        <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
+                          {['admin', 'sale_offline'].includes(profile?.role) && (
+                            <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
+                              <Edit className="w-4 h-4" /> Đánh giá
+                            </button>
+                          )}
+                          <button className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
+                            <Edit className="w-4 h-4" />
                           </button>
-                        )}
-                        <button className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </>
+              ))}
+            </div>
+          )}
       )}
 
       {/* Modal Thêm Lịch Hẹn Mới */}
