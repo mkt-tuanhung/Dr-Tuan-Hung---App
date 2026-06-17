@@ -20,6 +20,7 @@ const AppointmentManagementPage = () => {
   const [saving, setSaving] = useState(false);
   const [activeViewTab, setActiveViewTab] = useState('appointments');
   const [viewNoteApp, setViewNoteApp] = useState(null);
+  const [viewImage, setViewImage] = useState(null);
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
@@ -53,9 +54,9 @@ const AppointmentManagementPage = () => {
         const imgMatch = part.match(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/);
         if (imgMatch) {
           return (
-            <a key={i} href={imgMatch[1]} target="_blank" rel="noreferrer" className="block mt-1.5 mb-2">
-              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover" />
-            </a>
+            <div key={i} onClick={() => setViewImage(imgMatch[1])} className="inline-block mt-1.5 mb-2 cursor-pointer">
+              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover hover:opacity-90 transition-opacity" />
+            </div>
           );
         }
         return <span key={i}>{part}</span>;
@@ -765,6 +766,18 @@ const AppointmentManagementPage = () => {
                 <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử chăm sóc.</div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewImage && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
+          <div className="relative max-w-5xl w-full flex justify-center">
+            <button onClick={() => setViewImage(null)} className="absolute -top-12 right-0 md:-right-12 text-white hover:text-slate-300 p-2">
+              <X className="w-8 h-8" />
+            </button>
+            <img src={viewImage} alt="Phóng to" className="max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={e => e.stopPropagation()} />
           </div>
         </div>
       )}

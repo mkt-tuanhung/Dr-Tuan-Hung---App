@@ -21,6 +21,7 @@ const HauPhauPage = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [viewImage, setViewImage] = useState(null);
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
@@ -149,9 +150,9 @@ const HauPhauPage = () => {
         const imgMatch = part.match(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/);
         if (imgMatch) {
           return (
-            <a key={i} href={imgMatch[1]} target="_blank" rel="noreferrer" className="block mt-1.5 mb-2">
-              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover" />
-            </a>
+            <div key={i} onClick={() => setViewImage(imgMatch[1])} className="inline-block mt-1.5 mb-2 cursor-pointer">
+              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover hover:opacity-90 transition-opacity" />
+            </div>
           );
         }
         return <span key={i}>{part}</span>;
@@ -289,6 +290,18 @@ const HauPhauPage = () => {
               <button type="submit" disabled={saving} className="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu lại'}</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewImage && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
+          <div className="relative max-w-5xl w-full flex justify-center">
+            <button onClick={() => setViewImage(null)} className="absolute -top-12 right-0 md:-right-12 text-white hover:text-slate-300 p-2">
+              <X className="w-8 h-8" />
+            </button>
+            <img src={viewImage} alt="Phóng to" className="max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={e => e.stopPropagation()} />
+          </div>
         </div>
       )}
     </div>
