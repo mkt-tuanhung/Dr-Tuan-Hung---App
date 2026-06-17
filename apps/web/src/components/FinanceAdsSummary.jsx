@@ -34,7 +34,7 @@ const FinanceAdsSummary = ({ stats, month, onViewDetail }) => {
       </div>
       <button
         onClick={onViewDetail}
-        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors shadow-md flex items-center gap-2"
+        className="relative z-10 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors shadow-md flex items-center gap-2"
       >
         Xem chi tiết <TrendingUp className="w-4 h-4" />
       </button>

@@ -302,7 +302,7 @@ const FinanceManagementPage = () => {
       {activeTab === 'expenses' && (
           <FinanceAdsSummary
             stats={stats}
-            month={6}
+            month={month}
             onViewDetail={() => {
                 window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'ads_report', bubbles: true }));
               }}
