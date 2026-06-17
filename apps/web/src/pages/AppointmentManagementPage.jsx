@@ -452,6 +452,7 @@ const AppointmentManagementPage = () => {
               ))}
             </div>
           )}
+        </>
       )}
 
       {/* Modal Thêm Lịch Hẹn Mới */}
