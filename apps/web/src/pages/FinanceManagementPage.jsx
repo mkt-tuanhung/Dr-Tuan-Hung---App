@@ -173,40 +173,49 @@ const FinanceManagementPage = () => {
              ) : revenueData.length === 0 ? (
                 <div className="p-10 text-center text-slate-400">Không có giao dịch nào trong tháng này.</div>
              ) : (
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
-                    <tr>
-                      <th className="px-6 py-3 font-medium">Khách hàng / SĐT</th>
-                      <th className="px-6 py-3 font-medium">Dịch vụ</th>
-                      <th className="px-6 py-3 font-medium">Phân loại</th>
-                      <th className="px-6 py-3 font-medium text-right">Doanh thu</th>
-                      <th className="px-6 py-3 font-medium text-right">Upsale</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {revenueData.map(r => (
-                      <tr key={r.id} className="hover:bg-slate-50/50">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-800">{r.customer_name}</div>
-                          <div className="text-slate-500 text-xs mt-0.5">{r.phone}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-slate-700">{r.service || 'N/A'}</div>
-                          <div className="text-xs text-slate-400 mt-1">Lên mổ: {new Date(r.surgery_date).toLocaleDateString('vi-VN')}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-1 flex-wrap">
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{r.service_group || 'Chưa rõ'}</span>
-                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs">{r.customer_source || 'Khác'}</span>
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">{r.customer_type || 'Mới'}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50">
+                  {revenueData.map(r => (
+                    <div key={r.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-bold text-slate-800">{r.customer_name}</h4>
+                          <div className="text-sm text-slate-500 mt-0.5 flex items-center gap-1">
+                             <CalendarIcon className="w-3.5 h-3.5" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-emerald-600">{fmt(r.revenue || 0)}</td>
-                        <td className="px-6 py-4 text-right font-semibold text-purple-600">{fmt(r.upsale_revenue || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <div className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">
+                          {r.service_group || 'Chưa rõ'}
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm font-medium text-slate-700 mb-4 pb-4 border-b border-dashed border-slate-200">
+                        Dịch vụ: <span className="text-slate-900">{r.service || 'N/A'}</span>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Nguồn khách:</span>
+                          <span className="font-semibold text-amber-600">{r.customer_source || 'Khác'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Tệp khách:</span>
+                          <span className="font-semibold text-blue-600">{r.customer_type || 'Mới'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 rounded-xl p-3 space-y-1.5">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-600 font-medium">Doanh thu tổng:</span>
+                          <span className="font-bold text-emerald-600 text-base">{fmt(r.revenue || 0)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-600 font-medium">Upsale:</span>
+                          <span className="font-bold text-purple-600 text-base">{fmt(r.upsale_revenue || 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
              )}
           </div>
         </div>
