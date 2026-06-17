@@ -10,6 +10,7 @@ import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
+import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -29,8 +30,7 @@ const MENU = [
   { id: 'khach_bong',    label: 'Khách Bong',        shortLabel: 'Khách Bong', icon: UserX },
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
-  { id: 'expenses',      label: 'Tạm ứng / Chi',     shortLabel: 'Tạm ứng',   icon: DollarSign },
-  { id: 'finance',       label: 'Kế toán tài chính', shortLabel: 'Kế toán',   icon: Banknote },
+  { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
   { id: 'inventory',     label: 'Kế toán kho',       shortLabel: 'Kho',        icon: ClipboardList },
   { id: 'hospital_fee',  label: 'Viện phí',          shortLabel: 'Viện phí',  icon: Activity },
   { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: Bell },
@@ -244,6 +244,7 @@ const AdminDashboard = () => {
       case 'khach_phau_thuat': return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
       case 'khach_bong': return <KhachBongPage />;
       case 'hau_phau': return <HauPhauPage />;
+      case 'finance': return <FinanceManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }

@@ -26,7 +26,10 @@ const KhachBongPage = () => {
   // Forms
   const [careForm, setCareForm] = useState({ care_status: 'Đang chăm sóc', care_notes: '' });
   const [revertForm, setRevertForm] = useState({ appointment_date: '', appointment_time: '09:00', notes: '' });
-  const [surgeryForm, setSurgeryForm] = useState({ expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '' });
+  const [surgeryForm, setSurgeryForm] = useState({ 
+    expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '',
+    service_group: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới' 
+  });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -90,7 +93,10 @@ const KhachBongPage = () => {
         expected_surgery_date: surgeryForm.expected_surgery_date,
         revenue: surgeryForm.revenue,
         upsale_revenue: surgeryForm.upsale_revenue || 0,
-        service: surgeryForm.service
+        service: surgeryForm.service,
+        service_group: surgeryForm.service_group,
+        customer_source: surgeryForm.customer_source,
+        customer_type: surgeryForm.customer_type
       }).eq('id', selectedApp.id);
       
     if (error) toast.error(error.message);
@@ -100,7 +106,17 @@ const KhachBongPage = () => {
 
   const openCare = (app) => { setSelectedApp(app); setCareForm({ care_status: app.care_status || 'Đang chăm sóc', care_notes: '' }); setShowCareModal(true); };
   const openRevert = (app) => { setSelectedApp(app); setRevertForm({ appointment_date: new Date().toISOString().split('T')[0], appointment_time: '09:00', notes: '' }); setShowRevertModal(true); };
-  const openSurgery = (app) => { setSelectedApp(app); setSurgeryForm({ expected_surgery_date: new Date().toISOString().split('T')[0], revenue: '', upsale_revenue: '', service: app.service || '' }); setShowSurgeryModal(true); };
+  const openSurgery = (app) => { 
+    setSelectedApp(app); 
+    setSurgeryForm({ 
+      expected_surgery_date: app.expected_surgery_date || new Date().toISOString().split('T')[0], 
+      revenue: app.expected_bill || '', upsale_revenue: '', service: app.service || '',
+      service_group: app.service_group || 'Tiểu phẫu',
+      customer_source: app.customer_source || 'Ads',
+      customer_type: app.customer_type || 'Mới'
+    }); 
+    setShowSurgeryModal(true); 
+  };
 
   const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.care_status || 'Đang chăm sóc') === activeTab);
 
@@ -246,14 +262,42 @@ const KhachBongPage = () => {
               <h3 className="font-bold text-emerald-800">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
               <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
-                <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({...surgeryForm, expected_surgery_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
+                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({...surgeryForm, expected_surgery_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
+                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({...surgeryForm, service: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="Nâng mũi..." />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
-                <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({...surgeryForm, service: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="Nâng mũi..." />
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Nhóm dịch vụ</label>
+                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({...surgeryForm, service_group: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                    <option value="Hàm mặt">Hàm mặt</option>
+                    <option value="Body">Body</option>
+                    <option value="Tiểu phẫu">Tiểu phẫu</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Nguồn khách</label>
+                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({...surgeryForm, customer_source: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                    <option value="Ads">Ads</option>
+                    <option value="CTV">CTV</option>
+                    <option value="Người quen">Người quen</option>
+                    <option value="CSKH">CSKH</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Tệp khách</label>
+                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({...surgeryForm, customer_type: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                    <option value="Mới">Khách Mới</option>
+                    <option value="Cũ">Khách Cũ</option>
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

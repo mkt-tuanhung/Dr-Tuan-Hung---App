@@ -51,3 +51,7 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 - **Module Hậu Phẫu mới:**
   - Danh sách chuyên biệt theo dõi khách hàng sau phẫu thuật.
   - Tính năng CRM ghi chú tiến độ phục hồi qua từng giai đoạn.
+
+## [v1.6.0] - Gộp Module Doanh Thu và Tài Chính
+- Bổ sung trường phân loại nhóm dịch vụ, nguồn khách, tệp khách.
+- Thay thế menu Kế toán bằng Doanh thu / Tài chính tích hợp.
