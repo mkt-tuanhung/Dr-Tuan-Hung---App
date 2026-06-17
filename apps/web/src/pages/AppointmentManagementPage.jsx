@@ -19,6 +19,7 @@ const AppointmentManagementPage = () => {
   // Forms
   const [saving, setSaving] = useState(false);
   const [createForm, setCreateForm] = useState({
+    appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
     customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
     expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
@@ -75,12 +76,17 @@ const AppointmentManagementPage = () => {
   useEffect(() => { loadData(); }, [loadData]);
 
   // Derived state
-  const { groupedByDate, stats, chartData, pieData } = useMemo(() => {
+  const { groupedByDate, recheckAppointments, stats, chartData, pieData } = useMemo(() => {
     const groups = {};
+    const rechecks = [];
     const st = { total: 0, pt: 0, coc: 0, bong: 0, expected_bill: 0, total_deposit: 0 };
     const dates = [];
 
     appointments.forEach(app => {
+      if (app.service && app.service.startsWith('[Tái khám]')) {
+        rechecks.push(app);
+        return;
+      }
       st.total++;
       if (app.status === 'phau_thuat') st.pt++;
       if (app.status === 'coc') st.coc++;
@@ -124,22 +130,23 @@ const AppointmentManagementPage = () => {
     }
     setSaving(true);
     try {
+      const isRecheck = createForm.appointment_type === 'recheck';
       const { error } = await supabase.from('customer_appointments').insert({
         customer_name: createForm.customer_name,
         phone: createForm.phone,
         appointment_date: createForm.appointment_date,
         appointment_time: createForm.appointment_time,
-        service: createForm.service,
-        test_status: createForm.test_status,
-        expected_bill: createForm.expected_bill || 0,
-        deposit_amount: createForm.deposit_amount || 0,
-        telesale_id: createForm.telesale_id || null,
+        service: isRecheck ? `[Tái khám] ${createForm.service}` : createForm.service,
+        test_status: isRecheck ? 'Không cần' : createForm.test_status,
+        expected_bill: isRecheck ? 0 : (createForm.expected_bill || 0),
+        deposit_amount: isRecheck ? 0 : (createForm.deposit_amount || 0),
+        telesale_id: isRecheck ? null : (createForm.telesale_id || null),
         sale_id: createForm.sale_id || null,
         social_link: createForm.social_link,
         notes: createForm.notes,
         service_group: createForm.service_group,
-        customer_source: createForm.customer_source,
-        customer_type: createForm.customer_type,
+        customer_source: isRecheck ? 'CSKH' : createForm.customer_source,
+        customer_type: isRecheck ? 'Cũ' : createForm.customer_type,
         status: 'scheduled',
         created_by: profile.id
       });
@@ -298,6 +305,51 @@ const AppointmentManagementPage = () => {
             </div>
           </div>
 
+          {/* Lịch Tái Khám */}
+          {recheckAppointments.length > 0 && (
+            <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden mt-6 mb-8">
+              <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
+                <Stethoscope className="w-6 h-6 text-orange-600" />
+                <h3 className="font-bold text-orange-800 text-lg">Danh sách Lịch Tái Khám</h3>
+                <span className="bg-orange-200 text-orange-800 text-xs font-bold px-3 py-1 rounded-full">{recheckAppointments.length} lịch</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-orange-50/50 text-slate-700">
+                    <tr>
+                      <th className="px-6 py-3">Ngày & Giờ</th>
+                      <th className="px-6 py-3">Khách hàng</th>
+                      <th className="px-6 py-3">Dịch vụ tái khám</th>
+                      <th className="px-6 py-3">Phụ trách</th>
+                      <th className="px-6 py-3">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recheckAppointments.sort((a,b) => new Date(b.appointment_date) - new Date(a.appointment_date)).map(app => (
+                      <tr key={app.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-6 py-4 font-semibold text-orange-700">
+                          {new Date(app.appointment_date).toLocaleDateString('vi-VN')} <br/>
+                          <span className="text-xs text-slate-500">{app.appointment_time?.substring(0,5)}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-800">{app.customer_name}</div>
+                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3"/> {app.phone}</div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-slate-700">{app.service?.replace('[Tái khám] ', '')}</td>
+                        <td className="px-6 py-4 text-slate-600">{app.sale || 'Không có'}</td>
+                        <td className="px-6 py-4">
+                          <button onClick={() => deleteApp(app.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Groups by Date */}
           <div className="space-y-6">
             {Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a)).map(dateStr => (
@@ -383,9 +435,14 @@ const AppointmentManagementPage = () => {
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
             <div className="px-6 py-4 border-b flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-xl">Thêm lịch hẹn mới</h3>
-              <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex gap-2">
+              <button type="button" onClick={() => setCreateForm({...createForm, appointment_type: 'new'})} className={`px-5 py-2 rounded-xl font-bold text-sm transition-all ${createForm.appointment_type === 'new' ? 'bg-teal-600 text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100'}`}>Lịch hẹn mới</button>
+              <button type="button" onClick={() => setCreateForm({...createForm, appointment_type: 'recheck'})} className={`px-5 py-2 rounded-xl font-bold text-sm transition-all ${createForm.appointment_type === 'recheck' ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100'}`}>Lịch tái khám</button>
             </div>
             
             <form onSubmit={handleCreateSubmit} className="p-6 space-y-8">
@@ -409,32 +466,36 @@ const AppointmentManagementPage = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
                     <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập SĐT..." />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
-                    <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option value="Ads">Ads</option>
-                      <option value="Người quen">Người quen</option>
-                      <option value="CTV">CTV</option>
-                      <option value="CSKH">CSKH</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách hàng <span className="text-red-500">*</span></label>
-                    <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option value="Mới">Khách Mới</option>
-                      <option value="Cũ">Khách Cũ</option>
-                    </select>
-                  </div>
+                  {createForm.appointment_type === 'new' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
+                        <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                          <option value="Ads">Ads</option>
+                          <option value="Người quen">Người quen</option>
+                          <option value="CTV">CTV</option>
+                          <option value="CSKH">CSKH</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách hàng <span className="text-red-500">*</span></label>
+                        <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                          <option value="Mới">Khách Mới</option>
+                          <option value="Cũ">Khách Cũ</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
                 </div>
               </section>
 
               {/* Chi tiết dịch vụ */}
               <section>
-                <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">Chi tiết dịch vụ</h4>
+                <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">{createForm.appointment_type === 'new' ? 'Chi tiết dịch vụ' : 'Dịch vụ tái khám'}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ <span className="text-red-500">*</span></label>
-                    <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Chọn dịch vụ" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-red-500">*</span></label>
+                    <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
@@ -444,22 +505,26 @@ const AppointmentManagementPage = () => {
                       <option value="Tiểu phẫu">Tiểu phẫu</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tình trạng xét nghiệm</label>
-                    <select value={createForm.test_status} onChange={e => setCreateForm({...createForm, test_status: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option>Chưa xét nghiệm</option>
-                      <option>Đã xét nghiệm</option>
-                      <option>Không cần</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Bill dự kiến (VNĐ)</label>
-                    <input type="number" value={createForm.expected_bill} onChange={e => setCreateForm({...createForm, expected_bill: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Đã cọc (VNĐ)</label>
-                    <input type="number" value={createForm.deposit_amount} onChange={e => setCreateForm({...createForm, deposit_amount: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
-                  </div>
+                  {createForm.appointment_type === 'new' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tình trạng xét nghiệm</label>
+                        <select value={createForm.test_status} onChange={e => setCreateForm({...createForm, test_status: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                          <option>Chưa xét nghiệm</option>
+                          <option>Đã xét nghiệm</option>
+                          <option>Không cần</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Bill dự kiến (VNĐ)</label>
+                        <input type="number" value={createForm.expected_bill} onChange={e => setCreateForm({...createForm, expected_bill: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Đã cọc (VNĐ)</label>
+                        <input type="number" value={createForm.deposit_amount} onChange={e => setCreateForm({...createForm, deposit_amount: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
+                      </div>
+                    </>
+                  )}
                 </div>
               </section>
 
@@ -467,20 +532,22 @@ const AppointmentManagementPage = () => {
               <section>
                 <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">Phụ trách & Ghi chú</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {createForm.appointment_type === 'new' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
+                      <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                        <option value="">-- Không có --</option>
+                        {staffList.filter(s => s.role === 'telesale' || s.role === 'admin').map(s => (
+                          <option key={s.id} value={s.id}>{s.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
-                    <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option value="">-- Không có --</option>
-                      {staffList.filter(s => s.role === 'telesale' || s.role === 'admin').map(s => (
-                        <option key={s.id} value={s.id}>{s.full_name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Sale Offline phụ trách' : 'Người phụ trách (Sale/Điều dưỡng)'}</label>
                     <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                       <option value="">-- Không có --</option>
-                      {staffList.filter(s => s.role === 'sale_offline' || s.role === 'admin').map(s => (
+                      {staffList.filter(s => s.role === 'sale_offline' || s.role === 'admin' || s.role === 'dieu_duong').map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
                       ))}
                     </select>
