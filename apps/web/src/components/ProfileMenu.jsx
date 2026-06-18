@@ -258,7 +258,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                         <p className="text-sm font-bold text-emerald-800 mb-3">Mã QR Nhận lương</p>
                         <div className="bg-white p-2 rounded-xl shadow-sm">
                           <img 
-                            src={`https://img.vietqr.io/image/${profile.bank_name.trim().toLowerCase()}-${profile.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(profile.full_name)}`}
+                            src={`https://img.vietqr.io/image/${profile.bank_name.replace(/\s+/g, '').toLowerCase()}-${profile.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(profile.full_name)}`}
                             alt="VietQR"
                             className="w-40 h-40 object-contain"
                             onError={(e) => e.target.style.display = 'none'}

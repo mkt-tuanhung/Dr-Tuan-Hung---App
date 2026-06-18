@@ -393,7 +393,7 @@ const StaffManagementPage = ({ isNested = false }) => {
           
           <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 mb-4">
             <img 
-              src={viewQR ? `https://img.vietqr.io/image/${viewQR.bank_name.trim().toLowerCase()}-${viewQR.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(viewQR.full_name)}` : ''}
+              src={viewQR ? `https://img.vietqr.io/image/${viewQR.bank_name.replace(/\s+/g, '').toLowerCase()}-${viewQR.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(viewQR.full_name)}` : ''}
               alt="VietQR"
               className="w-48 h-48 object-contain"
               onError={(e) => e.target.style.display = 'none'}
