@@ -264,11 +264,15 @@ body.pink-mode .text-slate-500, body.pink-mode .text-slate-600 {
 }
 
 /* Primary Accents (Buttons, badges) */
-body.pink-mode .bg-teal-600, body.pink-mode .bg-emerald-600, 
-body.pink-mode .bg-purple-600, body.pink-mode .bg-blue-600,
-body.pink-mode .bg-indigo-600, body.pink-mode .bg-orange-500,
-body.pink-mode .bg-slate-800, body.pink-mode .bg-slate-900,
-body.pink-mode .bg-rose-500 {
+body.pink-mode .bg-teal-400, body.pink-mode .bg-teal-500, body.pink-mode .bg-teal-600, body.pink-mode .bg-teal-700,
+body.pink-mode .bg-emerald-400, body.pink-mode .bg-emerald-500, body.pink-mode .bg-emerald-600, body.pink-mode .bg-emerald-700,
+body.pink-mode .bg-purple-500, body.pink-mode .bg-purple-600, 
+body.pink-mode .bg-blue-500, body.pink-mode .bg-blue-600,
+body.pink-mode .bg-indigo-500, body.pink-mode .bg-indigo-600, 
+body.pink-mode .bg-orange-500, body.pink-mode .bg-slate-800, body.pink-mode .bg-slate-900,
+body.pink-mode .bg-rose-500,
+body.pink-mode .from-emerald-500, body.pink-mode .to-teal-600,
+body.pink-mode .from-teal-500, body.pink-mode .to-emerald-600 {
   background: linear-gradient(135deg, #ff7b89 0%, #ffa384 100%) !important;
   color: white !important;
   border: none !important;
@@ -282,8 +286,10 @@ body.pink-mode .bg-slate-50, body.pink-mode .bg-slate-100 {
   border-color: rgba(255, 255, 255, 0.6) !important;
 }
 
+body.pink-mode .text-teal-500, body.pink-mode .text-emerald-500,
 body.pink-mode .text-teal-600, body.pink-mode .text-emerald-600, 
-body.pink-mode .text-purple-600, body.pink-mode .text-blue-600,
+body.pink-mode .text-purple-500, body.pink-mode .text-purple-600, 
+body.pink-mode .text-blue-500, body.pink-mode .text-blue-600,
 body.pink-mode .text-teal-700, body.pink-mode .text-emerald-700, 
 body.pink-mode .text-purple-700, body.pink-mode .text-blue-700,
 body.pink-mode .text-slate-800 {
