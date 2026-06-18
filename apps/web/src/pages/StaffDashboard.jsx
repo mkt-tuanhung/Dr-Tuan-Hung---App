@@ -17,6 +17,7 @@ import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
+import ProfileMenu from '@/components/ProfileMenu.jsx';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -208,37 +209,30 @@ const StaffDashboard = () => {
           })}
         </nav>
 
-        {/* User */}
-        <div className="p-3 border-t border-emerald-50">
-          <div className="flex items-center gap-3 px-3 py-2 mb-1">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xs font-bold text-emerald-500">{profile?.full_name?.charAt(0)}</span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-700 truncate">{profile?.full_name}</div>
-              <div className="text-xs text-slate-400">{ROLE_LABELS[profile?.role] || profile?.role}</div>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-4 h-4" /> Đăng xuất
-          </button>
-        </div>
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top bar desktop */}
-        <header className="hidden lg:flex items-center gap-3 bg-white border-b border-emerald-100 px-6 py-3 sticky top-0 z-10">
-          {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
-          <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
+        <header className="hidden lg:flex items-center justify-between bg-white border-b border-emerald-100 px-6 py-3 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
+            <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
+          </div>
+          
+          <ProfileMenu mobile={false}>
+            <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  profile?.full_name?.charAt(0) || 'U'
+                )}
+              </div>
+              <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
+            </div>
+          </ProfileMenu>
         </header>
 
         {/* Top bar mobile */}
@@ -250,13 +244,15 @@ const StaffDashboard = () => {
             {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
-          <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xs font-bold text-emerald-500">{profile?.full_name?.charAt(0)}</span>
-            )}
-          </div>
+          <ProfileMenu mobile={true}>
+            <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+              ) : (
+                profile?.full_name?.charAt(0) || 'U'
+              )}
+            </div>
+          </ProfileMenu>
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
