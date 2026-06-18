@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { 
   ClipboardList, Edit, CheckCircle, Search, Save, Calendar as CalendarIcon, Phone,
-  Clock, Activity, Banknote, UserCheck, ShieldCheck, X, Image as ImageIcon, PackageOpen, Plus, Trash2, Loader2
+  Clock, Activity, Banknote, UserCheck, ShieldCheck, X, Image as ImageIcon, PackageOpen, Plus, Trash2, Loader2, Ban
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
@@ -20,13 +20,13 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   // Modal Phân công
   const [showNurseModal, setShowNurseModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  // Modal Viện phí
+  const [assignForm, setAssignForm] = useState({ phu_mo_1_id: '', truc_dem_id: '', hau_phau_id: '' });
+  const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [feeForm, setFeeForm] = useState({ amount: '', method: 'cash', proof: '' });
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
+  const [saving, setSaving] = useState(false);
 
   // Modal Vật tư
   const [showMaterialModal, setShowMaterialModal] = useState(false);
@@ -126,8 +126,11 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
         setActiveTab('hau_phau');
       }
     } else {
-      const mainNurse = nurses.find(n => n.id === app.hau_phau_id)?.full_name || 'chưa rõ';
-      toast.error(`Hậu phẫu khách hàng ${app.customer_name} đang được phân công cho ${mainNurse}. Hãy liên hệ trưởng bộ phận để được phân công và xem chi tiết`);
+      const mainNurse = nurses.find(n => n.id === app.hau_phau_id)?.full_name || 'chưa phân công';
+      setAccessDeniedInfo({
+        customerName: app.customer_name,
+        nurseName: mainNurse
+      });
     }
   };
 
@@ -542,6 +545,33 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
             <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
               <button onClick={() => setShowMaterialModal(false)} className="px-6 py-2 border rounded-xl font-semibold text-slate-600">Đóng</button>
               {materialForm.length > 0 && <button onClick={handleSaveMaterials} disabled={saving} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl">Lưu Vật Tư</button>}
+            </div>
+          </div>
+        </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Truy Cập Bị Từ Chối */}
+      {accessDeniedInfo && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden scale-in-center">
+            <div className="p-8 text-center flex flex-col items-center">
+              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6">
+                <Ban className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 mb-4">Truy cập bị từ chối</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed text-[15px]">
+                Hậu phẫu khách hàng <span className="font-bold text-slate-800">{accessDeniedInfo.customerName}</span> đang được phân công cho Điều Dưỡng <span className="font-bold text-red-600">{accessDeniedInfo.nurseName}</span>.
+                <br/><br/>
+                Hãy liên hệ trưởng bộ phận để được phân công và xem chi tiết.
+              </p>
+              <button 
+                onClick={() => setAccessDeniedInfo(null)}
+                className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md"
+              >
+                Đã hiểu
+              </button>
             </div>
           </div>
         </div>
