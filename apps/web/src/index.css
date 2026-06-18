@@ -311,18 +311,32 @@ body.pink-mode *:focus {
   --tw-ring-color: rgba(255, 123, 137, 0.3) !important;
 }
 
-/* Charts Overrides */
-body.pink-mode .recharts-bar-rectangle path,
-body.pink-mode .recharts-pie-sector path,
-body.pink-mode .recharts-area-area {
-  fill: #ff7b89 !important;
+body.pink-mode [class*="ring-teal"], body.pink-mode [class*="ring-emerald"] {
+  --tw-ring-color: #ff477e !important; /* Dark Pink */
 }
-body.pink-mode .recharts-line-curve {
-  stroke: #ff7b89 !important;
-}
+
+/* Multi-Tone Pink Charts */
+/* Emerald / Phẫu thuật -> Dark Pink */
+body.pink-mode [fill="#10b981"] { fill: #ff477e !important; }
+body.pink-mode [stroke="#10b981"] { stroke: #ff477e !important; }
+body.pink-mode [style*="color: #10b981"] { color: #ff477e !important; }
+body.pink-mode [style*="color:#10b981"] { color: #ff477e !important; }
+
+/* Amber / Chờ tư vấn -> Medium Pink */
+body.pink-mode [fill="#f59e0b"] { fill: #ff8fa3 !important; }
+body.pink-mode [stroke="#f59e0b"] { stroke: #ff8fa3 !important; }
+body.pink-mode [style*="color: #f59e0b"] { color: #ff8fa3 !important; }
+body.pink-mode [style*="color:#f59e0b"] { color: #ff8fa3 !important; }
+
+/* Blue / Tổng lịch -> Light Pink */
+body.pink-mode [fill="#3b82f6"] { fill: #ffb3c6 !important; }
+body.pink-mode [stroke="#3b82f6"] { stroke: #ffb3c6 !important; }
+body.pink-mode [style*="color: #3b82f6"] { color: #ffb3c6 !important; }
+body.pink-mode [style*="color:#3b82f6"] { color: #ffb3c6 !important; }
+
 body.pink-mode stop {
-  stop-color: #ff7b89 !important;
+  stop-color: #ffb3c6 !important;
 }
 body.pink-mode stop[offset="100%"] {
-  stop-color: #ffa384 !important;
+  stop-color: #ff477e !important;
 }
