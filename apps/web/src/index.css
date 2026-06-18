@@ -271,11 +271,26 @@ body.pink-mode .from-teal-500, body.pink-mode .to-emerald-600 {
   box-shadow: 0 4px 15px rgba(255, 123, 137, 0.3) !important;
 }
 
-body.pink-mode .bg-teal-50, body.pink-mode .bg-emerald-50, 
-body.pink-mode .bg-purple-50, body.pink-mode .bg-blue-50,
-body.pink-mode .bg-slate-50, body.pink-mode .bg-slate-100 {
-  background-color: rgba(255, 255, 255, 0.4) !important;
-  border-color: rgba(255, 255, 255, 0.6) !important;
+/* Light Backgrounds */
+body.pink-mode [class*="bg-teal-50"], body.pink-mode [class*="bg-emerald-50"],
+body.pink-mode [class*="bg-teal-100"], body.pink-mode [class*="bg-emerald-100"] {
+  background-color: #fff0f2 !important; /* Soft light pink */
+}
+
+/* Light Text inside Gradients */
+body.pink-mode [class*="text-emerald-100"], body.pink-mode [class*="text-emerald-200"],
+body.pink-mode [class*="text-teal-100"], body.pink-mode [class*="text-teal-200"] {
+  color: #fff1f2 !important; /* Rose 50 */
+}
+
+/* Force headings inside pink gradient to be white */
+body.pink-mode [class*="from-emerald-500"] h1,
+body.pink-mode [class*="from-emerald-500"] h2,
+body.pink-mode [class*="from-emerald-500"] h3,
+body.pink-mode [class*="from-emerald-500"] h4,
+body.pink-mode [class*="from-emerald-500"] h5,
+body.pink-mode [class*="from-emerald-500"] h6 {
+  color: white !important;
 }
 
 body.pink-mode .text-teal-500, body.pink-mode .text-emerald-500,
@@ -287,11 +302,9 @@ body.pink-mode .text-purple-700, body.pink-mode .text-blue-700 {
   color: #ff7b89 !important;
 }
 
-body.pink-mode .border-teal-200, body.pink-mode .border-emerald-200, 
-body.pink-mode .border-purple-200, body.pink-mode .border-blue-200,
-body.pink-mode .border-teal-500, body.pink-mode .border-emerald-500, 
-body.pink-mode .border-purple-500, body.pink-mode .border-blue-500 {
-  border-color: #ffcdd2 !important;
+/* Borders */
+body.pink-mode [class*="border-teal"], body.pink-mode [class*="border-emerald"] {
+  border-color: #ffcdd2 !important; /* Soft pink border */
 }
 
 body.pink-mode *:focus {
