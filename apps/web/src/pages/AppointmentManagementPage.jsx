@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const AppointmentManagementPage = () => {
@@ -28,6 +29,22 @@ const AppointmentManagementPage = () => {
     expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
     service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadToR2(file, 'tu-van');
+      setCreateForm(prev => ({ ...prev, notes: prev.notes + (prev.notes ? '\n' : '') + `[Ảnh đính kèm: ${url}]` }));
+      toast.success('Đã tải ảnh lên!');
+    } catch (err) {
+      toast.error('Lỗi tải ảnh: ' + err.message);
+    }
+    setUploadingImage(false);
+    e.target.value = '';
+  };
 
   const renderNotes = (notesString) => {
     if (!notesString) return null;
@@ -646,7 +663,14 @@ const AppointmentManagementPage = () => {
                   <input type="text" value={createForm.social_link} onChange={e => setCreateForm({...createForm, social_link: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Link profile khách hàng..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Note tình trạng khách hàng</label>
+                  <div className="flex justify-between items-end mb-1">
+                    <label className="block text-sm font-medium text-slate-700">Note tình trạng khách hàng</label>
+                    <label className="cursor-pointer inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 text-xs font-bold transition-colors">
+                      {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                      {uploadingImage ? 'Đang tải...' : 'Đính kèm ảnh'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                    </label>
+                  </div>
                   <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none resize-none" placeholder="Ghi chú chi tiết về tình trạng, mong muốn..." />
                 </div>
               </section>
