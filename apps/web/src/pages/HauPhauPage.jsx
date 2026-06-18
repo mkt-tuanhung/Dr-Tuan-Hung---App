@@ -31,6 +31,7 @@ const HauPhauPage = () => {
   const [assignForm, setAssignForm] = useState({ id: null, additional_hau_phau_ids: [] });
   const [selectedNurseId, setSelectedNurseId] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
+  const [detailApp, setDetailApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewImage, setViewImage] = useState(null);
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
@@ -234,8 +235,9 @@ const HauPhauPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
+      <div className="flex-1 min-w-0 space-y-6 w-full">
+        <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Chăm sóc Hậu phẫu</h2>
           <p className="text-slate-500 text-sm mt-1">Theo dõi sức khỏe và phản hồi khách hàng sau mổ</p>
@@ -304,8 +306,16 @@ const HauPhauPage = () => {
 
                     {/* Note Box */}
                     {app.post_op_notes && (
-                      <div className="mt-auto mb-3 text-xs text-slate-600 bg-yellow-50/50 p-3 rounded-lg border border-yellow-200/50 max-h-48 overflow-y-auto whitespace-pre-wrap">
-                        {renderNotes(app.post_op_notes)}
+                      <div className="mt-auto mb-3 relative">
+                        <div className="text-xs text-slate-600 bg-yellow-50/50 p-3 pb-8 rounded-lg border border-yellow-200/50 max-h-36 overflow-hidden whitespace-pre-wrap relative">
+                          {renderNotes(app.post_op_notes)}
+                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#fefce8] to-transparent pointer-events-none rounded-b-lg"></div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 flex justify-center translate-y-1/2">
+                          <button onClick={() => setDetailApp(app)} className="text-blue-600 text-[11px] font-bold bg-white px-4 py-1.5 rounded-full shadow-md hover:bg-slate-50 transition-colors border border-slate-100 flex items-center gap-1 z-10">
+                            Xem chi tiết
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -331,8 +341,44 @@ const HauPhauPage = () => {
           ))}
         </div>
       )}
+      </div> {/* End main content */}
 
-      {/* Modal */}
+      {/* Panel Xem Chi tiết Ghi chú (Desktop + Mobile) */}
+      {detailApp && (
+        <>
+          {/* Mobile Modal */}
+          <div className="lg:hidden fixed inset-0 bg-slate-900/50 z-[60] flex items-end p-4 backdrop-blur-sm transition-opacity" onClick={() => setDetailApp(null)}>
+            <div className="bg-white w-full rounded-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-slate-800 truncate pr-2">Chi tiết Ghi chú - {detailApp.customer_name}</h3>
+                <button onClick={() => setDetailApp(null)} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 flex-1 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 bg-yellow-50/30">
+                {renderNotes(detailApp.post_op_notes)}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Panel */}
+          <div className="hidden lg:flex flex-col lg:w-[320px] xl:w-[380px] shrink-0 sticky top-6 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" style={{ height: 'calc(100vh - 3rem)' }}>
+            <div className="px-4 py-4 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 truncate pr-2" title={detailApp.customer_name}>
+                Ghi chú: {detailApp.customer_name}
+              </h3>
+              <button onClick={() => setDetailApp(null)} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 bg-yellow-50/30">
+              {renderNotes(detailApp.post_op_notes)}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Modal Cập nhật (Ghi chú mới) */}
       {showNoteModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSave} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
