@@ -31,7 +31,6 @@ const HauPhauPage = () => {
   const [assignForm, setAssignForm] = useState({ id: null, additional_hau_phau_ids: [] });
   const [selectedNurseId, setSelectedNurseId] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
-  const [detailApp, setDetailApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewImage, setViewImage] = useState(null);
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
@@ -235,21 +234,20 @@ const HauPhauPage = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
-      <div className={`space-y-6 w-full ${detailApp ? 'lg:w-[75%] lg:flex-none transition-all duration-300' : 'lg:flex-1 transition-all duration-300'}`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Chăm sóc Hậu phẫu</h2>
-            <p className="text-slate-500 text-sm mt-1">Theo dõi sức khỏe và phản hồi khách hàng sau mổ</p>
-          </div>
-          <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold">
-            {customers.length} Khách
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Chăm sóc Hậu phẫu</h2>
+          <p className="text-slate-500 text-sm mt-1">Theo dõi sức khỏe và phản hồi khách hàng sau mổ</p>
         </div>
+        <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold">
+          {customers.length} Khách
+        </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {TABS.map(tab => (
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
             {tab.label}
@@ -306,16 +304,8 @@ const HauPhauPage = () => {
 
                     {/* Note Box */}
                     {app.post_op_notes && (
-                      <div className="mt-auto mb-3 relative">
-                        <div className="text-xs text-slate-600 bg-yellow-50/50 p-3 pb-8 rounded-lg border border-yellow-200/50 max-h-36 overflow-hidden whitespace-pre-wrap relative">
-                          {renderNotes(app.post_op_notes)}
-                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#fefce8] to-transparent pointer-events-none rounded-b-lg"></div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 flex justify-center translate-y-1/2">
-                          <button onClick={() => setDetailApp(app)} className="text-blue-600 text-[11px] font-bold bg-white px-4 py-1.5 rounded-full shadow-md hover:bg-slate-50 transition-colors border border-slate-100 flex items-center gap-1">
-                            Xem chi tiết
-                          </button>
-                        </div>
+                      <div className="mt-auto mb-3 text-xs text-slate-600 bg-yellow-50/50 p-3 rounded-lg border border-yellow-200/50 max-h-48 overflow-y-auto whitespace-pre-wrap">
+                        {renderNotes(app.post_op_notes)}
                       </div>
                     )}
 
