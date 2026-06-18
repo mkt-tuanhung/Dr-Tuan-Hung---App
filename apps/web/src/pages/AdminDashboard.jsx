@@ -18,6 +18,7 @@ import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
+import ProfileMenu from '@/components/ProfileMenu.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -330,22 +331,18 @@ const AdminDashboard = () => {
           })}
         </nav>
 
-        <div className="p-3 border-t border-emerald-50">
-          <div className="flex items-center gap-3 px-3 py-2 mb-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              {profile?.full_name?.charAt(0) || 'A'}
+        <div className="p-3 border-t border-emerald-50 mt-auto">
+          <ProfileMenu mobile={false}>
+            <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+                {profile?.full_name?.charAt(0) || 'A'}
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="text-sm font-semibold text-slate-700 truncate group-hover:text-emerald-700 transition-colors">{profile?.full_name}</div>
+                <div className="text-xs text-slate-400 truncate">{profile?.employee_id} · {profile?.position || profile?.role}</div>
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-700 truncate">{profile?.full_name}</div>
-              <div className="text-xs text-slate-400">{profile?.employee_id} · Admin</div>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-4 h-4" /> Đăng xuất
-          </button>
+          </ProfileMenu>
         </div>
       </aside>
 
@@ -367,9 +364,11 @@ const AdminDashboard = () => {
             {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold">
-            {profile?.full_name?.charAt(0) || 'A'}
-          </div>
+          <ProfileMenu mobile={true}>
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
+              {profile?.full_name?.charAt(0) || 'A'}
+            </div>
+          </ProfileMenu>
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
