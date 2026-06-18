@@ -12,7 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Search, UserCheck, Pencil, UserX } from 'lucide-react';
+import { Plus, Search, UserCheck, Pencil, UserX, QrCode } from 'lucide-react';
 
 // Format số tiền VND có dấu chấm
 const fmtInput = (val) => {
@@ -66,6 +66,7 @@ const StaffManagementPage = ({ isNested = false }) => {
   const [saving, setSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [viewQR, setViewQR] = useState(null);
 
   const loadStaff = async () => {
     setLoading(true);
@@ -244,6 +245,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                   <th className="text-left px-4 py-3 font-medium">Lương cơ bản</th>
                   <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
                   <th className="text-left px-4 py-3 font-medium">SĐT</th>
+                  <th className="text-left px-4 py-3 font-medium">Nhận lương</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -287,6 +289,15 @@ const StaffManagementPage = ({ isNested = false }) => {
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-400">{s.phone || '—'}</td>
+                    <td className="px-4 py-3">
+                      {s.bank_name && s.bank_account ? (
+                        <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors text-xs font-medium">
+                          <QrCode className="w-3.5 h-3.5" /> VietQR
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-300">Chưa cập nhật</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
                         <button onClick={() => openEdit(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
@@ -342,6 +353,16 @@ const StaffManagementPage = ({ isNested = false }) => {
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Chính thức</span>
                   )}
                 </div>
+                {s.bank_name && s.bank_account && (
+                  <div className="flex items-center justify-between text-sm py-2 border-t border-emerald-50">
+                    <div className="text-xs text-slate-500">
+                      Ngân hàng: <span className="font-semibold text-slate-700">{s.bank_name}</span> - {s.bank_account}
+                    </div>
+                    <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors text-xs font-bold">
+                      <QrCode className="w-4 h-4" /> QR Nhận lương
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 pt-1 border-t border-emerald-50">
                   {s.employment_status === 'probation' && (
                     <button onClick={() => handleEndProbation(s)} className="flex-1 h-8 text-xs font-medium rounded-xl border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1">
@@ -360,6 +381,35 @@ const StaffManagementPage = ({ isNested = false }) => {
           </div>
         </>
       )}
+
+      {/* QR Code Dialog */}
+      <Dialog open={!!viewQR} onOpenChange={(open) => !open && setViewQR(null)}>
+        <DialogContent className="max-w-xs rounded-3xl border-emerald-100 p-6 flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
+            <QrCode className="w-6 h-6 text-emerald-500" />
+          </div>
+          <DialogTitle className="text-lg font-bold text-slate-800">QR Nhận tiền</DialogTitle>
+          <p className="text-sm text-slate-500 mb-4">{viewQR?.full_name}</p>
+          
+          <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 mb-4">
+            <img 
+              src={viewQR ? `https://img.vietqr.io/image/${viewQR.bank_name.trim().toLowerCase()}-${viewQR.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(viewQR.full_name)}` : ''}
+              alt="VietQR"
+              className="w-48 h-48 object-contain"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+          </div>
+          
+          <div className="w-full bg-emerald-50 rounded-xl p-3 text-left">
+            <div className="text-xs text-emerald-600 mb-1">Ngân hàng: <span className="font-bold">{viewQR?.bank_name}</span></div>
+            <div className="text-xs text-emerald-600">Số TK: <span className="font-bold">{viewQR?.bank_account}</span></div>
+          </div>
+          
+          <Button onClick={() => setViewQR(null)} className="w-full mt-4 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+            Đóng
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-emerald-100">
