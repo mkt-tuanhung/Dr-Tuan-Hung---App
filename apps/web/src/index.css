@@ -319,20 +319,19 @@ body.pink-mode [class*="ring-teal"], body.pink-mode [class*="ring-emerald"] {
 /* Emerald / Phẫu thuật -> Dark Pink */
 body.pink-mode [fill="#10b981"] { fill: #ff477e !important; }
 body.pink-mode [stroke="#10b981"] { stroke: #ff477e !important; }
-body.pink-mode [style*="color: #10b981"] { color: #ff477e !important; }
-body.pink-mode [style*="color:#10b981"] { color: #ff477e !important; }
 
 /* Amber / Chờ tư vấn -> Medium Pink */
 body.pink-mode [fill="#f59e0b"] { fill: #ff8fa3 !important; }
 body.pink-mode [stroke="#f59e0b"] { stroke: #ff8fa3 !important; }
-body.pink-mode [style*="color: #f59e0b"] { color: #ff8fa3 !important; }
-body.pink-mode [style*="color:#f59e0b"] { color: #ff8fa3 !important; }
 
 /* Blue / Tổng lịch -> Light Pink */
 body.pink-mode [fill="#3b82f6"] { fill: #ffb3c6 !important; }
 body.pink-mode [stroke="#3b82f6"] { stroke: #ffb3c6 !important; }
-body.pink-mode [style*="color: #3b82f6"] { color: #ffb3c6 !important; }
-body.pink-mode [style*="color:#3b82f6"] { color: #ffb3c6 !important; }
+
+/* Make chart legend text black */
+body.pink-mode .recharts-legend-item-text {
+  color: #374151 !important;
+}
 
 body.pink-mode stop {
   stop-color: #ffb3c6 !important;
