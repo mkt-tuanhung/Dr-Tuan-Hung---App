@@ -103,7 +103,7 @@ const HauPhauPage = () => {
     if (focusId && customers.length > 0) {
       const app = customers.find(c => c.id === focusId);
       if (app) {
-        openNote(app);
+        setDetailApp(app);
         setActiveTab('all');
         sessionStorage.removeItem('focusHauPhauId');
       }
