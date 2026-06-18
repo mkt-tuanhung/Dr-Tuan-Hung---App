@@ -306,12 +306,12 @@ const HauPhauPage = () => {
 
                     {/* Note Box */}
                     {app.post_op_notes && (
-                      <div className="mt-auto mb-3 relative">
+                      <div className="mt-auto mb-4 relative">
                         <div className="text-xs text-slate-600 bg-yellow-50/50 p-3 pb-8 rounded-lg border border-yellow-200/50 max-h-36 overflow-hidden whitespace-pre-wrap relative">
                           {renderNotes(app.post_op_notes)}
                           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#fefce8] to-transparent pointer-events-none rounded-b-lg"></div>
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 flex justify-center translate-y-1/2">
+                        <div className="absolute bottom-2 left-0 right-0 flex justify-center">
                           <button onClick={() => setDetailApp(app)} className="text-blue-600 text-[11px] font-bold bg-white px-4 py-1.5 rounded-full shadow-md hover:bg-slate-50 transition-colors border border-slate-100 flex items-center gap-1 z-10">
                             Xem chi tiết
                           </button>
