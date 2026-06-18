@@ -247,9 +247,9 @@ body.pink-mode {
 body.pink-mode .bg-white,
 body.pink-mode .bg-white\/50,
 body.pink-mode .bg-white\/80 {
-  background-color: rgba(255, 255, 255, 0.55) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
   border: 1px solid rgba(255, 255, 255, 0.8) !important;
   box-shadow: 0 8px 32px 0 rgba(255, 150, 180, 0.1) !important;
 }
@@ -305,4 +305,20 @@ body.pink-mode .border-purple-500, body.pink-mode .border-blue-500 {
 
 body.pink-mode *:focus {
   --tw-ring-color: rgba(255, 123, 137, 0.3) !important;
+}
+
+/* Charts Overrides */
+body.pink-mode .recharts-bar-rectangle path,
+body.pink-mode .recharts-pie-sector path,
+body.pink-mode .recharts-area-area {
+  fill: #ff7b89 !important;
+}
+body.pink-mode .recharts-line-curve {
+  stroke: #ff7b89 !important;
+}
+body.pink-mode stop {
+  stop-color: #ff7b89 !important;
+}
+body.pink-mode stop[offset="100%"] {
+  stop-color: #ffa384 !important;
 }
