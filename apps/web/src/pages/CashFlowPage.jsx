@@ -7,7 +7,7 @@ import {
   LineChart, Line, Legend
 } from 'recharts';
 import { 
-  Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, Trash2, 
+  Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, X, Trash2, 
   ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users
 } from 'lucide-react';
 
