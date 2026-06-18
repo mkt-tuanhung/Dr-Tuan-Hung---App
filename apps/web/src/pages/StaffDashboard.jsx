@@ -84,24 +84,39 @@ const Overview = ({ profile, setActiveTab }) => {
         </div>
       </div>
 
-      {/* Quick access */}
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-50">
-          <h3 className="text-sm font-semibold text-slate-700">Tính năng</h3>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-2 gap-4">
+        <div onClick={() => setActiveTab('attendance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <CalendarCheck className="w-6 h-6" />
+          </div>
+          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Ngày công</p>
+          <p className="text-xl font-bold text-slate-800 mt-1">22 <span className="text-xs text-slate-400 font-medium normal-case">ngày</span></p>
         </div>
-        {FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role)).filter(m => m.id !== 'overview').map((m, i) => (
-          <button key={i} onClick={() => setActiveTab(m.id)} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-              <m.icon className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div className="flex-1 text-left">
-              <div className="text-sm font-medium text-slate-700">{m.label}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-slate-300" />
-            </div>
-          </button>
-        ))}
+
+        <div onClick={() => setActiveTab('kpi')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group">
+          <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <Target className="w-6 h-6" />
+          </div>
+          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Tiến độ KPI</p>
+          <p className="text-xl font-bold text-slate-800 mt-1">85<span className="text-xs text-slate-400 font-medium normal-case">%</span></p>
+        </div>
+
+        <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group">
+          <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <Wallet className="w-6 h-6" />
+          </div>
+          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Tạm ứng</p>
+          <p className="text-xl font-bold text-slate-800 mt-1">0<span className="text-xs text-slate-400 font-medium normal-case">đ</span></p>
+        </div>
+
+        <div onClick={() => setActiveTab('appointments')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group">
+          <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <CalendarDays className="w-6 h-6" />
+          </div>
+          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Lịch hẹn nay</p>
+          <p className="text-xl font-bold text-slate-800 mt-1">3 <span className="text-xs text-slate-400 font-medium normal-case">khách</span></p>
+        </div>
       </div>
 
       <p className="text-center text-xs text-slate-300">
