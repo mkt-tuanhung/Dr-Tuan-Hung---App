@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil } from 'lucide-react';
+import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft } from 'lucide-react';
 
 export default function ProfileMenu({ children, mobile = false }) {
   const { profile, refreshProfile } = useAuth();
@@ -14,6 +14,19 @@ export default function ProfileMenu({ children, mobile = false }) {
   const [activeTab, setActiveTab] = useState('profile'); // profile, password
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  const [banks, setBanks] = useState([]);
+  const [selectingBank, setSelectingBank] = useState(false);
+  const [bankSearch, setBankSearch] = useState('');
+
+  React.useEffect(() => {
+    fetch('https://api.vietqr.io/v2/banks')
+      .then(r => r.json())
+      .then(d => {
+        if (d.code === '00') setBanks(d.data);
+      })
+      .catch(e => console.log('Error fetching banks', e));
+  }, []);
   
   // Profile Form
   const [form, setForm] = useState({
@@ -47,6 +60,8 @@ export default function ProfileMenu({ children, mobile = false }) {
     });
     setMenuOpen(false);
     setIsEditing(false);
+    setSelectingBank(false);
+    setBankSearch('');
     setModalOpen(true);
   };
 
@@ -174,7 +189,41 @@ export default function ProfileMenu({ children, mobile = false }) {
 
             <div className="p-6">
               {activeTab === 'profile' ? (
-                isEditing ? (
+                selectingBank ? (
+                  <div className="flex flex-col h-[60vh]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <button onClick={() => setSelectingBank(false)} className="p-2 -ml-2 rounded-xl text-slate-400 hover:bg-slate-100"><ChevronLeft className="w-5 h-5"/></button>
+                      <h3 className="font-bold text-slate-800 flex-1">Chọn Ngân hàng</h3>
+                    </div>
+                    <div className="relative mb-4 shrink-0">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text" 
+                        autoFocus
+                        placeholder="Tìm theo tên ngân hàng hoặc mã (VD: MB, VCB)..." 
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-sm"
+                        value={bankSearch}
+                        onChange={e => setBankSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1 -mr-1 pb-4">
+                      {banks.filter(b => b.shortName?.toLowerCase().includes(bankSearch.toLowerCase()) || b.name?.toLowerCase().includes(bankSearch.toLowerCase())).map(b => (
+                        <button type="button" key={b.id} onClick={() => {
+                          setForm({...form, bank_name: b.shortName});
+                          setSelectingBank(false);
+                        }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors text-left bg-white shadow-sm">
+                          <div className="w-12 h-12 bg-white rounded-lg border border-slate-100 flex items-center justify-center p-1 shrink-0">
+                            <img src={b.logo} alt={b.shortName} className="max-w-full max-h-full object-contain" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-700 text-sm">{b.shortName}</div>
+                            <div className="text-xs text-slate-500 line-clamp-1">{b.name}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : isEditing ? (
                   <form onSubmit={handleSaveProfile} className="space-y-4">
                     {/* Avatar Upload */}
                     <div className="flex flex-col items-center justify-center mb-6">
@@ -206,7 +255,13 @@ export default function ProfileMenu({ children, mobile = false }) {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Ngân hàng</label>
-                        <input type="text" placeholder="VD: Vietcombank, MB..." value={form.bank_name} onChange={e => setForm({...form, bank_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                        <button type="button" onClick={() => setSelectingBank(true)} className="w-full text-left border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 hover:bg-white transition-colors min-h-[46px] truncate">
+                          {form.bank_name ? (
+                            <span className="text-slate-700">{form.bank_name}</span>
+                          ) : (
+                            <span className="text-slate-400">Chọn ngân hàng...</span>
+                          )}
+                        </button>
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Số tài khoản</label>
