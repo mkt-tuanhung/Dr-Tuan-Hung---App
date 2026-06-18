@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Clock, CheckCircle, X, Edit, ClipboardList, Calendar, Banknote, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { 
+  ClipboardList, Edit, CheckCircle, Search, Save, Calendar as CalendarIcon, Phone,
+  Clock, Activity, Banknote, UserCheck, ShieldCheck, X, Image as ImageIcon, PackageOpen, Plus, Trash2, Loader2
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -24,6 +27,12 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
 
+  // Modal Vật tư
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [consumedItems, setConsumedItems] = useState([]);
+  const [materialForm, setMaterialForm] = useState([]); // [{ item_id, quantity }]
+
   const [form, setForm] = useState({
     activeTab: 'phu_mo',
     surgery_type: 'Tiểu phẫu',
@@ -34,21 +43,30 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    // Fetch apps
     const { data: appsData, error: appsErr } = await supabase
       .from('customer_appointments')
       .select('*, profiles!customer_appointments_created_by_fkey(full_name)')
       .eq('status', 'phau_thuat')
       .order('surgery_date', { ascending: false });
 
-    // Fetch nurses
-    const { data: nursesData } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('role', 'dieu_duong');
+    const { data: nursesData } = await supabase.from('profiles').select('*').eq('role', 'dieu_duong');
+
+    const appIds = appsData ? appsData.map(a => a.id) : [];
+    let consumedSet = new Set();
+    if (appIds.length > 0) {
+      const { data: transData } = await supabase
+        .from('inventory_transactions')
+        .select('reference_id')
+        .in('reference_id', appIds)
+        .eq('type', 'export');
+      if (transData) transData.forEach(t => consumedSet.add(t.reference_id));
+    }
 
     if (appsErr) toast.error('Lỗi tải dữ liệu: ' + appsErr.message);
-    else setCustomers(appsData || []);
+    else {
+      const enhancedApps = (appsData || []).map(a => ({ ...a, has_materials: consumedSet.has(a.id) }));
+      setCustomers(enhancedApps);
+    }
     
     if (nursesData) setNurses(nursesData);
     setLoading(false);
@@ -94,7 +112,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       loadData();
     }
     setSaving(false);
-    setSaving(false);
   };
 
   const openFeeModal = (app) => {
@@ -112,14 +129,73 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       setFeeForm(prev => ({ ...prev, proof: url }));
       toast.success('Đã tải ảnh lên!');
     } catch (err) {
-      toast.error('Lỗi tải ảnh: ' + err.message);
+      toast.error('Có lỗi xảy ra: ' + err.message);
+    } finally {
+      setUploadingImage(false);
     }
-    setUploadingImage(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSaveFee = async (e) => {
-    e.preventDefault();
+  // --- LOGIC VẬT TƯ TIÊU HAO ---
+  const openMaterialModal = async (app) => {
+    setSelectedApp(app);
+    setMaterialForm([]);
+    setLoading(true);
+    
+    // Load inventory catalog
+    const { data: itemsData } = await supabase.from('inventory_items').select('*').order('name');
+    if (itemsData) setInventoryItems(itemsData);
+
+    // Load consumed items
+    const { data: consumedData } = await supabase.from('inventory_transactions')
+      .select('*, inventory_items(name, unit)')
+      .eq('reference_id', app.id)
+      .eq('type', 'export');
+    if (consumedData) setConsumedItems(consumedData);
+    
+    setLoading(false);
+    setShowMaterialModal(true);
+  };
+
+  const handleAddMaterialRow = () => {
+    setMaterialForm([...materialForm, { item_id: '', quantity: 1 }]);
+  };
+
+  const handleRemoveMaterialRow = (index) => {
+    setMaterialForm(materialForm.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateMaterialRow = (index, field, value) => {
+    const newForm = [...materialForm];
+    newForm[index][field] = value;
+    setMaterialForm(newForm);
+  };
+
+  const handleSaveMaterials = async () => {
+    const validRows = materialForm.filter(r => r.item_id && r.quantity > 0);
+    if (validRows.length === 0) return toast.error('Vui lòng nhập vật tư hợp lệ');
+    setSaving(true);
+
+    const inserts = validRows.map(r => ({
+      item_id: r.item_id,
+      type: 'export',
+      quantity: r.quantity,
+      reference_id: selectedApp.id,
+      notes: `Xuất cho KH: ${selectedApp.customer_name}`,
+      created_by: profile.id
+    }));
+
+    const { error } = await supabase.from('inventory_transactions').insert(inserts);
+    if (error) toast.error('Lỗi: ' + error.message);
+    else {
+      toast.success('Đã lưu vật tư tiêu hao!');
+      setShowMaterialModal(false);
+      loadData();
+    }
+    setSaving(false);
+  };
+
+  const handleSaveFee = async () => {
     if (!feeForm.amount) return toast.error('Vui lòng nhập số tiền');
     
     setSaving(true);
@@ -180,7 +256,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
           {Object.entries(groupedCustomers).map(([date, apps]) => (
             <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                <Calendar className="w-5 h-5 text-purple-600" />
+                <CalendarIcon className="w-5 h-5 text-purple-600" />
                 <h3 className="font-bold text-purple-800 text-lg">Ngày mổ: {date}</h3>
                 <span className="px-2.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full ml-auto">{apps.length} ca</span>
               </div>
@@ -190,13 +266,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                   const isAssigned = app.hau_phau_id;
                   return (
                     <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-purple-300 transition-colors">
-                      {/* Header */}
                       <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
                         <div>
                           <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
-                          <div className="text-slate-500 text-sm mt-0.5">
-                            {app.service}
-                          </div>
+                          <div className="text-slate-500 text-sm mt-0.5">{app.service}</div>
                         </div>
                         <div className="text-right">
                           <div className="text-xs text-slate-500 mb-0.5">Doanh thu</div>
@@ -204,7 +277,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         </div>
                       </div>
 
-                      {/* Phân công */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
                         <div className="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50 flex flex-col items-center justify-center text-center">
                           <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Phụ mổ</span>
@@ -216,7 +288,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="mt-auto flex flex-col gap-2 pt-2">
                         <div className="flex gap-2">
                           {isAssigned ? (
@@ -235,7 +306,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                           )}
                         </div>
                         
-                        {/* Nhập viện phí */}
                         {isAdminOrAccountant && (
                           <div className="pt-1">
                             {app.hospital_fee ? (
@@ -245,6 +315,20 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                             ) : (
                               <button onClick={() => openFeeModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm">
                                 <Banknote className="w-4 h-4" /> Nhập viện phí
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {['admin', 'accountant', 'dieu_duong'].includes(profile?.role) && (
+                          <div className="pt-1">
+                            {app.has_materials ? (
+                              <button onClick={() => openMaterialModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                                <PackageOpen className="w-4 h-4 text-indigo-500" /> Vật tư tiêu hao (Đã xuất)
+                              </button>
+                            ) : (
+                              <button onClick={() => openMaterialModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-orange-50 text-orange-700 text-xs font-bold rounded-xl border border-orange-200 hover:bg-orange-100 transition-colors shadow-sm">
+                                <PackageOpen className="w-4 h-4" /> Báo cáo Vật tư
                               </button>
                             )}
                           </div>
@@ -278,7 +362,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               {form.activeTab === 'phu_mo' && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Loại phẫu thuật (Dùng tính lương)</label>
+                    <label className="block text-sm font-semibold mb-2">Loại phẫu thuật</label>
                     <select value={form.surgery_type} onChange={e => setForm({...form, surgery_type: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
                       <option>Tiểu phẫu</option>
                       <option>Đại phẫu</option>
@@ -292,55 +376,38 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Phụ mổ 2 (Nếu có)</label>
+                    <label className="block text-sm font-semibold mb-2">Phụ mổ 2</label>
                     <select value={form.phu_mo_2_id} onChange={e => setForm({...form, phu_mo_2_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
                       <option value="">-- Trống --</option>
                       {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Phụ mổ 3 (Nếu có)</label>
+                    <label className="block text-sm font-semibold mb-2">Phụ mổ 3</label>
                     <select value={form.phu_mo_3_id} onChange={e => setForm({...form, phu_mo_3_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
                       <option value="">-- Trống --</option>
                       {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Ghi chú phụ mổ</label>
-                    <textarea rows={2} value={form.surgery_notes} onChange={e => setForm({...form, surgery_notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500 resize-none" placeholder="Ghi chú thêm..." />
-                  </div>
                 </>
               )}
-
               {form.activeTab === 'truc_dem' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Người trực đêm</label>
-                    <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
-                      <option value="">-- Trống --</option>
-                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Ghi chú trực đêm</label>
-                    <textarea rows={3} value={form.truc_dem_notes} onChange={e => setForm({...form, truc_dem_notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500 resize-none" placeholder="Yêu cầu theo dõi huyết áp..." />
-                  </div>
-                </>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Người trực đêm</label>
+                  <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <option value="">-- Trống --</option>
+                    {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                  </select>
+                </div>
               )}
-
               {form.activeTab === 'hau_phau' && (
-                <>
-                  <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-emerald-800 text-sm mb-4">
-                     Khách hàng sẽ được chuyển vào <strong>Module Hậu phẫu</strong> sau khi bạn gán nhân sự phụ trách tại đây.
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Người chăm sóc hậu phẫu</label>
-                    <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
-                      <option value="">-- Trống --</option>
-                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
-                    </select>
-                  </div>
-                </>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Người chăm sóc hậu phẫu</label>
+                  <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                    <option value="">-- Trống --</option>
+                    {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                  </select>
+                </div>
               )}
             </div>
             
@@ -356,48 +423,85 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       {/* Modal Nhập Viện Phí */}
       {showFeeModal && selectedApp && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSaveFee} className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50 shrink-0">
               <h3 className="font-bold text-blue-800">Nhập viện phí</h3>
               <button type="button" onClick={() => setShowFeeModal(false)}><X className="w-5 h-5 text-blue-400" /></button>
             </div>
-            
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền viện phí (VNĐ)</label>
-                <input required type="text" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-700 text-lg" placeholder="1.000.000" />
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền (VNĐ)</label>
+                <input type="text" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-700 text-lg" placeholder="1.000.000" />
               </div>
-              
-              <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Hình thức thanh toán</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
-                  <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
-                </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
+                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
               </div>
-
-              <div>
-                <div className="flex justify-between items-end mb-2">
-                  <label className="block text-sm font-semibold text-slate-700">Hoá đơn / Bill</label>
-                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-blue-100">
-                    {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} {feeForm.proof ? 'Đổi ảnh' : 'Tải ảnh lên'}
-                  </button>
-                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-                </div>
-                {feeForm.proof && (
-                  <div className="mt-2 rounded-xl overflow-hidden border border-slate-200">
-                    <img src={feeForm.proof} alt="Bill" className="w-full h-auto object-cover max-h-40" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="p-6 bg-slate-50 shrink-0 border-t border-slate-100">
-              <button type="submit" disabled={saving || uploadingImage} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">
-                {saving ? 'Đang lưu...' : 'Xác nhận thu'}
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-blue-400">
+                {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : (feeForm.proof ? <img src={feeForm.proof} className="max-h-20 mx-auto" /> : 'Tải bill lên')}
               </button>
+              <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
             </div>
-          </form>
+            <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
+              <button type="button" onClick={() => setShowFeeModal(false)} className="px-6 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Đóng</button>
+              <button type="button" onClick={handleSaveFee} disabled={saving || uploadingImage} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Lưu Viện Phí</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: VẬT TƯ TIÊU HAO */}
+      {showMaterialModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50 shrink-0">
+              <h3 className="font-bold text-indigo-800 flex items-center gap-2"><PackageOpen className="w-5 h-5"/> Báo cáo Vật tư tiêu hao</h3>
+              <button onClick={() => setShowMaterialModal(false)}><X className="w-5 h-5 text-indigo-400 hover:text-indigo-600" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                <div className="font-bold text-slate-800">{selectedApp?.customer_name}</div>
+                <div className="text-sm text-slate-500">Phẫu thuật: {selectedApp?.surgery_type}</div>
+              </div>
+              {consumedItems.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-sm text-slate-700 mb-3 uppercase">Đã báo cáo</h4>
+                  <div className="bg-slate-50 border rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-100 text-slate-500">
+                        <tr><th className="px-4 py-2">Tên vật tư</th><th className="px-4 py-2 text-right">SL</th></tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {consumedItems.map(item => (
+                          <tr key={item.id}><td className="px-4 py-3 font-semibold">{item.inventory_items?.name}</td><td className="px-4 py-3 text-right font-bold text-red-600">-{item.quantity}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-bold text-sm text-slate-700 uppercase">Nhập thêm</h4>
+                  <button onClick={handleAddMaterialRow} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Thêm dòng</button>
+                </div>
+                {materialForm.map((row, index) => (
+                  <div key={index} className="flex gap-2 items-center bg-white border p-2 rounded-xl shadow-sm mb-2">
+                    <select value={row.item_id} onChange={(e) => handleUpdateMaterialRow(index, 'item_id', e.target.value)} className="flex-1 text-sm font-semibold outline-none">
+                      <option value="">-- Chọn vật tư --</option>
+                      {inventoryItems.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                    </select>
+                    <input type="number" min="1" value={row.quantity} onChange={(e) => handleUpdateMaterialRow(index, 'quantity', Number(e.target.value))} className="w-20 text-center font-bold bg-slate-50 rounded-lg p-2 outline-none" />
+                    <button onClick={() => handleRemoveMaterialRow(index)} className="text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
+              <button onClick={() => setShowMaterialModal(false)} className="px-6 py-2 border rounded-xl font-semibold text-slate-600">Đóng</button>
+              {materialForm.length > 0 && <button onClick={handleSaveMaterials} disabled={saving} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl">Lưu Vật Tư</button>}
+            </div>
+          </div>
         </div>
       )}
     </div>
