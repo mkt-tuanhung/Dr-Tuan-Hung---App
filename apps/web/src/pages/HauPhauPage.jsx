@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { UserPlus, Plus } from 'lucide-react';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -13,11 +15,21 @@ const TABS = [
 ];
 
 const HauPhauPage = () => {
+  const { profile } = useAuth();
   const [customers, setCustomers] = useState([]);
+  const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
 
+  const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
+  const isAdmin = profile?.role === 'admin';
+  const canSeeAll = isAdmin || isHeadNurse;
+
   // Modal
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignForm, setAssignForm] = useState({ id: null, additional_hau_phau_ids: [] });
+  const [selectedNurseId, setSelectedNurseId] = useState('');
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -43,20 +55,35 @@ const HauPhauPage = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('customer_appointments')
-      .select('*, hau_phau:profiles!hau_phau_id(full_name)')
-      .eq('status', 'phau_thuat')
-      .not('hau_phau_id', 'is', null)
-      .order('surgery_date', { ascending: false });
+    const [appointmentsRes, nursesRes] = await Promise.all([
+      supabase
+        .from('customer_appointments')
+        .select('*, hau_phau:profiles!hau_phau_id(full_name)')
+        .eq('status', 'phau_thuat')
+        .order('surgery_date', { ascending: false }),
+      supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .in('role', ['dieu_duong', 'admin'])
+    ]);
 
-    if (error) {
-      toast.error('Lỗi tải dữ liệu: ' + error.message);
+    if (appointmentsRes.error) {
+      toast.error('Lỗi tải dữ liệu: ' + appointmentsRes.error.message);
     } else {
-      setCustomers(data || []);
+      let data = appointmentsRes.data || [];
+      data = data.filter(d => d.hau_phau_id || (d.additional_hau_phau_ids && d.additional_hau_phau_ids.length > 0));
+
+      if (!canSeeAll && profile?.id) {
+         data = data.filter(d => d.hau_phau_id === profile.id || (d.additional_hau_phau_ids && d.additional_hau_phau_ids.includes(profile.id)));
+      }
+      setCustomers(data);
+    }
+
+    if (nursesRes.data) {
+      setNurses(nursesRes.data);
     }
     setLoading(false);
-  }, []);
+  }, [profile, canSeeAll]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -112,6 +139,37 @@ const HauPhauPage = () => {
       loadData(); 
     }
     setSaving(false);
+  };
+
+  const handleAssignMoreSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedNurseId) {
+      toast.error('Vui lòng chọn nhân sự!');
+      return;
+    }
+    
+    if (assignForm.additional_hau_phau_ids.includes(selectedNurseId)) {
+      toast.error('Nhân sự này đã được phân công từ trước!');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const newIds = [...assignForm.additional_hau_phau_ids, selectedNurseId];
+      const { error } = await supabase
+        .from('customer_appointments')
+        .update({ additional_hau_phau_ids: newIds })
+        .eq('id', assignForm.id);
+
+      if (error) throw error;
+      toast.success('Phân công thêm thành công!');
+      setShowAssignModal(false);
+      loadData();
+    } catch (err) {
+      toast.error('Lỗi phân công: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
@@ -223,7 +281,14 @@ const HauPhauPage = () => {
                       <div className="text-slate-500 text-xs">Dịch vụ:</div>
                       <div className="font-semibold text-slate-800 text-right truncate">{app.service || 'Chưa rõ'}</div>
                       <div className="text-slate-500 text-xs">Phụ trách hậu phẫu:</div>
-                      <div className="text-slate-700 text-right truncate">{app.hau_phau?.full_name || 'N/A'}</div>
+                      <div className="text-slate-700 text-right">
+                        <div>{app.hau_phau?.full_name || 'N/A'}</div>
+                        {app.additional_hau_phau_ids && app.additional_hau_phau_ids.length > 0 && (
+                           <div className="text-xs text-slate-500 mt-1">
+                             + {app.additional_hau_phau_ids.map(id => nurses.find(n => n.id === id)?.full_name || id).join(', ')}
+                           </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Note Box */}
@@ -234,10 +299,19 @@ const HauPhauPage = () => {
                     )}
 
                     {/* Action Buttons */}
-                    <div className="mt-auto pt-2">
-                      <button onClick={() => openNote(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl transition-colors border border-slate-200">
-                        <MessageCircle className="w-4 h-4" /> Cập nhật tình trạng & Ghi chú
+                    <div className="mt-auto pt-2 flex gap-2">
+                      <button onClick={() => openNote(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl transition-colors border border-slate-200">
+                        <MessageCircle className="w-4 h-4" /> Ghi chú
                       </button>
+                      {canSeeAll && (
+                        <button onClick={() => {
+                          setAssignForm({ id: app.id, additional_hau_phau_ids: app.additional_hau_phau_ids || [] });
+                          setSelectedNurseId('');
+                          setShowAssignModal(true);
+                        }} className="w-10 h-10 flex shrink-0 justify-center items-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-colors border border-blue-200" title="Phân công thêm">
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -288,6 +362,32 @@ const HauPhauPage = () => {
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end shrink-0">
               <button type="submit" disabled={saving} className="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu lại'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal Phân công thêm */}
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <form onSubmit={handleAssignMoreSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-white">
+              <h3 className="font-bold text-slate-800 text-lg">Phân công thêm Điều dưỡng</h3>
+              <button type="button" onClick={() => setShowAssignModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-semibold mb-2">Chọn nhân sự Điều dưỡng</label>
+              <select required value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                <option value="">-- Chọn Điều dưỡng --</option>
+                {nurses.filter(n => n.role === 'dieu_duong' && !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
+                  <option key={n.id} value={n.id}>{n.full_name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end">
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700">{saving ? 'Đang lưu...' : 'Lưu phân công'}</button>
             </div>
           </form>
         </div>

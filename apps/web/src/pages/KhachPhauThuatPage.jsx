@@ -292,7 +292,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         <div className="flex gap-2">
                           {isAssigned ? (
                             <>
-                              {['admin', 'dieu_duong'].includes(profile?.role) && (
+                              {(profile?.role === 'admin' || (profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận')) && (
                                 <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
                                   <Edit className="w-3.5 h-3.5" /> Sửa ca
                                 </button>
@@ -302,7 +302,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                               </button>
                             </>
                           ) : (
-                            ['admin', 'dieu_duong'].includes(profile?.role) && (
+                            (profile?.role === 'admin' || (profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận')) && (
                               <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
                                 <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
                               </button>

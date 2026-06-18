@@ -129,6 +129,8 @@ create table customer_appointments (
   surgery_date date,
   revenue numeric(15,0),
   upsale_revenue numeric(15,0),
+  -- Hậu phẫu
+  additional_hau_phau_ids uuid[] default '{}',
   -- Chung
   notes text,
   created_by uuid references profiles(id),
