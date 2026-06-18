@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import { 
   Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, X, Trash2, 
-  ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users
+  ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users, PackageOpen, TrendingUp, Activity, Wallet
 } from 'lucide-react';
 
 export default function CashFlowPage() {
@@ -23,6 +23,10 @@ export default function CashFlowPage() {
   // Filters
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+
+  const [dashboardStats, setDashboardStats] = useState({
+    revenue: 0, hospitalFee: 0, payroll: 0, advance: 0, material: 0
+  });
 
   // Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -52,6 +56,39 @@ export default function CashFlowPage() {
 
     if (error) toast.error('Lỗi tải dữ liệu: ' + error.message);
     else setData(flowsData || []);
+
+    try {
+      const [payrollRes, appRes, expRes] = await Promise.all([
+        supabase.from('payroll').select('net_salary').eq('month', filterMonth).eq('year', filterYear),
+        supabase.from('customer_appointments').select('revenue, upsale_revenue, hospital_fee, surgery_date, hospital_fee_date')
+          .or(`surgery_date.gte.${startDate},hospital_fee_date.gte.${startDate}`),
+        supabase.from('expenses').select('amount, category, is_advance')
+          .eq('status', 'paid')
+          .gte('date', startDate).lte('date', endDate)
+      ]);
+
+      let rev = 0, fee = 0, pr = 0, adv = 0, mat = 0;
+      payrollRes.data?.forEach(d => pr += Number(d.net_salary || 0));
+      
+      appRes.data?.forEach(d => {
+        if (d.surgery_date && d.surgery_date >= startDate && d.surgery_date <= endDate) {
+          rev += Number(d.revenue || 0) + Number(d.upsale_revenue || 0);
+        }
+        if (d.hospital_fee_date && d.hospital_fee_date >= startDate && d.hospital_fee_date <= endDate) {
+          fee += Number(d.hospital_fee || 0);
+        }
+      });
+
+      expRes.data?.forEach(d => {
+        if (d.is_advance) adv += Number(d.amount || 0);
+        if (d.category === 'Vat_tu') mat += Number(d.amount || 0);
+      });
+
+      setDashboardStats({ revenue: rev, hospitalFee: fee, payroll: pr, advance: adv, material: mat });
+    } catch (e) {
+      console.error('Lỗi lấy dữ liệu tổng quan:', e);
+    }
+
     setLoading(false);
   }, [filterMonth, filterYear, canRead]);
 
@@ -194,6 +231,55 @@ export default function CashFlowPage() {
               <Plus className="w-4 h-4" /> Tạo giao dịch
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Dashboard Overview */}
+      <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-inner space-y-4">
+        <h3 className="font-bold text-slate-700 flex items-center gap-2 text-lg">
+          <Activity className="w-5 h-5 text-indigo-500" /> Báo cáo tổng quan Tháng {filterMonth}/{filterYear}
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm mb-2"><TrendingUp className="w-4 h-4"/> Tổng Doanh thu</div>
+            <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.revenue)}</div>
+          </div>
+          
+          <div onClick={() => window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'hospital_fee_inventory' }))} 
+               className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between text-emerald-600 font-semibold text-sm mb-2">
+              <span className="flex items-center gap-2"><Banknote className="w-4 h-4"/> Tổng Viện phí</span>
+              <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.hospitalFee)}</div>
+          </div>
+
+          <div onClick={() => window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'payroll' }))}
+               className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between text-rose-600 font-semibold text-sm mb-2">
+              <span className="flex items-center gap-2"><Users className="w-4 h-4"/> Chi lương T{filterMonth}</span>
+              <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.payroll)}</div>
+          </div>
+
+          <div onClick={() => window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'advances' }))}
+               className="bg-white rounded-2xl p-4 border border-orange-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between text-orange-600 font-semibold text-sm mb-2">
+              <span className="flex items-center gap-2"><Wallet className="w-4 h-4"/> Tạm ứng chi</span>
+              <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.advance)}</div>
+          </div>
+
+          <div onClick={() => window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'hospital_fee_inventory' }))}
+               className="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between text-purple-600 font-semibold text-sm mb-2">
+              <span className="flex items-center gap-2"><PackageOpen className="w-4 h-4"/> Chi Vật tư</span>
+              <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.material)}</div>
+          </div>
         </div>
       </div>
 
