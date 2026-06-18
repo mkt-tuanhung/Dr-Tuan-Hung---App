@@ -508,18 +508,25 @@ const AppointmentManagementPage = () => {
                           )}
                         </div>
 
-                        <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
-                          {['admin', 'sale_offline'].includes(profile?.role) && (
-                            <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
-                              <Edit className="w-4 h-4" /> Đánh giá
+                        <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex flex-col gap-2 mt-auto">
+                          {app.notes && (
+                            <button onClick={() => setViewNoteApp(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
+                              <FileText className="w-4 h-4" /> Tình trạng KH
                             </button>
                           )}
-                          <button className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2 w-full">
+                            {['admin', 'sale_offline'].includes(profile?.role) && (
+                              <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
+                                <Edit className="w-4 h-4" /> Đánh giá
+                              </button>
+                            )}
+                            <button className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
