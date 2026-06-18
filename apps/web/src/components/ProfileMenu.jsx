@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert } from 'lucide-react';
+import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2 } from 'lucide-react';
 
 export default function ProfileMenu({ children, mobile = false }) {
   const { profile } = useAuth();
@@ -18,8 +18,10 @@ export default function ProfileMenu({ children, mobile = false }) {
     full_name: profile?.full_name || '',
     phone: profile?.phone || '',
     bank_name: profile?.bank_name || '',
-    bank_account: profile?.bank_account || ''
+    bank_account: profile?.bank_account || '',
+    avatar_url: profile?.avatar_url || ''
   });
+  const [uploading, setUploading] = useState(false);
 
   // Password Form
   const [pwdForm, setPwdForm] = useState({ newPassword: '', confirmPassword: '' });
@@ -38,10 +40,34 @@ export default function ProfileMenu({ children, mobile = false }) {
       full_name: profile?.full_name || '',
       phone: profile?.phone || '',
       bank_name: profile?.bank_name || '',
-      bank_account: profile?.bank_account || ''
+      bank_account: profile?.bank_account || '',
+      avatar_url: profile?.avatar_url || ''
     });
     setMenuOpen(false);
     setModalOpen(true);
+  };
+
+  const handleAvatarUpload = async (event) => {
+    try {
+      setUploading(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
+
+      let { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      setForm({ ...form, avatar_url: data.publicUrl });
+      toast.success('Đã tải ảnh lên! Hãy bấm Lưu thay đổi.');
+    } catch (error) {
+      toast.error('Lỗi tải ảnh: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSaveProfile = async (e) => {
@@ -53,7 +79,8 @@ export default function ProfileMenu({ children, mobile = false }) {
         full_name: form.full_name,
         phone: form.phone,
         bank_name: form.bank_name,
-        bank_account: form.bank_account
+        bank_account: form.bank_account,
+        avatar_url: form.avatar_url
       })
       .eq('id', profile.id);
 
@@ -152,6 +179,25 @@ export default function ProfileMenu({ children, mobile = false }) {
             <div className="p-6">
               {activeTab === 'profile' ? (
                 <form onSubmit={handleSaveProfile} className="space-y-4">
+                  {/* Avatar Upload */}
+                  <div className="flex flex-col items-center justify-center mb-6">
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-slate-200 group">
+                      {form.avatar_url ? (
+                        <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <User className="w-10 h-10" />
+                        </div>
+                      )}
+                      
+                      <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+                        <span className="text-[10px] mt-1 font-medium">{uploading ? 'Đang tải...' : 'Thay đổi'}</span>
+                        <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={uploading} />
+                      </label>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Họ và tên</label>
                     <input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" required />
