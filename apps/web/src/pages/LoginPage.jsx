@@ -9,8 +9,6 @@ import { Loader2, Stethoscope, User, ShieldAlert } from 'lucide-react';
 
 const ROLE_ROUTES = {
   admin: '/admin-dashboard',
-  accountant: '/accountant-dashboard',
-  shareholder: '/shareholder-dashboard',
 };
 
 const getRoute = (role) => ROLE_ROUTES[role] || '/staff-dashboard';
