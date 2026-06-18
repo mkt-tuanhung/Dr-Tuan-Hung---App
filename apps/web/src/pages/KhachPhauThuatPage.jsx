@@ -114,6 +114,19 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setSaving(false);
   };
 
+  const handleGoToHauPhau = (app) => {
+    const isAdmin = profile?.role === 'admin';
+    const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
+    const isAssignedToMe = app.hau_phau_id === profile?.id || (app.additional_hau_phau_ids && app.additional_hau_phau_ids.includes(profile?.id));
+    
+    if (isAdmin || isHeadNurse || isAssignedToMe) {
+      if (setActiveTab) setActiveTab('hau_phau');
+    } else {
+      const mainNurse = nurses.find(n => n.id === app.hau_phau_id)?.full_name || 'chưa rõ';
+      toast.error(`Hậu phẫu khách hàng ${app.customer_name} đang được phân công cho ${mainNurse}. Hãy liên hệ trưởng bộ phận để được phân công và xem chi tiết`);
+    }
+  };
+
   const openFeeModal = (app) => {
     setSelectedApp(app);
     setFeeForm({ amount: '', method: 'cash', proof: '' });
@@ -297,7 +310,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                                   <Edit className="w-3.5 h-3.5" /> Sửa ca
                                 </button>
                               )}
-                              <button onClick={() => setActiveTab && setActiveTab('hau_phau')} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
+                              <button onClick={() => handleGoToHauPhau(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
                                 <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
                               </button>
                             </>
