@@ -30,12 +30,12 @@ export default function ProfileMenu({ children, mobile = false }) {
     }
   }, [isPinkMode]);
 
-  const togglePinkMode = () => {
+  const togglePinkMode = (e) => {
+    e.stopPropagation();
     const newMode = !isPinkMode;
     setIsPinkMode(newMode);
     localStorage.setItem('theme', newMode ? 'pink' : 'default');
-    setMenuOpen(false);
-    toast.success(newMode ? 'Đã bật chế độ Kute phô mai que 🌸' : 'Đã tắt Pink Mode 🧊');
+    toast.success(newMode ? 'Đã bật Pink Mode' : 'Đã tắt Pink Mode');
   };
 
   React.useEffect(() => {
@@ -168,8 +168,14 @@ export default function ProfileMenu({ children, mobile = false }) {
                 <User className="w-4 h-4 text-slate-400" /> Hồ sơ cá nhân
               </button>
               
-              <button onClick={togglePinkMode} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
-                <Settings className="w-4 h-4 text-slate-400" /> {isPinkMode ? 'Tắt chế độ Pink Mode 🌸' : 'Bật chế độ Pink Mode 🌸'}
+              <button onClick={togglePinkMode} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  <span>Pink Mode</span>
+                </div>
+                <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${isPinkMode ? 'bg-gradient-to-r from-rose-400 to-orange-300' : 'bg-slate-200'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${isPinkMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
               </button>
               
               <div className="h-px bg-slate-100 my-1" />
