@@ -46,7 +46,7 @@ const FULL_MENU = [
   { id: 'hau_phau',      label: 'Hậu phẫu',      icon: ClipboardList, roles: ['dieu_duong'] },
 ];
 
-const Overview = ({ profile }) => {
+const Overview = ({ profile, setActiveTab }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
 
   return (
@@ -90,7 +90,7 @@ const Overview = ({ profile }) => {
           <h3 className="text-sm font-semibold text-slate-700">Tính năng</h3>
         </div>
         {FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role)).filter(m => m.id !== 'overview').map((m, i) => (
-          <button key={i} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+          <button key={i} onClick={() => setActiveTab(m.id)} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
               <m.icon className="w-4 h-4 text-emerald-600" />
             </div>
@@ -139,7 +139,7 @@ const StaffDashboard = () => {
   const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role));
 
   const renderContent = () => {
-    if (activeTab === 'overview') return <Overview profile={profile} />;
+    if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} />;
     if (activeTab === 'attendance') return <AttendancePage />;
     if (activeTab === 'kpi') return <KPIPage />;
     if (activeTab === 'finance') return <FinanceManagementPage />;

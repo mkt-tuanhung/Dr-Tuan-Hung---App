@@ -100,7 +100,7 @@ export default function ProfileMenu({ children, mobile = false }) {
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-          <div className={`absolute z-50 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden w-64 ${mobile ? 'bottom-full mb-2 left-0' : 'top-full mt-2 right-0'}`}>
+          <div className="absolute z-50 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden w-64 top-full mt-2 right-0">
             <div className="p-4 border-b bg-emerald-50/50">
               <div className="font-bold text-slate-800 truncate">{profile?.full_name}</div>
               <div className="text-xs text-emerald-600 mt-0.5">{profile?.position || profile?.role} · {profile?.employee_id}</div>
