@@ -632,7 +632,10 @@ const AppointmentManagementPage = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Sale Offline phụ trách' : 'Người phụ trách (Sale/Điều dưỡng)'}</label>
                     <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                       <option value="">-- Không có --</option>
-                      {staffList.filter(s => s.role === 'sale_offline' || s.role === 'admin' || s.role === 'dieu_duong').map(s => (
+                      {staffList.filter(s => {
+                        if (createForm.appointment_type === 'new') return s.role === 'sale_offline' || s.role === 'admin';
+                        return s.role === 'sale_offline' || s.role === 'admin' || s.role === 'dieu_duong';
+                      }).map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
                       ))}
                     </select>
