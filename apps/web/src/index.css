@@ -254,14 +254,6 @@ body.pink-mode .bg-white\/80 {
   box-shadow: 0 8px 32px 0 rgba(255, 150, 180, 0.1) !important;
 }
 
-body.pink-mode h1, body.pink-mode h2, body.pink-mode h3, 
-body.pink-mode h4, body.pink-mode h5, body.pink-mode h6 {
-  color: #3f3f46 !important;
-}
-
-body.pink-mode .text-slate-500, body.pink-mode .text-slate-600 {
-  color: #71717a !important;
-}
 
 /* Primary Accents (Buttons, badges) */
 body.pink-mode .bg-teal-400, body.pink-mode .bg-teal-500, body.pink-mode .bg-teal-600, body.pink-mode .bg-teal-700,
@@ -291,8 +283,7 @@ body.pink-mode .text-teal-600, body.pink-mode .text-emerald-600,
 body.pink-mode .text-purple-500, body.pink-mode .text-purple-600, 
 body.pink-mode .text-blue-500, body.pink-mode .text-blue-600,
 body.pink-mode .text-teal-700, body.pink-mode .text-emerald-700, 
-body.pink-mode .text-purple-700, body.pink-mode .text-blue-700,
-body.pink-mode .text-slate-800 {
+body.pink-mode .text-purple-700, body.pink-mode .text-blue-700 {
   color: #ff7b89 !important;
 }
 
