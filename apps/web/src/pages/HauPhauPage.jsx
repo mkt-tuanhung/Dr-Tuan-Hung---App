@@ -30,7 +30,6 @@ const HauPhauPage = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({ id: null, additional_hau_phau_ids: [] });
   const [selectedNurseId, setSelectedNurseId] = useState('');
-  const [showNoteModal, setShowNoteModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewImage, setViewImage] = useState(null);
