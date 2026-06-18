@@ -548,10 +548,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
             </div>
           </div>
         </div>
-          </div>
-        </div>
       )}
-
       {/* Modal Truy Cập Bị Từ Chối */}
       {accessDeniedInfo && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
