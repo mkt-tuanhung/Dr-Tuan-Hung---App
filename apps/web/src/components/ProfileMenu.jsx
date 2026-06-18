@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2 } from 'lucide-react';
 
 export default function ProfileMenu({ children, mobile = false }) {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   
@@ -88,9 +88,8 @@ export default function ProfileMenu({ children, mobile = false }) {
       toast.error('Lỗi cập nhật: ' + error.message);
     } else {
       toast.success('Đã cập nhật hồ sơ cá nhân!');
+      await refreshProfile();
       setModalOpen(false);
-      // Ideally we should reload profile context, but reloading window is an easy way to refresh global state
-      setTimeout(() => window.location.reload(), 1000);
     }
     setSaving(false);
   };

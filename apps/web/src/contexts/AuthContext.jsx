@@ -82,6 +82,13 @@ export const AuthProvider = ({ children }) => {
     setProfile(null);
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      const p = await fetchProfile(user.id);
+      setProfile(p);
+    }
+  };
+
   const isAdmin = profile?.role === 'admin';
   const isAccountant = profile?.role === 'accountant';
   const isShareholder = profile?.role === 'shareholder';
@@ -97,6 +104,7 @@ export const AuthProvider = ({ children }) => {
       isShareholder,
       login,
       logout,
+      refreshProfile,
     }}>
       {!loading && children}
     </AuthContext.Provider>
