@@ -158,11 +158,11 @@ const StaffDashboard = () => {
     if (activeTab === 'attendance') return <AttendancePage />;
     if (activeTab === 'kpi') return <KPIPage />;
     if (activeTab === 'finance') return <FinanceManagementPage />;
-    if (activeTab === 'appointments') return <AppointmentManagementPage />;
-    if (activeTab === 'khach_coc') return <KhachCocPage />;
-    if (activeTab === 'khach_bong') return <KhachBongPage />;
-    if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage />;
-    if (activeTab === 'hau_phau') return <HauPhauPage />;
+    if (activeTab === 'appointments') return <AppointmentManagementPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'khach_coc') return <KhachCocPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'khach_bong') return <KhachBongPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'hau_phau') return <HauPhauPage setActiveTab={setActiveTab} />;
     if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'vien_phi') return <VienPhiPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
