@@ -692,7 +692,7 @@ const AppointmentManagementPage = () => {
               {/* Chi tiết dịch vụ */}
               <section>
                 <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">{createForm.appointment_type === 'new' ? 'Chi tiết dịch vụ' : 'Dịch vụ tái khám'}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className={`grid grid-cols-1 gap-4 ${createForm.appointment_type === 'new' ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-red-500">*</span></label>
                     <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
@@ -731,7 +731,7 @@ const AppointmentManagementPage = () => {
               {/* Phụ trách & Ghi chú */}
               <section>
                 <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">Phụ trách & Ghi chú</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className={`grid grid-cols-1 gap-4 mb-4 ${createForm.appointment_type === 'new' ? 'md:grid-cols-2' : ''}`}>
                   {createForm.appointment_type === 'new' && (
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
