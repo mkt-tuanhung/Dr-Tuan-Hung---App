@@ -234,3 +234,69 @@
     scrollbar-width: none;
   }
 }
+
+/* --- PINK MODE (GLASSMORPHISM) OVERRIDES --- */
+body.pink-mode {
+  background: radial-gradient(circle at 10% 20%, rgba(255, 200, 200, 1) 0%, transparent 40%),
+              radial-gradient(circle at 90% 80%, rgba(255, 180, 220, 1) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, rgba(255, 230, 210, 1) 0%, transparent 50%),
+              linear-gradient(135deg, #f3e8f8 0%, #ffeceb 100%) !important;
+  background-attachment: fixed !important;
+}
+
+body.pink-mode .bg-white,
+body.pink-mode .bg-white\/50,
+body.pink-mode .bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 8px 32px 0 rgba(255, 150, 180, 0.1) !important;
+}
+
+body.pink-mode h1, body.pink-mode h2, body.pink-mode h3, 
+body.pink-mode h4, body.pink-mode h5, body.pink-mode h6 {
+  color: #3f3f46 !important;
+}
+
+body.pink-mode .text-slate-500, body.pink-mode .text-slate-600 {
+  color: #71717a !important;
+}
+
+/* Primary Accents (Buttons, badges) */
+body.pink-mode .bg-teal-600, body.pink-mode .bg-emerald-600, 
+body.pink-mode .bg-purple-600, body.pink-mode .bg-blue-600,
+body.pink-mode .bg-indigo-600, body.pink-mode .bg-orange-500,
+body.pink-mode .bg-slate-800, body.pink-mode .bg-slate-900,
+body.pink-mode .bg-rose-500 {
+  background: linear-gradient(135deg, #ff7b89 0%, #ffa384 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(255, 123, 137, 0.3) !important;
+}
+
+body.pink-mode .bg-teal-50, body.pink-mode .bg-emerald-50, 
+body.pink-mode .bg-purple-50, body.pink-mode .bg-blue-50,
+body.pink-mode .bg-slate-50, body.pink-mode .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+body.pink-mode .text-teal-600, body.pink-mode .text-emerald-600, 
+body.pink-mode .text-purple-600, body.pink-mode .text-blue-600,
+body.pink-mode .text-teal-700, body.pink-mode .text-emerald-700, 
+body.pink-mode .text-purple-700, body.pink-mode .text-blue-700,
+body.pink-mode .text-slate-800 {
+  color: #ff7b89 !important;
+}
+
+body.pink-mode .border-teal-200, body.pink-mode .border-emerald-200, 
+body.pink-mode .border-purple-200, body.pink-mode .border-blue-200,
+body.pink-mode .border-teal-500, body.pink-mode .border-emerald-500, 
+body.pink-mode .border-purple-500, body.pink-mode .border-blue-500 {
+  border-color: #ffcdd2 !important;
+}
+
+body.pink-mode *:focus {
+  --tw-ring-color: rgba(255, 123, 137, 0.3) !important;
+}

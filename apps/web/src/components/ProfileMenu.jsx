@@ -19,6 +19,25 @@ export default function ProfileMenu({ children, mobile = false }) {
   const [selectingBank, setSelectingBank] = useState(false);
   const [bankSearch, setBankSearch] = useState('');
 
+  // Pink Mode Toggle
+  const [isPinkMode, setIsPinkMode] = useState(() => localStorage.getItem('theme') === 'pink');
+
+  React.useEffect(() => {
+    if (isPinkMode) {
+      document.body.classList.add('pink-mode');
+    } else {
+      document.body.classList.remove('pink-mode');
+    }
+  }, [isPinkMode]);
+
+  const togglePinkMode = () => {
+    const newMode = !isPinkMode;
+    setIsPinkMode(newMode);
+    localStorage.setItem('theme', newMode ? 'pink' : 'default');
+    setMenuOpen(false);
+    toast.success(newMode ? 'Đã bật chế độ Kute phô mai que 🌸' : 'Đã tắt Pink Mode 🧊');
+  };
+
   React.useEffect(() => {
     fetch('https://api.vietqr.io/v2/banks')
       .then(r => r.json())
@@ -149,8 +168,8 @@ export default function ProfileMenu({ children, mobile = false }) {
                 <User className="w-4 h-4 text-slate-400" /> Hồ sơ cá nhân
               </button>
               
-              <button onClick={() => { setMenuOpen(false); toast.info('Tính năng sắp ra mắt'); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
-                <Settings className="w-4 h-4 text-slate-400" /> Cài đặt giao diện
+              <button onClick={togglePinkMode} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
+                <Settings className="w-4 h-4 text-slate-400" /> {isPinkMode ? 'Tắt chế độ Pink Mode 🌸' : 'Bật chế độ Pink Mode 🌸'}
               </button>
               
               <div className="h-px bg-slate-100 my-1" />
