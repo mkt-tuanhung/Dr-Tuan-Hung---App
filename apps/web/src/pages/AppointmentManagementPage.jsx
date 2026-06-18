@@ -586,7 +586,7 @@ const AppointmentManagementPage = () => {
                         </div>
 
                         <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex flex-col gap-2 mt-auto">
-                          {app.notes && (
+                          {app.notes && (isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
                             <button onClick={() => setViewNoteApp(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
                               <FileText className="w-4 h-4" /> Tình trạng KH
                             </button>
@@ -602,7 +602,7 @@ const AppointmentManagementPage = () => {
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
-                            {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role) || isHeadNurse) && (
+                            {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
                               <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
                                 <Trash2 className="w-4 h-4" />
                               </button>
