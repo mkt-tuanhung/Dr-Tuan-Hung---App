@@ -190,12 +190,12 @@ const AppointmentManagementPage = () => {
     setSaving(true);
     try {
       const isRecheck = createForm.appointment_type === 'recheck';
-      const { error } = await supabase.from('customer_appointments').insert({
+      const payload = {
         customer_name: createForm.customer_name,
         phone: createForm.phone,
         appointment_date: createForm.appointment_date,
         appointment_time: createForm.appointment_time,
-        service: isRecheck ? `[Tái khám] ${createForm.service}` : createForm.service,
+        service: isRecheck ? `[Tái khám] ${createForm.service.replace('[Tái khám] ', '')}` : createForm.service,
         test_status: isRecheck ? 'Không cần' : createForm.test_status,
         expected_bill: isRecheck ? 0 : (createForm.expected_bill || 0),
         deposit_amount: isRecheck ? 0 : (createForm.deposit_amount || 0),
@@ -206,11 +206,19 @@ const AppointmentManagementPage = () => {
         service_group: createForm.service_group,
         customer_source: isRecheck ? 'CSKH' : createForm.customer_source,
         customer_type: isRecheck ? 'Cũ' : createForm.customer_type,
-        status: 'scheduled',
-        created_by: profile.id
-      });
-      if (error) throw error;
-      toast.success('Đã thêm lịch hẹn!');
+      };
+
+      if (createForm.id) {
+        const { error } = await supabase.from('customer_appointments').update(payload).eq('id', createForm.id);
+        if (error) throw error;
+        toast.success('Đã cập nhật lịch hẹn!');
+      } else {
+        payload.status = 'scheduled';
+        payload.created_by = profile.id;
+        const { error } = await supabase.from('customer_appointments').insert(payload);
+        if (error) throw error;
+        toast.success('Đã thêm lịch hẹn!');
+      }
       setShowCreateModal(false);
       loadData();
     } catch (err) {
@@ -218,6 +226,33 @@ const AppointmentManagementPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openEditModal = (app) => {
+    if (app.status !== 'scheduled') {
+      toast.error('Lịch hẹn đã đánh giá, không thể chỉnh sửa!');
+      return;
+    }
+    setCreateForm({
+      id: app.id,
+      appointment_type: app.service?.startsWith('[Tái khám]') ? 'recheck' : 'new',
+      appointment_date: app.appointment_date || '',
+      appointment_time: app.appointment_time || '',
+      customer_name: app.customer_name || '',
+      phone: app.phone || '',
+      service: app.service?.replace('[Tái khám] ', '') || '',
+      test_status: app.test_status || 'Chưa xét nghiệm', 
+      expected_bill: app.expected_bill || '',
+      deposit_amount: app.deposit_amount || '',
+      telesale_id: app.telesale_id || '',
+      sale_id: app.sale_id || '',
+      social_link: app.social_link || '',
+      notes: app.notes || '',
+      service_group: app.service_group || 'Hàm mặt',
+      customer_source: app.customer_source || 'Ads',
+      customer_type: app.customer_type || 'Mới'
+    });
+    setShowCreateModal(true);
   };
 
   const openEval = (app) => {
@@ -286,7 +321,16 @@ const AppointmentManagementPage = () => {
           <p className="text-teal-600 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
         </div>
         {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-          <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
+          <button onClick={() => {
+            setCreateForm({
+              appointment_type: 'new',
+              appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
+              customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
+              expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
+              service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
+            });
+            setShowCreateModal(true);
+          }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
             <Plus className="w-4 h-4" /> Thêm lịch hẹn mới
           </button>
         )}
@@ -520,12 +564,16 @@ const AppointmentManagementPage = () => {
                                 <Edit className="w-4 h-4" /> Đánh giá
                               </button>
                             )}
-                            <button className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {['admin', 'telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled' && (
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            {['admin', 'telesale', 'sale_offline'].includes(profile?.role) && (
+                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -543,7 +591,7 @@ const AppointmentManagementPage = () => {
          <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
             <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-xl">Thêm lịch hẹn mới</h3>
+              <h3 className="font-bold text-slate-800 text-xl">{createForm.id ? 'Cập nhật lịch hẹn' : 'Thêm lịch hẹn mới'}</h3>
               <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
                 <X className="w-4 h-4" />
               </button>
