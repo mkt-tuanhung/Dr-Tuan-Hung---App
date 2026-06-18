@@ -17,6 +17,7 @@ import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
+import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -28,11 +29,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 const MENU = [
   { id: 'overview',      label: 'Tổng quan',        shortLabel: 'Tổng quan',  icon: LayoutDashboard },
   { id: 'hr',            label: 'Quản lý Nhân sự',  shortLabel: 'Nhân sự',    icon: Users },
+  { id: 'deposit_management', label: 'Quản lý Đặt cọc', shortLabel: 'Đặt cọc', icon: ClipboardList },
   { id: 'appointments',  label: 'Lịch hẹn',          shortLabel: 'Lịch hẹn',  icon: CalendarDays },
-  { id: 'khach_coc',     label: 'Khách Cọc',         shortLabel: 'Khách Cọc', icon: ClipboardList },
   { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', shortLabel: 'Phẫu thuật', icon: Activity },
   { id: 'hau_phau',      label: 'Hậu phẫu',          shortLabel: 'Hậu phẫu',   icon: ClipboardList },
-  { id: 'khach_bong',    label: 'Khách Bong',        shortLabel: 'Khách Bong', icon: UserX },
   { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
   { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
   { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
@@ -251,10 +251,9 @@ const AdminDashboard = () => {
     switch (activeTab) {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
       case 'hr': return <HRManagementPage />;
+      case 'deposit_management': return <DepositManagementPage />;
       case 'appointments': return <AppointmentManagementPage />;
-      case 'khach_coc': return <KhachCocPage />;
       case 'khach_phau_thuat': return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
-      case 'khach_bong': return <KhachBongPage />;
       case 'hau_phau': return <HauPhauPage />;
       case 'advances': return <AdvanceExpensePage />;
       case 'finance': return <FinanceManagementPage />;

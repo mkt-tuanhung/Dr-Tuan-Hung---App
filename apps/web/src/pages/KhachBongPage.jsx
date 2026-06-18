@@ -11,7 +11,7 @@ const CARE_TABS = [
   { id: 'Hủy hẳn', label: 'Hủy hẳn' }
 ];
 
-const KhachBongPage = () => {
+const KhachBongPage = ({ isNested = false }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -131,15 +131,17 @@ const KhachBongPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Khách Bong (Mini-CRM)</h2>
-          <p className="text-slate-500 text-sm mt-1">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
+      {!isNested && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Khách Bong (Mini-CRM)</h2>
+            <p className="text-slate-500 text-sm mt-1">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
+          </div>
+          <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold">
+            {customers.length} Khách
+          </div>
         </div>
-        <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold">
-          {customers.length} Khách
-        </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2">
