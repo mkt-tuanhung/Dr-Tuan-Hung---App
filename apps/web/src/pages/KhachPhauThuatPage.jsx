@@ -15,6 +15,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   const [customers, setCustomers] = useState([]);
   const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Modal Phân công
   const [showNurseModal, setShowNurseModal] = useState(false);
@@ -240,7 +241,16 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     return new Intl.NumberFormat('vi-VN').format(numbers);
   };
 
-  const groupedCustomers = customers.reduce((acc, app) => {
+  let filteredCustomers = customers;
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filteredCustomers = filteredCustomers.filter(c => 
+      (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
+      (c.phone && c.phone.toLowerCase().includes(q))
+    );
+  }
+
+  const groupedCustomers = filteredCustomers.reduce((acc, app) => {
     const date = app.surgery_date 
       ? new Date(app.surgery_date).toLocaleDateString('vi-VN') 
       : 'Không rõ';
@@ -251,13 +261,25 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Khách Phẫu Thuật</h2>
           <p className="text-slate-500 text-sm mt-1">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
         </div>
-        <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-xl font-bold">
-          {customers.length} Khách
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-72 shrink-0">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Tìm tên KH hoặc số điện thoại..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+            />
+          </div>
+          <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-xl font-bold whitespace-nowrap hidden sm:block">
+            {filteredCustomers.length} Khách
+          </div>
         </div>
       </div>
 

@@ -20,6 +20,7 @@ const HauPhauPage = () => {
   const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
   const isAdmin = profile?.role === 'admin';
@@ -184,7 +185,15 @@ const HauPhauPage = () => {
     }
   };
 
-  const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
+  let filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filteredCustomers = filteredCustomers.filter(c => 
+      (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
+      (c.phone && c.phone.toLowerCase().includes(q))
+    );
+  }
 
   const groupedCustomers = filteredCustomers.reduce((acc, app) => {
     const date = app.surgery_date 
@@ -247,14 +256,26 @@ const HauPhauPage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full sm:w-72 shrink-0">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text" 
+            placeholder="Tìm tên KH hoặc số điện thoại..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+          />
+        </div>
       </div>
 
       {loading ? (

@@ -4,6 +4,7 @@ import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2 } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const AppointmentManagementPage = () => {
@@ -12,6 +13,7 @@ const AppointmentManagementPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -141,7 +143,16 @@ const AppointmentManagementPage = () => {
     const st = { total: 0, pt: 0, coc: 0, bong: 0, expected_bill: 0, total_deposit: 0 };
     const dates = [];
 
-    appointments.forEach(app => {
+    let filteredApps = appointments;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filteredApps = filteredApps.filter(c => 
+        (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
+        (c.phone && c.phone.toLowerCase().includes(q))
+      );
+    }
+
+    filteredApps.forEach(app => {
       if (app.service && app.service.startsWith('[Tái khám]')) {
         rechecks.push(app);
         return;
@@ -179,7 +190,7 @@ const AppointmentManagementPage = () => {
     ].filter(i => i.value > 0);
 
     return { groupedByDate: groups, recheckAppointments: rechecks, stats: st, chartData: cd, pieData: pd };
-  }, [appointments]);
+  }, [appointments, searchQuery]);
 
   // Actions
   const handleCreateSubmit = async (e) => {
@@ -410,18 +421,31 @@ const AppointmentManagementPage = () => {
             </div>
           </div>
 
-          {/* View Tabs */}
-          <div className="mt-8 mb-6 bg-white p-1.5 rounded-2xl border border-slate-200 inline-flex shadow-sm">
-            <button 
-              onClick={() => setActiveViewTab('appointments')}
-              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'appointments' ? 'bg-teal-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-              <CalendarIcon className="w-4 h-4" /> Lịch hẹn tư vấn / phẫu thuật ({stats.total - recheckAppointments.length})
-            </button>
-            <button 
-              onClick={() => setActiveViewTab('rechecks')}
-              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'rechecks' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-              <Stethoscope className="w-4 h-4" /> Lịch tái khám ({recheckAppointments.length})
-            </button>
+          {/* View Tabs & Search */}
+          <div className="mt-8 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-white p-1.5 rounded-2xl border border-slate-200 inline-flex shadow-sm">
+              <button 
+                onClick={() => setActiveViewTab('appointments')}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'appointments' ? 'bg-teal-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+                <CalendarIcon className="w-4 h-4" /> Lịch hẹn tư vấn / phẫu thuật ({stats.total - recheckAppointments.length})
+              </button>
+              <button 
+                onClick={() => setActiveViewTab('rechecks')}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'rechecks' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+                <Stethoscope className="w-4 h-4" /> Lịch tái khám ({recheckAppointments.length})
+              </button>
+            </div>
+            
+            <div className="relative w-full sm:w-80 shrink-0">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder="Tìm tên KH hoặc số điện thoại..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm"
+              />
+            </div>
           </div>
 
           {/* Tab Content */}
