@@ -287,8 +287,8 @@ const AdminDashboard = () => {
         <div className="p-5 border-b border-emerald-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-emerald-200">
-                DTH
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-md overflow-hidden p-1">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <div className="font-bold text-slate-800 text-sm">Dr Tuấn Hùng</div>

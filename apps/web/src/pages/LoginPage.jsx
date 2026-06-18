@@ -58,11 +58,13 @@ const LoginPage = () => {
       <div className="w-full max-w-md bg-white/80 backdrop-blur-sm border border-emerald-100 shadow-xl shadow-emerald-100/50 rounded-3xl p-8 relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-200">
-            <Stethoscope className="w-8 h-8 text-white" />
+          <div className="w-24 h-24 flex items-center justify-center mb-2">
+            <img src="/logo.png" alt="Dr Tuan Hung Logo" className="w-full h-full object-contain rounded-xl shadow-lg" onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
+            <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl hidden items-center justify-center shadow-lg shadow-emerald-200">
+              <Stethoscope className="w-10 h-10 text-white" />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Dr Tuấn Hùng</h1>
-          <p className="text-xs text-emerald-600 mt-1 font-medium tracking-widest uppercase">Internal System</p>
+          <p className="text-xs text-emerald-600 mt-1 font-bold tracking-widest uppercase">Internal System</p>
         </div>
 
         <Tabs defaultValue="staff" className="w-full">
