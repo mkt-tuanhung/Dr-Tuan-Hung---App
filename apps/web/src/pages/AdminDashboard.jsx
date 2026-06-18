@@ -101,9 +101,9 @@ const Overview = ({ profile, setActiveTab }) => {
   };
 
   const cards = [
-    { label: 'Nhân sự', value: stats.totalStaff, icon: Users, tab: 'staff', color: '#10b981' },
-    { label: 'Có mặt', value: stats.presentToday, icon: UserCheck, tab: 'attendance', color: '#3b82f6' },
-    { label: 'Chờ duyệt', value: stats.pendingExpenses, icon: AlertCircle, tab: 'expenses', color: '#f59e0b' },
+    { label: 'Nhân sự', value: stats.totalStaff, icon: Users, tab: 'hr', color: '#10b981' },
+    { label: 'Có mặt', value: stats.presentToday, icon: UserCheck, tab: 'hr', color: '#3b82f6' },
+    { label: 'Chờ duyệt', value: stats.pendingExpenses, icon: AlertCircle, tab: 'advances', color: '#f59e0b' },
     { label: 'Doanh thu', value: fmt(stats.monthRevenue), icon: TrendingUp, tab: 'finance', color: '#8b5cf6' },
   ];
 
@@ -182,8 +182,8 @@ const Overview = ({ profile, setActiveTab }) => {
         <h3 className="font-semibold text-slate-800 mb-3">Truy cập nhanh</h3>
         <div className="space-y-2">
           {[
-            { label: 'Quản lý nhân sự', sub: `${stats.totalStaff} nhân sự`, tab: 'staff', icon: Users },
-            { label: 'Chấm công hôm nay', sub: `${stats.presentToday} có mặt`, tab: 'attendance', icon: CalendarCheck },
+            { label: 'Quản lý nhân sự', sub: `${stats.totalStaff} nhân sự`, tab: 'hr', icon: Users },
+            { label: 'Chấm công hôm nay', sub: `${stats.presentToday} có mặt`, tab: 'hr', icon: CalendarCheck },
             { label: 'KPI & Hoa hồng', sub: 'Xem báo cáo', tab: 'kpi', icon: Target },
           ].map(item => (
             <button key={item.tab} onClick={() => setActiveTab(item.tab)}
