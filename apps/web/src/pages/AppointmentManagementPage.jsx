@@ -622,7 +622,7 @@ const AppointmentManagementPage = () => {
                       <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
                       <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                         <option value="">-- Không có --</option>
-                        {staffList.filter(s => s.role === 'telesale' || s.role === 'admin').map(s => (
+                        {staffList.filter(s => s.role === 'telesale').map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
                         ))}
                       </select>
@@ -633,8 +633,8 @@ const AppointmentManagementPage = () => {
                     <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                       <option value="">-- Không có --</option>
                       {staffList.filter(s => {
-                        if (createForm.appointment_type === 'new') return s.role === 'sale_offline' || s.role === 'admin';
-                        return s.role === 'sale_offline' || s.role === 'admin' || s.role === 'dieu_duong';
+                        if (createForm.appointment_type === 'new') return s.role === 'sale_offline';
+                        return s.role === 'sale_offline' || s.role === 'dieu_duong';
                       }).map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
                       ))}
