@@ -335,20 +335,36 @@ const AppointmentManagementPage = () => {
           <h2 className="text-2xl font-bold text-teal-800">Lịch Hẹn</h2>
           <p className="text-teal-600 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
         </div>
-        {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-          <button onClick={() => {
-            setCreateForm({
-              appointment_type: 'new',
-              appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
-              customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
-              expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
-              service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
-            });
-            setShowCreateModal(true);
-          }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
-            <Plus className="w-4 h-4" /> Thêm lịch hẹn mới
-          </button>
-        )}
+        <div className="flex gap-2">
+          {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
+            <button onClick={() => {
+              setCreateForm({
+                appointment_type: 'new',
+                appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
+                customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
+                expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
+                service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
+              });
+              setShowCreateModal(true);
+            }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
+              <Plus className="w-4 h-4" /> Thêm lịch Tư vấn / PT
+            </button>
+          )}
+          {['dieu_duong', 'admin'].includes(profile?.role) && (
+            <button onClick={() => {
+              setCreateForm({
+                appointment_type: 'recheck',
+                appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
+                customer_name: '', phone: '', service: '', test_status: 'Không cần', 
+                expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '',
+                service_group: 'Hàm mặt', customer_source: 'CSKH', customer_type: 'Cũ'
+              });
+              setShowCreateModal(true);
+            }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
+              <Plus className="w-4 h-4" /> Thêm lịch Tái khám
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -622,16 +638,11 @@ const AppointmentManagementPage = () => {
       {showCreateModal && (
          <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-xl">{createForm.id ? 'Cập nhật lịch hẹn' : 'Thêm lịch hẹn mới'}</h3>
-              <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 text-xl">{createForm.id ? 'Cập nhật lịch hẹn' : (createForm.appointment_type === 'new' ? 'Thêm lịch Tư vấn / PT' : 'Thêm lịch Tái khám')}</h3>
+              <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300">
                 <X className="w-4 h-4" />
               </button>
-            </div>
-
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex gap-2">
-              <button type="button" onClick={() => setCreateForm({...createForm, appointment_type: 'new'})} className={`px-5 py-2 rounded-xl font-bold text-sm transition-all ${createForm.appointment_type === 'new' ? 'bg-teal-600 text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100'}`}>Lịch hẹn mới</button>
-              <button type="button" onClick={() => setCreateForm({...createForm, appointment_type: 'recheck'})} className={`px-5 py-2 rounded-xl font-bold text-sm transition-all ${createForm.appointment_type === 'recheck' ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100'}`}>Lịch tái khám</button>
             </div>
             
             <form onSubmit={handleCreateSubmit} className="p-6 space-y-8">
