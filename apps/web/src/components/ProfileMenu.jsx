@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2 } from 'lucide-react';
+import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil } from 'lucide-react';
 
 export default function ProfileMenu({ children, mobile = false }) {
   const { profile, refreshProfile } = useAuth();
@@ -11,6 +12,7 @@ export default function ProfileMenu({ children, mobile = false }) {
   
   // Modals state
   const [activeTab, setActiveTab] = useState('profile'); // profile, password
+  const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   
   // Profile Form
@@ -44,6 +46,7 @@ export default function ProfileMenu({ children, mobile = false }) {
       avatar_url: profile?.avatar_url || ''
     });
     setMenuOpen(false);
+    setIsEditing(false);
     setModalOpen(true);
   };
 
@@ -53,15 +56,9 @@ export default function ProfileMenu({ children, mobile = false }) {
       if (!event.target.files || event.target.files.length === 0) return;
 
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
+      const avatarUrl = await uploadToR2(file, 'avatars');
 
-      let { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setForm({ ...form, avatar_url: data.publicUrl });
+      setForm({ ...form, avatar_url: avatarUrl });
       toast.success('Đã tải ảnh lên! Hãy bấm Lưu thay đổi.');
     } catch (error) {
       toast.error('Lỗi tải ảnh: ' + error.message);
@@ -89,7 +86,7 @@ export default function ProfileMenu({ children, mobile = false }) {
     } else {
       toast.success('Đã cập nhật hồ sơ cá nhân!');
       await refreshProfile();
-      setModalOpen(false);
+      setIsEditing(false);
     }
     setSaving(false);
   };
@@ -177,65 +174,104 @@ export default function ProfileMenu({ children, mobile = false }) {
 
             <div className="p-6">
               {activeTab === 'profile' ? (
-                <form onSubmit={handleSaveProfile} className="space-y-4">
-                  {/* Avatar Upload */}
-                  <div className="flex flex-col items-center justify-center mb-6">
-                    <div className="relative w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-slate-200 group">
-                      {form.avatar_url ? (
-                        <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
-                          <User className="w-10 h-10" />
-                        </div>
-                      )}
-                      
-                      <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                        {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
-                        <span className="text-[10px] mt-1 font-medium">{uploading ? 'Đang tải...' : 'Thay đổi'}</span>
-                        <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={uploading} />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Họ và tên</label>
-                    <input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Số điện thoại</label>
-                    <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Ngân hàng</label>
-                      <input type="text" placeholder="VD: Vietcombank, MB, ACB..." value={form.bank_name} onChange={e => setForm({...form, bank_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Số tài khoản</label>
-                      <input type="text" value={form.bank_account} onChange={e => setForm({...form, bank_account: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
-                    </div>
-                  </div>
-
-                  {form.bank_name && form.bank_account && (
-                    <div className="mt-4 p-4 bg-emerald-50/80 rounded-2xl border border-emerald-100 flex flex-col items-center">
-                      <p className="text-sm font-bold text-emerald-800 mb-3">Mã QR Nhận tiền của bạn</p>
-                      <div className="bg-white p-2 rounded-xl shadow-sm">
-                        <img 
-                          src={`https://img.vietqr.io/image/${form.bank_name.trim().toLowerCase()}-${form.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(form.full_name)}`}
-                          alt="VietQR"
-                          className="w-40 h-40 object-contain"
-                          onError={(e) => e.target.style.display = 'none'}
-                        />
+                isEditing ? (
+                  <form onSubmit={handleSaveProfile} className="space-y-4">
+                    {/* Avatar Upload */}
+                    <div className="flex flex-col items-center justify-center mb-6">
+                      <div className="relative w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-slate-200 group">
+                        {form.avatar_url ? (
+                          <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-300">
+                            <User className="w-10 h-10" />
+                          </div>
+                        )}
+                        
+                        <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                          {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+                          <span className="text-[10px] mt-1 font-medium">{uploading ? 'Đang tải...' : 'Thay đổi'}</span>
+                          <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={uploading} />
+                        </label>
                       </div>
-                      <p className="text-xs text-emerald-600 mt-3 text-center">Đưa mã này cho Kế toán để nhận lương/tạm ứng siêu tốc</p>
                     </div>
-                  )}
 
-                  <div className="pt-4 flex justify-end gap-3 border-t">
-                    <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
-                    <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Họ và tên</label>
+                      <input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Số điện thoại</label>
+                      <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Ngân hàng</label>
+                        <input type="text" placeholder="VD: Vietcombank, MB..." value={form.bank_name} onChange={e => setForm({...form, bank_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Số tài khoản</label>
+                        <input type="text" value={form.bank_account} onChange={e => setForm({...form, bank_account: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                      </div>
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-3 border-t">
+                      <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
+                      <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex flex-col items-center">
+                      <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-emerald-100 mb-3 shadow-sm">
+                        {profile?.avatar_url ? (
+                          <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-300">
+                            <User className="w-10 h-10" />
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-800">{profile?.full_name}</h3>
+                      <p className="text-sm font-medium text-emerald-600">{profile?.position || profile?.role}</p>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <p className="text-slate-400 text-xs mb-0.5">Số điện thoại</p>
+                          <p className="font-semibold text-slate-700">{profile?.phone || 'Chưa cập nhật'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-3 border-t border-slate-200">
+                        <div className="text-sm">
+                          <p className="text-slate-400 text-xs mb-0.5">Tài khoản nhận lương</p>
+                          <p className="font-semibold text-slate-700">
+                            {profile?.bank_name ? `${profile.bank_name} - ${profile.bank_account}` : 'Chưa cập nhật'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {profile?.bank_name && profile?.bank_account && (
+                      <div className="flex flex-col items-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                        <p className="text-sm font-bold text-emerald-800 mb-3">Mã QR Nhận lương</p>
+                        <div className="bg-white p-2 rounded-xl shadow-sm">
+                          <img 
+                            src={`https://img.vietqr.io/image/${profile.bank_name.trim().toLowerCase()}-${profile.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(profile.full_name)}`}
+                            alt="VietQR"
+                            className="w-40 h-40 object-contain"
+                            onError={(e) => e.target.style.display = 'none'}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors">
+                      <Pencil className="w-4 h-4" /> Chỉnh sửa hồ sơ
+                    </button>
                   </div>
-                </form>
+                )
               ) : (
                 <form onSubmit={handleSavePassword} className="space-y-4">
                   <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-800 text-sm mb-4">
