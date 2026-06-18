@@ -9,6 +9,11 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 
 const AppointmentManagementPage = () => {
   const { profile } = useAuth();
+  
+  const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
+  const isAdmin = profile?.role === 'admin';
+  const isNurse = profile?.role === 'dieu_duong';
+
   const today = new Date();
   const [appointments, setAppointments] = useState([]);
   const [staffList, setStaffList] = useState([]);
@@ -501,12 +506,16 @@ const AppointmentManagementPage = () => {
                           </div>
 
                           <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
-                            <button onClick={() => setViewNoteApp(app)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm py-2 rounded-xl hover:bg-blue-100 transition-colors">
-                              <FileText className="w-4 h-4" /> Lịch sử chăm sóc
-                            </button>
-                            <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {(isAdmin || isNurse) && (
+                              <button onClick={() => setViewNoteApp(app)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm py-2 rounded-xl hover:bg-blue-100 transition-colors">
+                                <FileText className="w-4 h-4" /> Lịch sử chăm sóc
+                              </button>
+                            )}
+                            {(isAdmin || isHeadNurse) && (
+                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -593,7 +602,7 @@ const AppointmentManagementPage = () => {
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
-                            {['admin', 'telesale', 'sale_offline'].includes(profile?.role) && (
+                            {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role) || isHeadNurse) && (
                               <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
                                 <Trash2 className="w-4 h-4" />
                               </button>
