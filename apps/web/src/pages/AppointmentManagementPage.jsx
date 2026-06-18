@@ -268,9 +268,11 @@ const AppointmentManagementPage = () => {
           <h2 className="text-2xl font-bold text-teal-800">Lịch Hẹn</h2>
           <p className="text-teal-600 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
-          <Plus className="w-4 h-4" /> Thêm lịch hẹn mới
-        </button>
+        {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
+          <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
+            <Plus className="w-4 h-4" /> Thêm lịch hẹn mới
+          </button>
+        )}
       </div>
 
       {loading ? (
