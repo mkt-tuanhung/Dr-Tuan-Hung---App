@@ -97,6 +97,18 @@ const HauPhauPage = () => {
     setShowNoteModal(true);
   };
 
+  useEffect(() => {
+    const focusId = sessionStorage.getItem('focusHauPhauId');
+    if (focusId && customers.length > 0) {
+      const app = customers.find(c => c.id === focusId);
+      if (app) {
+        openNote(app);
+        setActiveTab('all');
+        sessionStorage.removeItem('focusHauPhauId');
+      }
+    }
+  }, [customers]);
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);

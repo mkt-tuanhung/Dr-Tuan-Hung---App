@@ -120,7 +120,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     const isAssignedToMe = app.hau_phau_id === profile?.id || (app.additional_hau_phau_ids && app.additional_hau_phau_ids.includes(profile?.id));
     
     if (isAdmin || isHeadNurse || isAssignedToMe) {
-      if (setActiveTab) setActiveTab('hau_phau');
+      if (setActiveTab) {
+        sessionStorage.setItem('focusHauPhauId', app.id);
+        setActiveTab('hau_phau');
+      }
     } else {
       const mainNurse = nurses.find(n => n.id === app.hau_phau_id)?.full_name || 'chưa rõ';
       toast.error(`Hậu phẫu khách hàng ${app.customer_name} đang được phân công cho ${mainNurse}. Hãy liên hệ trưởng bộ phận để được phân công và xem chi tiết`);
