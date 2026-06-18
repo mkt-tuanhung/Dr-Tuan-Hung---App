@@ -49,7 +49,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       .eq('status', 'phau_thuat')
       .order('surgery_date', { ascending: false });
 
-    const { data: nursesData } = await supabase.from('profiles').select('*').eq('role', 'dieu_duong');
+    const { data: nursesData } = await supabase.from('profiles').select('*').in('role', ['dieu_duong', 'admin']);
 
     const appIds = appsData ? appsData.map(a => a.id) : [];
     let consumedSet = new Set();
@@ -292,17 +292,21 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         <div className="flex gap-2">
                           {isAssigned ? (
                             <>
-                              <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
-                                <Edit className="w-3.5 h-3.5" /> Sửa ca
-                              </button>
+                              {['admin', 'dieu_duong'].includes(profile?.role) && (
+                                <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
+                                  <Edit className="w-3.5 h-3.5" /> Sửa ca
+                                </button>
+                              )}
                               <button onClick={() => setActiveTab && setActiveTab('hau_phau')} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
                                 <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
                               </button>
                             </>
                           ) : (
-                            <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
-                              <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
-                            </button>
+                            ['admin', 'dieu_duong'].includes(profile?.role) && (
+                              <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
+                                <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
+                              </button>
+                            )
                           )}
                         </div>
                         
