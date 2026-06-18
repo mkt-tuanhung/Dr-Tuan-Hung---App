@@ -209,13 +209,29 @@ export default function ProfileMenu({ children, mobile = false }) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Ngân hàng</label>
-                      <input type="text" placeholder="VD: Vietcombank" value={form.bank_name} onChange={e => setForm({...form, bank_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                      <input type="text" placeholder="VD: Vietcombank, MB, ACB..." value={form.bank_name} onChange={e => setForm({...form, bank_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Số tài khoản</label>
                       <input type="text" value={form.bank_account} onChange={e => setForm({...form, bank_account: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
                     </div>
                   </div>
+
+                  {form.bank_name && form.bank_account && (
+                    <div className="mt-4 p-4 bg-emerald-50/80 rounded-2xl border border-emerald-100 flex flex-col items-center">
+                      <p className="text-sm font-bold text-emerald-800 mb-3">Mã QR Nhận tiền của bạn</p>
+                      <div className="bg-white p-2 rounded-xl shadow-sm">
+                        <img 
+                          src={`https://img.vietqr.io/image/${form.bank_name.trim().toLowerCase()}-${form.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(form.full_name)}`}
+                          alt="VietQR"
+                          className="w-40 h-40 object-contain"
+                          onError={(e) => e.target.style.display = 'none'}
+                        />
+                      </div>
+                      <p className="text-xs text-emerald-600 mt-3 text-center">Đưa mã này cho Kế toán để nhận lương/tạm ứng siêu tốc</p>
+                    </div>
+                  )}
+
                   <div className="pt-4 flex justify-end gap-3 border-t">
                     <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
                     <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
