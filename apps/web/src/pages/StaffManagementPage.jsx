@@ -51,7 +51,7 @@ const ROLE_COLORS = {
 
 const EMPTY_FORM = {
   employee_id: '', password: '', full_name: '', role: 'telesale',
-  position: '', base_salary: '', allowance: '', phone: '',
+  position: 'Nhân viên', base_salary: '', allowance: '', phone: '',
   employment_status: 'official', probation_started_at: '',
 };
 
@@ -101,7 +101,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       password: '',
       full_name: s.full_name,
       role: s.role,
-      position: s.position || '',
+      position: s.position || 'Nhân viên',
       base_salary: s.base_salary || '',
       allowance: s.allowance || '',
       phone: s.phone || '',
@@ -498,13 +498,15 @@ const StaffManagementPage = ({ isNested = false }) => {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">Tên vị trí hiển thị</label>
-                <input
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  placeholder="VD: Trưởng nhóm Sale"
-                  value={form.position}
-                  onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
-                />
+                <label className="text-sm font-medium text-slate-700">Chức vụ</label>
+                <Select value={form.position} onValueChange={v => setForm(f => ({ ...f, position: v }))}>
+                  <SelectTrigger className="rounded-xl border-emerald-100 bg-emerald-50/30"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Trưởng bộ phận">Trưởng bộ phận</SelectItem>
+                    <SelectItem value="Giám đốc">Giám đốc</SelectItem>
+                    <SelectItem value="Nhân viên">Nhân viên</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
