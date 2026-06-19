@@ -116,6 +116,7 @@ const AttendancePage = () => {
 
       // Lấy GPS và IP đồng thời
       let lat = null, lng = null, ip = null, location_status = 'unknown';
+      let warningMsg = null;
       try {
         const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
         lat = pos.lat; lng = pos.lng; ip = ipAddr;
@@ -124,10 +125,8 @@ const AttendancePage = () => {
         const isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
         
         location_status = isGpsValid ? 'in_office' : 'outside';
-
         setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: isGpsValid, ip: ipAddr });
 
-        let warningMsg = null;
         if (!isGpsValid && !isIpValid) {
           warningMsg = `Sai vị trí (${Math.round(dist)}m) và sai mạng Wi-Fi`;
         } else if (!isGpsValid) {
@@ -135,20 +134,24 @@ const AttendancePage = () => {
         } else if (!isIpValid) {
           warningMsg = `Sai mạng Wi-Fi`;
         }
+      } catch (gpsErr) {
+        toast.warning('Không lấy được vị trí — chấm công không có GPS');
+        warningMsg = 'Không bật định vị GPS hoặc lỗi mạng';
+      }
 
-        const { error } = await supabase.from('attendance').insert({
-          staff_id: profile.id, date: todayStr, check_in: checkInTime, status,
-          latitude: lat, longitude: lng, ip_address: ip, location_status,
-        });
-        if (error) throw error;
-        
-        if (warningMsg) {
-          setAnomalyAlert(warningMsg);
-        } else {
-          toast.success('Đã chấm công vào!');
-        }
-        loadData();
-      } catch (err) { toast.error(err.message); }
+      const { error } = await supabase.from('attendance').insert({
+        staff_id: profile.id, date: todayStr, check_in: checkInTime, status,
+        latitude: lat, longitude: lng, ip_address: ip, location_status,
+      });
+      if (error) throw error;
+      
+      if (warningMsg) {
+        setAnomalyAlert(warningMsg);
+      } else {
+        toast.success('Đã chấm công vào!');
+      }
+      loadData();
+    } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   };
 
