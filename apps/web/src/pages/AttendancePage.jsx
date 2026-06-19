@@ -66,6 +66,7 @@ const fmtTime = (t) => t ? t.slice(0, 5) : null;
 const AttendancePage = () => {
   const { profile } = useAuth();
   const today = new Date();
+  const [anomalyAlert, setAnomalyAlert] = useState(null);
   const todayStr = today.toISOString().split('T')[0];
 
   const [year, setYear] = useState(today.getFullYear());
@@ -124,27 +125,30 @@ const AttendancePage = () => {
         
         location_status = isGpsValid ? 'in_office' : 'outside';
 
-        if (!isGpsValid && !isIpValid) {
-          toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m) & sai Wi-Fi!`);
-        } else if (!isGpsValid) {
-          toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m)!`);
-        } else if (!isIpValid) {
-          toast.warning(`Vi phạm: Sai mạng Wi-Fi!`);
-        }
-        
         setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: isGpsValid, ip: ipAddr });
-      } catch (gpsErr) {
-        toast.warning('Không lấy được vị trí — chấm công không có GPS');
-      }
 
-      const { error } = await supabase.from('attendance').insert({
-        staff_id: profile.id, date: todayStr, check_in: checkInTime, status,
-        latitude: lat, longitude: lng, ip_address: ip, location_status,
-      });
-      if (error) throw error;
-      toast.success('Đã chấm công vào!');
-      loadData();
-    } catch (err) { toast.error(err.message); }
+        let warningMsg = null;
+        if (!isGpsValid && !isIpValid) {
+          warningMsg = `Sai vị trí (${Math.round(dist)}m) và sai mạng Wi-Fi`;
+        } else if (!isGpsValid) {
+          warningMsg = `Sai vị trí (${Math.round(dist)}m so với VP)`;
+        } else if (!isIpValid) {
+          warningMsg = `Sai mạng Wi-Fi`;
+        }
+
+        const { error } = await supabase.from('attendance').insert({
+          staff_id: profile.id, date: todayStr, check_in: checkInTime, status,
+          latitude: lat, longitude: lng, ip_address: ip, location_status,
+        });
+        if (error) throw error;
+        
+        if (warningMsg) {
+          setAnomalyAlert(warningMsg);
+        } else {
+          toast.success('Đã chấm công vào!');
+        }
+        loadData();
+      } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   };
 
@@ -152,22 +156,35 @@ const AttendancePage = () => {
     if (!todayRecord?.id) return;
     setSaving(true);
     try {
-      let lat = null, lng = null, ip = null;
+      let lat = null, lng = null, ip = null, dist = 0, warningMsg = null;
       try {
         const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
         lat = pos.lat; lng = pos.lng; ip = ipAddr;
+        dist = calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
+        const isGpsValid = dist <= OFFICE_RADIUS_M;
+        const isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
+        
+        if (!isGpsValid && !isIpValid) {
+          warningMsg = `Sai vị trí (${Math.round(dist)}m) và sai mạng Wi-Fi`;
+        } else if (!isGpsValid) {
+          warningMsg = `Sai vị trí (${Math.round(dist)}m so với VP)`;
+        } else if (!isIpValid) {
+          warningMsg = `Sai mạng Wi-Fi`;
+        }
       } catch {}
 
       const { error } = await supabase.from('attendance').update({
         check_out: now.toTimeString().slice(0, 8),
         updated_at: new Date().toISOString(),
-        // Lưu GPS checkout vào note nếu khác vị trí
-        ...(lat && calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG) > OFFICE_RADIUS_M
-          ? { note: `Check-out ngoài văn phòng (${Math.round(calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG))}m)` }
-          : {}),
+        ...(lat ? { note: `Check-out: ${warningMsg || 'Hợp lệ'}` } : {}),
       }).eq('id', todayRecord.id);
       if (error) throw error;
-      toast.success('Đã chấm công ra!');
+      
+      if (warningMsg) {
+        setAnomalyAlert(warningMsg);
+      } else {
+        toast.success('Đã chấm công ra!');
+      }
       loadData();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
@@ -587,6 +604,33 @@ const AttendancePage = () => {
               <button onClick={handleLeaveSubmit} disabled={saving}
                 className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold disabled:opacity-50">
                 {saving ? 'Đang gửi...' : 'Gửi đơn'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup Cảnh báo vi phạm GPS / IP */}
+      {anomalyAlert && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-gradient-to-br from-red-500 to-rose-600 p-6 flex flex-col items-center justify-center text-white relative">
+              <AlertTriangle className="w-16 h-16 mb-3 animate-bounce drop-shadow-md" />
+              <h3 className="text-xl font-bold text-center">Phát hiện bất thường!</h3>
+            </div>
+            <div className="p-6 text-center">
+              <p className="text-slate-600 mb-4 font-medium leading-relaxed">
+                Hệ thống vẫn ghi nhận giờ công cho bạn, tuy nhiên đã phát đi một cảnh báo với lỗi:
+                <span className="text-red-600 font-bold text-lg mt-3 block">{anomalyAlert}</span>
+              </p>
+              <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-6 text-sm text-orange-800 font-medium text-left">
+                Thông báo vi phạm này đã được gửi trực tiếp đến ban quản trị. Bạn vui lòng chủ động giải trình với Admin.
+              </div>
+              <button
+                onClick={() => setAnomalyAlert(null)}
+                className="w-full py-3.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-slate-900/20"
+              >
+                Tôi đã hiểu
               </button>
             </div>
           </div>
