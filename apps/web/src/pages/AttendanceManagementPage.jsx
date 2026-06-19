@@ -99,7 +99,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
   const handleCellClick = (staffId, day) => {
     if (isMultiSelect) {
-      const key = `${staffId}-${day}`;
+      const key = `${staffId}_${day}`;
       const next = new Set(selectedCells);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -116,7 +116,9 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       const inserts = [];
       
       Array.from(selectedCells).forEach(key => {
-        const [staffId, dayStr] = key.split('-');
+        const parts = key.split('_');
+        const dayStr = parts.pop();
+        const staffId = parts.join('_');
         const day = parseInt(dayStr, 10);
         const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const record = getRecord(staffId, day);
@@ -329,7 +331,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       const date = new Date(year, month-1, d);
                       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                       const isToday = date.toDateString() === today.toDateString();
-                      const cellKey = `${s.id}-${d}`;
+                      const cellKey = `${s.id}_${d}`;
                       const isSelected = selectedCells.has(cellKey);
                       return (
                         <td key={d} className={`px-1 py-2 text-center relative ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-emerald-50/40' : ''} ${isSelected ? 'ring-2 ring-inset ring-emerald-500 bg-emerald-100/50' : ''}`}>
