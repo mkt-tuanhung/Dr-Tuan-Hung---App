@@ -14,6 +14,7 @@ const STATUS_CONFIG = {
 
 const DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+const OFFICE_IPS = ['42.114.215.104'];
 
 const fmtTime = (t) => t ? t.slice(0, 5) : '—';
 const fmtDate = (d) => {
@@ -524,7 +525,15 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   )}
                   <div className="flex items-center justify-between border-t border-slate-200 pt-2 mt-2">
                     <span className="font-semibold">IP Wi-Fi:</span>
-                    <span className="font-mono font-medium text-slate-700">{editModal.ip_address || 'N/A'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-medium text-slate-700">{editModal.ip_address || 'N/A'}</span>
+                      {editModal.ip_address && !OFFICE_IPS.includes(editModal.ip_address) && (
+                        <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
+                      )}
+                      {editModal.ip_address && OFFICE_IPS.includes(editModal.ip_address) && (
+                        <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded text-[10px] border border-emerald-200">Hợp lệ</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -580,12 +589,17 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       </span>
                     </div>
                     <div className="space-y-2 text-xs text-slate-600 bg-red-50/50 p-3 rounded-xl border border-red-100">
-                      <div className="flex justify-between">
+                      <div className="flex items-center justify-between">
                         <span className="font-medium">IP Wi-Fi:</span>
-                        <span className="font-mono text-red-700">{v.ip_address || 'N/A'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-700">{v.ip_address || 'N/A'}</span>
+                          {v.ip_address && !OFFICE_IPS.includes(v.ip_address) && (
+                            <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Vị trí:</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Vị trí GPS:</span>
                         <span className="text-red-700 font-medium">Ngoài văn phòng</span>
                       </div>
                       {v.latitude && v.longitude && (
