@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle } from 'lucide-react';
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 
 const STATUS_CONFIG = {
