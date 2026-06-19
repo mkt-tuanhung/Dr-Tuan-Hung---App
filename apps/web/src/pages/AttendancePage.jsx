@@ -628,27 +628,35 @@ const AttendancePage = () => {
 
       {/* Popup Cảnh báo vi phạm GPS / IP */}
       {anomalyAlert && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="bg-gradient-to-br from-red-500 to-rose-600 p-6 flex flex-col items-center justify-center text-white relative">
-              <AlertTriangle className="w-16 h-16 mb-3 animate-bounce drop-shadow-md" />
-              <h3 className="text-xl font-bold text-center">Phát hiện bất thường!</h3>
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[24px] w-full max-w-[340px] shadow-2xl animate-in zoom-in-95 duration-300 p-6 flex flex-col items-center text-center">
+            
+            {/* Icon Container */}
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-5 ring-8 ring-red-50/50">
+              <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />
             </div>
-            <div className="p-6 text-center">
-              <p className="text-slate-600 mb-4 font-medium leading-relaxed">
-                Hệ thống vẫn ghi nhận giờ công cho bạn, tuy nhiên đã phát đi một cảnh báo với lỗi:
-                <span className="text-red-600 font-bold text-lg mt-3 block">{anomalyAlert}</span>
-              </p>
-              <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-6 text-sm text-orange-800 font-medium text-left">
-                Thông báo vi phạm này đã được gửi trực tiếp đến ban quản trị. Bạn vui lòng chủ động giải trình với Admin.
-              </div>
-              <button
-                onClick={() => setAnomalyAlert(null)}
-                className="w-full py-3.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-slate-900/20"
-              >
-                Tôi đã hiểu
-              </button>
+            
+            {/* Title */}
+            <h3 className="text-xl font-extrabold text-slate-800 mb-2 tracking-tight">Cảnh báo vi phạm</h3>
+            
+            {/* Content */}
+            <p className="text-slate-500 text-[15px] leading-relaxed mb-5">
+              Hệ thống vẫn ghi nhận giờ công cho bạn, tuy nhiên đã phát hiện lỗi:
+              <span className="text-red-600 font-bold block mt-3 px-3 py-2.5 bg-red-50 rounded-xl border border-red-100 shadow-sm">{anomalyAlert}</span>
+            </p>
+            
+            {/* Warning Note */}
+            <div className="w-full bg-amber-50 border border-amber-100/50 p-3.5 rounded-2xl mb-6 text-[13px] text-amber-800 font-medium leading-snug">
+              Thông báo này đã được gửi đến ban quản trị. Bạn vui lòng chủ động giải trình với Admin.
             </div>
+            
+            {/* Button */}
+            <button
+              onClick={() => setAnomalyAlert(null)}
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-[15px] transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20"
+            >
+              Tôi đã hiểu
+            </button>
           </div>
         </div>
       )}
