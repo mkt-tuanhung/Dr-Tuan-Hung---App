@@ -94,6 +94,10 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       check_out: record?.check_out || '',
       note: record?.note || '',
       id: record?.id || null,
+      latitude: record?.latitude,
+      longitude: record?.longitude,
+      ip_address: record?.ip_address,
+      location_status: record?.location_status,
     });
   };
 
@@ -337,14 +341,19 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                         <td key={d} className={`px-1 py-2 text-center relative ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-emerald-50/40' : ''} ${isSelected ? 'ring-2 ring-inset ring-emerald-500 bg-emerald-100/50' : ''}`}>
                           <button
                             onClick={() => handleCellClick(s.id, d)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all hover:scale-110"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all hover:scale-110 relative"
                             title={record ? STATUS_CONFIG[record.status]?.label : 'Chưa chấm'}
                           >
                             {record ? (
-                              record.status === 'present' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> :
-                              record.status === 'absent' ? <X className="w-3.5 h-3.5 text-red-400" /> :
-                              record.status === 'late' ? <Clock className="w-3.5 h-3.5 text-yellow-500" /> :
-                              <span className="text-[9px] font-bold text-purple-500">{record.status === 'leave' ? 'NP' : 'ND'}</span>
+                              <>
+                                {record.status === 'present' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> :
+                                record.status === 'absent' ? <X className="w-3.5 h-3.5 text-red-400" /> :
+                                record.status === 'late' ? <Clock className="w-3.5 h-3.5 text-yellow-500" /> :
+                                <span className="text-[9px] font-bold text-purple-500">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
+                                {record.location_status === 'outside' && (
+                                  <span className="absolute top-0 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white" title="Chấm công ngoài văn phòng"></span>
+                                )}
+                              </>
                             ) : (
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-200 block mx-auto" />
                             )}
@@ -484,6 +493,32 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   placeholder="Ghi chú thêm..."
                 />
               </div>
+
+              {editModal.id && (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold flex items-center gap-1.5">Vị trí GPS:</span>
+                    {editModal.location_status === 'in_office' ? (
+                      <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">Hợp lệ</span>
+                    ) : editModal.location_status === 'outside' ? (
+                      <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded border border-red-200">Ngoài VP</span>
+                    ) : (
+                      <span className="text-slate-400">Không có dữ liệu</span>
+                    )}
+                  </div>
+                  {editModal.latitude && editModal.longitude && (
+                    <div className="flex justify-end mt-1">
+                      <a href={`https://maps.google.com/?q=${editModal.latitude},${editModal.longitude}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 bg-blue-50 px-2 py-1 rounded">
+                        Xem bản đồ
+                      </a>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-2 mt-2">
+                    <span className="font-semibold">IP Wi-Fi:</span>
+                    <span className="font-mono font-medium text-slate-700">{editModal.ip_address || 'N/A'}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-5">

@@ -58,6 +58,9 @@ const LEAVE_STATUS = {
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const DAYS_SHORT = ['CN','T2','T3','T4','T5','T6','T7'];
 
+// Thay đổi địa chỉ IP Public của phòng khám ở đây. Để mảng rỗng [] nếu không muốn check IP.
+const OFFICE_IPS = []; // Ví dụ: ['113.190.233.150', '27.72.60.200']
+
 const fmtTime = (t) => t ? t.slice(0, 5) : null;
 
 const AttendancePage = () => {
@@ -116,11 +119,23 @@ const AttendancePage = () => {
         const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
         lat = pos.lat; lng = pos.lng; ip = ipAddr;
         const dist = calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-        location_status = dist <= OFFICE_RADIUS_M ? 'in_office' : 'outside';
-        setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: location_status === 'in_office', ip });
-        if (location_status === 'outside') {
-          toast.warning(`Bạn đang cách văn phòng ${Math.round(dist)}m`);
+        const isGpsValid = dist <= OFFICE_RADIUS_M;
+        const isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
+        
+        if (isGpsValid && isIpValid) {
+          location_status = 'in_office';
+        } else {
+          location_status = 'outside';
+          if (!isGpsValid && !isIpValid) {
+            toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m) & sai Wi-Fi!`);
+          } else if (!isGpsValid) {
+            toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m)!`);
+          } else if (!isIpValid) {
+            toast.warning(`Vi phạm: Sai mạng Wi-Fi!`);
+          }
         }
+        
+        setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: location_status === 'in_office', ip });
       } catch (gpsErr) {
         toast.warning('Không lấy được vị trí — chấm công không có GPS');
       }
