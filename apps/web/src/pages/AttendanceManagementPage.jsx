@@ -25,6 +25,7 @@ const fmtDate = (d) => {
 const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' }) => {
   const today = new Date();
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [showViolationsModal, setShowViolationsModal] = useState(false);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [staff, setStaff] = useState([]);
@@ -194,6 +195,23 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     }
   };
 
+  const handleClearAnomaly = async (record) => {
+    if (!confirm('Bạn có chắc chắn muốn xác nhận ca chấm công này là hợp lệ (xóa cảnh báo sai phạm)?')) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('attendance').update({
+        location_status: 'in_office',
+        ip_address: OFFICE_IPS[0] || '127.0.0.1',
+        note: (record.note ? record.note + ' \n' : '') + '[Admin đã duyệt hợp lệ]',
+        updated_at: new Date().toISOString()
+      }).eq('id', record.id);
+      if (error) throw error;
+      toast.success('Đã duyệt hợp lệ');
+      loadData();
+    } catch (err) { toast.error(err.message); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div className="space-y-5">
       {/* Header & Tabs */}
@@ -297,6 +315,15 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         >
           {isMultiSelect ? 'Hủy chọn nhiều' : 'Tích chọn nhiều ô'}
         </button>
+        {isNested && (
+          <button 
+            onClick={() => setShowViolationsModal(true)} 
+            className="w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-2 justify-center"
+          >
+            <AlertTriangle className="w-4 h-4" /> 
+            Cảnh báo vi phạm {violations.length > 0 && `(${violations.length})`}
+          </button>
+        )}
       </div>
 
       {/* Desktop table */}
@@ -622,6 +649,101 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal Cảnh báo vi phạm */}
+      {showViolationsModal && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+                Danh sách vi phạm chấm công
+              </h3>
+              <button onClick={() => setShowViolationsModal(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+              {violations.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
+                  <Check className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
+                  <p className="text-slate-500 font-medium">Không có cảnh báo vi phạm nào trong tháng này.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {violations.map(v => {
+                    const s = staff.find(x => x.id === v.staff_id);
+                    return (
+                      <div key={v.id} className="bg-white border border-red-100 p-4 rounded-2xl shadow-sm hover:shadow transition-all relative overflow-hidden flex flex-col">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                              {s?.avatar_url ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-slate-400">{s?.full_name?.charAt(0)}</span>}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-800">{s?.full_name}</div>
+                              <div className="text-xs text-slate-500">{fmtDate(v.date)} · {v.check_in?.slice(0, 5)}</div>
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${STATUS_CONFIG[v.status]?.color}`}>
+                            {STATUS_CONFIG[v.status]?.label}
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-2 text-xs text-slate-600 bg-red-50/50 p-3 rounded-xl border border-red-100 flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">IP Wi-Fi:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-slate-700">{v.ip_address || 'N/A'}</span>
+                              {v.ip_address && !OFFICE_IPS.includes(v.ip_address) && (
+                                <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Vị trí GPS:</span>
+                            {v.location_status === 'outside' ? (
+                              <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                            ) : (
+                              <span className="text-emerald-700 font-medium">Hợp lệ</span>
+                            )}
+                          </div>
+                          {v.latitude && v.longitude && (
+                            <div className="flex justify-end mt-1">
+                              <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Xem vị trí GPS</a>
+                            </div>
+                          )}
+                          {v.note && (
+                            <div className="mt-2 text-slate-500 italic break-words">Ghi chú: {v.note}</div>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                          <button 
+                            onClick={() => { setShowViolationsModal(false); openEdit(v.staff_id, parseInt(v.date.split('-')[2])); }} 
+                            className="py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                          >
+                            Chi tiết
+                          </button>
+                          <button 
+                            onClick={() => handleClearAnomaly(v)} 
+                            disabled={saving}
+                            className="py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                          >
+                            Bỏ qua sai phạm
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
