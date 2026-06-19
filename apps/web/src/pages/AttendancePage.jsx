@@ -160,12 +160,13 @@ const AttendancePage = () => {
     setSaving(true);
     try {
       let lat = null, lng = null, ip = null, dist = 0, warningMsg = null;
+      let isGpsValid = true, isIpValid = true;
       try {
         const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
         lat = pos.lat; lng = pos.lng; ip = ipAddr;
         dist = calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-        const isGpsValid = dist <= OFFICE_RADIUS_M;
-        const isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
+        isGpsValid = dist <= OFFICE_RADIUS_M;
+        isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
         
         if (!isGpsValid && !isIpValid) {
           warningMsg = `Sai vị trí (${Math.round(dist)}m) và sai mạng Wi-Fi`;
@@ -176,11 +177,23 @@ const AttendancePage = () => {
         }
       } catch {}
 
-      const { error } = await supabase.from('attendance').update({
+      const updatePayload = {
         check_out: now.toTimeString().slice(0, 8),
         updated_at: new Date().toISOString(),
-        ...(lat ? { note: `Check-out: ${warningMsg || 'Hợp lệ'}` } : {}),
-      }).eq('id', todayRecord.id);
+      };
+
+      if (lat) {
+        updatePayload.note = `Check-out: ${warningMsg || 'Hợp lệ'}`;
+        // Nếu có lỗi lúc check-out HOẶC lúc check-in chưa có dữ liệu GPS/IP, thì ghi đè dữ liệu mới vào
+        if (warningMsg || !todayRecord.ip_address || !todayRecord.latitude) {
+          updatePayload.location_status = isGpsValid ? 'in_office' : 'outside';
+          updatePayload.ip_address = ip;
+          updatePayload.latitude = lat;
+          updatePayload.longitude = lng;
+        }
+      }
+
+      const { error } = await supabase.from('attendance').update(updatePayload).eq('id', todayRecord.id);
       if (error) throw error;
       
       if (warningMsg) {
