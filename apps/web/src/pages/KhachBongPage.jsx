@@ -18,6 +18,7 @@ const KhachBongPage = ({ isNested = false }) => {
 
   // Modals state
   const [selectedApp, setSelectedApp] = useState(null);
+  const [detailApp, setDetailApp] = useState(null);
   const [showCareModal, setShowCareModal] = useState(false);
   const [showRevertModal, setShowRevertModal] = useState(false);
   const [showSurgeryModal, setShowSurgeryModal] = useState(false);
@@ -129,8 +130,35 @@ const KhachBongPage = ({ isNested = false }) => {
     return acc;
   }, {});
 
+  const renderNotes = (notesString) => {
+    if (!notesString) return null;
+    const lines = notesString.split('\n').filter(l => l.trim() !== '');
+    let currentDate = null;
+    const elements = [];
+    
+    lines.forEach((line, index) => {
+      const match = line.match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})\]/);
+      if (match) {
+        const date = match[1];
+        if (date !== currentDate) {
+          currentDate = date;
+          elements.push(
+            <div key={`date-${index}`} className="font-extrabold text-teal-700 text-[13px] mt-3 mb-1 uppercase tracking-wide border-b border-teal-100 pb-0.5 inline-block">
+              CẬP NHẬT {date} :
+            </div>
+          );
+        }
+      }
+      
+      elements.push(<div key={`line-${index}`} className="mb-0.5">{line}</div>);
+    });
+    
+    return elements;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
+      <div className="flex-1 min-w-0 space-y-6 w-full">
       {!isNested && (
         <div className="flex items-center justify-between">
           <div>
@@ -197,8 +225,16 @@ const KhachBongPage = ({ isNested = false }) => {
 
                     {/* Note Box */}
                     {app.care_notes && (
-                      <div className="mt-auto mb-3 text-xs text-slate-500 bg-yellow-50/50 p-2.5 rounded-lg border border-yellow-100/50 max-h-20 overflow-y-auto whitespace-pre-wrap">
-                        {app.care_notes}
+                      <div className="mt-auto mb-4 relative">
+                        <div className="text-xs text-slate-600 bg-yellow-50/50 p-3 pb-8 rounded-lg border border-yellow-200/50 max-h-36 overflow-hidden whitespace-pre-wrap relative">
+                          {renderNotes(app.care_notes)}
+                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#fefce8] to-transparent pointer-events-none rounded-b-lg"></div>
+                        </div>
+                        <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                          <button onClick={() => setDetailApp(app)} className="text-blue-600 text-[11px] font-bold bg-white px-4 py-1.5 rounded-full shadow-md hover:bg-slate-50 transition-colors border border-slate-100 flex items-center gap-1 z-10">
+                            Xem chi tiết
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -223,6 +259,42 @@ const KhachBongPage = ({ isNested = false }) => {
             </div>
           ))}
         </div>
+      )}
+      </div> {/* End main content */}
+
+      {/* Panel Xem Chi tiết Ghi chú (Desktop + Mobile) */}
+      {detailApp && (
+        <>
+          {/* Mobile Modal */}
+          <div className="lg:hidden fixed inset-0 bg-slate-900/50 z-[60] flex items-end p-4 backdrop-blur-sm transition-opacity" onClick={() => setDetailApp(null)}>
+            <div className="bg-white w-full rounded-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-slate-800 truncate pr-2">Chi tiết Ghi chú - {detailApp.customer_name}</h3>
+                <button onClick={() => setDetailApp(null)} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 flex-1 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 bg-yellow-50/30">
+                {renderNotes(detailApp.care_notes)}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Panel */}
+          <div className="hidden lg:flex flex-col lg:w-[320px] xl:w-[380px] shrink-0 sticky top-6 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" style={{ height: 'calc(100vh - 3rem)' }}>
+            <div className="px-4 py-4 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 truncate pr-2" title={detailApp.customer_name}>
+                Ghi chú: {detailApp.customer_name}
+              </h3>
+              <button onClick={() => setDetailApp(null)} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 bg-yellow-50/30">
+              {renderNotes(detailApp.care_notes)}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Modal 1: Cập nhật chăm sóc */}
