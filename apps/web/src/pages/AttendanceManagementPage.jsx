@@ -83,6 +83,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     }).length,
   };
 
+  const violations = attendance.filter(a => a.location_status === 'outside').sort((a, b) => new Date(b.date) - new Date(a.date));
+
   const openEdit = (staffId, day) => {
     const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const record = getRecord(staffId, day);
@@ -224,6 +226,13 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
               className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'leave' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
               Duyệt đơn xin phép
+            </button>
+            <button
+              onClick={() => setActiveTab('warnings')}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'warnings' ? 'border-red-500 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              Cảnh báo
+              {violations.length > 0 && <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">{violations.length}</span>}
             </button>
           </div>
         </div>
@@ -437,7 +446,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {/* Edit modal */}
       {editModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl">
             <h3 className="font-bold text-slate-800 text-lg mb-1">Chấm công</h3>
             <p className="text-sm text-slate-400 mb-5">{editModal.staffName} · {fmtDate(editModal.date)}</p>
@@ -540,8 +549,60 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         </div>
       )}
         </>
-      ) : (
+      ) : activeTab === 'leave' ? (
         <LeaveManagementPage />
+      ) : (
+        <div className="space-y-4">
+          {violations.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
+              <Check className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">Không có cảnh báo vi phạm nào trong tháng này.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {violations.map(v => {
+                const s = staff.find(x => x.id === v.staff_id);
+                return (
+                  <div key={v.id} className="bg-white border border-red-100 p-4 rounded-2xl shadow-sm hover:shadow transition-all relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                          {s?.avatar_url ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-slate-400">{s?.full_name?.charAt(0)}</span>}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800">{s?.full_name}</div>
+                          <div className="text-xs text-slate-500">{fmtDate(v.date)} · Lúc {v.check_in?.slice(0, 5)}</div>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${STATUS_CONFIG[v.status]?.color}`}>
+                        {STATUS_CONFIG[v.status]?.label}
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-xs text-slate-600 bg-red-50/50 p-3 rounded-xl border border-red-100">
+                      <div className="flex justify-between">
+                        <span className="font-medium">IP Wi-Fi:</span>
+                        <span className="font-mono text-red-700">{v.ip_address || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Vị trí:</span>
+                        <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                      </div>
+                      {v.latitude && v.longitude && (
+                        <div className="flex justify-end mt-1">
+                          <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Xem vị trí GPS</a>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => openEdit(v.staff_id, parseInt(v.date.split('-')[2]))} className="w-full mt-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      Xử lý vi phạm
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
