@@ -108,7 +108,7 @@ const AttendancePage = () => {
     setSaving(true);
     try {
       const checkInTime = now.toTimeString().slice(0, 8);
-      const status = checkInTime > '08:30:00' ? 'late' : 'present';
+      const status = checkInTime >= '09:01:00' ? 'late' : 'present';
 
       // Lấy GPS và IP đồng thời
       let lat = null, lng = null, ip = null, location_status = 'unknown';
