@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle } from 'lucide-react';
 
 // Tọa độ văn phòng Dr Tuấn Hùng - 10 ngõ 168 Hào Nam, Hà Nội
-const OFFICE_LAT = 21.0285;
-const OFFICE_LNG = 105.8412;
+const OFFICE_LAT = 21.025956;
+const OFFICE_LNG = 105.828384;
 const OFFICE_RADIUS_M = 200; // bán kính cho phép 200m
 
 const calcDistance = (lat1, lng1, lat2, lng2) => {
