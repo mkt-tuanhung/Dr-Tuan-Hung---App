@@ -86,7 +86,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   };
 
   const violations = attendance.filter(a => 
-    a.location_status === 'outside' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address))
+    a.location_status === 'outside' || a.location_status === 'unknown' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address))
   ).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const openEdit = (staffId, day) => {
@@ -389,7 +389,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                                 record.status === 'absent' ? <X className="w-3.5 h-3.5 text-red-400" /> :
                                 record.status === 'late' ? <Clock className="w-3.5 h-3.5 text-yellow-500" /> :
                                 <span className="text-[9px] font-bold text-purple-500">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
-                                {(record.location_status === 'outside' || (record.ip_address && !OFFICE_IPS.includes(record.ip_address))) && (
+                                {(record.location_status === 'outside' || record.location_status === 'unknown' || (record.ip_address && !OFFICE_IPS.includes(record.ip_address))) && (
                                   <span className="absolute top-0 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white" title="Chấm công sai vị trí hoặc sai mạng"></span>
                                 )}
                               </>
@@ -708,6 +708,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                             <span className="font-medium">Vị trí GPS:</span>
                             {v.location_status === 'outside' ? (
                               <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                            ) : v.location_status === 'unknown' ? (
+                              <span className="text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded border border-orange-100 text-[10px]">Chặn định vị</span>
                             ) : (
                               <span className="text-emerald-700 font-medium">Hợp lệ</span>
                             )}
