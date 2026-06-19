@@ -32,6 +32,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [isMultiSelect, setIsMultiSelect] = useState(false);
+  const [selectedCells, setSelectedCells] = useState(new Set());
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,6 +95,63 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       note: record?.note || '',
       id: record?.id || null,
     });
+  };
+
+  const handleCellClick = (staffId, day) => {
+    if (isMultiSelect) {
+      const key = `${staffId}-${day}`;
+      const next = new Set(selectedCells);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      setSelectedCells(next);
+    } else {
+      openEdit(staffId, day);
+    }
+  };
+
+  const handleBulkAction = async (status) => {
+    setSaving(true);
+    try {
+      const updates = [];
+      const inserts = [];
+      
+      Array.from(selectedCells).forEach(key => {
+        const [staffId, dayStr] = key.split('-');
+        const day = parseInt(dayStr, 10);
+        const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const record = getRecord(staffId, day);
+        
+        if (record) {
+          updates.push({ ...record, status, updated_at: new Date().toISOString() });
+        } else {
+          inserts.push({
+            staff_id: staffId,
+            date,
+            status,
+            check_in: status === 'present' ? '08:50:00' : null,
+            updated_at: new Date().toISOString()
+          });
+        }
+      });
+      
+      if (updates.length > 0) {
+        const { error } = await supabase.from('attendance').upsert(updates);
+        if (error) throw error;
+      }
+      if (inserts.length > 0) {
+        const { error } = await supabase.from('attendance').insert(inserts);
+        if (error) throw error;
+      }
+      
+      toast.success(`Đã cập nhật ${selectedCells.size} ô chấm công`);
+      setSelectedCells(new Set());
+      setIsMultiSelect(false);
+      loadData();
+    } catch(err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -200,15 +259,26 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
-        <input
-          className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-emerald-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-          placeholder="Tìm nhân sự..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+      {/* Search & Bulk Toggle */}
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="relative w-full max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+          <input
+            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-emerald-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            placeholder="Tìm nhân sự..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <button 
+          onClick={() => {
+            setIsMultiSelect(!isMultiSelect);
+            if (isMultiSelect) setSelectedCells(new Set());
+          }}
+          className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border ${isMultiSelect ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+        >
+          {isMultiSelect ? 'Hủy chọn nhiều' : 'Tích chọn nhiều ô'}
+        </button>
       </div>
 
       {/* Desktop table */}
@@ -259,10 +329,12 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       const date = new Date(year, month-1, d);
                       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                       const isToday = date.toDateString() === today.toDateString();
+                      const cellKey = `${s.id}-${d}`;
+                      const isSelected = selectedCells.has(cellKey);
                       return (
-                        <td key={d} className={`px-1 py-2 text-center ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-emerald-50/40' : ''}`}>
+                        <td key={d} className={`px-1 py-2 text-center relative ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-emerald-50/40' : ''} ${isSelected ? 'ring-2 ring-inset ring-emerald-500 bg-emerald-100/50' : ''}`}>
                           <button
-                            onClick={() => openEdit(s.id, d)}
+                            onClick={() => handleCellClick(s.id, d)}
                             className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all hover:scale-110"
                             title={record ? STATUS_CONFIG[record.status]?.label : 'Chưa chấm'}
                           >
@@ -328,6 +400,19 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             })}
           </div>
         </>
+      )}
+
+      {/* Floating Action Bar for Multi-Select */}
+      {isMultiSelect && selectedCells.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur text-white px-6 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center gap-6 z-[60] animate-in slide-in-from-bottom-8">
+          <div className="font-semibold text-sm">Đã chọn {selectedCells.size} ô</div>
+          <div className="flex items-center gap-2 border-l border-slate-700 pl-6">
+            <button disabled={saving} onClick={() => handleBulkAction('present')} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-sm font-bold transition-colors">Có mặt</button>
+            <button disabled={saving} onClick={() => handleBulkAction('half_day')} className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-sm font-bold transition-colors">Nửa ngày</button>
+            <button disabled={saving} onClick={() => handleBulkAction('late')} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl text-sm font-bold transition-colors">Đi trễ</button>
+            <button disabled={saving} onClick={() => handleBulkAction('absent')} className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-xl text-sm font-bold transition-colors">Vắng mặt</button>
+          </div>
+        </div>
       )}
 
       {/* Legend */}
