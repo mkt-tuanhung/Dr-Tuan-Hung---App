@@ -59,7 +59,7 @@ const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6
 const DAYS_SHORT = ['CN','T2','T3','T4','T5','T6','T7'];
 
 // Thay đổi địa chỉ IP Public của phòng khám ở đây. Để mảng rỗng [] nếu không muốn check IP.
-const OFFICE_IPS = []; // Ví dụ: ['113.190.233.150', '27.72.60.200']
+const OFFICE_IPS = ['42.114.215.104'];
 
 const fmtTime = (t) => t ? t.slice(0, 5) : null;
 
