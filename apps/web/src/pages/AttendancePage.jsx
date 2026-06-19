@@ -122,20 +122,17 @@ const AttendancePage = () => {
         const isGpsValid = dist <= OFFICE_RADIUS_M;
         const isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
         
-        if (isGpsValid && isIpValid) {
-          location_status = 'in_office';
-        } else {
-          location_status = 'outside';
-          if (!isGpsValid && !isIpValid) {
-            toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m) & sai Wi-Fi!`);
-          } else if (!isGpsValid) {
-            toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m)!`);
-          } else if (!isIpValid) {
-            toast.warning(`Vi phạm: Sai mạng Wi-Fi!`);
-          }
+        location_status = isGpsValid ? 'in_office' : 'outside';
+
+        if (!isGpsValid && !isIpValid) {
+          toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m) & sai Wi-Fi!`);
+        } else if (!isGpsValid) {
+          toast.warning(`Vi phạm: Sai vị trí (${Math.round(dist)}m)!`);
+        } else if (!isIpValid) {
+          toast.warning(`Vi phạm: Sai mạng Wi-Fi!`);
         }
         
-        setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: location_status === 'in_office', ip });
+        setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: isGpsValid, ip: ipAddr });
       } catch (gpsErr) {
         toast.warning('Không lấy được vị trí — chấm công không có GPS');
       }

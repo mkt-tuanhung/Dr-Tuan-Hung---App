@@ -84,7 +84,9 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     }).length,
   };
 
-  const violations = attendance.filter(a => a.location_status === 'outside').sort((a, b) => new Date(b.date) - new Date(a.date));
+  const violations = attendance.filter(a => 
+    a.location_status === 'outside' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address))
+  ).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const openEdit = (staffId, day) => {
     const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
@@ -360,8 +362,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                                 record.status === 'absent' ? <X className="w-3.5 h-3.5 text-red-400" /> :
                                 record.status === 'late' ? <Clock className="w-3.5 h-3.5 text-yellow-500" /> :
                                 <span className="text-[9px] font-bold text-purple-500">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
-                                {record.location_status === 'outside' && (
-                                  <span className="absolute top-0 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white" title="Chấm công ngoài văn phòng"></span>
+                                {(record.location_status === 'outside' || (record.ip_address && !OFFICE_IPS.includes(record.ip_address))) && (
+                                  <span className="absolute top-0 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white" title="Chấm công sai vị trí hoặc sai mạng"></span>
                                 )}
                               </>
                             ) : (
@@ -600,7 +602,11 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Vị trí GPS:</span>
-                        <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                        {v.location_status === 'outside' ? (
+                          <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                        ) : (
+                          <span className="text-emerald-700 font-medium">Hợp lệ</span>
+                        )}
                       </div>
                       {v.latitude && v.longitude && (
                         <div className="flex justify-end mt-1">
