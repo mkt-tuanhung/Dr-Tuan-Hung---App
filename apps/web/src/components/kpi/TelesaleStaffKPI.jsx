@@ -50,6 +50,7 @@ const TelesaleStaffKPI = () => {
       supabase.from('page_daily_reports').select('total_phones').eq('telesale_id', id).gte('date', ms).lte('date', me),
     ]);
     if (apptRes.error) toast.error('Lỗi tải lịch hẹn: ' + apptRes.error.message);
+    if (surgRes.error) toast.error('Lỗi tải doanh thu (cần chạy add_bong_date.sql?): ' + surgRes.error.message);
     setKpi(kpiRes.data || null);
     setAppts((apptRes.data || []).filter(a => !isRecheck(a)));
     setSurgRows(surgRes.data || []);
