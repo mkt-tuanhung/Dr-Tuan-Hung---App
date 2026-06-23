@@ -42,7 +42,7 @@ const FULL_MENU = [
 
   // CRM
   { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
-  { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'cskh'] },
+  { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
   // Phẫu thuật

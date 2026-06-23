@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Calendar, FileText, ArrowUpCircle, RotateCcw, X, MessageCircle, AlertCircle, Clock, Phone, Search } from 'lucide-react';
+import { Calendar, FileText, ArrowUpCircle, RotateCcw, X, MessageCircle, AlertCircle, Clock, Phone, Search, Plus, Upload, Loader2 } from 'lucide-react';
+
+const CAN_ADD_ROLES = ['sale_offline', 'telesale', 'admin', 'accountant'];
+const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
+const todayStr = () => new Date().toISOString().split('T')[0];
+const EMPTY_COC = {
+  customer_name: '', phone: '', deposit_amount: '', deposit_date: todayStr(),
+  expected_surgery_date: '', service: '', telesale_id: '', sale_id: '', notes: '',
+};
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -12,10 +22,21 @@ const CARE_TABS = [
 ];
 
 const KhachCocPage = ({ isNested = false }) => {
+  const { profile } = useAuth();
+  const canAdd = CAN_ADD_ROLES.includes(profile?.role);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Thêm khách cọc
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_COC);
+  const [creating, setCreating] = useState(false);
+  const [telesales, setTelesales] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [billFile, setBillFile] = useState(null);
+  const [noteFiles, setNoteFiles] = useState([]);
 
   // Modals state
   const [selectedApp, setSelectedApp] = useState(null);
@@ -49,6 +70,62 @@ const KhachCocPage = ({ isNested = false }) => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    if (!canAdd) return;
+    supabase.from('profiles').select('id, full_name, role').eq('is_active', true)
+      .in('role', ['telesale', 'sale_offline']).order('full_name')
+      .then(({ data }) => {
+        setTelesales((data || []).filter(s => s.role === 'telesale'));
+        setSales((data || []).filter(s => s.role === 'sale_offline'));
+      });
+  }, [canAdd]);
+
+  const openCreate = () => {
+    // Tự điền telesale/sale theo người đang đăng nhập
+    const init = { ...EMPTY_COC };
+    if (profile?.role === 'telesale') init.telesale_id = profile.id;
+    if (profile?.role === 'sale_offline') init.sale_id = profile.id;
+    setCreateForm(init);
+    setBillFile(null);
+    setNoteFiles([]);
+    setShowCreateModal(true);
+  };
+
+  const handleCreateCoc = async (e) => {
+    e.preventDefault();
+    if (!createForm.customer_name || !createForm.phone) { toast.error('Nhập tên và SĐT khách'); return; }
+    if (!createForm.deposit_date) { toast.error('Chọn ngày cọc'); return; }
+    setCreating(true);
+    try {
+      let deposit_bill_url = null;
+      if (billFile) deposit_bill_url = await uploadToR2(billFile, 'deposit-bills');
+      const note_image_urls = [];
+      for (const f of noteFiles) note_image_urls.push(await uploadToR2(f, 'coc-notes'));
+
+      const { error } = await supabase.from('customer_appointments').insert({
+        customer_name: createForm.customer_name,
+        phone: createForm.phone,
+        status: 'coc',
+        appointment_date: createForm.deposit_date,
+        deposit_date: createForm.deposit_date,
+        deposit_amount: Number(String(createForm.deposit_amount).replace(/\D/g, '')) || 0,
+        expected_surgery_date: createForm.expected_surgery_date || null,
+        service: createForm.service || null,
+        telesale_id: createForm.telesale_id || null,
+        sale_id: createForm.sale_id || null,
+        notes: createForm.notes || null,
+        deposit_bill_url,
+        note_image_urls,
+        created_by: profile?.id,
+      });
+      if (error) throw error;
+      toast.success('Đã thêm khách cọc');
+      setShowCreateModal(false);
+      loadData();
+    } catch (err) { toast.error(err.message); }
+    finally { setCreating(false); }
+  };
 
   // Handle Care Update
   const handleCareSubmit = async (e) => {
@@ -161,15 +238,23 @@ const KhachCocPage = ({ isNested = false }) => {
             </button>
           ))}
         </div>
-        <div className="relative w-full sm:w-72 shrink-0">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Tìm tên KH hoặc số điện thoại..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-72 shrink-0">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Tìm tên KH hoặc số điện thoại..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+          </div>
+          {canAdd && (
+            <button onClick={openCreate}
+              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-emerald-200 hover:from-emerald-600 hover:to-teal-600">
+              <Plus className="w-4 h-4" /> Thêm khách cọc
+            </button>
+          )}
         </div>
       </div>
 
@@ -353,6 +438,91 @@ const KhachCocPage = ({ isNested = false }) => {
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end">
               <button type="submit" disabled={saving} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal: Thêm khách cọc */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <form onSubmit={handleCreateCoc} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50 shrink-0">
+              <h3 className="font-bold text-emerald-800">Thêm khách cọc</h3>
+              <button type="button" onClick={() => setShowCreateModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Tên khách hàng *</label>
+                  <input value={createForm.customer_name} onChange={e => setCreateForm(f => ({ ...f, customer_name: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Số điện thoại *</label>
+                  <input value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Số tiền cọc</label>
+                  <input inputMode="numeric" value={fmtInput(createForm.deposit_amount)} onChange={e => setCreateForm(f => ({ ...f, deposit_amount: e.target.value.replace(/\D/g, '') }))} placeholder="VD: 5.000.000" className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Ngày cọc *</label>
+                  <input type="date" value={createForm.deposit_date} onChange={e => setCreateForm(f => ({ ...f, deposit_date: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Lịch hẹn / PT dự kiến</label>
+                  <input type="date" value={createForm.expected_surgery_date} onChange={e => setCreateForm(f => ({ ...f, expected_surgery_date: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Dịch vụ dự kiến</label>
+                  <input value={createForm.service} onChange={e => setCreateForm(f => ({ ...f, service: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Telesale phụ trách</label>
+                  {profile?.role === 'telesale' ? (
+                    <input disabled value={profile.full_name} className="w-full border p-2.5 rounded-xl bg-slate-50 text-slate-500" />
+                  ) : (
+                    <select value={createForm.telesale_id} onChange={e => setCreateForm(f => ({ ...f, telesale_id: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                      <option value="">— Chọn telesale —</option>
+                      {telesales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                    </select>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Sale Offline phụ trách</label>
+                  {profile?.role === 'sale_offline' ? (
+                    <input disabled value={profile.full_name} className="w-full border p-2.5 rounded-xl bg-slate-50 text-slate-500" />
+                  ) : (
+                    <select value={createForm.sale_id} onChange={e => setCreateForm(f => ({ ...f, sale_id: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                      <option value="">— Chọn sale offline —</option>
+                      {sales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Bill / Hoá đơn cọc</label>
+                <label className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 text-sm text-slate-500">
+                  <Upload className="w-4 h-4" /> {billFile ? billFile.name : 'Chọn ảnh bill...'}
+                  <input type="file" accept="image/*" className="hidden" onChange={e => setBillFile(e.target.files[0] || null)} />
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Note tình trạng</label>
+                <textarea rows={2} value={createForm.notes} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none" />
+                <label className="mt-2 flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 text-sm text-slate-500">
+                  <Upload className="w-4 h-4" /> {noteFiles.length ? `${noteFiles.length} ảnh đã chọn` : 'Thêm ảnh ghi chú...'}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={e => setNoteFiles(Array.from(e.target.files || []))} />
+                </label>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
+              <button type="submit" disabled={creating} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2">
+                {creating && <Loader2 className="w-4 h-4 animate-spin" />} Lưu khách cọc
+              </button>
             </div>
           </form>
         </div>
