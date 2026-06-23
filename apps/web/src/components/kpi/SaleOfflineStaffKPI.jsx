@@ -7,18 +7,11 @@ import {
   Wallet, TrendingUp, Coins, ArrowUpRight, Target,
 } from 'lucide-react';
 
+import { computeSaleOffline, isRecheck, UPSALE_RATE } from '@/lib/kpiCalc';
+
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
-
-// Hoa hồng doanh thu Sale Offline (bậc thang): <500tr=1% | 500tr–<1 tỷ=1.5% | ≥1 tỷ=2%
-const revCommissionRate = (rev) => {
-  if (rev <= 0) return 0;
-  if (rev < 500_000_000) return 1;
-  if (rev < 1_000_000_000) return 1.5;
-  return 2;
-};
-const UPSALE_RATE = 3; // 3% doanh thu upsale
 
 const STATUS_LABEL = { phau_thuat: 'Phẫu thuật', coc: 'Cọc', bong: 'Bong', scheduled: 'Đã hẹn', cancelled: 'Huỷ' };
 const STATUS_COLOR = {
@@ -68,7 +61,6 @@ const SaleOfflineStaffKPI = () => {
     setLoading(true);
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
-    const isRecheck = (a) => (a.service || '').startsWith('[Tái khám]');
 
     const [kpiRes, apptRes, surgRes] = await Promise.all([
       supabase.from('kpi_targets').select('*')
@@ -99,21 +91,10 @@ const SaleOfflineStaffKPI = () => {
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
-  // ---- Tính toán chỉ số ----
-  const total = appts.length;                              // Tổng lịch hẹn (không tính tái khám)
-  const ptList = surgeries;                                // Khách phẫu thuật trong tháng (theo surgery_date)
-  const cntPT = ptList.length;
-  const cntCoc = appts.filter(a => a.status === 'coc').length;
-  const cntBong = appts.filter(a => a.status === 'bong').length;
-  const closeRate = total > 0 ? (cntPT / total) * 100 : 0; // Tỷ lệ chốt = khách PT / tổng lịch hẹn
-
-  const doanhThu = ptList.reduce((s, a) => s + Number(a.revenue || 0), 0);
-  const upsale = ptList.reduce((s, a) => s + Number(a.upsale_revenue || 0), 0);
-
-  const dtRate = revCommissionRate(doanhThu);
-  const hhDoanhThu = Math.round(doanhThu * dtRate / 100);
-  const hhUpsale = Math.round(upsale * UPSALE_RATE / 100);
-  const tongHH = hhDoanhThu + hhUpsale;
+  // ---- Tính toán chỉ số (dùng hàm chung với admin) ----
+  const ptList = surgeries; // Khách phẫu thuật trong tháng (theo surgery_date)
+  const { total, cntPT, cntCoc, cntBong, closeRate, doanhThu, upsale, dtRate, hhDoanhThu, hhUpsale, tongHH }
+    = computeSaleOffline(appts, surgeries);
 
   const revProgress = kpi?.target_revenue > 0 ? Math.min(Math.round(doanhThu / kpi.target_revenue * 100), 100) : 0;
   const rateProgress = kpi?.target_close_rate > 0 ? Math.min(Math.round(closeRate / kpi.target_close_rate * 100), 100) : 0;
