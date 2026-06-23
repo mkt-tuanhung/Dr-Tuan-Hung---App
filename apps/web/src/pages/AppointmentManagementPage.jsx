@@ -542,6 +542,11 @@ const AppointmentManagementPage = () => {
                                 <FileText className="w-4 h-4" /> Lịch sử chăm sóc
                               </button>
                             )}
+                            {(isAdmin || isNurse) && (
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors" title="Sửa lịch tái khám">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
                             {(isAdmin || isHeadNurse) && (
                               <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
                                 <Trash2 className="w-4 h-4" />
