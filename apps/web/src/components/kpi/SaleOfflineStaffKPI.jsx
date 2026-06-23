@@ -7,7 +7,7 @@ import {
   Wallet, TrendingUp, Coins, ArrowUpRight, Target,
 } from 'lucide-react';
 
-import { computeSaleOffline, isRecheck, UPSALE_RATE } from '@/lib/kpiCalc';
+import { computeSaleOffline, isRecheck } from '@/lib/kpiCalc';
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
@@ -180,13 +180,20 @@ const SaleOfflineStaffKPI = () => {
             sub="Khách phẫu thuật / Tổng lịch hẹn" accent="emerald" />
           <StatCard icon={Wallet} label="Doanh thu chốt được" value={fmtM(doanhThu)} accent="violet" />
           <StatCard icon={ArrowUpRight} label="Doanh thu Upsale" value={fmtM(upsale)} accent="orange" />
-          <StatCard icon={Coins} label="Hoa hồng doanh thu" value={fmtM(hhDoanhThu)} sub={`Tỷ lệ: ${dtRate.toFixed(1)}%`} accent="emerald" />
-          <StatCard icon={TrendingUp} label="Hoa hồng Upsale" value={fmtM(hhUpsale)} sub={`Tỷ lệ: ${UPSALE_RATE.toFixed(1)}%`} accent="blue" />
+          <StatCard icon={Coins} label="Hoa hồng doanh thu" value={fmtM(hhDoanhThu)} sub={`(Doanh thu − Upsale) × ${dtRate.toFixed(1)}%`} accent="emerald" />
+          <StatCard icon={TrendingUp} label="Hoa hồng Upsale" value={fmtM(hhUpsale)} sub="3–5% / khách (theo bậc upsale)" accent="blue" />
           <div className="col-span-2 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-2xl p-4 shadow-md flex flex-col justify-center">
             <div className="text-[11px] font-bold uppercase tracking-wider text-white/90">Tổng hoa hồng ước tính</div>
             <div className="text-3xl font-black mt-1">{fmtM(tongHH)}</div>
-            <div className="text-xs text-white/80 mt-1">Hoa hồng doanh thu + Hoa hồng Upsale</div>
+            <div className="text-xs text-white/80 mt-1">HH doanh thu {fmtM(hhDoanhThu)} + HH upsale {fmtM(hhUpsale)}</div>
           </div>
+        </div>
+        {/* Ghi chú cách tính */}
+        <div className="mt-3 bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs text-slate-500 space-y-1">
+          <div className="font-semibold text-slate-600">Cách tính hoa hồng:</div>
+          <div>• <b>HH doanh thu</b> = (Doanh thu − Upsale) × A%. Bậc A theo tổng doanh thu: &lt;500tr = 1% · 500tr–&lt;1 tỷ = 1.5% · ≥1 tỷ = 2%.</div>
+          <div>• <b>HH upsale</b> = Σ (upsale từng khách × B%). Bậc B theo upsale mỗi khách: &lt;50tr = 3% · 50tr–&lt;100tr = 4% · ≥100tr = 5%.</div>
+          <div>• <b>Tổng hoa hồng</b> = HH doanh thu + HH upsale.</div>
         </div>
       </div>
 

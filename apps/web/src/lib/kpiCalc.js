@@ -2,8 +2,16 @@
 // Hàm tính KPI & hoa hồng dùng chung (admin + nhân sự phải khớp số)
 // ============================================================
 
-export const UPSALE_RATE = 3; // % hoa hồng doanh thu upsale của Sale Offline
 export const PHONE_COMMISSION = 20000; // 20.000đ / 1 SĐT quan tâm (Trực page)
+
+// Thưởng upsale Sale Offline — bậc thang theo upsale CỦA TỪNG KHÁCH:
+//   < 50tr = 3%  |  50tr – < 100tr = 4%  |  ≥ 100tr = 5%
+export const saleUpsaleRate = (u) => {
+  if (u <= 0) return 0;
+  if (u < 50_000_000) return 3;
+  if (u < 100_000_000) return 4;
+  return 5;
+};
 
 // Tính bộ chỉ số Trực page từ các báo cáo ngày (page_daily_reports) trong tháng
 export const computeTrucPage = (reports = []) => {
@@ -41,9 +49,16 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
   const doanhThu = surgeries.reduce((s, a) => s + Number(a.revenue || 0), 0);
   const upsale = surgeries.reduce((s, a) => s + Number(a.upsale_revenue || 0), 0);
 
+  // Thưởng doanh thu cá nhân = (doanh thu − upsale) × A% (A theo bậc tổng doanh thu)
   const dtRate = saleRevCommissionRate(doanhThu);
-  const hhDoanhThu = Math.round(doanhThu * dtRate / 100);
-  const hhUpsale = Math.round(upsale * UPSALE_RATE / 100);
+  const hhDoanhThu = Math.round(Math.max(doanhThu - upsale, 0) * dtRate / 100);
+
+  // Thưởng upsale = Σ (upsale từng khách × B% theo bậc upsale của khách đó)
+  const hhUpsale = surgeries.reduce((s, a) => {
+    const u = Number(a.upsale_revenue || 0);
+    return s + Math.round(u * saleUpsaleRate(u) / 100);
+  }, 0);
+
   const tongHH = hhDoanhThu + hhUpsale;
 
   return { total, cntPT, cntCoc, cntBong, closeRate, doanhThu, upsale, dtRate, hhDoanhThu, hhUpsale, tongHH };
