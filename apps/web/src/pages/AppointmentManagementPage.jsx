@@ -295,7 +295,7 @@ const AppointmentManagementPage = () => {
       } else if (evalForm.status === 'coc') {
         updateData = { ...updateData, deposit_date: evalForm.deposit_date, deposit_amount: evalForm.deposit_amount || 0, service: evalForm.service, expected_surgery_date: evalForm.expected_surgery_date };
       } else if (evalForm.status === 'bong') {
-        updateData = { ...updateData, notes: evalForm.notes };
+        updateData = { ...updateData, notes: evalForm.notes, bong_date: new Date().toISOString().split('T')[0] };
       }
       
       const { error } = await supabase.from('customer_appointments').update(updateData).eq('id', evalApp.id);

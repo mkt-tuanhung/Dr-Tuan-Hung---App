@@ -36,6 +36,47 @@ export const saleRevCommissionRate = (rev) => {
 // Lịch tái khám được đánh dấu bằng service bắt đầu "[Tái khám]"
 export const isRecheck = (a) => (a?.service || '').startsWith('[Tái khám]');
 
+// ===================== TELESALE =====================
+// Thưởng doanh thu telesale theo bậc tổng doanh thu: <500tr=0.5% | <1 tỷ=1% | ≥1 tỷ=1.5%
+export const telesaleRevRate = (rev) => {
+  if (rev <= 0) return 0;
+  if (rev < 500_000_000) return 0.5;
+  if (rev < 1_000_000_000) return 1;
+  return 1.5;
+};
+
+// Tính chỉ số + hoa hồng Telesale.
+//   phones   : tổng SĐT nhận trong tháng (từ page_daily_reports tag telesale)
+//   appts    : lịch hẹn theo appointment_date trong tháng (ĐÃ loại tái khám)
+//   bongRows : khách bị đánh giá BONG trong tháng (bong_date trong tháng)
+//   cocRows  : khách bị đánh giá CỌC trong tháng (deposit_date trong tháng)
+//   surgRows : khách phẫu thuật trong tháng (surgery_date trong tháng)
+export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows = [], surgRows = [] }) => {
+  const tongLichHen = appts.length;
+  const tyLeChotHen = phones > 0 ? (tongLichHen / phones) * 100 : 0;
+  const doanhThu = surgRows.reduce((s, a) => s + Number(a.revenue || 0), 0);
+
+  const dtRate = telesaleRevRate(doanhThu);
+  const thuongDoanhThu = Math.round(doanhThu * dtRate / 100);
+
+  // Thưởng lịch hẹn: trả theo tháng diễn ra sự kiện
+  let thuongLichHen = bongRows.length * 200000 + cocRows.length * 300000;
+  let direct = 0, fromBong = 0, fromCoc = 0;
+  for (const a of surgRows) {
+    if (a.bong_date) { thuongLichHen += 300000; fromBong++; }       // từng bong → +300k
+    else if (a.deposit_date) { thuongLichHen += 200000; fromCoc++; } // từng cọc → +200k
+    else { thuongLichHen += 500000; direct++; }                      // PT trực tiếp → 500k
+  }
+
+  const tongHH = thuongDoanhThu + thuongLichHen;
+  return {
+    phones, tongLichHen, tyLeChotHen, doanhThu, dtRate,
+    thuongDoanhThu, thuongLichHen, tongHH,
+    bongCount: bongRows.length, cocCount: cocRows.length, ptCount: surgRows.length,
+    direct, fromBong, fromCoc,
+  };
+};
+
 // Tính bộ chỉ số Sale Offline cho 1 nhân sự.
 //   appts     : lịch hẹn trong tháng theo appointment_date (ĐÃ loại tái khám)
 //   surgeries : khách phẫu thuật trong tháng theo surgery_date (status=phau_thuat)

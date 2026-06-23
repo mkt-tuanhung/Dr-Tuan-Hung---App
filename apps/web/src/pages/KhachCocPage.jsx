@@ -71,8 +71,9 @@ const KhachCocPage = ({ isNested = false }) => {
     e.preventDefault();
     setSaving(true);
     const { error } = await supabase.from('customer_appointments')
-      .update({ 
-        status: 'bong', 
+      .update({
+        status: 'bong',
+        bong_date: new Date().toISOString().split('T')[0],
         notes: (selectedApp.notes || '') + `\n[Hủy cọc] ${bongForm.notes}`
       }).eq('id', selectedApp.id);
       

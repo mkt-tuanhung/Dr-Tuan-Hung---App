@@ -11,6 +11,7 @@ import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
 import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
 import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
+import TelesaleStaffKPI from '@/components/kpi/TelesaleStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
@@ -220,6 +221,7 @@ const StaffDashboard = () => {
     if (activeTab === 'kpi') {
       if (profile?.role === 'sale_offline') return <SaleOfflineStaffKPI />;
       if (profile?.role === 'truc_page') return <TrucPageStaffKPI />;
+      if (profile?.role === 'telesale') return <TelesaleStaffKPI />;
       return <KPIPage />;
     }
     if (activeTab === 'finance') return <FinanceManagementPage />;
