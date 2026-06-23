@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseNoSession } from '@/lib/supabaseClient';
-import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { supabase } from '@/lib/supabaseClient';
+import { uploadToR2 } from '@/lib/r2Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +55,6 @@ const EMPTY_FORM = {
 };
 
 const StaffManagementPage = ({ isNested = false }) => {
-  const { profile: me } = useAuth();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -70,10 +68,11 @@ const StaffManagementPage = ({ isNested = false }) => {
 
   const loadStaff = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
+    if (error) toast.error('Không tải được danh sách nhân sự: ' + error.message);
     setStaff(data || []);
     setLoading(false);
   };
@@ -142,34 +141,41 @@ const StaffManagementPage = ({ isNested = false }) => {
           avatar_url,
         }).eq('id', editTarget.id);
         if (error) throw error;
-        toast.success('Đã cập nhật nhân sự');
-      } else {
-        const email = `${form.employee_id.trim().toLowerCase()}@drtuanhung.internal`;
-        const { data: authData, error: authErr } = await supabaseNoSession.auth.signUp({
-          email,
-          password: form.password,
-          options: { data: { employee_id: form.employee_id.trim().toUpperCase() } },
-        });
-        if (authErr) throw authErr;
-        if (!authData.user) throw new Error('Không tạo được tài khoản');
 
-        const { error: profileErr } = await supabase.from('profiles').insert({
-          id: authData.user.id,
-          employee_id: form.employee_id.trim().toUpperCase(),
-          full_name: form.full_name,
-          role: form.role,
-          position: form.position,
-          base_salary: parseInput(form.base_salary),
-          allowance: parseInput(form.allowance),
-          phone: form.phone,
-          employment_status: form.employment_status,
-          probation_started_at: form.employment_status === 'probation'
-            ? (form.probation_started_at || new Date().toISOString().split('T')[0])
-            : null,
-          created_by: me?.id,
-          avatar_url,
+        // Đổi mật khẩu (nếu admin có nhập) — phải qua Edge Function vì cần service_role
+        if (form.password) {
+          const { data: pwData, error: pwErr } = await supabase.functions.invoke('admin-update-user', {
+            body: { targetUserId: editTarget.id, newPassword: form.password },
+          });
+          if (pwErr || pwData?.error) {
+            throw new Error('Cập nhật hồ sơ OK nhưng đổi mật khẩu thất bại: ' + (pwData?.error || pwErr.message));
+          }
+          toast.success('Đã cập nhật nhân sự & đổi mật khẩu');
+        } else {
+          toast.success('Đã cập nhật nhân sự');
+        }
+      } else {
+        // Tạo nhân sự nguyên tử qua Edge Function (auth + profile, có rollback)
+        const { data: res, error: fnErr } = await supabase.functions.invoke('admin-create-user', {
+          body: {
+            employeeId: form.employee_id,
+            password: form.password,
+            profile: {
+              full_name: form.full_name,
+              role: form.role,
+              position: form.position,
+              base_salary: parseInput(form.base_salary),
+              allowance: parseInput(form.allowance),
+              phone: form.phone,
+              employment_status: form.employment_status,
+              probation_started_at: form.employment_status === 'probation'
+                ? (form.probation_started_at || new Date().toISOString().split('T')[0])
+                : null,
+              avatar_url,
+            },
+          },
         });
-        if (profileErr) throw profileErr;
+        if (fnErr || res?.error) throw new Error(res?.error || fnErr.message);
         toast.success('Đã tạo nhân sự mới');
       }
       setModalOpen(false);
@@ -311,7 +317,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-10 text-slate-400">Không tìm thấy nhân sự</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10 text-slate-400">Không tìm thấy nhân sự</td></tr>
                 )}
               </tbody>
             </table>

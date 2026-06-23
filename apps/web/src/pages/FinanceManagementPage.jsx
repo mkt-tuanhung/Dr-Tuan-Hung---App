@@ -10,8 +10,12 @@ import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, 
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
+// Chỉ các vai trò này được xem Chi phí Ads (khớp với RLS bảng marketing_*)
+const CAN_VIEW_ADS = ['marketing', 'admin', 'accountant', 'shareholder'];
+
 const FinanceManagementPage = () => {
   const { profile } = useAuth();
+  const canViewAds = CAN_VIEW_ADS.includes(profile?.role);
   const [activeTab, setActiveTab] = useState('revenue');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -144,7 +148,7 @@ const FinanceManagementPage = () => {
       setServiceGroupData(Object.keys(svcMap).map(name => ({ name, value: svcMap[name] })));
     }
     setLoading(false);
-  }, [month, year]);
+  }, [month, year, profile?.id, profile?.role]);
 
   useEffect(() => {
     if (activeTab === 'revenue' && profile) loadData();
@@ -199,9 +203,11 @@ const FinanceManagementPage = () => {
           <button onClick={() => setActiveTab('revenue')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'revenue' ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
             <Banknote className="w-4 h-4 inline-block mr-2" /> Doanh Thu
           </button>
-          <button onClick={() => setActiveTab('expenses')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
-            <Wallet className="w-4 h-4 inline-block mr-2" /> Tài chính
-          </button>
+          {canViewAds && (
+            <button onClick={() => setActiveTab('expenses')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+              <Wallet className="w-4 h-4 inline-block mr-2" /> Tài chính
+            </button>
+          )}
         </div>
       </div>
 
@@ -337,20 +343,22 @@ const FinanceManagementPage = () => {
         </div>
       )}
 
-      {activeTab === 'expenses' && (
+      {activeTab === 'expenses' && canViewAds && (
         <div className="space-y-6">
           <FinanceRevenueSummary
             stats={stats}
             month={month}
             onViewDetail={() => setActiveTab('revenue')}
           />
-          <FinanceAdsSummary
-            stats={stats}
-            month={month}
-            onViewDetail={() => {
-                window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'ads_report', bubbles: true }));
-              }}
-          />
+          {canViewAds && (
+            <FinanceAdsSummary
+              stats={stats}
+              month={month}
+              onViewDetail={() => {
+                  window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'ads_report', bubbles: true }));
+                }}
+            />
+          )}
           <FinanceHospitalFeeSummary
             stats={stats}
             month={month}
