@@ -77,7 +77,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
         month, year,
         target_revenue: Number(String(form.target_revenue).replace(/\D/g, '')) || 0,
         target_close_rate: parseFloat(form.target_close_rate) || 0,
-        note: form.note || null,
+        notes: form.note || null,
         created_by: me?.id,
         updated_at: new Date().toISOString(),
       };
@@ -94,7 +94,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
     staff_id: r.staff.id,
     target_revenue: String(r.kpi?.target_revenue || ''),
     target_close_rate: String(r.kpi?.target_close_rate || ''),
-    note: r.kpi?.note || '',
+    note: r.kpi?.notes || '',
   });
 
   if (loading) {
