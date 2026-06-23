@@ -60,26 +60,37 @@ const SaleOfflineStaffKPI = () => {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [loading, setLoading] = useState(true);
   const [kpi, setKpi] = useState(null);
-  const [appts, setAppts] = useState([]);
+  const [appts, setAppts] = useState([]);       // Lịch hẹn theo appointment_date (đã loại tái khám)
+  const [surgeries, setSurgeries] = useState([]); // Khách phẫu thuật theo surgery_date
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
     setLoading(true);
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    const isRecheck = (a) => (a.service || '').startsWith('[Tái khám]');
 
-    const [kpiRes, apptRes] = await Promise.all([
+    const [kpiRes, apptRes, surgRes] = await Promise.all([
       supabase.from('kpi_targets').select('*')
         .eq('staff_id', profile.id).eq('month', month).eq('year', year).maybeSingle(),
+      // Tổng lịch hẹn trong tháng (theo appointment_date)
       supabase.from('customer_appointments')
         .select('id, customer_name, appointment_date, surgery_date, status, revenue, upsale_revenue, service, notes')
         .eq('sale_id', profile.id)
         .gte('appointment_date', monthStart).lte('appointment_date', monthEnd)
         .order('appointment_date', { ascending: false }),
+      // Khách phẫu thuật trong tháng (theo surgery_date)
+      supabase.from('customer_appointments')
+        .select('id, customer_name, appointment_date, surgery_date, status, revenue, upsale_revenue, service')
+        .eq('sale_id', profile.id).eq('status', 'phau_thuat')
+        .gte('surgery_date', monthStart).lte('surgery_date', monthEnd)
+        .order('surgery_date', { ascending: false }),
     ]);
     if (apptRes.error) toast.error('Không tải được lịch hẹn: ' + apptRes.error.message);
     setKpi(kpiRes.data || null);
-    setAppts(apptRes.data || []);
+    // Loại bỏ lịch tái khám khỏi tổng lịch hẹn
+    setAppts((apptRes.data || []).filter(a => !isRecheck(a)));
+    setSurgeries((surgRes.data || []).filter(a => !isRecheck(a)));
     setLoading(false);
   }, [profile?.id, month, year]);
 
@@ -89,12 +100,12 @@ const SaleOfflineStaffKPI = () => {
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   // ---- Tính toán chỉ số ----
-  const total = appts.length;
-  const ptList = appts.filter(a => a.status === 'phau_thuat');
+  const total = appts.length;                              // Tổng lịch hẹn (không tính tái khám)
+  const ptList = surgeries;                                // Khách phẫu thuật trong tháng (theo surgery_date)
   const cntPT = ptList.length;
   const cntCoc = appts.filter(a => a.status === 'coc').length;
   const cntBong = appts.filter(a => a.status === 'bong').length;
-  const closeRate = total > 0 ? ((cntPT + cntCoc) / total) * 100 : 0;
+  const closeRate = total > 0 ? (cntPT / total) * 100 : 0; // Tỷ lệ chốt = khách PT / tổng lịch hẹn
 
   const doanhThu = ptList.reduce((s, a) => s + Number(a.revenue || 0), 0);
   const upsale = ptList.reduce((s, a) => s + Number(a.upsale_revenue || 0), 0);
@@ -182,10 +193,10 @@ const SaleOfflineStaffKPI = () => {
       <div>
         <h3 className="font-bold text-slate-800 mb-3">Doanh thu & Hoa hồng</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard icon={CalendarCheck} label="Tổng khách tiếp" value={fmt(total)}
-            sub={`PT: ${cntPT}  ·  Cọc: ${cntCoc}  ·  Bong: ${cntBong}`} accent="blue" />
+          <StatCard icon={CalendarCheck} label="Tổng lịch hẹn" value={fmt(total)}
+            sub={`Không tính tái khám · PT: ${cntPT} · Cọc: ${cntCoc} · Bong: ${cntBong}`} accent="blue" />
           <StatCard icon={Percent} label="Tỷ lệ chốt thực tế" value={`${closeRate.toFixed(1)}%`}
-            sub="(Phẫu thuật + Cọc) / Tổng khách" accent="emerald" />
+            sub="Khách phẫu thuật / Tổng lịch hẹn" accent="emerald" />
           <StatCard icon={Wallet} label="Doanh thu chốt được" value={fmtM(doanhThu)} accent="violet" />
           <StatCard icon={ArrowUpRight} label="Doanh thu Upsale" value={fmtM(upsale)} accent="orange" />
           <StatCard icon={Coins} label="Hoa hồng doanh thu" value={fmtM(hhDoanhThu)} sub={`Tỷ lệ: ${dtRate.toFixed(1)}%`} accent="emerald" />
