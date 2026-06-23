@@ -10,6 +10,7 @@ import {
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
 import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
+import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
@@ -216,7 +217,11 @@ const StaffDashboard = () => {
   const renderContent = () => {
     if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} />;
     if (activeTab === 'attendance') return <AttendancePage />;
-    if (activeTab === 'kpi') return profile?.role === 'sale_offline' ? <SaleOfflineStaffKPI /> : <KPIPage />;
+    if (activeTab === 'kpi') {
+      if (profile?.role === 'sale_offline') return <SaleOfflineStaffKPI />;
+      if (profile?.role === 'truc_page') return <TrucPageStaffKPI />;
+      return <KPIPage />;
+    }
     if (activeTab === 'finance') return <FinanceManagementPage />;
     if (activeTab === 'appointments') return <AppointmentManagementPage setActiveTab={setActiveTab} />;
     if (activeTab === 'khach_coc') return <KhachCocPage setActiveTab={setActiveTab} />;

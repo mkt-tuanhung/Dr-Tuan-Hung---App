@@ -3,6 +3,18 @@
 // ============================================================
 
 export const UPSALE_RATE = 3; // % hoa hồng doanh thu upsale của Sale Offline
+export const PHONE_COMMISSION = 20000; // 20.000đ / 1 SĐT quan tâm (Trực page)
+
+// Tính bộ chỉ số Trực page từ các báo cáo ngày (page_daily_reports) trong tháng
+export const computeTrucPage = (reports = []) => {
+  const phones = reports.reduce((s, r) => s + Number(r.total_phones || 0), 0);            // SĐT xin được
+  const interested = reports.reduce((s, r) => s + Number(r.total_interested_phones || 0), 0); // SĐT quan tâm
+  const messages = reports.reduce((s, r) => s + Number(r.total_messages || 0), 0);        // tin nhắn tiếp nhận
+  const spam = reports.reduce((s, r) => s + Number(r.total_spam_messages || 0), 0);       // tin nhắn spam
+  const rate = messages > 0 ? (phones / messages) * 100 : 0;                              // tỉ lệ xin số
+  const hh = interested * PHONE_COMMISSION;                                               // hoa hồng
+  return { phones, interested, messages, spam, rate, hh };
+};
 
 // Hoa hồng doanh thu Sale Offline (bậc thang):
 //   < 500tr  = 1%   |  500tr – < 1 tỷ = 1.5%  |  ≥ 1 tỷ = 2%
