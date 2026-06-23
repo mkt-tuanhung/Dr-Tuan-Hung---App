@@ -36,6 +36,31 @@ export const saleRevCommissionRate = (rev) => {
 // Lịch tái khám được đánh dấu bằng service bắt đầu "[Tái khám]"
 export const isRecheck = (a) => (a?.service || '').startsWith('[Tái khám]');
 
+// ===================== ĐIỀU DƯỠNG =====================
+// Thưởng trực đêm: 500k/khách
+// Thưởng phụ mổ theo loại phẫu thuật & vị trí phụ:
+//   Đại phẫu: P1 500k · P2 250k · P3 150k   |   Tiểu phẫu: P1 300k · P2 150k · P3 100k
+const TRUC_DEM_BONUS = 500000;
+const PHU_MO_BONUS = {
+  'Đại phẫu': { 1: 500000, 2: 250000, 3: 150000 },
+  'Tiểu phẫu': { 1: 300000, 2: 150000, 3: 100000 },
+};
+
+// surgeries: các ca phẫu thuật trong tháng (status=phau_thuat, surgery_date trong tháng)
+export const computeDieuDuong = (surgeries = [], nurseId) => {
+  let trucDem = 0, pm1 = 0, pm2 = 0, pm3 = 0, hauPhau = 0;
+  let thuongTrucDem = 0, thuongPhuMo = 0;
+  for (const s of surgeries) {
+    const tier = PHU_MO_BONUS[s.surgery_type] || PHU_MO_BONUS['Tiểu phẫu'];
+    if (s.truc_dem_id === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; }
+    if (s.phu_mo_1_id === nurseId) { pm1++; thuongPhuMo += tier[1]; }
+    if (s.phu_mo_2_id === nurseId) { pm2++; thuongPhuMo += tier[2]; }
+    if (s.phu_mo_3_id === nurseId) { pm3++; thuongPhuMo += tier[3]; }
+    if (s.hau_phau_id === nurseId || (s.additional_hau_phau_ids || []).includes(nurseId)) hauPhau++;
+  }
+  return { trucDem, pm1, pm2, pm3, hauPhau, thuongTrucDem, thuongPhuMo, tongHH: thuongTrucDem + thuongPhuMo };
+};
+
 // ===================== TELESALE =====================
 // Thưởng doanh thu telesale theo bậc tổng doanh thu: <500tr=0.5% | <1 tỷ=1% | ≥1 tỷ=1.5%
 export const telesaleRevRate = (rev) => {

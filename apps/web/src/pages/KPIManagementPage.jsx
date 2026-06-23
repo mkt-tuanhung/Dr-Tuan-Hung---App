@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Construction } from 'lucide-react';
 import SaleOfflineAdmin from '@/components/kpi/SaleOfflineAdmin.jsx';
 import TrucPageAdmin from '@/components/kpi/TrucPageAdmin.jsx';
 import TelesaleAdmin from '@/components/kpi/TelesaleAdmin.jsx';
+import DieuDuongAdmin from '@/components/kpi/DieuDuongAdmin.jsx';
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 
@@ -71,6 +72,7 @@ const KPIManagementPage = () => {
       {dept === 'sale_offline' ? <SaleOfflineAdmin month={month} year={year} />
         : dept === 'truc_page' ? <TrucPageAdmin month={month} year={year} />
         : dept === 'telesale' ? <TelesaleAdmin month={month} year={year} />
+        : dept === 'dieu_duong' ? <DieuDuongAdmin month={month} year={year} />
         : <ComingSoon label={DEPARTMENTS.find(d => d.id === dept)?.label} />}
     </div>
   );
