@@ -11,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Search, UserCheck, Pencil, UserX, QrCode } from 'lucide-react';
+import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn } from 'lucide-react';
 
 // Format số tiền VND có dấu chấm
 const fmtInput = (val) => {
@@ -197,6 +197,18 @@ const StaffManagementPage = ({ isNested = false }) => {
     loadStaff();
   };
 
+  const handleImpersonate = async (s) => {
+    if (!window.confirm(`Đăng nhập với tư cách "${s.full_name}"?\n\nLưu ý: nên mở ở CỬA SỔ ẨN DANH để không ảnh hưởng phiên đăng nhập Admin hiện tại.`)) return;
+    const t = toast.loading('Đang tạo phiên đăng nhập...');
+    const { data, error } = await supabase.functions.invoke('admin-impersonate', {
+      body: { targetUserId: s.id, redirectTo: window.location.origin },
+    });
+    toast.dismiss(t);
+    if (error || data?.error) { toast.error(data?.error || error.message); return; }
+    window.open(data.actionLink, '_blank');
+    toast.success('Đã mở tài khoản nhân sự ở tab mới');
+  };
+
   const handleToggleActive = async (s) => {
     const { error } = await supabase.from('profiles').update({
       is_active: !s.is_active,
@@ -306,6 +318,9 @@ const StaffManagementPage = ({ isNested = false }) => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
+                        <button onClick={() => handleImpersonate(s)} title="Đăng nhập với tư cách" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                          <LogIn className="w-3.5 h-3.5" />
+                        </button>
                         <button onClick={() => openEdit(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -375,6 +390,9 @@ const StaffManagementPage = ({ isNested = false }) => {
                       <UserCheck className="w-3 h-3" /> Kết thúc thử việc
                     </button>
                   )}
+                  <button onClick={() => handleImpersonate(s)} className="h-8 w-8 rounded-xl border border-blue-100 text-blue-500 hover:bg-blue-50 flex items-center justify-center" title="Đăng nhập với tư cách">
+                    <LogIn className="w-3.5 h-3.5" />
+                  </button>
                   <button onClick={() => openEdit(s)} className="flex-1 h-8 text-xs font-medium rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1">
                     <Pencil className="w-3 h-3" /> Sửa
                   </button>
