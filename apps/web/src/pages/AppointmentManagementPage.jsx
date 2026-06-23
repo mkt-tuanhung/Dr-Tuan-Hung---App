@@ -31,9 +31,10 @@ const AppointmentManagementPage = () => {
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
-    customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
+    customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm',
     expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
-    service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
+    service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
+    used_service: '', surgery_date: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -221,6 +222,7 @@ const AppointmentManagementPage = () => {
         service_group: createForm.service_group,
         customer_source: isRecheck ? 'CSKH' : createForm.customer_source,
         customer_type: isRecheck ? 'Cũ' : createForm.customer_type,
+        ...(isRecheck ? { used_service: createForm.used_service || null, surgery_date: createForm.surgery_date || null } : {}),
       };
 
       if (createForm.id) {
@@ -265,7 +267,9 @@ const AppointmentManagementPage = () => {
       notes: app.notes || '',
       service_group: app.service_group || 'Hàm mặt',
       customer_source: app.customer_source || 'Ads',
-      customer_type: app.customer_type || 'Mới'
+      customer_type: app.customer_type || 'Mới',
+      used_service: app.used_service || '',
+      surgery_date: app.surgery_date || ''
     });
     setShowCreateModal(true);
   };
@@ -507,9 +511,21 @@ const AppointmentManagementPage = () => {
                             </div>
 
                             <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3 space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">Phụ trách:</span>
-                                <span className="font-semibold text-orange-700">{app.sale || 'Không có'}</span>
+                              <div className="flex justify-between gap-2">
+                                <span className="text-slate-500 shrink-0">Lý do tái khám:</span>
+                                <span className="font-medium text-slate-700 text-right">{app.service?.replace('[Tái khám] ', '') || '—'}</span>
+                              </div>
+                              <div className="flex justify-between gap-2">
+                                <span className="text-slate-500 shrink-0">Dịch vụ sử dụng:</span>
+                                <span className="font-medium text-slate-700 text-right">{app.used_service || '—'}</span>
+                              </div>
+                              <div className="flex justify-between gap-2">
+                                <span className="text-slate-500 shrink-0">Ngày phẫu thuật:</span>
+                                <span className="font-medium text-slate-700 text-right">{app.surgery_date ? new Date(app.surgery_date).toLocaleDateString('vi-VN') : '—'}</span>
+                              </div>
+                              <div className="flex justify-between gap-2 border-t border-orange-100 pt-2">
+                                <span className="text-slate-500 shrink-0">Phụ trách:</span>
+                                <span className="font-semibold text-orange-700 text-right">{app.sale || 'Không có'}</span>
                               </div>
                             </div>
                             
@@ -697,6 +713,12 @@ const AppointmentManagementPage = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-red-500">*</span></label>
                     <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
                   </div>
+                  {createForm.appointment_type === 'recheck' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ sử dụng</label>
+                      <input value={createForm.used_service} onChange={e => setCreateForm({...createForm, used_service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="VD: Cắt mí trên, nâng mũi" />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
                     <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
@@ -705,6 +727,12 @@ const AppointmentManagementPage = () => {
                       <option value="Tiểu phẫu">Tiểu phẫu</option>
                     </select>
                   </div>
+                  {createForm.appointment_type === 'recheck' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Ngày phẫu thuật</label>
+                      <input type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
+                    </div>
+                  )}
                   {createForm.appointment_type === 'new' && (
                     <>
                       <div>
