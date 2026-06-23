@@ -1,9 +1,5 @@
 // ============================================================
-// Supabase Edge Function: r2-upload (PROXY UPLOAD)
-// Trình duyệt gửi file (FormData) cho function → function tự đẩy lên R2.
-// Không dùng presigned URL → không vướng CORS R2 & không lỗi chữ ký 403.
-//
-// Secret R2 chỉ nằm ở biến môi trường của function (server-side).
+// Supabase Edge Function: r2-upload (PROXY UPLOAD) — bản có log lỗi chi tiết
 // ============================================================
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -25,9 +21,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    // 1. Bắt buộc đăng nhập
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    if (!authHeader) return json({ error: "Unauthorized" });
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -35,30 +30,33 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return json({ error: "Unauthorized" }, 401);
+    if (!user) return json({ error: "Unauthorized (chưa đăng nhập)" });
 
-    // 2. Lấy file từ FormData
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const folder = (formData.get("folder") as string) || "avatars";
-    if (!file) return json({ error: "Thiếu file" }, 400);
+    if (!file) return json({ error: "Thiếu file" });
 
-    const accountId = Deno.env.get("R2_ACCOUNT_ID")!;
-    const bucket = Deno.env.get("R2_BUCKET_NAME")!;
-    const publicUrl = Deno.env.get("R2_PUBLIC_URL")!;
+    const accountId = Deno.env.get("R2_ACCOUNT_ID") || "";
+    const bucket = Deno.env.get("R2_BUCKET_NAME") || "";
+    const publicUrl = Deno.env.get("R2_PUBLIC_URL") || "";
+    const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID") || "";
+    const secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
 
-    // 3. Sinh key an toàn
+    // Báo rõ nếu thiếu secret
+    const missing = [];
+    if (!accountId) missing.push("R2_ACCOUNT_ID");
+    if (!bucket) missing.push("R2_BUCKET_NAME");
+    if (!publicUrl) missing.push("R2_PUBLIC_URL");
+    if (!accessKeyId) missing.push("R2_ACCESS_KEY_ID");
+    if (!secretAccessKey) missing.push("R2_SECRET_ACCESS_KEY");
+    if (missing.length) return json({ error: "Thiếu secret: " + missing.join(", ") });
+
     const ext = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "bin";
     const safeFolder = String(folder).replace(/[^a-z0-9/_-]/gi, "") || "misc";
     const key = `${safeFolder}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-    // 4. Đẩy thẳng lên R2 (server-side, aws4fetch ký + gửi cùng request)
-    const aws = new AwsClient({
-      accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID")!,
-      secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
-      service: "s3",
-      region: "auto",
-    });
+    const aws = new AwsClient({ accessKeyId, secretAccessKey, service: "s3", region: "auto" });
 
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${key}`;
     const res = await aws.fetch(endpoint, {
@@ -66,13 +64,17 @@ Deno.serve(async (req) => {
       body: await file.arrayBuffer(),
       headers: { "content-type": file.type || "application/octet-stream" },
     });
+
     if (!res.ok) {
       const txt = await res.text();
-      return json({ error: `R2 lỗi ${res.status}: ${txt}` }, 502);
+      console.error("R2 PUT failed", res.status, txt);
+      // Trả 200 + lý do để hiện thẳng trên giao diện (debug)
+      return json({ error: `R2 từ chối (HTTP ${res.status}): ${txt.slice(0, 300)}` });
     }
 
     return json({ publicUrl: `${publicUrl}/${key}` });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    console.error("Function crashed", e);
+    return json({ error: "Lỗi function: " + String(e) });
   }
 });
