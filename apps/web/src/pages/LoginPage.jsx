@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Loader2, Stethoscope, User, ShieldAlert } from 'lucide-react';
+import { Loader2, Stethoscope } from 'lucide-react';
 
 const ROLE_ROUTES = {
   admin: '/admin-dashboard',
@@ -65,57 +64,42 @@ const LoginPage = () => {
           <p className="text-xs text-emerald-600 mt-1 font-bold tracking-widest uppercase">Internal System</p>
         </div>
 
-        <Tabs defaultValue="staff" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-emerald-50 rounded-2xl p-1">
-            <TabsTrigger value="staff" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-emerald-700">
-              <User className="w-4 h-4" /> Nhân sự
-            </TabsTrigger>
-            <TabsTrigger value="admin" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-emerald-700">
-              <ShieldAlert className="w-4 h-4" /> Quản trị
-            </TabsTrigger>
-          </TabsList>
-
-          {['staff', 'admin'].map(tab => (
-            <TabsContent key={tab} value={tab}>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-600">ID nhân sự</label>
-                  <Input
-                    type="text"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
-                    className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 focus:border-emerald-400 focus:ring-emerald-400"
-                    placeholder="Nhập ID nhân sự"
-                    autoComplete="username"
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-600">Mật khẩu</label>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 focus:border-emerald-400 focus:ring-emerald-400"
-                    placeholder="Nhập mật khẩu"
-                    autoComplete="current-password"
-                  />
-                </div>
-                {errorMsg && (
-                  <p className="text-sm text-red-500 font-medium text-center">{errorMsg}</p>
-                )}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-200 border-0"
-                >
-                  {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
-                  Đăng nhập
-                </Button>
-              </form>
-            </TabsContent>
-          ))}
-        </Tabs>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-600">ID nhân sự</label>
+            <Input
+              type="text"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 focus:border-emerald-400 focus:ring-emerald-400"
+              placeholder="Nhập ID nhân sự"
+              autoComplete="username"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-600">Mật khẩu</label>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 focus:border-emerald-400 focus:ring-emerald-400"
+              placeholder="Nhập mật khẩu"
+              autoComplete="current-password"
+            />
+          </div>
+          {errorMsg && (
+            <p className="text-sm text-red-500 font-medium text-center">{errorMsg}</p>
+          )}
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-200 border-0"
+          >
+            {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
+            Đăng nhập
+          </Button>
+        </form>
       </div>
     </div>
   );

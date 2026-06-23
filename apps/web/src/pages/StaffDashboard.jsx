@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabaseClient';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
@@ -46,8 +47,66 @@ const FULL_MENU = [
   { id: 'hau_phau',      label: 'Hậu phẫu',      icon: ClipboardList, roles: ['dieu_duong'] },
 ];
 
+const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actual || 0) / target) * 100), 100) : 0;
+
 const Overview = ({ profile, setActiveTab }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
+
+  const [stats, setStats] = useState({ workingDays: null, kpiPct: null, advance: null, todayAppts: null });
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    const todayStr = now.toISOString().split('T')[0];
+
+    (async () => {
+      const [attRes, kpiRes, advRes, apptRes] = await Promise.all([
+        // Ngày công thực tế trong tháng (có mặt + đi trễ vẫn tính công)
+        supabase.from('attendance')
+          .select('id', { count: 'exact', head: true })
+          .eq('staff_id', profile.id)
+          .in('status', ['present', 'late', 'early_leave'])
+          .gte('date', monthStart).lte('date', monthEnd),
+        // KPI tháng này
+        supabase.from('kpi_targets')
+          .select('*')
+          .eq('staff_id', profile.id).eq('month', month).eq('year', year)
+          .maybeSingle(),
+        // Tạm ứng chưa hoàn (đã duyệt, chưa trả)
+        supabase.from('expenses')
+          .select('amount')
+          .eq('staff_id', profile.id).eq('is_advance', true).eq('status', 'approved'),
+        // Lịch hẹn hôm nay liên quan tới mình
+        supabase.from('customer_appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('appointment_date', todayStr)
+          .or(`telesale_id.eq.${profile.id},sale_offline_id.eq.${profile.id},created_by.eq.${profile.id}`),
+      ]);
+
+      const kpi = kpiRes.data;
+      const kpiPct = kpi
+        ? Math.round((
+            pctOf(kpi.actual_revenue, kpi.target_revenue) +
+            pctOf(kpi.actual_customers, kpi.target_customers) +
+            pctOf(kpi.actual_calls, kpi.target_calls)
+          ) / 3)
+        : 0;
+      const advance = (advRes.data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+
+      setStats({
+        workingDays: attRes.count ?? 0,
+        kpiPct,
+        advance,
+        todayAppts: apptRes.count ?? 0,
+      });
+    })();
+  }, [profile?.id]);
+
+  const show = (v, dash = '—') => v === null ? dash : v;
 
   return (
     <div className="space-y-5">
@@ -91,7 +150,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <CalendarCheck className="w-6 h-6" />
           </div>
           <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Ngày công</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">22 <span className="text-xs text-slate-400 font-medium normal-case">ngày</span></p>
+          <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.workingDays)} <span className="text-xs text-slate-400 font-medium normal-case">ngày</span></p>
         </div>
 
         <div onClick={() => setActiveTab('kpi')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group">
@@ -99,7 +158,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <Target className="w-6 h-6" />
           </div>
           <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Tiến độ KPI</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">85<span className="text-xs text-slate-400 font-medium normal-case">%</span></p>
+          <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.kpiPct)}<span className="text-xs text-slate-400 font-medium normal-case">%</span></p>
         </div>
 
         <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group">
@@ -107,7 +166,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <Wallet className="w-6 h-6" />
           </div>
           <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Tạm ứng</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">0<span className="text-xs text-slate-400 font-medium normal-case">đ</span></p>
+          <p className="text-xl font-bold text-slate-800 mt-1">{stats.advance === null ? '—' : new Intl.NumberFormat('vi-VN').format(stats.advance)}<span className="text-xs text-slate-400 font-medium normal-case">đ</span></p>
         </div>
 
         <div onClick={() => setActiveTab('appointments')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group">
@@ -115,7 +174,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <CalendarDays className="w-6 h-6" />
           </div>
           <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Lịch hẹn nay</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">3 <span className="text-xs text-slate-400 font-medium normal-case">khách</span></p>
+          <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.todayAppts)} <span className="text-xs text-slate-400 font-medium normal-case">khách</span></p>
         </div>
       </div>
 

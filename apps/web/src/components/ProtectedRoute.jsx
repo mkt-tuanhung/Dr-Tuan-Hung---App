@@ -2,10 +2,9 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 
+// Chỉ admin có dashboard riêng; mọi vai trò khác dùng chung /staff-dashboard
 const ROLE_DASHBOARD = {
   admin: '/admin-dashboard',
-  accountant: '/accountant-dashboard',
-  shareholder: '/shareholder-dashboard',
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
