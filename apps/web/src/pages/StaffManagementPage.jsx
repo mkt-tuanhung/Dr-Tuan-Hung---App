@@ -473,8 +473,9 @@ const StaffManagementPage = ({ isNested = false }) => {
                 {editTarget && <p className="text-xs text-slate-400">Bỏ trống = giữ nguyên</p>}
                 <input
                   type="password"
+                  autoComplete="new-password"
                   className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  placeholder="Nhập mật khẩu"
+                  placeholder={editTarget ? 'Bỏ trống nếu không đổi' : 'Nhập mật khẩu'}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 />
