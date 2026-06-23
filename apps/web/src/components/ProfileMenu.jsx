@@ -4,6 +4,7 @@ import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft } from 'lucide-react';
+import TwoFactorSettings from '@/components/TwoFactorSettings.jsx';
 
 export default function ProfileMenu({ children, mobile = false }) {
   const { profile, refreshProfile } = useAuth();
@@ -209,6 +210,9 @@ export default function ProfileMenu({ children, mobile = false }) {
               <button onClick={() => setActiveTab('password')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'password' ? 'border-emerald-500 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Đổi mật khẩu
               </button>
+              <button onClick={() => setActiveTab('2fa')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === '2fa' ? 'border-emerald-500 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                Bảo mật
+              </button>
               <button onClick={() => setModalOpen(false)} className="px-4 text-slate-400 hover:text-slate-600"><X className="w-5 h-5"/></button>
             </div>
 
@@ -352,6 +356,8 @@ export default function ProfileMenu({ children, mobile = false }) {
                     </button>
                   </div>
                 )
+              ) : activeTab === '2fa' ? (
+                <TwoFactorSettings />
               ) : (
                 <form onSubmit={handleSavePassword} className="space-y-4">
                   <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-800 text-sm mb-4">

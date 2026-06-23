@@ -8,7 +8,7 @@ const ROLE_DASHBOARD = {
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isLoggedIn, loading, profile } = useAuth();
+  const { isLoggedIn, loading, profile, mfaRequired } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -21,6 +21,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!isLoggedIn) {
     return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  // Đã đăng nhập nhưng chưa qua bước 2FA → về trang đăng nhập để nhập mã
+  if (mfaRequired) {
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && profile) {

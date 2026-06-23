@@ -14,6 +14,7 @@ function App() {
       <div className="min-h-screen bg-background">
         <Routes>
           <Route path="/" element={<LoginPage />} />
+          <Route path="/quan-tri" element={<LoginPage adminMode />} />
 
           <Route
             path="/admin-dashboard"

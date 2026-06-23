@@ -13,6 +13,20 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  // Kiểm tra phiên hiện tại có cần bước 2FA (aal1 → aal2) không
+  const checkMfa = async () => {
+    try {
+      const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      const need = !!data && data.currentLevel === 'aal1' && data.nextLevel === 'aal2';
+      setMfaRequired(need);
+      return need;
+    } catch {
+      setMfaRequired(false);
+      return false;
+    }
+  };
 
   const fetchProfile = async (userId) => {
     for (let i = 0; i < 3; i++) {
@@ -38,6 +52,7 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user);
         const p = await fetchProfile(session.user.id);
         setProfile(p);
+        await checkMfa();
       }
       setLoading(false);
     });
@@ -48,9 +63,11 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user);
         const p = await fetchProfile(session.user.id);
         setProfile(p);
+        await checkMfa();
       } else {
         setUser(null);
         setProfile(null);
+        setMfaRequired(false);
       }
     });
 
@@ -73,13 +90,26 @@ export const AuthProvider = ({ children }) => {
       await supabase.auth.signOut();
       throw new Error('Tài khoản đã bị khóa. Vui lòng liên hệ Admin.');
     }
-    return { user: data.user, profile: p };
+    const needMfa = await checkMfa();
+    return { user: data.user, profile: p, mfaRequired: needMfa };
+  };
+
+  // Xác minh mã 2FA (TOTP) để nâng phiên lên aal2
+  const verifyMfa = async (code) => {
+    const { data: factors, error: listErr } = await supabase.auth.mfa.listFactors();
+    if (listErr) throw listErr;
+    const totp = factors?.totp?.find(f => f.status === 'verified') || factors?.totp?.[0];
+    if (!totp) throw new Error('Tài khoản chưa thiết lập 2FA');
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: totp.id, code });
+    if (error) throw new Error('Mã 2FA không đúng');
+    await checkMfa();
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setMfaRequired(false);
   };
 
   const refreshProfile = async () => {
@@ -102,7 +132,9 @@ export const AuthProvider = ({ children }) => {
       isAdmin,
       isAccountant,
       isShareholder,
+      mfaRequired,
       login,
+      verifyMfa,
       logout,
       refreshProfile,
     }}>
