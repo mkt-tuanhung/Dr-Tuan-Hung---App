@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
-  CalendarDays, ClipboardList, Activity, UserX, BarChart2
+  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -37,7 +37,7 @@ const FULL_MENU = [
   { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'] },
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'] },
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
-  { id: 'community',  label: 'Cộng đồng',       icon: Bell, roles: ['all'] },
+  { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'ads_report', label: 'Báo cáo Ads',     icon: BarChart2, roles: ['marketing', 'admin'] },

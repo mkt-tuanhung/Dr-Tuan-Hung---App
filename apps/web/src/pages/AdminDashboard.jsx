@@ -7,6 +7,7 @@ import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
+import NotificationsPage from '@/pages/NotificationsPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
@@ -26,7 +27,7 @@ import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -44,8 +45,8 @@ const MENU = [
   { id: 'cashflow',      label: 'Kế toán dòng tiền', shortLabel: 'Dòng tiền',  icon: BarChart2 },
   { id: 'marketing',     label: 'Marketing',         shortLabel: 'Marketing',  icon: Target },
   { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', shortLabel: 'VP/VT', icon: Activity },
-  { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: Bell },
-  { id: 'notifications', label: 'Thông báo',         shortLabel: 'Thông báo', icon: AlertCircle },
+  { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: MessagesSquare },
+  { id: 'notifications', label: 'Thông báo',         shortLabel: 'Thông báo', icon: Bell },
   { id: 'permissions',   label: 'Phân quyền',        shortLabel: 'Phân quyền',icon: ShieldCheck },
 ];
 
@@ -264,6 +265,7 @@ const AdminDashboard = () => {
       case 'kpi': return <KPIManagementPage />;
       case 'payroll': return <PayrollPage />;
       case 'community': return <CommunityPage />;
+      case 'notifications': return <NotificationsPage />;
       case 'ads_report': return <AdsReportPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
