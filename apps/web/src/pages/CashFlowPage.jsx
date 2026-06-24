@@ -72,7 +72,7 @@ export default function CashFlowPage() {
       
       appRes.data?.forEach(d => {
         if (d.surgery_date && d.surgery_date >= startDate && d.surgery_date <= endDate) {
-          rev += Number(d.revenue || 0) + Number(d.upsale_revenue || 0);
+          rev += Number(d.revenue || 0); // revenue đã bao gồm upsale → không cộng thêm
         }
         if (d.hospital_fee_date && d.hospital_fee_date >= startDate && d.hospital_fee_date <= endDate) {
           fee += Number(d.hospital_fee || 0);
