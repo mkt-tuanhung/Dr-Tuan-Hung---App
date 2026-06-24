@@ -220,6 +220,7 @@ const AdminDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [hrInitialTab, setHrInitialTab] = useState('staff');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingLeaves, setPendingLeaves] = useState(0);
 
@@ -247,7 +248,11 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    const handleNav = (e) => setActiveTab(e.detail);
+    const handleNav = (e) => {
+      const [tab, sub] = String(e.detail).split('#');
+      setActiveTab(tab);
+      if (sub) setHrInitialTab(sub);
+    };
     window.addEventListener('NAVIGATE', handleNav);
     return () => window.removeEventListener('NAVIGATE', handleNav);
   }, []);
@@ -255,7 +260,7 @@ const AdminDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': return <Overview profile={profile} setActiveTab={setActiveTab} />;
-      case 'hr': return <HRManagementPage />;
+      case 'hr': return <HRManagementPage initialTab={hrInitialTab} />;
       case 'deposit_management': return <DepositManagementPage />;
       case 'appointments': return <AppointmentManagementPage />;
       case 'khach_phau_thuat': return <KhachPhauThuatPage setActiveTab={setActiveTab} />;

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StaffManagementPage from './StaffManagementPage.jsx';
 import AttendanceManagementPage from './AttendanceManagementPage.jsx';
 import { Users, CalendarCheck, FileText } from 'lucide-react';
 
-export default function HRManagementPage() {
-  const [activeTab, setActiveTab] = useState('staff'); // staff, attendance, leave
+export default function HRManagementPage({ initialTab = 'staff' }) {
+  const [activeTab, setActiveTab] = useState(initialTab); // staff, attendance, leave
+  useEffect(() => { setActiveTab(initialTab); }, [initialTab]);
 
   return (
     <div className="space-y-6">
