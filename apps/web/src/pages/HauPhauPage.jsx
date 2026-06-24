@@ -24,7 +24,7 @@ const HauPhauPage = () => {
 
   const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
   const isAdmin = profile?.role === 'admin';
-  const isCskh = profile?.role === 'cskh';
+  const isCskh = profile?.role === 'cskh' || profile?.role_2 === 'cskh';
   const canSeeAll = isAdmin || isHeadNurse || isCskh;
 
   // Modal
