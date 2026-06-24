@@ -3,11 +3,22 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { X } from 'lucide-react';
 import { computeDieuDuong } from '@/lib/kpiCalc';
 
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const EMPTY = { staff_id: '', target_close_rate: '', note: '' };
+
+// Lọc khách của 1 điều dưỡng theo vai trò
+const ROLE_MATCH = {
+  truc_dem: (s, id) => s.truc_dem_id === id || s.truc_dem_id_2 === id,
+  pm1: (s, id) => s.phu_mo_1_id === id,
+  pm2: (s, id) => s.phu_mo_2_id === id,
+  pm3: (s, id) => s.phu_mo_3_id === id,
+  hau_phau: (s, id) => s.hau_phau_id === id || (s.additional_hau_phau_ids || []).includes(id),
+};
+const ROLE_LABEL = { truc_dem: 'Trực đêm', pm1: 'Phụ mổ 1', pm2: 'Phụ mổ 2', pm3: 'Phụ mổ 3', hau_phau: 'Hậu phẫu' };
 
 const DieuDuongAdmin = ({ month, year }) => {
   const { profile: me } = useAuth();
@@ -18,6 +29,12 @@ const DieuDuongAdmin = ({ month, year }) => {
   const [kpis, setKpis] = useState([]);
   const [surgeries, setSurgeries] = useState([]);
   const [form, setForm] = useState(EMPTY);
+  const [detail, setDetail] = useState(null); // { staff, roleKey, items }
+
+  const openDetail = (st, roleKey) => {
+    const items = surgeries.filter(s => ROLE_MATCH[roleKey](s, st.id));
+    setDetail({ staff: st, roleKey, items });
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -28,7 +45,7 @@ const DieuDuongAdmin = ({ month, year }) => {
     const [kpiRes, surgRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', ids.length ? ids : ['x']),
       supabase.from('customer_appointments')
-        .select('id, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids')
+        .select('id, customer_name, surgery_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids')
         .eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
     ]);
     setStaff(staffData || []);
@@ -125,11 +142,11 @@ const DieuDuongAdmin = ({ month, year }) => {
                     : rows.map(r => (
                       <tr key={r.staff.id} className="hover:bg-slate-50/50">
                         <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}<div className="text-[11px] text-slate-400">{r.staff.position || r.staff.employee_id}</div></td>
-                        <td className="text-center px-3 py-2.5 text-orange-600 font-semibold">{r.trucDem}</td>
-                        <td className="text-center px-3 py-2.5">{r.pm1}</td>
-                        <td className="text-center px-3 py-2.5">{r.pm2}</td>
-                        <td className="text-center px-3 py-2.5">{r.pm3}</td>
-                        <td className="text-center px-3 py-2.5 text-pink-600">{r.hauPhau}</td>
+                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'truc_dem')} disabled={!r.trucDem} className="text-orange-600 font-semibold hover:underline disabled:no-underline disabled:text-slate-400">{r.trucDem}</button></td>
+                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'pm1')} disabled={!r.pm1} className="text-slate-700 hover:underline hover:text-emerald-600 disabled:text-slate-400">{r.pm1}</button></td>
+                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'pm2')} disabled={!r.pm2} className="text-slate-700 hover:underline hover:text-emerald-600 disabled:text-slate-400">{r.pm2}</button></td>
+                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'pm3')} disabled={!r.pm3} className="text-slate-700 hover:underline hover:text-emerald-600 disabled:text-slate-400">{r.pm3}</button></td>
+                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'hau_phau')} disabled={!r.hauPhau} className="text-pink-600 hover:underline disabled:no-underline disabled:text-slate-400">{r.hauPhau}</button></td>
                         <td className="text-right px-4 py-2.5 text-emerald-700 font-bold">{fmtM(r.tongHH)}</td>
                         <td className="text-center px-3 py-2.5"><button onClick={() => editRow(r)} className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.kpi ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>{r.kpi ? 'Sửa' : 'Giao KPI'}</button></td>
                       </tr>
@@ -189,8 +206,45 @@ const DieuDuongAdmin = ({ month, year }) => {
           </div>
         </>
       )}
+
+      {/* Modal danh sách khách theo vai trò */}
+      {detail && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setDetail(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-emerald-50 shrink-0">
+              <div>
+                <h3 className="font-bold text-emerald-800">{ROLE_LABEL[detail.roleKey]} — {detail.staff.full_name}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{detail.items.length} khách · {MONTHS_SHORT(month)}/{year}</p>
+              </div>
+              <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100 sticky top-0"><tr>
+                  <th className="text-left px-4 py-2.5 font-medium">STT</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Ngày mổ</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Loại PT</th>
+                </tr></thead>
+                <tbody className="divide-y divide-slate-50">
+                  {detail.items.map((s, i) => (
+                    <tr key={s.id} className="hover:bg-slate-50/50">
+                      <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
+                      <td className="px-4 py-2.5 text-slate-600">{s.surgery_date ? new Date(s.surgery_date).toLocaleDateString('vi-VN') : '—'}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const MONTHS_SHORT = (m) => `Tháng ${m}`;
 
 export default DieuDuongAdmin;
