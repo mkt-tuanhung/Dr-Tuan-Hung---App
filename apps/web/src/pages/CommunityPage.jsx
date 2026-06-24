@@ -331,14 +331,16 @@ const CommunityPage = () => {
               {posts.map(p => {
                 const cmt = comments.filter(c => c.post_id === p.id).length;
                 const rea = likes.filter(l => l.post_id === p.id).length;
+                const excerpt = (p.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
                 return (
                   <button key={p.id} onClick={() => { setViewMode('feed'); setTimeout(() => document.getElementById(`post-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <div className="font-semibold text-slate-800 truncate">{p.title || '(Không tiêu đề)'}</div>
-                      <div className="text-xs text-slate-400 mt-0.5">{p.author?.full_name} · {timeAgo(p.created_at)}</div>
+                      {excerpt && <div className="text-sm text-slate-400 mt-0.5 line-clamp-1">{excerpt}</div>}
+                      <div className="text-xs text-slate-400 mt-1">{p.author?.full_name} · {new Date(p.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
-                    <div className="text-xs text-slate-400 shrink-0">❤️ {rea} · 💬 {cmt}</div>
+                    <div className="text-xs text-slate-400 shrink-0 pt-0.5">❤️ {rea} · 💬 {cmt}</div>
                   </button>
                 );
               })}
