@@ -6,6 +6,7 @@ import StaffManagementPage from '@/pages/StaffManagementPage.jsx';
 import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
+import CommunityPage from '@/pages/CommunityPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
@@ -261,6 +262,7 @@ const AdminDashboard = () => {
       case 'finance': return <FinanceManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       case 'payroll': return <PayrollPage />;
+      case 'community': return <CommunityPage />;
       case 'ads_report': return <AdsReportPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;

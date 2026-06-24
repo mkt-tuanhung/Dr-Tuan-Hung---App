@@ -12,6 +12,7 @@ import KPIPage from '@/pages/KPIPage.jsx';
 import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
 import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
 import TelesaleStaffKPI from '@/components/kpi/TelesaleStaffKPI.jsx';
+import CommunityPage from '@/pages/CommunityPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
@@ -35,6 +36,7 @@ const FULL_MENU = [
   { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'] },
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'] },
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
+  { id: 'community',  label: 'Cộng đồng',       icon: Bell, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'ads_report', label: 'Báo cáo Ads',     icon: BarChart2, roles: ['marketing', 'admin'] },
@@ -255,6 +257,7 @@ const StaffDashboard = () => {
     if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
+    if (activeTab === 'community') return <CommunityPage />;
     return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 
