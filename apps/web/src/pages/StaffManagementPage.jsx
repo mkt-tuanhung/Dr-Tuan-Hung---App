@@ -11,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn } from 'lucide-react';
+import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2 } from 'lucide-react';
 
 // Format số tiền VND có dấu chấm
 const fmtInput = (val) => {
@@ -197,6 +197,16 @@ const StaffManagementPage = ({ isNested = false }) => {
     loadStaff();
   };
 
+  const handleDelete = async (s) => {
+    if (!window.confirm(`XÓA HẲN nhân sự "${s.full_name}"?\n\n⚠️ KHÔNG thể hoàn tác — xóa cả tài khoản đăng nhập.\nNếu nhân sự đã có dữ liệu (lịch hẹn, lương, KPI...) sẽ không xóa được, hãy dùng Khóa.`)) return;
+    const t = toast.loading('Đang xóa...');
+    const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { targetUserId: s.id } });
+    toast.dismiss(t);
+    if (error || data?.error) { toast.error(data?.error || error.message); return; }
+    toast.success('Đã xóa hẳn nhân sự');
+    loadStaff();
+  };
+
   const handleImpersonate = async (s) => {
     if (!window.confirm(`Đăng nhập với tư cách "${s.full_name}"?\n\nLưu ý: nên mở ở CỬA SỔ ẨN DANH để không ảnh hưởng phiên đăng nhập Admin hiện tại.`)) return;
     const t = toast.loading('Đang tạo phiên đăng nhập...');
@@ -324,8 +334,11 @@ const StaffManagementPage = ({ isNested = false }) => {
                         <button onClick={() => openEdit(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleToggleActive(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                        <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-amber-50 hover:text-amber-500 transition-colors">
                           <UserX className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDelete(s)} title="Xóa hẳn" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -396,8 +409,11 @@ const StaffManagementPage = ({ isNested = false }) => {
                   <button onClick={() => openEdit(s)} className="flex-1 h-8 text-xs font-medium rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1">
                     <Pencil className="w-3 h-3" /> Sửa
                   </button>
-                  <button onClick={() => handleToggleActive(s)} className="h-8 w-8 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 flex items-center justify-center">
+                  <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="h-8 w-8 rounded-xl border border-amber-100 text-amber-500 hover:bg-amber-50 flex items-center justify-center">
                     <UserX className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleDelete(s)} title="Xóa hẳn" className="h-8 w-8 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 flex items-center justify-center">
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
