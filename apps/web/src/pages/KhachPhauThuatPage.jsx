@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { 
   ClipboardList, Edit, CheckCircle, Search, Save, Calendar as CalendarIcon, Phone,
@@ -73,6 +74,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeReload('customer_appointments,inventory_transactions,inventory_items', loadData);
 
   const openModal = (app) => {
     setSelectedApp(app);

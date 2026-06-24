@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Calendar, FileText, Edit3, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone } from 'lucide-react';
 
@@ -49,6 +50,7 @@ const KhachBongPage = ({ isNested = false }) => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeReload('customer_appointments', loadData);
 
   // Handle Care Update
   const handleCareSubmit = async (e) => {

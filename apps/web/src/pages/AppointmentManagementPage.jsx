@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -140,6 +141,7 @@ const AppointmentManagementPage = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeReload('customer_appointments', loadData);
 
   // Derived state
   const { groupedByDate, recheckAppointments, stats, chartData, pieData } = useMemo(() => {

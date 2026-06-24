@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -107,6 +108,7 @@ const AttendancePage = () => {
   }, [profile?.id, year, month, todayStr]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeReload('attendance,leave_requests', loadData);
 
   const handleCheckIn = async () => {
     setSaving(true);

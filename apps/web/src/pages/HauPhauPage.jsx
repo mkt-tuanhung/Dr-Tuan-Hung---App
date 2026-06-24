@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
@@ -87,6 +88,7 @@ const HauPhauPage = () => {
   }, [profile, canSeeAll]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeReload('customer_appointments', loadData);
 
   const openNote = (app) => {
     setSelectedApp(app);

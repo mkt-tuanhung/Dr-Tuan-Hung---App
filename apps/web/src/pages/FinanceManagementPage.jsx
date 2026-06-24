@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
@@ -189,6 +190,7 @@ const FinanceManagementPage = () => {
   useEffect(() => {
     if (activeTab === 'revenue' && profile) loadData();
   }, [loadData, activeTab, profile]);
+  useRealtimeReload('customer_appointments,marketing_ads_performance', loadData);
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();

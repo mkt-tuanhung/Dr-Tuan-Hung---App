@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { 
@@ -95,6 +96,7 @@ export default function CashFlowPage() {
   useEffect(() => {
     if (profile) loadData();
   }, [loadData, profile]);
+  useRealtimeReload('cash_flows,customer_appointments,expenses,payroll', loadData);
 
   if (!canRead) {
     return <div className="p-8 text-center text-slate-500">Bạn không có quyền truy cập trang này.</div>;

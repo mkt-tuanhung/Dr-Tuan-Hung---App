@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
@@ -70,6 +71,7 @@ const KhachCocPage = ({ isNested = false }) => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeReload('customer_appointments', loadData);
 
   useEffect(() => {
     if (!canAdd) return;
