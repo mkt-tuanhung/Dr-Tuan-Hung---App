@@ -20,6 +20,12 @@ const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
   </div>
 );
 
+const roleBadgeClass = (role) =>
+  role === 'Trực đêm' ? 'bg-violet-100 text-violet-700'
+  : role === 'Hậu phẫu' ? 'bg-pink-100 text-pink-700'
+  : role.startsWith('Phụ mổ') ? 'bg-emerald-100 text-emerald-700'
+  : 'bg-slate-100 text-slate-600';
+
 const ROLE_OF = (s, id, major) => {
   // Trả về [nhãn vai trò, thưởng] của điều dưỡng trong 1 ca
   if (s.truc_dem_id === id || s.truc_dem_id_2 === id) return ['Trực đêm', 500000];
@@ -123,35 +129,63 @@ const DieuDuongStaffKPI = () => {
         <div>• Hậu phẫu: tính số ca (chưa có thưởng riêng).</div>
       </div>
 
-      {/* Bảng ca của tôi */}
+      {/* Ca của tôi */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700">Ca của tôi trong tháng</h3></div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm whitespace-nowrap">
-            <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-              <th className="text-left px-4 py-2.5 font-medium">Ngày mổ</th>
-              <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th>
-              <th className="text-left px-4 py-2.5 font-medium">Loại PT</th>
-              <th className="text-left px-4 py-2.5 font-medium">Vai trò</th>
-              <th className="text-right px-4 py-2.5 font-medium">Thưởng</th>
-            </tr></thead>
-            <tbody className="divide-y divide-slate-50">
-              {myCases.length === 0 ? (<tr><td colSpan={5} className="text-center py-8 text-slate-400">Chưa có ca nào trong tháng.</td></tr>)
-                : myCases.map(s => {
-                  const [role, bonus] = ROLE_OF(s, id, s.surgery_type === 'Đại phẫu');
-                  return (
-                    <tr key={s.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-2.5 text-slate-600">{s.surgery_date}</td>
-                      <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
-                      <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${role === 'Trực đêm' ? 'bg-violet-100 text-violet-700' : role === 'Hậu phẫu' ? 'bg-pink-100 text-pink-700' : role.startsWith('Phụ mổ') ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{role}</span></td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">{bonus ? fmtM(bonus) : '—'}</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+
+        {myCases.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-sm">Chưa có ca nào trong tháng.</div>
+        ) : (
+          <>
+            {/* Desktop: bảng */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm whitespace-nowrap">
+                <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
+                  <th className="text-left px-4 py-2.5 font-medium">Ngày mổ</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Loại PT</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Vai trò</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Thưởng</th>
+                </tr></thead>
+                <tbody className="divide-y divide-slate-50">
+                  {myCases.map(s => {
+                    const [role, bonus] = ROLE_OF(s, id, s.surgery_type === 'Đại phẫu');
+                    return (
+                      <tr key={s.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-2.5 text-slate-600">{s.surgery_date}</td>
+                        <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
+                        <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
+                        <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(role)}`}>{role}</span></td>
+                        <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">{bonus ? fmtM(bonus) : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: thẻ */}
+            <div className="md:hidden divide-y divide-slate-50">
+              {myCases.map(s => {
+                const [role, bonus] = ROLE_OF(s, id, s.surgery_type === 'Đại phẫu');
+                return (
+                  <div key={s.id} className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-800 truncate">{s.customer_name}</div>
+                        <div className="text-xs text-slate-400 mt-0.5">{s.surgery_date} · {s.surgery_type || '—'}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(role)}`}>{role}</span>
+                        <div className="text-sm font-bold text-emerald-700 mt-1">{bonus ? fmtM(bonus) : '—'}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
