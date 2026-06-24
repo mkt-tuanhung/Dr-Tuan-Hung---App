@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft } from 'lucide-react';
+import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft, Send, CheckCircle2 } from 'lucide-react';
 import TwoFactorSettings from '@/components/TwoFactorSettings.jsx';
 
 export default function ProfileMenu({ children, mobile = false }) {
@@ -68,6 +68,15 @@ export default function ProfileMenu({ children, mobile = false }) {
     } catch (error) {
       toast.error('Lỗi đăng xuất');
     }
+  };
+
+  const linkTelegram = async () => {
+    const nonce = (crypto.randomUUID?.() || Math.random().toString(36).slice(2)).replace(/-/g, '');
+    const { error } = await supabase.from('telegram_links').insert({ nonce, user_id: profile.id });
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    setMenuOpen(false);
+    window.open(`https://t.me/TH_app_Bot?start=${nonce}`, '_blank');
+    toast.info('Bấm "Bắt đầu / Start" trong Telegram để hoàn tất liên kết');
   };
 
   const openProfileModal = () => {
@@ -188,7 +197,15 @@ export default function ProfileMenu({ children, mobile = false }) {
               <button onClick={() => { setMenuOpen(false); toast.info('Kho tài liệu trống'); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
                 <FileText className="w-4 h-4 text-blue-400" /> Giấy tờ & Tài liệu
               </button>
-              
+
+              <button onClick={linkTelegram} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
+                <div className="flex items-center gap-3">
+                  <Send className="w-4 h-4 text-sky-500" />
+                  <span>{profile?.telegram_chat_id ? 'Telegram đã liên kết' : 'Nhận thông báo Telegram'}</span>
+                </div>
+                {profile?.telegram_chat_id && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+              </button>
+
               <div className="h-px bg-slate-100 my-1" />
               
               <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-red-600 text-sm font-bold transition-colors text-left">
