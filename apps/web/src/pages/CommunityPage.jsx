@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, Reply } from 'lucide-react';
+import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const REACTIONS = [
   { key: 'like', emoji: '👍', label: 'Thích' },
@@ -87,6 +87,7 @@ const CommunityPage = () => {
   const [replyFor, setReplyFor] = useState(null);        // comment id
   const [replyText, setReplyText] = useState('');
   const [reactWho, setReactWho] = useState(null);        // { post, list }
+  const [lightbox, setLightbox] = useState(null);        // { urls, index }
 
   const loadGroups = useCallback(async () => {
     const { data } = await supabase.from('community_groups').select('*').order('created_at');
@@ -381,7 +382,9 @@ const CommunityPage = () => {
             {post.image_urls?.length > 0 && (
               <div className={`grid gap-0.5 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {post.image_urls.map((u, i) => (
-                  <a key={i} href={u} target="_blank" rel="noreferrer" className="block"><img src={u} alt="" className="w-full max-h-96 object-cover" /></a>
+                  <button key={i} type="button" onClick={() => setLightbox({ urls: post.image_urls, index: i })} className="block overflow-hidden">
+                    <img src={u} alt="" className="w-full max-h-96 object-cover cursor-zoom-in hover:opacity-95 transition-opacity" />
+                  </button>
                 ))}
               </div>
             )}
@@ -445,6 +448,28 @@ const CommunityPage = () => {
         );
       }))}
       </>
+      )}
+
+      {/* Lightbox xem ảnh */}
+      {lightbox && (
+        <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"><X className="w-5 h-5" /></button>
+          {lightbox.urls.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: (l.index - 1 + l.urls.length) % l.urls.length })); }}
+                className="absolute left-3 sm:left-6 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"><ChevronLeft className="w-6 h-6" /></button>
+              <button onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: (l.index + 1) % l.urls.length })); }}
+                className="absolute right-3 sm:right-6 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"><ChevronRight className="w-6 h-6" /></button>
+            </>
+          )}
+          <img src={lightbox.urls[lightbox.index]} alt="" onClick={e => e.stopPropagation()}
+            className="max-w-full max-h-[88vh] rounded-2xl shadow-2xl object-contain" />
+          {lightbox.urls.length > 1 && (
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-white/15 text-white text-sm px-3 py-1 rounded-full">
+              {lightbox.index + 1} / {lightbox.urls.length}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Modal: ai đã thả cảm xúc */}
