@@ -114,6 +114,15 @@ export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows
 // Tính bộ chỉ số Sale Offline cho 1 nhân sự.
 //   appts     : lịch hẹn trong tháng theo appointment_date (ĐÃ loại tái khám)
 //   surgeries : khách phẫu thuật trong tháng theo surgery_date (status=phau_thuat)
+// Nguồn khách "quen/CTV" → Sale Offline chỉ tính 50% phần doanh thu cơ bản (upsale vẫn 100%)
+export const SALE_HALF_SOURCES = ['Người quen', 'CTV'];
+const saleBaseOf = (a) => {
+  let base = Number(a.revenue || 0) - Number(a.upsale_revenue || 0);
+  if (base < 0) base = 0;
+  if (SALE_HALF_SOURCES.includes(a.customer_source)) base = base / 2;
+  return base;
+};
+
 export const computeSaleOffline = (appts = [], surgeries = []) => {
   const total = appts.length;                 // Tổng lịch hẹn (mẫu số tỉ lệ chốt)
   const cntPT = surgeries.length;             // Khách phẫu thuật (tử số)
@@ -121,12 +130,15 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
   const cntBong = appts.filter(a => a.status === 'bong').length;
   const closeRate = total > 0 ? (cntPT / total) * 100 : 0;
 
-  const doanhThu = surgeries.reduce((s, a) => s + Number(a.revenue || 0), 0);
   const upsale = surgeries.reduce((s, a) => s + Number(a.upsale_revenue || 0), 0);
+  // Tổng phần cơ bản (đã giảm 50% với nguồn quen/CTV)
+  const sumBase = surgeries.reduce((s, a) => s + saleBaseOf(a), 0);
+  // Doanh thu cá nhân ghi nhận KPI = phần cơ bản (đã điều chỉnh) + upsale
+  const doanhThu = sumBase + upsale;
 
-  // Thưởng doanh thu cá nhân = (doanh thu − upsale) × A% (A theo bậc tổng doanh thu)
+  // Thưởng doanh thu = phần cơ bản × A% (A theo bậc doanh thu cá nhân)
   const dtRate = saleRevCommissionRate(doanhThu);
-  const hhDoanhThu = Math.round(Math.max(doanhThu - upsale, 0) * dtRate / 100);
+  const hhDoanhThu = Math.round(sumBase * dtRate / 100);
 
   // Thưởng upsale = Σ (upsale từng khách × B% theo bậc upsale của khách đó)
   const hhUpsale = surgeries.reduce((s, a) => {

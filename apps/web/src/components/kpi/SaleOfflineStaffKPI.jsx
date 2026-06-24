@@ -73,7 +73,7 @@ const SaleOfflineStaffKPI = () => {
         .order('appointment_date', { ascending: false }),
       // Khách phẫu thuật trong tháng (theo surgery_date)
       supabase.from('customer_appointments')
-        .select('id, customer_name, appointment_date, surgery_date, status, revenue, upsale_revenue, service')
+        .select('id, customer_name, appointment_date, surgery_date, status, revenue, upsale_revenue, service, customer_source')
         .eq('sale_id', profile.id).eq('status', 'phau_thuat')
         .gte('surgery_date', monthStart).lte('surgery_date', monthEnd)
         .order('surgery_date', { ascending: false }),

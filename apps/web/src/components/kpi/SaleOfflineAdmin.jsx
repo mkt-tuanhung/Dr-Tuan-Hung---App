@@ -43,7 +43,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
         .in('sale_id', ids.length ? ids : ['x'])
         .gte('appointment_date', monthStart).lte('appointment_date', monthEnd),
       supabase.from('customer_appointments')
-        .select('id, sale_id, status, service, surgery_date, revenue, upsale_revenue')
+        .select('id, sale_id, status, service, surgery_date, revenue, upsale_revenue, customer_source')
         .eq('status', 'phau_thuat')
         .in('sale_id', ids.length ? ids : ['x'])
         .gte('surgery_date', monthStart).lte('surgery_date', monthEnd),
