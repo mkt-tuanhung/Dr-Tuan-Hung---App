@@ -73,11 +73,11 @@ const KhachCocPage = ({ isNested = false }) => {
 
   useEffect(() => {
     if (!canAdd) return;
-    supabase.from('profiles').select('id, full_name, role').eq('is_active', true)
-      .in('role', ['telesale', 'sale_offline']).order('full_name')
+    supabase.from('profiles').select('id, full_name, role, role_2').eq('is_active', true)
+      .or('role.in.(telesale,sale_offline),role_2.in.(telesale,sale_offline)').order('full_name')
       .then(({ data }) => {
-        setTelesales((data || []).filter(s => s.role === 'telesale'));
-        setSales((data || []).filter(s => s.role === 'sale_offline'));
+        setTelesales((data || []).filter(s => s.role === 'telesale' || s.role_2 === 'telesale'));
+        setSales((data || []).filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline'));
       });
   }, [canAdd]);
 

@@ -49,7 +49,7 @@ const TrucPageStaffKPI = () => {
       supabase.from('kpi_targets').select('*').eq('staff_id', profile.id).eq('month', month).eq('year', year).maybeSingle(),
       supabase.from('page_daily_reports').select('*, telesale:telesale_id(full_name)')
         .eq('staff_id', profile.id).gte('date', monthStart).lte('date', monthEnd).order('date', { ascending: false }),
-      supabase.from('profiles').select('id, full_name').eq('role', 'telesale').eq('is_active', true).order('full_name'),
+      supabase.from('profiles').select('id, full_name').or('role.eq.telesale,role_2.eq.telesale').eq('is_active', true).order('full_name'),
     ]);
     if (repRes.error) toast.error('Không tải được báo cáo: ' + repRes.error.message);
     setKpi(kpiRes.data || null);

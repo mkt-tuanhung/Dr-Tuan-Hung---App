@@ -116,7 +116,7 @@ const AppointmentManagementPage = () => {
     // Fetch staff for joining names
     const { data: staffData, error: staffErr } = await supabase
       .from('profiles')
-      .select('id, full_name, role');
+      .select('id, full_name, role, role_2');
       
     if (staffErr) {
       toast.error('Lỗi tải dữ liệu nhân viên: ' + staffErr.message);
@@ -772,7 +772,7 @@ const AppointmentManagementPage = () => {
                       <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
                       <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                         <option value="">-- Không có --</option>
-                        {staffList.filter(s => s.role === 'telesale').map(s => (
+                        {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale').map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
                         ))}
                       </select>
@@ -783,7 +783,7 @@ const AppointmentManagementPage = () => {
                       <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(nếu có — chia đôi hoa hồng)</span></label>
                       <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                         <option value="">-- Không có --</option>
-                        {staffList.filter(s => s.role === 'telesale' && s.id !== createForm.telesale_id).map(s => (
+                        {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale') && s.id !== createForm.telesale_id).map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
                         ))}
                       </select>
@@ -794,8 +794,9 @@ const AppointmentManagementPage = () => {
                     <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                       <option value="">-- Không có --</option>
                       {staffList.filter(s => {
-                        if (createForm.appointment_type === 'new') return s.role === 'sale_offline';
-                        return s.role === 'sale_offline' || s.role === 'dieu_duong';
+                        const r = [s.role, s.role_2];
+                        if (createForm.appointment_type === 'new') return r.includes('sale_offline');
+                        return r.includes('sale_offline') || r.includes('dieu_duong');
                       }).map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
                       ))}

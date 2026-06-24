@@ -102,7 +102,7 @@ const FinanceManagementPage = () => {
     const { data, error } = await query.order('surgery_date', { ascending: false });
 
     // Fetch staff for dropdown
-    const { data: staffData } = await supabase.from('profiles').select('id, full_name, role');
+    const { data: staffData } = await supabase.from('profiles').select('id, full_name, role, role_2');
     if (staffData) setStaffList(staffData);
 
     if (error) {
@@ -625,7 +625,7 @@ const FinanceManagementPage = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
                   <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
-                    {staffList.filter(s => s.role === 'sale_offline' || s.role === 'admin').map(s => (
+                    {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline' || s.role === 'admin').map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
                     ))}
                   </select>
@@ -634,7 +634,7 @@ const FinanceManagementPage = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
                   <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
-                    {staffList.filter(s => s.role === 'telesale' || s.role === 'admin').map(s => (
+                    {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin').map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
                     ))}
                   </select>
@@ -643,7 +643,7 @@ const FinanceManagementPage = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
                   <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
-                    {staffList.filter(s => (s.role === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
+                    {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
                     ))}
                   </select>
