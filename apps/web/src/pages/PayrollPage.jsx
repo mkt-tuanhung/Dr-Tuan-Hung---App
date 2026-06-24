@@ -36,7 +36,7 @@ const PayrollPage = () => {
     const meDay = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
     const { data: staff } = await supabase.from('profiles')
-      .select('id, full_name, employee_id, role, base_salary, allowance, employment_status, bank_name, bank_account')
+      .select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account')
       .eq('is_active', true).order('full_name');
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
@@ -66,24 +66,26 @@ const PayrollPage = () => {
       const luongCong = Math.round(effectiveBase / STANDARD_DAYS * workingDays);
       const phuCap = Number(s.allowance || 0);
 
-      let commission = 0;
-      if (s.role === 'sale_offline') {
-        commission = computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id)).tongHH;
-      } else if (s.role === 'telesale') {
-        const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
-        const phones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
-        commission = computeTelesale({
-          phones,
-          appts: appts.filter(a => mine(a) && !isRecheck(a)),
-          bongRows: bong.filter(mine),
-          cocRows: coc.filter(mine),
-          surgRows: surg.filter(mine),
-        }).tongHH;
-      } else if (s.role === 'truc_page') {
-        commission = computeTrucPage(pages.filter(p => p.staff_id === s.id)).hh;
-      } else if (s.role === 'dieu_duong') {
-        commission = computeDieuDuong(surg, s.id).tongHH;
-      }
+      // Hoa hồng theo từng vị trí — cộng dồn nếu kiêm nhiệm 2 vị trí
+      const commissionForRole = (role) => {
+        if (role === 'sale_offline') {
+          return computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id)).tongHH;
+        } else if (role === 'telesale') {
+          const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
+          const phones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
+          return computeTelesale({
+            phones,
+            appts: appts.filter(a => mine(a) && !isRecheck(a)),
+            bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine),
+          }).tongHH;
+        } else if (role === 'truc_page') {
+          return computeTrucPage(pages.filter(p => p.staff_id === s.id)).hh;
+        } else if (role === 'dieu_duong') {
+          return computeDieuDuong(surg, s.id).tongHH;
+        }
+        return 0;
+      };
+      const commission = [s.role, s.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0);
 
       const saved = payroll.find(p => p.staff_id === s.id);
       const otherBonus = Number(saved?.other_bonus || 0);

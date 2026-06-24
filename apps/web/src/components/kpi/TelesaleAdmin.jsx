@@ -23,7 +23,7 @@ const TelesaleAdmin = ({ month, year }) => {
     setLoading(true);
     const ms = `${year}-${String(month).padStart(2, '0')}-01`;
     const me2 = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
-    const { data: staffData } = await supabase.from('profiles').select('id, full_name, employee_id').eq('role', 'telesale').eq('is_active', true).order('full_name');
+    const { data: staffData } = await supabase.from('profiles').select('id, full_name, employee_id').or('role.eq.telesale,role_2.eq.telesale').eq('is_active', true).order('full_name');
     const ids = (staffData || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
     const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes] = await Promise.all([

@@ -49,7 +49,7 @@ const ROLE_COLORS = {
 };
 
 const EMPTY_FORM = {
-  employee_id: '', password: '', full_name: '', role: 'telesale',
+  employee_id: '', password: '', full_name: '', role: 'telesale', role_2: '',
   position: 'Nhân viên', base_salary: '', allowance: '', phone: '',
   employment_status: 'official', probation_started_at: '',
 };
@@ -100,6 +100,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       password: '',
       full_name: s.full_name,
       role: s.role,
+      role_2: s.role_2 || '',
       position: s.position || 'Nhân viên',
       base_salary: s.base_salary || '',
       allowance: s.allowance || '',
@@ -132,6 +133,7 @@ const StaffManagementPage = ({ isNested = false }) => {
         const { error } = await supabase.from('profiles').update({
           full_name: form.full_name,
           role: form.role,
+          role_2: form.role_2 || null,
           position: form.position,
           base_salary: parseInput(form.base_salary),
           allowance: parseInput(form.allowance),
@@ -163,6 +165,7 @@ const StaffManagementPage = ({ isNested = false }) => {
             profile: {
               full_name: form.full_name,
               role: form.role,
+              role_2: form.role_2 || null,
               position: form.position,
               base_salary: parseInput(form.base_salary),
               allowance: parseInput(form.allowance),
@@ -549,6 +552,19 @@ const StaffManagementPage = ({ isNested = false }) => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Vị trí kiêm nhiệm 2 <span className="text-slate-400 font-normal">(nếu làm 2 vị trí — cộng dồn quyền & lương)</span></label>
+              <Select value={form.role_2 || 'none'} onValueChange={v => setForm(f => ({ ...f, role_2: v === 'none' ? '' : v }))}>
+                <SelectTrigger className="rounded-xl border-emerald-100 bg-emerald-50/30"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Không có —</SelectItem>
+                  {ROLES.filter(r => r.value !== form.role).map(r => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

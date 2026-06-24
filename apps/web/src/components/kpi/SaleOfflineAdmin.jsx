@@ -33,7 +33,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
 
     const { data: staffData } = await supabase.from('profiles')
       .select('id, full_name, employee_id, avatar_url')
-      .eq('role', 'sale_offline').eq('is_active', true).order('full_name');
+      .or('role.eq.sale_offline,role_2.eq.sale_offline').eq('is_active', true).order('full_name');
     const ids = (staffData || []).map(s => s.id);
 
     const [kpiRes, apptRes, surgRes] = await Promise.all([

@@ -24,7 +24,7 @@ const TrucPageAdmin = ({ month, year }) => {
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
     const { data: staffData } = await supabase.from('profiles')
-      .select('id, full_name, employee_id').eq('role', 'truc_page').eq('is_active', true).order('full_name');
+      .select('id, full_name, employee_id').or('role.eq.truc_page,role_2.eq.truc_page').eq('is_active', true).order('full_name');
     const ids = (staffData || []).map(s => s.id);
     const [kpiRes, repRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', ids.length ? ids : ['x']),

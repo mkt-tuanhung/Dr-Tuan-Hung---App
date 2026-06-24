@@ -201,6 +201,7 @@ const StaffDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [kpiRoleSel, setKpiRoleSel] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -214,17 +215,36 @@ const StaffDashboard = () => {
     return () => window.removeEventListener('NAVIGATE', handleNav);
   }, []);
 
-  const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role));
+  const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role) || m.roles.includes(profile?.role_2));
 
   const renderContent = () => {
     if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} />;
     if (activeTab === 'attendance') return <AttendancePage />;
     if (activeTab === 'kpi') {
-      if (profile?.role === 'sale_offline') return <SaleOfflineStaffKPI />;
-      if (profile?.role === 'truc_page') return <TrucPageStaffKPI />;
-      if (profile?.role === 'telesale') return <TelesaleStaffKPI />;
-      if (profile?.role === 'dieu_duong') return <DieuDuongStaffKPI />;
-      return <KPIPage />;
+      const KPI_VIEWS = {
+        sale_offline: { label: 'Sale Offline', el: <SaleOfflineStaffKPI /> },
+        truc_page: { label: 'Trực page', el: <TrucPageStaffKPI /> },
+        telesale: { label: 'Telesale', el: <TelesaleStaffKPI /> },
+        dieu_duong: { label: 'Điều dưỡng', el: <DieuDuongStaffKPI /> },
+      };
+      const kpiRoles = [profile?.role, profile?.role_2].filter(r => KPI_VIEWS[r]);
+      if (kpiRoles.length === 0) return <KPIPage />;
+      const active = kpiRoles.includes(kpiRoleSel) ? kpiRoleSel : kpiRoles[0];
+      return (
+        <div className="space-y-4">
+          {kpiRoles.length > 1 && (
+            <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+              {kpiRoles.map(r => (
+                <button key={r} onClick={() => setKpiRoleSel(r)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${active === r ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+                  KPI {KPI_VIEWS[r].label}
+                </button>
+              ))}
+            </div>
+          )}
+          {KPI_VIEWS[active].el}
+        </div>
+      );
     }
     if (activeTab === 'finance') return <FinanceManagementPage />;
     if (activeTab === 'appointments') return <AppointmentManagementPage setActiveTab={setActiveTab} />;

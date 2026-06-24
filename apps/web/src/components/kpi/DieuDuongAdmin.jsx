@@ -23,7 +23,7 @@ const DieuDuongAdmin = ({ month, year }) => {
     setLoading(true);
     const ms = `${year}-${String(month).padStart(2, '0')}-01`;
     const me2 = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
-    const { data: staffData } = await supabase.from('profiles').select('id, full_name, employee_id, position').eq('role', 'dieu_duong').eq('is_active', true).order('full_name');
+    const { data: staffData } = await supabase.from('profiles').select('id, full_name, employee_id, position').or('role.eq.dieu_duong,role_2.eq.dieu_duong').eq('is_active', true).order('full_name');
     const ids = (staffData || []).map(s => s.id);
     const [kpiRes, surgRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', ids.length ? ids : ['x']),
