@@ -22,7 +22,7 @@ const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
 
 const ROLE_OF = (s, id, major) => {
   // Trả về [nhãn vai trò, thưởng] của điều dưỡng trong 1 ca
-  if (s.truc_dem_id === id) return ['Trực đêm', 500000];
+  if (s.truc_dem_id === id || s.truc_dem_id_2 === id) return ['Trực đêm', 500000];
   if (s.phu_mo_1_id === id) return ['Phụ mổ 1', major ? 500000 : 300000];
   if (s.phu_mo_2_id === id) return ['Phụ mổ 2', major ? 250000 : 150000];
   if (s.phu_mo_3_id === id) return ['Phụ mổ 3', major ? 150000 : 100000];
@@ -47,7 +47,7 @@ const DieuDuongStaffKPI = () => {
     const [kpiRes, surgRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('staff_id', profile.id).eq('month', month).eq('year', year).maybeSingle(),
       supabase.from('customer_appointments')
-        .select('id, customer_name, surgery_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, hau_phau_id, additional_hau_phau_ids')
+        .select('id, customer_name, surgery_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids')
         .eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
     ]);
     if (surgRes.error) toast.error('Lỗi tải ca phẫu thuật: ' + surgRes.error.message);
@@ -65,7 +65,7 @@ const DieuDuongStaffKPI = () => {
   const r = computeDieuDuong(surgeries, id);
   // Các ca có liên quan tới điều dưỡng này
   const myCases = surgeries.filter(s =>
-    s.truc_dem_id === id || s.phu_mo_1_id === id || s.phu_mo_2_id === id || s.phu_mo_3_id === id ||
+    s.truc_dem_id === id || s.truc_dem_id_2 === id || s.phu_mo_1_id === id || s.phu_mo_2_id === id || s.phu_mo_3_id === id ||
     s.hau_phau_id === id || (s.additional_hau_phau_ids || []).includes(id));
 
   if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;

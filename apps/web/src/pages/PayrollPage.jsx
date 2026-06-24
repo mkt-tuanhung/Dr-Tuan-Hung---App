@@ -44,7 +44,7 @@ const PayrollPage = () => {
     const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes] = await Promise.all([
       supabase.from('attendance').select('staff_id, status').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
-      supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2').gte('bong_date', ms).lte('bong_date', meDay),
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),

@@ -28,7 +28,7 @@ const DieuDuongAdmin = ({ month, year }) => {
     const [kpiRes, surgRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', ids.length ? ids : ['x']),
       supabase.from('customer_appointments')
-        .select('id, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, hau_phau_id, additional_hau_phau_ids')
+        .select('id, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids')
         .eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
     ]);
     setStaff(staffData || []);

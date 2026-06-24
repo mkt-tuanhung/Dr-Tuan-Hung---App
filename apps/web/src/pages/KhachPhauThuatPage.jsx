@@ -37,7 +37,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     activeTab: 'phu_mo',
     surgery_type: 'Tiểu phẫu',
     phu_mo_1_id: '', phu_mo_2_id: '', phu_mo_3_id: '', surgery_notes: '',
-    truc_dem_id: '', truc_dem_notes: '',
+    truc_dem_id: '', truc_dem_id_2: '', truc_dem_notes: '',
     hau_phau_id: ''
   });
 
@@ -84,6 +84,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       phu_mo_3_id: app.phu_mo_3_id || '',
       surgery_notes: app.surgery_notes || '',
       truc_dem_id: app.truc_dem_id || '',
+      truc_dem_id_2: app.truc_dem_id_2 || '',
       truc_dem_notes: app.truc_dem_notes || '',
       hau_phau_id: app.hau_phau_id || ''
     });
@@ -101,6 +102,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
         phu_mo_3_id: form.phu_mo_3_id || null,
         surgery_notes: form.surgery_notes,
         truc_dem_id: form.truc_dem_id || null,
+        truc_dem_id_2: form.truc_dem_id_2 || null,
         truc_dem_notes: form.truc_dem_notes,
         hau_phau_id: form.hau_phau_id || null
       }).eq('id', selectedApp.id);
@@ -335,7 +337,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         </div>
                         <div className="bg-orange-50/50 p-2 rounded-xl border border-orange-100/50 flex flex-col items-center justify-center text-center">
                           <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Trực đêm</span>
-                          {app.truc_dem_id ? <CheckCircle className="w-4 h-4 text-orange-600" /> : <span className="text-xs text-slate-400">-</span>}
+                          {(app.truc_dem_id || app.truc_dem_id_2) ? <CheckCircle className="w-4 h-4 text-orange-600" /> : <span className="text-xs text-slate-400">-</span>}
                         </div>
                       </div>
 
@@ -447,12 +449,21 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                 </>
               )}
               {form.activeTab === 'truc_dem' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Người trực đêm</label>
-                  <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
-                    <option value="">-- Trống --</option>
-                    {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
-                  </select>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Người trực đêm 1</label>
+                    <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                      <option value="">-- Trống --</option>
+                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Người trực đêm 2 <span className="text-slate-400 font-normal">(nếu có)</span></label>
+                    <select value={form.truc_dem_id_2} onChange={e => setForm({...form, truc_dem_id_2: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                      <option value="">-- Trống --</option>
+                      {nurses.filter(n => n.id !== form.truc_dem_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                    </select>
+                  </div>
                 </div>
               )}
               {form.activeTab === 'hau_phau' && (

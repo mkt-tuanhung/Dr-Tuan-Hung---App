@@ -53,6 +53,7 @@ export const computeDieuDuong = (surgeries = [], nurseId) => {
   for (const s of surgeries) {
     const tier = PHU_MO_BONUS[s.surgery_type] || PHU_MO_BONUS['Tiểu phẫu'];
     if (s.truc_dem_id === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; }
+    if (s.truc_dem_id_2 === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; }
     if (s.phu_mo_1_id === nurseId) { pm1++; thuongPhuMo += tier[1]; }
     if (s.phu_mo_2_id === nurseId) { pm2++; thuongPhuMo += tier[2]; }
     if (s.phu_mo_3_id === nurseId) { pm3++; thuongPhuMo += tier[3]; }
