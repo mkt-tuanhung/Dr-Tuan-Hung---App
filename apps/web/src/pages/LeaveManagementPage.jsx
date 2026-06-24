@@ -92,6 +92,14 @@ const LeaveManagementPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Tự tải lại khi có thay đổi (vd duyệt/từ chối qua Telegram)
+  useEffect(() => {
+    const ch = supabase.channel('leave_mgmt_' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => loadData())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [loadData]);
+
   const handleApprove = async (id) => {
     setSaving(id);
     const req = requests.find(r => r.id === id);

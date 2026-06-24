@@ -102,6 +102,14 @@ export default function AdvanceExpensePage() {
     if (profile) loadData();
   }, [loadData, profile]);
 
+  // Tự tải lại khi có thay đổi (vd duyệt/từ chối qua Telegram)
+  useEffect(() => {
+    const ch = supabase.channel('expenses_mgmt_' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => loadData())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [loadData]);
+
   const fmt = (n) => new Intl.NumberFormat('vi-VN').format(n || 0) + 'đ';
 
   // Stats calculation
