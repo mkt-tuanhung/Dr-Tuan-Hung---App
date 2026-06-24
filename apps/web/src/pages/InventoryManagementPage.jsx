@@ -6,7 +6,7 @@ import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, Histor
 
 export default function InventoryManagementPage({ isNested = false }) {
   const { profile } = useAuth();
-  const canWrite = ['admin', 'accountant'].includes(profile?.role);
+  const canWrite = ['admin', 'accountant', 'dieu_duong'].includes(profile?.role);
   
   const [items, setItems] = useState([]);
   const [transactions, setTransactions] = useState([]);

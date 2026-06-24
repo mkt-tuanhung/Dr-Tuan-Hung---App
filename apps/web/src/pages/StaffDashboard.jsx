@@ -20,7 +20,7 @@ import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
-import VienPhiPage from '@/pages/VienPhiPage.jsx';
+import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 
@@ -39,7 +39,7 @@ const FULL_MENU = [
   // MKT / Finance / Sales
   { id: 'ads_report', label: 'Báo cáo Ads',     icon: BarChart2, roles: ['marketing', 'admin'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
-  { id: 'vien_phi',   label: 'Viện phí',        icon: Activity, roles: ['accountant', 'admin'] },
+  { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong'] },
 
   // CRM
   { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
@@ -233,7 +233,7 @@ const StaffDashboard = () => {
     if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
     if (activeTab === 'hau_phau') return <HauPhauPage setActiveTab={setActiveTab} />;
     if (activeTab === 'ads_report') return <AdsReportPage />;
-    if (activeTab === 'vien_phi') return <VienPhiPage />;
+    if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };

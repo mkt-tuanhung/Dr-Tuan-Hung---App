@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import VienPhiPage from './VienPhiPage.jsx';
 import InventoryManagementPage from './InventoryManagementPage.jsx';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Activity, PackageOpen } from 'lucide-react';
 
 export default function HospitalFeeAndInventoryPage() {
-  const [activeTab, setActiveTab] = useState('vien_phi'); // 'vien_phi', 'inventory'
+  const { profile } = useAuth();
+  // Điều dưỡng chỉ dùng phần Vật tư (không xem Viện phí)
+  const showVienPhi = profile?.role !== 'dieu_duong';
+  const [activeTab, setActiveTab] = useState(showVienPhi ? 'vien_phi' : 'inventory');
 
   return (
     <div className="space-y-6">
@@ -17,6 +21,7 @@ export default function HospitalFeeAndInventoryPage() {
       {/* Main Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
         <div className="flex bg-slate-50 border-b overflow-x-auto">
+          {showVienPhi && (
           <button
             onClick={() => setActiveTab('vien_phi')}
             className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
@@ -25,6 +30,7 @@ export default function HospitalFeeAndInventoryPage() {
           >
             <Activity className="w-4 h-4" /> Viện phí
           </button>
+          )}
           <button
             onClick={() => setActiveTab('inventory')}
             className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
@@ -37,7 +43,7 @@ export default function HospitalFeeAndInventoryPage() {
 
         {/* Content Area */}
         <div className="p-6 bg-slate-50/50 min-h-[60vh]">
-          {activeTab === 'vien_phi' && <VienPhiPage isNested={true} />}
+          {activeTab === 'vien_phi' && showVienPhi && <VienPhiPage isNested={true} />}
           {activeTab === 'inventory' && <InventoryManagementPage isNested={true} />}
         </div>
       </div>
