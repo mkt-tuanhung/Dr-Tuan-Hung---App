@@ -19,11 +19,13 @@ const HauPhauPage = () => {
   const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [mainTab, setMainTab] = useState('hau_phau'); // 'hau_phau' (<1 tháng) | 'cskh' (≥1 tháng)
   const [searchQuery, setSearchQuery] = useState('');
 
   const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
   const isAdmin = profile?.role === 'admin';
-  const canSeeAll = isAdmin || isHeadNurse;
+  const isCskh = profile?.role === 'cskh';
+  const canSeeAll = isAdmin || isHeadNurse || isCskh;
 
   // Modal
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -71,8 +73,7 @@ const HauPhauPage = () => {
       toast.error('Lỗi tải dữ liệu: ' + appointmentsRes.error.message);
     } else {
       let data = appointmentsRes.data || [];
-      data = data.filter(d => d.hau_phau_id || (d.additional_hau_phau_ids && d.additional_hau_phau_ids.length > 0));
-
+      // Điều dưỡng thường chỉ thấy ca được phân công; admin/trưởng bp/CSKH thấy tất cả
       if (!canSeeAll && profile?.id) {
          data = data.filter(d => d.hau_phau_id === profile.id || (d.additional_hau_phau_ids && d.additional_hau_phau_ids.includes(profile.id)));
       }
@@ -184,7 +185,14 @@ const HauPhauPage = () => {
     }
   };
 
-  let filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
+  // Phân loại theo tuổi ca mổ: <1 tháng = Hậu phẫu, ≥1 tháng = CSKH
+  const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const isOldCase = (c) => c.surgery_date && new Date(c.surgery_date) < oneMonthAgo;
+  const mainTabCustomers = customers.filter(c => mainTab === 'cskh' ? isOldCase(c) : !isOldCase(c));
+  const hauPhauCount = customers.filter(c => !isOldCase(c)).length;
+  const cskhCount = customers.filter(c => isOldCase(c)).length;
+
+  let filteredCustomers = activeTab === 'all' ? mainTabCustomers : mainTabCustomers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
 
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -247,12 +255,24 @@ const HauPhauPage = () => {
       <div className="flex-1 min-w-0 space-y-6 w-full">
         <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Chăm sóc Hậu phẫu</h2>
-          <p className="text-slate-500 text-sm mt-1">Theo dõi sức khỏe và phản hồi khách hàng sau mổ</p>
+          <h2 className="text-2xl font-bold text-slate-800">{mainTab === 'cskh' ? 'Chăm sóc khách hàng (CSKH)' : 'Chăm sóc Hậu phẫu'}</h2>
+          <p className="text-slate-500 text-sm mt-1">{mainTab === 'cskh' ? 'Khách đã mổ trên 1 tháng — CSKH tiếp quản chăm sóc' : 'Khách mổ trong vòng 1 tháng — theo dõi sau mổ'}</p>
         </div>
         <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold">
-          {customers.length} Khách
+          {mainTabCustomers.length} Khách
         </div>
+      </div>
+
+      {/* Main tabs: Hậu phẫu / CSKH */}
+      <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-fit">
+        <button onClick={() => { setMainTab('hau_phau'); setActiveTab('all'); }}
+          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'hau_phau' ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+          Hậu phẫu (&lt;1 tháng) · {hauPhauCount}
+        </button>
+        <button onClick={() => { setMainTab('cskh'); setActiveTab('all'); }}
+          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'cskh' ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+          CSKH (≥1 tháng) · {cskhCount}
+        </button>
       </div>
 
       {/* Tabs & Search */}

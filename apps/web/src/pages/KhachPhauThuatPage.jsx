@@ -10,7 +10,6 @@ import { uploadToR2 } from '@/lib/r2Client';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
   const { profile } = useAuth();
-  const isAdminOrAccountant = ['admin', 'accountant'].includes(profile?.role);
 
   const [customers, setCustomers] = useState([]);
   const [nurses, setNurses] = useState([]);
@@ -362,7 +361,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                           )}
                         </div>
                         
-                        {isAdminOrAccountant && (
+                        {['admin', 'accountant', 'cskh'].includes(profile?.role) && (
                           <div className="pt-1">
                             {app.hospital_fee ? (
                               <div className="w-full flex justify-center items-center py-2 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl border border-blue-200">
@@ -376,7 +375,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                           </div>
                         )}
 
-                        {['admin', 'accountant', 'dieu_duong'].includes(profile?.role) && (
+                        {['admin', 'accountant', 'dieu_duong', 'cskh'].includes(profile?.role) && (
                           <div className="pt-1">
                             {app.has_materials ? (
                               <button onClick={() => openMaterialModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
