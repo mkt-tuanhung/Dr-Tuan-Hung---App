@@ -3,7 +3,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
-const SECRET = Deno.env.get('WEBHOOK_SECRET'); // tùy chọn nhưng nên đặt
+const SECRET = Deno.env.get('WEBHOOK_SECRET');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -23,10 +23,24 @@ Deno.serve(async (req) => {
 
     if (prof?.telegram_chat_id) {
       const text = `🔔 <b>${rec.title ?? 'Thông báo'}</b>` + (rec.body ? `\n${rec.body}` : '');
+      const body: Record<string, unknown> = {
+        chat_id: prof.telegram_chat_id,
+        text,
+        parse_mode: 'HTML',
+      };
+      // Nếu là yêu cầu cần duyệt → thêm nút ✅ Duyệt / ❌ Từ chối
+      if (rec.action_type && rec.action_id) {
+        body.reply_markup = {
+          inline_keyboard: [[
+            { text: '✅ Duyệt', callback_data: `ok:${rec.action_type}:${rec.action_id}` },
+            { text: '❌ Từ chối', callback_data: `no:${rec.action_type}:${rec.action_id}` },
+          ]],
+        };
+      }
       await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: prof.telegram_chat_id, text, parse_mode: 'HTML' }),
+        body: JSON.stringify(body),
       });
     }
   } catch (e) {
