@@ -21,6 +21,7 @@ import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
+import NotificationBell from '@/components/NotificationBell.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -347,14 +348,17 @@ const AdminDashboard = () => {
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
           
-          <ProfileMenu mobile={false}>
-            <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                {profile?.full_name?.charAt(0) || 'A'}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <ProfileMenu mobile={false}>
+              <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                  {profile?.full_name?.charAt(0) || 'A'}
+                </div>
+                <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
               </div>
-              <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
-            </div>
-          </ProfileMenu>
+            </ProfileMenu>
+          </div>
         </header>
 
         {/* Mobile top bar */}
@@ -366,11 +370,14 @@ const AdminDashboard = () => {
             {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
-          <ProfileMenu mobile={true}>
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
-              {profile?.full_name?.charAt(0) || 'A'}
-            </div>
-          </ProfileMenu>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <ProfileMenu mobile={true}>
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
+                {profile?.full_name?.charAt(0) || 'A'}
+              </div>
+            </ProfileMenu>
+          </div>
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
