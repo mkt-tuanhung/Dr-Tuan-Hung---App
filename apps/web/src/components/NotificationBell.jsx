@@ -14,6 +14,9 @@ const ICON_OF = {
   member_added: { Icon: UserPlus, cls: 'bg-violet-100 text-violet-600' },
 };
 
+// Chống hiện toast trùng khi có nhiều instance bell (header desktop + mobile)
+const shownToasts = new Set();
+
 const timeAgo = (d) => {
   const diff = (Date.now() - new Date(d).getTime()) / 1000;
   if (diff < 60) return 'Vừa xong';
@@ -44,7 +47,9 @@ export default function NotificationBell() {
   // Realtime: thông báo mới → thêm vào đầu + popup
   useEffect(() => {
     if (!profile?.id) return;
-    const ch = supabase.channel('noti-' + profile.id)
+    // Tên channel duy nhất mỗi instance để tránh trùng topic (header desktop + mobile)
+    const chName = 'noti-' + profile.id + '-' + Math.random().toString(36).slice(2);
+    const ch = supabase.channel(chName)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${profile.id}` },
         async (payload) => {
           let actor = null;
@@ -52,8 +57,11 @@ export default function NotificationBell() {
             const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', payload.new.actor_id).single();
             actor = data;
           }
-          setItems(prev => [{ ...payload.new, actor }, ...prev]);
-          toast(payload.new.title, { description: payload.new.body || undefined, icon: '🔔' });
+          setItems(prev => prev.some(i => i.id === payload.new.id) ? prev : [{ ...payload.new, actor }, ...prev]);
+          if (!shownToasts.has(payload.new.id)) {
+            shownToasts.add(payload.new.id);
+            toast(payload.new.title, { description: payload.new.body || undefined, icon: '🔔' });
+          }
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
