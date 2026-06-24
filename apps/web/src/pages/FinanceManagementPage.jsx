@@ -6,9 +6,42 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTo
 import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
-import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X } from 'lucide-react';
+import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+// ===== Import doanh thu từ CSV =====
+// Thứ tự cột BẮT BUỘC (đúng theo header dưới):
+const IMPORT_HEADERS = [
+  'ngay_phau_thuat', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'nhom_dich_vu',
+  'nguon_khach', 'tep_khach', 'doanh_thu', 'doanh_thu_upsale', 'ma_telesale', 'ma_sale', 'ghi_chu',
+];
+const IMPORT_TEMPLATE =
+  IMPORT_HEADERS.join(',') + '\n' +
+  '2026-06-19,Nguyễn Văn A,0901234567,Cắt mí trên,Hàm mặt,Ads,Mới,18000000,1500000,NV001,NV002,Khách hài lòng\n' +
+  '2026-06-20,Trần Thị B,0907654321,Nâng mũi,Hàm mặt,CTV,Cũ,35000000,0,,NV002,\n';
+
+// Parse CSV đơn giản, hỗ trợ ô có dấu phẩy trong dấu ngoặc kép
+const parseCSV = (text) => {
+  const rows = [];
+  let row = [], cell = '', inQuotes = false;
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') inQuotes = false;
+      else cell += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => String(x).trim() !== ''));
+};
 
 // Chỉ các vai trò này được xem Chi phí Ads (khớp với RLS bảng marketing_*)
 const CAN_VIEW_ADS = ['marketing', 'admin', 'accountant', 'shareholder'];
@@ -26,6 +59,9 @@ const FinanceManagementPage = () => {
   const [staffList, setStaffList] = useState([]);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState(null); // { valid: [], errors: [] }
+  const [importing, setImporting] = useState(false);
   const [createForm, setCreateForm] = useState({
     surgery_date: new Date().toISOString().split('T')[0],
     customer_name: '', phone: '', service: '',
@@ -189,6 +225,67 @@ const FinanceManagementPage = () => {
     }
   };
 
+  // ===== Import CSV =====
+  const downloadTemplate = () => {
+    const blob = new Blob(['﻿' + IMPORT_TEMPLATE], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'mau_import_doanh_thu.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportPreview(null);
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (rows.length < 2) { toast.error('File trống hoặc thiếu dữ liệu'); return; }
+
+    const { data: profs } = await supabase.from('profiles').select('id, employee_id');
+    const empMap = {};
+    (profs || []).forEach(p => { if (p.employee_id) empMap[p.employee_id.trim().toUpperCase()] = p.id; });
+
+    const valid = [], errors = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const get = (idx) => (r[idx] || '').trim();
+      const lineNo = i + 1;
+      const date = get(0), name = get(1);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { errors.push(`Dòng ${lineNo}: ngày phẫu thuật sai định dạng (YYYY-MM-DD)`); continue; }
+      if (!name) { errors.push(`Dòng ${lineNo}: thiếu tên khách hàng`); continue; }
+      const teleCode = get(9).toUpperCase(), saleCode = get(10).toUpperCase();
+      let telesale_id = null, sale_id = null;
+      if (teleCode) { if (empMap[teleCode]) telesale_id = empMap[teleCode]; else { errors.push(`Dòng ${lineNo}: không tìm thấy mã telesale "${teleCode}"`); continue; } }
+      if (saleCode) { if (empMap[saleCode]) sale_id = empMap[saleCode]; else { errors.push(`Dòng ${lineNo}: không tìm thấy mã sale "${saleCode}"`); continue; } }
+      valid.push({
+        customer_name: name, phone: get(2),
+        appointment_date: date, surgery_date: date,
+        service: get(3) || null, service_group: get(4) || 'Hàm mặt',
+        customer_source: get(5) || 'Ads', customer_type: get(6) || 'Mới',
+        revenue: Number(get(7).replace(/\D/g, '')) || 0,
+        upsale_revenue: Number(get(8).replace(/\D/g, '')) || 0,
+        telesale_id, sale_id, notes: get(11) || null,
+        status: 'phau_thuat', created_by: profile.id,
+      });
+    }
+    setImportPreview({ valid, errors });
+    e.target.value = '';
+  };
+
+  const handleImport = async () => {
+    if (!importPreview?.valid?.length) { toast.error('Không có dòng hợp lệ để import'); return; }
+    setImporting(true);
+    try {
+      const { error } = await supabase.from('customer_appointments').insert(importPreview.valid);
+      if (error) throw error;
+      toast.success(`Đã import ${importPreview.valid.length} dòng doanh thu`);
+      setShowImportModal(false); setImportPreview(null);
+      loadData();
+    } catch (err) { toast.error(err.message); }
+    finally { setImporting(false); }
+  };
+
   const fmt = (val) => new Intl.NumberFormat('vi-VN').format(val) + 'đ';
 
   return (
@@ -285,9 +382,14 @@ const FinanceManagementPage = () => {
              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                <h3 className="font-bold text-slate-800">Danh sách Giao dịch Doanh Thu</h3>
                {(profile?.role === 'admin' || profile?.role === 'marketing') && (
-                 <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
-                   + Nhập doanh thu trực tiếp
-                 </button>
+                 <div className="flex items-center gap-2">
+                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="px-4 py-2 bg-white border border-emerald-200 text-emerald-700 font-semibold rounded-xl text-sm shadow-sm hover:bg-emerald-50 transition-colors flex items-center gap-2">
+                     <Upload className="w-4 h-4" /> Import Excel/CSV
+                   </button>
+                   <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
+                     + Nhập trực tiếp
+                   </button>
+                 </div>
                )}
              </div>
              {loading ? (
@@ -370,6 +472,83 @@ const FinanceManagementPage = () => {
       )}
 
       {/* Direct Revenue Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-emerald-50 shrink-0">
+              <h3 className="font-bold text-emerald-800">Import doanh thu từ Excel / CSV</h3>
+              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Hướng dẫn */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-600 space-y-2">
+                <div className="font-semibold text-blue-700">Các cột BẮT BUỘC đúng thứ tự (dòng đầu là tiêu đề):</div>
+                <ol className="list-decimal ml-5 space-y-0.5 text-xs">
+                  <li><b>ngay_phau_thuat</b> — định dạng <code>YYYY-MM-DD</code> (vd 2026-06-19)</li>
+                  <li><b>ten_khach_hang</b></li>
+                  <li><b>so_dien_thoai</b></li>
+                  <li><b>dich_vu</b></li>
+                  <li><b>nhom_dich_vu</b> — Hàm mặt / Body / Tiểu phẫu</li>
+                  <li><b>nguon_khach</b> — Ads / CTV / Người quen / CSKH</li>
+                  <li><b>tep_khach</b> — Mới / Cũ</li>
+                  <li><b>doanh_thu</b> — số (vd 18000000)</li>
+                  <li><b>doanh_thu_upsale</b> — số</li>
+                  <li><b>ma_telesale</b> — mã NV telesale (vd NV001), để trống nếu không có</li>
+                  <li><b>ma_sale</b> — mã NV sale offline, để trống nếu không có</li>
+                  <li><b>ghi_chu</b></li>
+                </ol>
+                <button onClick={downloadTemplate} className="mt-1 inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline">
+                  <Download className="w-4 h-4" /> Tải file mẫu (.csv)
+                </button>
+              </div>
+
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 text-emerald-700 font-semibold">
+                <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
+                <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
+              </label>
+
+              {importPreview && (
+                <div className="space-y-3">
+                  <div className="flex gap-3 text-sm">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
+                    {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
+                  </div>
+                  {importPreview.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-3 max-h-32 overflow-y-auto text-xs text-red-600 space-y-0.5">
+                      {importPreview.errors.map((er, i) => <div key={i}>• {er}</div>)}
+                    </div>
+                  )}
+                  {importPreview.valid.length > 0 && (
+                    <div className="border border-slate-100 rounded-xl max-h-48 overflow-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-50 text-slate-500 sticky top-0"><tr>
+                          <th className="text-left px-3 py-2">Ngày</th><th className="text-left px-3 py-2">Khách</th>
+                          <th className="text-right px-3 py-2">Doanh thu</th><th className="text-right px-3 py-2">Upsale</th>
+                        </tr></thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {importPreview.valid.slice(0, 50).map((v, i) => (
+                            <tr key={i}><td className="px-3 py-1.5">{v.surgery_date}</td><td className="px-3 py-1.5">{v.customer_name}</td>
+                              <td className="px-3 py-1.5 text-right">{new Intl.NumberFormat('vi-VN').format(v.revenue)}</td>
+                              <td className="px-3 py-1.5 text-right">{new Intl.NumberFormat('vi-VN').format(v.upsale_revenue)}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
+              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
+              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length}
+                className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50">
+                {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} dòng`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
