@@ -27,22 +27,23 @@ Deno.serve(async (req) => {
       const cq = update.callback_query;
       const chatId = cq.message.chat.id;
       const [act, type, id] = String(cq.data).split(':');
-      const { data: resultText } = await supabase.rpc('tg_resolve', {
+      const { data: resultText, error: rpcErr } = await supabase.rpc('tg_resolve', {
         p_action_type: type,
         p_action_id: id,
         p_approve: act === 'ok',
         p_chat_id: String(chatId),
       });
+      const resultMsg = rpcErr ? ('⚠️ Lỗi xử lý: ' + rpcErr.message) : (resultText || '✔️ Đã xử lý');
       await api('answerCallbackQuery', {
         callback_query_id: cq.id,
-        text: act === 'ok' ? 'Đã duyệt' : 'Đã từ chối',
+        text: rpcErr ? 'Có lỗi, xem chi tiết' : (act === 'ok' ? 'Đã duyệt' : 'Đã từ chối'),
       });
       // Sửa lại tin nhắn: bỏ nút, hiện kết quả
       const original = cq.message.text || '';
       await api('editMessageText', {
         chat_id: chatId,
         message_id: cq.message.message_id,
-        text: `${original}\n\n${resultText || '✔️ Đã xử lý'}`,
+        text: `${original}\n\n${resultMsg}`,
         parse_mode: 'HTML',
       });
       return new Response('ok');

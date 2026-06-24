@@ -497,6 +497,21 @@ const AttendancePage = () => {
         {leaveRequests.length === 0 ? (
           <div className="text-center py-8 text-slate-400 text-sm">Chưa có đơn xin phép</div>
         ) : (
+          <div>
+          <div className="grid grid-cols-3 gap-2 p-3 border-b border-emerald-50">
+            <div className="text-center bg-yellow-50 rounded-xl py-2">
+              <div className="text-lg font-bold text-yellow-600">{leaveRequests.filter(r => r.status === 'pending').length}</div>
+              <div className="text-[11px] text-yellow-700">Chờ duyệt</div>
+            </div>
+            <div className="text-center bg-emerald-50 rounded-xl py-2">
+              <div className="text-lg font-bold text-emerald-600">{leaveRequests.filter(r => r.status === 'approved').length}</div>
+              <div className="text-[11px] text-emerald-700">Đã duyệt</div>
+            </div>
+            <div className="text-center bg-red-50 rounded-xl py-2">
+              <div className="text-lg font-bold text-red-600">{leaveRequests.filter(r => r.status === 'rejected').length}</div>
+              <div className="text-[11px] text-red-700">Từ chối</div>
+            </div>
+          </div>
           <div className="divide-y divide-emerald-50">
             {leaveRequests.map(r => (
               <div key={r.id} className="flex items-center justify-between px-4 py-3">
@@ -513,6 +528,7 @@ const AttendancePage = () => {
                 </span>
               </div>
             ))}
+          </div>
           </div>
         )}
       </div>

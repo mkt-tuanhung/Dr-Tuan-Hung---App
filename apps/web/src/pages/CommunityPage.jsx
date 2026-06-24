@@ -194,10 +194,10 @@ const CommunityPage = () => {
       const others = prev.filter(l => !(l.post_id === postId && l.user_id === profile.id));
       return cur === key ? others : [...others, { post_id: postId, user_id: profile.id, reaction: key, user: meUser }];
     });
-    try {
-      if (cur === key) await supabase.from('community_likes').delete().eq('post_id', postId).eq('user_id', profile.id);
-      else await supabase.from('community_likes').upsert({ post_id: postId, user_id: profile.id, reaction: key }, { onConflict: 'post_id,user_id' });
-    } catch (e) { toast.error(e.message); loadFeed(); }
+    const { error } = cur === key
+      ? await supabase.from('community_likes').delete().eq('post_id', postId).eq('user_id', profile.id)
+      : await supabase.from('community_likes').upsert({ post_id: postId, user_id: profile.id, reaction: key }, { onConflict: 'post_id,user_id' });
+    if (error) { toast.error('Lỗi lưu cảm xúc: ' + error.message); loadFeed(); }
   };
 
   // ----- Comment reactions -----
@@ -209,10 +209,10 @@ const CommunityPage = () => {
       const others = prev.filter(l => !(l.comment_id === cid && l.user_id === profile.id));
       return cur === key ? others : [...others, { comment_id: cid, user_id: profile.id, reaction: key }];
     });
-    try {
-      if (cur === key) await supabase.from('community_comment_likes').delete().eq('comment_id', cid).eq('user_id', profile.id);
-      else await supabase.from('community_comment_likes').upsert({ comment_id: cid, user_id: profile.id, reaction: key }, { onConflict: 'comment_id,user_id' });
-    } catch (e) { toast.error(e.message); loadFeed(); }
+    const { error } = cur === key
+      ? await supabase.from('community_comment_likes').delete().eq('comment_id', cid).eq('user_id', profile.id)
+      : await supabase.from('community_comment_likes').upsert({ comment_id: cid, user_id: profile.id, reaction: key }, { onConflict: 'comment_id,user_id' });
+    if (error) { toast.error('Lỗi lưu cảm xúc: ' + error.message); loadFeed(); }
   };
 
   const addComment = async (postId, parentId, text) => {
