@@ -140,24 +140,32 @@ const CommunityPage = () => {
     try {
       const image_urls = [];
       for (const f of files) image_urls.push(await uploadToR2(f, 'community'));
-      const { error } = await supabase.from('community_posts').insert({
+      const { data, error } = await supabase.from('community_posts').insert({
         group_id: groupId, author_id: profile.id, title: title.trim(), content: plain ? html : null, image_urls,
-      });
+      }).select('*').single();
       if (error) throw error;
       if (editorRef.current) editorRef.current.innerHTML = '';
-      setTitle(''); setFiles([]); loadFeed();
+      setTitle(''); setFiles([]);
+      setPosts(prev => [{ ...data, author: { full_name: profile.full_name, avatar_url: profile.avatar_url } }, ...prev]);
     } catch (err) { toast.error(err.message); }
     finally { setPosting(false); }
   };
 
-  // ----- Post reactions -----
+  const meUser = { full_name: profile?.full_name, avatar_url: profile?.avatar_url };
+
+  // ----- Post reactions (cập nhật cục bộ, không reload) -----
   const myPostReaction = (postId) => likes.find(l => l.post_id === postId && l.user_id === profile?.id)?.reaction || null;
   const reactPost = async (postId, key) => {
     setPickerFor(null);
     const cur = myPostReaction(postId);
-    if (cur === key) await supabase.from('community_likes').delete().eq('post_id', postId).eq('user_id', profile.id);
-    else await supabase.from('community_likes').upsert({ post_id: postId, user_id: profile.id, reaction: key }, { onConflict: 'post_id,user_id' });
-    loadFeed();
+    setLikes(prev => {
+      const others = prev.filter(l => !(l.post_id === postId && l.user_id === profile.id));
+      return cur === key ? others : [...others, { post_id: postId, user_id: profile.id, reaction: key, user: meUser }];
+    });
+    try {
+      if (cur === key) await supabase.from('community_likes').delete().eq('post_id', postId).eq('user_id', profile.id);
+      else await supabase.from('community_likes').upsert({ post_id: postId, user_id: profile.id, reaction: key }, { onConflict: 'post_id,user_id' });
+    } catch (e) { toast.error(e.message); loadFeed(); }
   };
 
   // ----- Comment reactions -----
@@ -165,23 +173,38 @@ const CommunityPage = () => {
   const reactComment = async (cid, key) => {
     setCPickerFor(null);
     const cur = myCmtReaction(cid);
-    if (cur === key) await supabase.from('community_comment_likes').delete().eq('comment_id', cid).eq('user_id', profile.id);
-    else await supabase.from('community_comment_likes').upsert({ comment_id: cid, user_id: profile.id, reaction: key }, { onConflict: 'comment_id,user_id' });
-    loadFeed();
+    setCLikes(prev => {
+      const others = prev.filter(l => !(l.comment_id === cid && l.user_id === profile.id));
+      return cur === key ? others : [...others, { comment_id: cid, user_id: profile.id, reaction: key }];
+    });
+    try {
+      if (cur === key) await supabase.from('community_comment_likes').delete().eq('comment_id', cid).eq('user_id', profile.id);
+      else await supabase.from('community_comment_likes').upsert({ comment_id: cid, user_id: profile.id, reaction: key }, { onConflict: 'comment_id,user_id' });
+    } catch (e) { toast.error(e.message); loadFeed(); }
   };
 
   const addComment = async (postId, parentId, text) => {
     const t = (text || '').trim();
     if (!t) return;
-    const { error } = await supabase.from('community_comments').insert({ post_id: postId, author_id: profile.id, content: t, parent_id: parentId || null });
-    if (error) { toast.error(error.message); return; }
     if (parentId) { setReplyFor(null); setReplyText(''); }
     else setCommentText(c => ({ ...c, [postId]: '' }));
-    loadFeed();
+    const { data, error } = await supabase.from('community_comments')
+      .insert({ post_id: postId, author_id: profile.id, content: t, parent_id: parentId || null }).select('*').single();
+    if (error) { toast.error(error.message); return; }
+    setComments(prev => [...prev, { ...data, author: meUser }]);
   };
 
-  const deletePost = async (id) => { if (!window.confirm('Xóa bài viết này?')) return; const { error } = await supabase.from('community_posts').delete().eq('id', id); if (error) toast.error(error.message); else loadFeed(); };
-  const deleteComment = async (id) => { const { error } = await supabase.from('community_comments').delete().eq('id', id); if (error) toast.error(error.message); else loadFeed(); };
+  const deletePost = async (id) => {
+    if (!window.confirm('Xóa bài viết này?')) return;
+    setPosts(prev => prev.filter(p => p.id !== id));
+    const { error } = await supabase.from('community_posts').delete().eq('id', id);
+    if (error) { toast.error(error.message); loadFeed(); }
+  };
+  const deleteComment = async (id) => {
+    setComments(prev => prev.filter(c => c.id !== id && c.parent_id !== id));
+    const { error } = await supabase.from('community_comments').delete().eq('id', id);
+    if (error) { toast.error(error.message); loadFeed(); }
+  };
 
   // Render 1 comment (kèm reaction + reply)
   const renderComment = (c, isReply = false) => {
