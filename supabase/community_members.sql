@@ -3,6 +3,17 @@
 -- An toàn cho prod. Chạy trong Supabase SQL Editor.
 -- ============================================================
 
+-- Bảng thành viên group (tạo TRƯỚC để hàm helper tham chiếu được)
+create table if not exists community_group_members (
+  id uuid default uuid_generate_v4() primary key,
+  group_id uuid references community_groups(id) on delete cascade not null,
+  user_id uuid references profiles(id) on delete cascade not null,
+  added_by uuid references profiles(id),
+  created_at timestamptz default now(),
+  unique(group_id, user_id)
+);
+alter table community_group_members enable row level security;
+
 -- Hàm helper (SECURITY DEFINER → tránh đệ quy RLS)
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
@@ -16,17 +27,6 @@ create or replace function public.is_group_owner(gid uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from community_groups where id = gid and created_by = auth.uid());
 $$;
-
--- Bảng thành viên group
-create table if not exists community_group_members (
-  id uuid default uuid_generate_v4() primary key,
-  group_id uuid references community_groups(id) on delete cascade not null,
-  user_id uuid references profiles(id) on delete cascade not null,
-  added_by uuid references profiles(id),
-  created_at timestamptz default now(),
-  unique(group_id, user_id)
-);
-alter table community_group_members enable row level security;
 
 drop policy if exists "gm_read" on community_group_members;
 drop policy if exists "gm_write" on community_group_members;
