@@ -88,6 +88,12 @@ const CommunityPage = () => {
   const [replyText, setReplyText] = useState('');
   const [reactWho, setReactWho] = useState(null);        // { post, list }
   const [lightbox, setLightbox] = useState(null);        // { urls, index }
+  const [showMembers, setShowMembers] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [allStaff, setAllStaff] = useState([]);
+
+  const selectedGroup = groups.find(g => g.id === groupId);
+  const canManageGroup = isAdmin || selectedGroup?.created_by === profile?.id;
 
   const loadGroups = useCallback(async () => {
     const { data } = await supabase.from('community_groups').select('*').order('created_at');
@@ -102,9 +108,34 @@ const CommunityPage = () => {
       .insert({ name: groupForm.name.trim(), description: groupForm.description.trim() || null, created_by: profile.id })
       .select().single();
     if (error) { toast.error(error.message); return; }
+    // Tự thêm người tạo làm thành viên
+    if (data) await supabase.from('community_group_members').insert({ group_id: data.id, user_id: profile.id, added_by: profile.id });
     toast.success('Đã tạo group');
     setShowGroupModal(false); setGroupForm({ name: '', description: '' });
     await loadGroups(); if (data) setGroupId(data.id);
+  };
+
+  const loadMembers = async (gid) => {
+    const { data } = await supabase.from('community_group_members')
+      .select('user_id, user:profiles!user_id(full_name, avatar_url, role)').eq('group_id', gid);
+    setMembers(data || []);
+  };
+  const openMembers = async () => {
+    if (!groupId) return;
+    const { data: staffData } = await supabase.from('profiles').select('id, full_name, avatar_url').eq('is_active', true).order('full_name');
+    setAllStaff(staffData || []);
+    await loadMembers(groupId);
+    setShowMembers(true);
+  };
+  const addMember = async (uid) => {
+    const { error } = await supabase.from('community_group_members').insert({ group_id: groupId, user_id: uid, added_by: profile.id });
+    if (error) { toast.error(error.message); return; }
+    loadMembers(groupId);
+  };
+  const removeMember = async (uid) => {
+    const { error } = await supabase.from('community_group_members').delete().eq('group_id', groupId).eq('user_id', uid);
+    if (error) { toast.error(error.message); return; }
+    loadMembers(groupId);
   };
 
   const loadFeed = useCallback(async () => {
@@ -269,6 +300,21 @@ const CommunityPage = () => {
               <Users className="w-3.5 h-3.5" /> {g.name}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Thanh thông tin group + quản lý thành viên */}
+      {selectedGroup && (
+        <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm">
+          <div className="min-w-0 text-sm">
+            <span className="font-semibold text-slate-700">{selectedGroup.name}</span>
+            {selectedGroup.description && <span className="ml-2 text-slate-400">{selectedGroup.description}</span>}
+          </div>
+          {canManageGroup && (
+            <button onClick={openMembers} className="shrink-0 flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+              <Users className="w-4 h-4" /> Thành viên
+            </button>
+          )}
         </div>
       )}
 
@@ -448,6 +494,53 @@ const CommunityPage = () => {
         );
       }))}
       </>
+      )}
+
+      {/* Modal quản lý thành viên */}
+      {showMembers && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowMembers(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-emerald-50">
+              <h3 className="font-bold text-emerald-800">Thành viên · {selectedGroup?.name}</h3>
+              <button onClick={() => setShowMembers(false)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-4">
+              <div>
+                <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Đang trong group ({members.length})</div>
+                <div className="space-y-1">
+                  {members.map(m => (
+                    <div key={m.user_id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar url={m.user?.avatar_url} name={m.user?.full_name} size="w-8 h-8" />
+                        <span className="text-sm font-medium text-slate-700 truncate">{m.user?.full_name}</span>
+                      </div>
+                      {m.user_id !== selectedGroup?.created_by && (
+                        <button onClick={() => removeMember(m.user_id)} className="text-xs text-red-400 hover:text-red-600 font-semibold shrink-0">Xóa</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Thêm thành viên</div>
+                <div className="space-y-1">
+                  {allStaff.filter(s => !members.some(m => m.user_id === s.id)).map(s => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar url={s.avatar_url} name={s.full_name} size="w-8 h-8" />
+                        <span className="text-sm text-slate-700 truncate">{s.full_name}</span>
+                      </div>
+                      <button onClick={() => addMember(s.id)} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 shrink-0 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Thêm</button>
+                    </div>
+                  ))}
+                  {allStaff.filter(s => !members.some(m => m.user_id === s.id)).length === 0 && (
+                    <div className="text-sm text-slate-400 text-center py-3">Tất cả nhân sự đã trong group.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Lightbox xem ảnh */}
