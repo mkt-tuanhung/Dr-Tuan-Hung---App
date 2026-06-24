@@ -10,8 +10,9 @@ export default function InventoryManagementPage({ isNested = false }) {
   
   const [items, setItems] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [customerMap, setCustomerMap] = useState({}); // reference_id -> { name, date }
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('stock'); // 'stock', 'history'
+  const [activeTab, setActiveTab] = useState('stock'); // 'stock', 'history', 'by_customer'
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals
@@ -43,6 +44,15 @@ export default function InventoryManagementPage({ isNested = false }) {
       
     if (transError) toast.error(transError.message);
     else setTransactions(transData || []);
+
+    // Tên khách cho các phiếu xuất (vật tư dùng trên khách)
+    const refIds = [...new Set((transData || []).filter(t => t.type === 'export' && t.reference_id).map(t => t.reference_id))];
+    if (refIds.length) {
+      const { data: custData } = await supabase.from('customer_appointments').select('id, customer_name, surgery_date').in('id', refIds);
+      const map = {};
+      (custData || []).forEach(c => { map[c.id] = { name: c.customer_name, date: c.surgery_date }; });
+      setCustomerMap(map);
+    } else setCustomerMap({});
 
     setLoading(false);
   }, []);
@@ -136,6 +146,9 @@ export default function InventoryManagementPage({ isNested = false }) {
             </button>
             <button onClick={() => setActiveTab('history')} className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}>
               <History className="w-4 h-4 inline-block mr-2" /> Lịch sử Nhập / Xuất
+            </button>
+            <button onClick={() => setActiveTab('by_customer')} className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'by_customer' ? 'bg-indigo-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}>
+              <PackageOpen className="w-4 h-4 inline-block mr-2" /> Vật tư theo khách
             </button>
           </div>
 
@@ -242,6 +255,52 @@ export default function InventoryManagementPage({ isNested = false }) {
               </table>
           </div>
         )}
+
+        {/* Tab: Vật tư theo khách hàng */}
+        {activeTab === 'by_customer' && (() => {
+          const groups = {};
+          transactions.filter(t => t.type === 'export' && t.reference_id).forEach(t => {
+            const k = t.reference_id;
+            if (!groups[k]) groups[k] = [];
+            groups[k].push(t);
+          });
+          const entries = Object.entries(groups).sort((a, b) => {
+            const da = customerMap[a[0]]?.date || '', db = customerMap[b[0]]?.date || '';
+            return db.localeCompare(da);
+          });
+          return (
+            <div className="p-4 space-y-3 max-h-[600px] overflow-auto">
+              {loading ? (
+                <div className="text-center py-10 text-slate-400">Đang tải...</div>
+              ) : entries.length === 0 ? (
+                <div className="text-center py-10 text-slate-400">Chưa có khách nào dùng vật tư.</div>
+              ) : entries.map(([ref, list]) => {
+                const cust = customerMap[ref];
+                return (
+                  <div key={ref} className="border border-slate-200 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
+                      <div>
+                        <div className="font-bold text-slate-800">{cust?.name || 'Khách (đã xóa)'}</div>
+                        <div className="text-xs text-slate-400">{cust?.date ? 'Ngày mổ: ' + new Date(cust.date).toLocaleDateString('vi-VN') : ''}</div>
+                      </div>
+                      <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full">{list.length} loại vật tư</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-slate-50">
+                        {list.map(t => (
+                          <tr key={t.id} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-2.5 font-medium text-slate-700">{t.inventory_items?.name}</td>
+                            <td className="px-4 py-2.5 text-right font-bold text-red-600">-{t.quantity} <span className="text-xs font-normal text-slate-400 ml-1">{t.inventory_items?.unit}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Modal: Add Item */}
