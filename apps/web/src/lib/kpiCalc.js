@@ -76,22 +76,31 @@ export const telesaleRevRate = (rev) => {
 //   bongRows : khách bị đánh giá BONG trong tháng (bong_date trong tháng)
 //   cocRows  : khách bị đánh giá CỌC trong tháng (deposit_date trong tháng)
 //   surgRows : khách phẫu thuật trong tháng (surgery_date trong tháng)
+// Phần chia của 1 telesale trên 1 khách: 1/2 nếu có 2 telesale phụ trách, ngược lại = 1
+export const telesaleShare = (row) => (row?.telesale_id_2 ? 0.5 : 1);
+
 export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows = [], surgRows = [] }) => {
-  const tongLichHen = appts.length;
+  const tongLichHen = appts.length; // số lịch hẹn (đếm đủ, không chia)
   const tyLeChotHen = phones > 0 ? (tongLichHen / phones) * 100 : 0;
-  const doanhThu = surgRows.reduce((s, a) => s + Number(a.revenue || 0), 0);
+
+  // Doanh thu cá nhân: chia đều nếu khách do 2 telesale phụ trách
+  const doanhThu = surgRows.reduce((s, a) => s + Number(a.revenue || 0) * telesaleShare(a), 0);
 
   const dtRate = telesaleRevRate(doanhThu);
   const thuongDoanhThu = Math.round(doanhThu * dtRate / 100);
 
-  // Thưởng lịch hẹn: trả theo tháng diễn ra sự kiện
-  let thuongLichHen = bongRows.length * 200000 + cocRows.length * 300000;
+  // Thưởng lịch hẹn (trả theo tháng diễn ra sự kiện) — cũng chia đều theo số telesale
+  let thuongLichHen = 0;
+  thuongLichHen += bongRows.reduce((s, a) => s + 200000 * telesaleShare(a), 0);
+  thuongLichHen += cocRows.reduce((s, a) => s + 300000 * telesaleShare(a), 0);
   let direct = 0, fromBong = 0, fromCoc = 0;
   for (const a of surgRows) {
-    if (a.bong_date) { thuongLichHen += 300000; fromBong++; }       // từng bong → +300k
-    else if (a.deposit_date) { thuongLichHen += 200000; fromCoc++; } // từng cọc → +200k
-    else { thuongLichHen += 500000; direct++; }                      // PT trực tiếp → 500k
+    const sh = telesaleShare(a);
+    if (a.bong_date) { thuongLichHen += 300000 * sh; fromBong++; }
+    else if (a.deposit_date) { thuongLichHen += 200000 * sh; fromCoc++; }
+    else { thuongLichHen += 500000 * sh; direct++; }
   }
+  thuongLichHen = Math.round(thuongLichHen);
 
   const tongHH = thuongDoanhThu + thuongLichHen;
   return {

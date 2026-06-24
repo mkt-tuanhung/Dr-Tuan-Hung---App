@@ -41,12 +41,13 @@ const TelesaleStaffKPI = () => {
     const ms = `${year}-${String(month).padStart(2, '0')}-01`;
     const me = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
     const id = profile.id;
+    const orTele = `telesale_id.eq.${id},telesale_id_2.eq.${id}`;
     const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('staff_id', id).eq('month', month).eq('year', year).maybeSingle(),
-      supabase.from('customer_appointments').select('id, customer_name, appointment_date, status, service, notes').eq('telesale_id', id).gte('appointment_date', ms).lte('appointment_date', me).order('appointment_date', { ascending: false }),
-      supabase.from('customer_appointments').select('id, customer_name, surgery_date, revenue, service, notes, bong_date, deposit_date').eq('telesale_id', id).eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
-      supabase.from('customer_appointments').select('id').eq('telesale_id', id).gte('bong_date', ms).lte('bong_date', me),
-      supabase.from('customer_appointments').select('id').eq('telesale_id', id).gte('deposit_date', ms).lte('deposit_date', me),
+      supabase.from('customer_appointments').select('id, customer_name, appointment_date, status, service, notes, telesale_id_2').or(orTele).gte('appointment_date', ms).lte('appointment_date', me).order('appointment_date', { ascending: false }),
+      supabase.from('customer_appointments').select('id, customer_name, surgery_date, revenue, service, notes, bong_date, deposit_date, telesale_id_2').eq('status', 'phau_thuat').or(orTele).gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
+      supabase.from('customer_appointments').select('id, telesale_id_2').or(orTele).gte('bong_date', ms).lte('bong_date', me),
+      supabase.from('customer_appointments').select('id, telesale_id_2').or(orTele).gte('deposit_date', ms).lte('deposit_date', me),
       supabase.from('page_daily_reports').select('total_phones').eq('telesale_id', id).gte('date', ms).lte('date', me),
     ]);
     if (apptRes.error) toast.error('Lỗi tải lịch hẹn: ' + apptRes.error.message);

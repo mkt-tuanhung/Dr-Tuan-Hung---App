@@ -14,12 +14,12 @@ const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'
 // Thứ tự cột BẮT BUỘC (đúng theo header dưới):
 const IMPORT_HEADERS = [
   'ngay_phau_thuat', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'nhom_dich_vu',
-  'nguon_khach', 'tep_khach', 'doanh_thu', 'doanh_thu_upsale', 'ma_telesale', 'ma_sale', 'ghi_chu',
+  'nguon_khach', 'tep_khach', 'doanh_thu', 'doanh_thu_upsale', 'ma_telesale', 'ma_telesale_2', 'ma_sale', 'ghi_chu',
 ];
 const IMPORT_TEMPLATE =
   IMPORT_HEADERS.join(',') + '\n' +
-  '2026-06-19,Nguyễn Văn A,0901234567,Cắt mí trên,Hàm mặt,Ads,Mới,18000000,1500000,NV001,NV002,Khách hài lòng\n' +
-  '2026-06-20,Trần Thị B,0907654321,Nâng mũi,Hàm mặt,CTV,Cũ,35000000,0,,NV002,\n';
+  '2026-06-19,Nguyễn Văn A,0901234567,Cắt mí trên,Hàm mặt,Ads,Mới,18000000,1500000,NV001,,NV002,Khách hài lòng\n' +
+  '2026-06-20,Trần Thị B,0907654321,Nâng mũi,Hàm mặt,CTV,Cũ,35000000,0,NV001,NV003,NV002,2 telesale cùng care\n';
 
 // Parse CSV đơn giản, hỗ trợ ô có dấu phẩy trong dấu ngoặc kép
 const parseCSV = (text) => {
@@ -66,7 +66,7 @@ const FinanceManagementPage = () => {
     surgery_date: new Date().toISOString().split('T')[0],
     customer_name: '', phone: '', service: '',
     service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
-    revenue: '', upsale_revenue: '', sale_id: '', telesale_id: '', notes: ''
+    revenue: '', upsale_revenue: '', sale_id: '', telesale_id: '', telesale_id_2: '', notes: ''
   });
   
   // Charts Data
@@ -210,6 +210,7 @@ const FinanceManagementPage = () => {
         upsale_revenue: createForm.upsale_revenue || 0,
         sale_id: createForm.sale_id || null,
         telesale_id: createForm.telesale_id || null,
+        telesale_id_2: createForm.telesale_id_2 || null,
         notes: createForm.notes,
         status: 'phau_thuat',
         created_by: profile.id
@@ -254,9 +255,10 @@ const FinanceManagementPage = () => {
       const date = get(0), name = get(1);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { errors.push(`Dòng ${lineNo}: ngày phẫu thuật sai định dạng (YYYY-MM-DD)`); continue; }
       if (!name) { errors.push(`Dòng ${lineNo}: thiếu tên khách hàng`); continue; }
-      const teleCode = get(9).toUpperCase(), saleCode = get(10).toUpperCase();
-      let telesale_id = null, sale_id = null;
+      const teleCode = get(9).toUpperCase(), teleCode2 = get(10).toUpperCase(), saleCode = get(11).toUpperCase();
+      let telesale_id = null, telesale_id_2 = null, sale_id = null;
       if (teleCode) { if (empMap[teleCode]) telesale_id = empMap[teleCode]; else { errors.push(`Dòng ${lineNo}: không tìm thấy mã telesale "${teleCode}"`); continue; } }
+      if (teleCode2) { if (empMap[teleCode2]) telesale_id_2 = empMap[teleCode2]; else { errors.push(`Dòng ${lineNo}: không tìm thấy mã telesale 2 "${teleCode2}"`); continue; } }
       if (saleCode) { if (empMap[saleCode]) sale_id = empMap[saleCode]; else { errors.push(`Dòng ${lineNo}: không tìm thấy mã sale "${saleCode}"`); continue; } }
       valid.push({
         customer_name: name, phone: get(2),
@@ -265,7 +267,7 @@ const FinanceManagementPage = () => {
         customer_source: get(5) || 'Ads', customer_type: get(6) || 'Mới',
         revenue: Number(get(7).replace(/\D/g, '')) || 0,
         upsale_revenue: Number(get(8).replace(/\D/g, '')) || 0,
-        telesale_id, sale_id, notes: get(11) || null,
+        telesale_id, telesale_id_2, sale_id, notes: get(12) || null,
         status: 'phau_thuat', created_by: profile.id,
       });
     }
@@ -494,6 +496,7 @@ const FinanceManagementPage = () => {
                   <li><b>doanh_thu</b> — số (vd 18000000)</li>
                   <li><b>doanh_thu_upsale</b> — số</li>
                   <li><b>ma_telesale</b> — mã NV telesale (vd NV001), để trống nếu không có</li>
+                  <li><b>ma_telesale_2</b> — mã NV telesale phụ trách thứ 2 (nếu 2 người cùng care → chia đôi hoa hồng), để trống nếu không có</li>
                   <li><b>ma_sale</b> — mã NV sale offline, để trống nếu không có</li>
                   <li><b>ghi_chu</b></li>
                 </ol>
@@ -632,6 +635,15 @@ const FinanceManagementPage = () => {
                   <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => s.role === 'telesale' || s.role === 'admin').map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
+                  <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                    <option value="">-- Không có --</option>
+                    {staffList.filter(s => (s.role === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
                     ))}
                   </select>

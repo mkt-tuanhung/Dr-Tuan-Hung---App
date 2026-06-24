@@ -28,10 +28,10 @@ const TelesaleAdmin = ({ month, year }) => {
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
     const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', safe),
-      supabase.from('customer_appointments').select('id, telesale_id, status, service').in('telesale_id', safe).gte('appointment_date', ms).lte('appointment_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, revenue, bong_date, deposit_date').eq('status', 'phau_thuat').in('telesale_id', safe).gte('surgery_date', ms).lte('surgery_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id').in('telesale_id', safe).gte('bong_date', ms).lte('bong_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id').in('telesale_id', safe).gte('deposit_date', ms).lte('deposit_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, revenue, bong_date, deposit_date').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2').gte('bong_date', ms).lte('bong_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2').gte('deposit_date', ms).lte('deposit_date', me2),
       supabase.from('page_daily_reports').select('telesale_id, total_phones').in('telesale_id', safe).gte('date', ms).lte('date', me2),
     ]);
     setStaff(staffData || []);
@@ -47,10 +47,11 @@ const TelesaleAdmin = ({ month, year }) => {
 
   const rows = staff.map(s => {
     const phones = data.pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
-    const appts = data.appts.filter(a => a.telesale_id === s.id);
-    const surgRows = data.surg.filter(a => a.telesale_id === s.id);
-    const bongRows = data.bong.filter(a => a.telesale_id === s.id);
-    const cocRows = data.coc.filter(a => a.telesale_id === s.id);
+    const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
+    const appts = data.appts.filter(mine);
+    const surgRows = data.surg.filter(mine);
+    const bongRows = data.bong.filter(mine);
+    const cocRows = data.coc.filter(mine);
     const m = computeTelesale({ phones, appts, bongRows, cocRows, surgRows });
     const kpi = data.kpis.find(k => k.staff_id === s.id) || null;
     const revProgress = kpi?.target_revenue > 0 ? Math.round(m.doanhThu / kpi.target_revenue * 100) : null;

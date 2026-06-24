@@ -32,7 +32,7 @@ const AppointmentManagementPage = () => {
     appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
     customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm',
-    expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
+    expected_bill: '', deposit_amount: '', telesale_id: '', telesale_id_2: '', sale_id: '', social_link: '', notes: '',
     service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
     used_service: '', surgery_date: ''
   });
@@ -216,6 +216,7 @@ const AppointmentManagementPage = () => {
         expected_bill: isRecheck ? 0 : (createForm.expected_bill || 0),
         deposit_amount: isRecheck ? 0 : (createForm.deposit_amount || 0),
         telesale_id: isRecheck ? null : (createForm.telesale_id || null),
+        telesale_id_2: isRecheck ? null : (createForm.telesale_id_2 || null),
         sale_id: createForm.sale_id || null,
         social_link: createForm.social_link,
         notes: createForm.notes,
@@ -262,6 +263,7 @@ const AppointmentManagementPage = () => {
       expected_bill: app.expected_bill || '',
       deposit_amount: app.deposit_amount || '',
       telesale_id: app.telesale_id || '',
+      telesale_id_2: app.telesale_id_2 || '',
       sale_id: app.sale_id || '',
       social_link: app.social_link || '',
       notes: app.notes || '',
@@ -771,6 +773,17 @@ const AppointmentManagementPage = () => {
                       <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                         <option value="">-- Không có --</option>
                         {staffList.filter(s => s.role === 'telesale').map(s => (
+                          <option key={s.id} value={s.id}>{s.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {createForm.appointment_type === 'new' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(nếu có — chia đôi hoa hồng)</span></label>
+                      <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                        <option value="">-- Không có --</option>
+                        {staffList.filter(s => s.role === 'telesale' && s.id !== createForm.telesale_id).map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
                         ))}
                       </select>
