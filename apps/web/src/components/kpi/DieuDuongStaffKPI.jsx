@@ -144,7 +144,7 @@ const DieuDuongStaffKPI = () => {
                       <td className="px-4 py-2.5 text-slate-600">{s.surgery_date}</td>
                       <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
                       <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
-                      <td className="px-4 py-2.5"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">{role}</span></td>
+                      <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${role === 'Trực đêm' ? 'bg-violet-100 text-violet-700' : role === 'Hậu phẫu' ? 'bg-pink-100 text-pink-700' : role.startsWith('Phụ mổ') ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{role}</span></td>
                       <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">{bonus ? fmtM(bonus) : '—'}</td>
                     </tr>
                   );
