@@ -6,7 +6,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTo
 import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
-import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download } from 'lucide-react';
+import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2 } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -197,10 +197,9 @@ const FinanceManagementPage = () => {
     }
     setSaving(true);
     try {
-      const { error } = await supabase.from('customer_appointments').insert({
+      const payload = {
         customer_name: createForm.customer_name,
         phone: createForm.phone,
-        appointment_date: createForm.surgery_date,
         surgery_date: createForm.surgery_date,
         service: createForm.service,
         service_group: createForm.service_group,
@@ -212,11 +211,18 @@ const FinanceManagementPage = () => {
         telesale_id: createForm.telesale_id || null,
         telesale_id_2: createForm.telesale_id_2 || null,
         notes: createForm.notes,
-        status: 'phau_thuat',
-        created_by: profile.id
-      });
-      if (error) throw error;
-      toast.success('Đã thêm doanh thu thành công!');
+      };
+      if (createForm.id) {
+        const { error } = await supabase.from('customer_appointments').update(payload).eq('id', createForm.id);
+        if (error) throw error;
+        toast.success('Đã cập nhật doanh thu!');
+      } else {
+        const { error } = await supabase.from('customer_appointments').insert({
+          ...payload, appointment_date: createForm.surgery_date, status: 'phau_thuat', created_by: profile.id,
+        });
+        if (error) throw error;
+        toast.success('Đã thêm doanh thu thành công!');
+      }
       setShowCreateModal(false);
       loadData();
     } catch (err) {
@@ -224,6 +230,35 @@ const FinanceManagementPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openCreateRevenue = () => {
+    setCreateForm({
+      surgery_date: new Date().toISOString().split('T')[0],
+      customer_name: '', phone: '', service: '',
+      service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
+      revenue: '', upsale_revenue: '', sale_id: '', telesale_id: '', telesale_id_2: '', notes: '',
+    });
+    setShowCreateModal(true);
+  };
+
+  const openEditRevenue = (r) => {
+    setCreateForm({
+      id: r.id,
+      surgery_date: r.surgery_date || new Date().toISOString().split('T')[0],
+      customer_name: r.customer_name || '', phone: r.phone || '', service: r.service || '',
+      service_group: r.service_group || 'Hàm mặt', customer_source: r.customer_source || 'Ads', customer_type: r.customer_type || 'Mới',
+      revenue: r.revenue || '', upsale_revenue: r.upsale_revenue || '',
+      sale_id: r.sale_id || '', telesale_id: r.telesale_id || '', telesale_id_2: r.telesale_id_2 || '', notes: r.notes || '',
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleDeleteRevenue = async (r) => {
+    if (!window.confirm(`Xóa doanh thu của khách "${r.customer_name}"? Hành động không hoàn tác.`)) return;
+    const { error } = await supabase.from('customer_appointments').delete().eq('id', r.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã xóa'); loadData();
   };
 
   // ===== Import CSV =====
@@ -388,7 +423,7 @@ const FinanceManagementPage = () => {
                    <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="px-4 py-2 bg-white border border-emerald-200 text-emerald-700 font-semibold rounded-xl text-sm shadow-sm hover:bg-emerald-50 transition-colors flex items-center gap-2">
                      <Upload className="w-4 h-4" /> Import Excel/CSV
                    </button>
-                   <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
+                   <button onClick={openCreateRevenue} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
                      + Nhập trực tiếp
                    </button>
                  </div>
@@ -439,6 +474,17 @@ const FinanceManagementPage = () => {
                           <span className="font-bold text-purple-600 text-base">{fmt(r.upsale_revenue || 0)}</span>
                         </div>
                       </div>
+
+                      {(profile?.role === 'admin' || profile?.role === 'marketing') && (
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
+                          <button onClick={() => openEditRevenue(r)} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition-colors">
+                            <Pencil className="w-3.5 h-3.5" /> Sửa
+                          </button>
+                          <button onClick={() => handleDeleteRevenue(r)} className="w-9 flex items-center justify-center py-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -556,7 +602,7 @@ const FinanceManagementPage = () => {
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
             <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-xl">Nhập doanh thu trực tiếp</h3>
+              <h3 className="font-bold text-slate-800 text-xl">{createForm.id ? 'Sửa doanh thu' : 'Nhập doanh thu trực tiếp'}</h3>
               <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
                 <X className="w-4 h-4" />
               </button>
@@ -657,7 +703,7 @@ const FinanceManagementPage = () => {
 
               <div className="pt-4 flex justify-end">
                 <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
-                  {saving ? 'Đang lưu...' : 'Nhập Doanh Thu'}
+                  {saving ? 'Đang lưu...' : (createForm.id ? 'Cập nhật' : 'Nhập Doanh Thu')}
                 </button>
               </div>
             </form>
