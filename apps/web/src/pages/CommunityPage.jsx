@@ -16,6 +16,7 @@ const REACTIONS = [
 const EMOJI_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.emoji]));
 const LABEL_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.label]));
 const TEXT_COLORS = ['#0f172a', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+const QUICK_COMMENTS = ['Đã xét nghiệm xong', 'Vào phẫu thuật', 'KH phẫu thuật xong', 'Khách hàng về phòng nghỉ ngơi'];
 
 // Làm sạch HTML soạn thảo: chỉ giữ định dạng cơ bản + màu chữ
 const sanitizeHtml = (html) => {
@@ -74,8 +75,10 @@ const CommunityPage = () => {
   const [comments, setComments] = useState([]);
   const [cLikes, setCLikes] = useState([]);         // comment reactions
 
+  const [title, setTitle] = useState('');
   const [files, setFiles] = useState([]);
   const [posting, setPosting] = useState(false);
+  const [viewMode, setViewMode] = useState('feed'); // 'feed' | 'list'
 
   const [pickerFor, setPickerFor] = useState(null);      // post id
   const [cPickerFor, setCPickerFor] = useState(null);    // comment id
@@ -131,17 +134,18 @@ const CommunityPage = () => {
     const raw = editorRef.current?.innerHTML || '';
     const html = sanitizeHtml(raw);
     const plain = (editorRef.current?.innerText || '').trim();
+    if (!title.trim()) { toast.error('Nhập tiêu đề bài viết'); return; }
     if (!plain && files.length === 0) { toast.error('Nhập nội dung hoặc thêm ảnh'); return; }
     setPosting(true);
     try {
       const image_urls = [];
       for (const f of files) image_urls.push(await uploadToR2(f, 'community'));
       const { error } = await supabase.from('community_posts').insert({
-        group_id: groupId, author_id: profile.id, content: plain ? html : null, image_urls,
+        group_id: groupId, author_id: profile.id, title: title.trim(), content: plain ? html : null, image_urls,
       });
       if (error) throw error;
       if (editorRef.current) editorRef.current.innerHTML = '';
-      setFiles([]); loadFeed();
+      setTitle(''); setFiles([]); loadFeed();
     } catch (err) { toast.error(err.message); }
     finally { setPosting(false); }
   };
@@ -202,7 +206,7 @@ const CommunityPage = () => {
               {mine ? `${EMOJI_OF[mine]} ${LABEL_OF[mine]}` : 'Thích'}
             </button>
             {!isReply && <button onClick={() => { setReplyFor(c.id); setReplyText(''); }} className="font-semibold hover:text-slate-600">Trả lời</button>}
-            {(c.author_id === profile?.id || isAdmin) && <button onClick={() => deleteComment(c.id)} className="opacity-0 group-hover:opacity-100 hover:text-red-500">Xóa</button>}
+            {(c.author_id === profile?.id || isAdmin) && <button onClick={() => deleteComment(c.id)} className="text-red-400 hover:text-red-600 font-semibold">Xóa</button>}
             {cPickerFor === c.id && <ReactionBar onPick={(k) => reactComment(c.id, k)} />}
           </div>
 
@@ -252,6 +256,8 @@ const CommunityPage = () => {
       <>
       {/* Composer với trình soạn thảo */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Tiêu đề bài viết *"
+          className="w-full mb-2 px-1 text-[15px] font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none" />
         <div className="flex items-center gap-1 mb-2 border-b border-slate-50 pb-2">
           <button onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600"><Bold className="w-4 h-4" /></button>
           <button onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600"><Italic className="w-4 h-4" /></button>
@@ -285,8 +291,41 @@ const CommunityPage = () => {
         </div>
       </div>
 
+      {/* Toggle Bảng tin / Danh sách */}
+      <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+        {[['feed', 'Bảng tin'], ['list', 'Danh sách bài viết']].map(([id, label]) => (
+          <button key={id} onClick={() => setViewMode(id)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${viewMode === id ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+        ))}
+      </div>
+
+      {/* Danh sách bài viết */}
+      {viewMode === 'list' && !loading && (
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+          {posts.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 text-sm">Chưa có bài viết nào.</div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {posts.map(p => {
+                const cmt = comments.filter(c => c.post_id === p.id).length;
+                const rea = likes.filter(l => l.post_id === p.id).length;
+                return (
+                  <button key={p.id} onClick={() => { setViewMode('feed'); setTimeout(() => document.getElementById(`post-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800 truncate">{p.title || '(Không tiêu đề)'}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{p.author?.full_name} · {timeAgo(p.created_at)}</div>
+                    </div>
+                    <div className="text-xs text-slate-400 shrink-0">❤️ {rea} · 💬 {cmt}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Feed */}
-      {loading ? (
+      {viewMode === 'feed' && (loading ? (
         <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-emerald-500" /></div>
       ) : posts.length === 0 ? (
         <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center text-slate-400 shadow-sm">Chưa có bài viết nào trong group này.</div>
@@ -298,7 +337,7 @@ const CommunityPage = () => {
         const myReaction = myPostReaction(post.id);
         const reactionSet = [...new Set(postLikes.map(l => l.reaction))];
         return (
-          <div key={post.id} className="bg-white border border-slate-100 rounded-2xl shadow-sm">
+          <div key={post.id} id={`post-${post.id}`} className="bg-white border border-slate-100 rounded-2xl shadow-sm scroll-mt-20">
             <div className="flex items-start justify-between p-4 pb-2">
               <div className="flex items-center gap-3">
                 <Avatar url={post.author?.avatar_url} name={post.author?.full_name} />
@@ -312,6 +351,7 @@ const CommunityPage = () => {
               )}
             </div>
 
+            {post.title && <div className="px-4 pb-1 font-bold text-slate-800 text-[16px]">{post.title}</div>}
             {post.content && <div className="px-4 pb-3 text-slate-700 text-[15px] break-words" dangerouslySetInnerHTML={{ __html: post.content }} />}
             {post.image_urls?.length > 0 && (
               <div className={`grid gap-0.5 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
@@ -352,6 +392,20 @@ const CommunityPage = () => {
                     {repliesOf(c.id).map(r => renderComment(r, true))}
                   </div>
                 ))}
+                {(() => {
+                  const used = comments.filter(c => c.post_id === post.id).map(c => c.content);
+                  const avail = QUICK_COMMENTS.filter(q => !used.includes(q));
+                  return avail.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {avail.map(q => (
+                        <button key={q} onClick={() => addComment(post.id, null, q)}
+                          className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 border border-emerald-100">
+                          + {q}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 <div className="flex gap-2 items-center">
                   <Avatar url={profile?.avatar_url} name={profile?.full_name} size="w-8 h-8" />
                   <input value={commentText[post.id] || ''} onChange={e => setCommentText(c => ({ ...c, [post.id]: e.target.value }))}
@@ -364,7 +418,7 @@ const CommunityPage = () => {
             )}
           </div>
         );
-      })}
+      }))}
       </>
       )}
 
