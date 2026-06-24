@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile } from 'lucide-react';
+import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users } from 'lucide-react';
 
 const REACTIONS = [
   { key: 'like', emoji: '👍', label: 'Thích' },
@@ -38,6 +38,12 @@ const CommunityPage = () => {
   const [likes, setLikes] = useState([]);
   const [comments, setComments] = useState([]);
 
+  // Groups
+  const [groups, setGroups] = useState([]);
+  const [groupId, setGroupId] = useState(null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupForm, setGroupForm] = useState({ name: '', description: '' });
+
   // Composer
   const [content, setContent] = useState('');
   const [files, setFiles] = useState([]);
@@ -48,11 +54,33 @@ const CommunityPage = () => {
   const [openComments, setOpenComments] = useState({});
   const [commentText, setCommentText] = useState({});
 
+  // Tải danh sách group
+  const loadGroups = useCallback(async () => {
+    const { data } = await supabase.from('community_groups').select('*').order('created_at');
+    setGroups(data || []);
+    setGroupId(prev => prev || (data && data[0]?.id) || null);
+  }, []);
+  useEffect(() => { loadGroups(); }, [loadGroups]);
+
+  const createGroup = async () => {
+    if (!groupForm.name.trim()) { toast.error('Nhập tên group'); return; }
+    const { data, error } = await supabase.from('community_groups')
+      .insert({ name: groupForm.name.trim(), description: groupForm.description.trim() || null, created_by: profile.id })
+      .select().single();
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã tạo group');
+    setShowGroupModal(false); setGroupForm({ name: '', description: '' });
+    await loadGroups();
+    if (data) setGroupId(data.id);
+  };
+
   const loadFeed = useCallback(async () => {
+    if (!groupId) { setPosts([]); setLoading(false); return; }
     setLoading(true);
     const { data: postData, error } = await supabase
       .from('community_posts')
       .select('*, author:profiles!author_id(full_name, avatar_url)')
+      .eq('group_id', groupId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(80);
@@ -67,7 +95,7 @@ const CommunityPage = () => {
     setLikes(likeRes.data || []);
     setComments(cmtRes.data || []);
     setLoading(false);
-  }, []);
+  }, [groupId]);
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
 
@@ -78,7 +106,7 @@ const CommunityPage = () => {
       const image_urls = [];
       for (const f of files) image_urls.push(await uploadToR2(f, 'community'));
       const { error } = await supabase.from('community_posts').insert({
-        author_id: profile.id, content: content.trim() || null, image_urls,
+        group_id: groupId, author_id: profile.id, content: content.trim() || null, image_urls,
       });
       if (error) throw error;
       setContent(''); setFiles([]);
@@ -126,8 +154,33 @@ const CommunityPage = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      <h2 className="text-2xl font-bold text-slate-800">Cộng đồng</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">Cộng đồng</h2>
+        {isAdmin && (
+          <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">
+            <Plus className="w-4 h-4" /> Tạo group
+          </button>
+        )}
+      </div>
 
+      {/* Thanh chọn group */}
+      {groups.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {groups.map(g => (
+            <button key={g.id} onClick={() => setGroupId(g.id)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${groupId === g.id ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200' : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-800'}`}>
+              <Users className="w-3.5 h-3.5" /> {g.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {groups.length === 0 ? (
+        <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center text-slate-400 shadow-sm">
+          Chưa có group nào.{isAdmin ? ' Bấm "Tạo group" để bắt đầu.' : ' Liên hệ admin để tạo group.'}
+        </div>
+      ) : (
+      <>
       {/* Composer */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
         <div className="flex gap-3">
@@ -269,6 +322,37 @@ const CommunityPage = () => {
           </div>
         );
       })}
+      </>
+      )}
+
+      {/* Modal tạo group */}
+      {showGroupModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-emerald-50">
+              <h3 className="font-bold text-emerald-800">Tạo group mới</h3>
+              <button onClick={() => setShowGroupModal(false)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1.5">Tên group *</label>
+                <input value={groupForm.name} onChange={e => setGroupForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="VD: Hành trình khách hàng"
+                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1.5">Mô tả</label>
+                <textarea rows={2} value={groupForm.description} onChange={e => setGroupForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex justify-end gap-2">
+              <button onClick={() => setShowGroupModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
+              <button onClick={createGroup} className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md">Tạo group</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
