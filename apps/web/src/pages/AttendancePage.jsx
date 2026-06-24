@@ -97,7 +97,7 @@ const AttendancePage = () => {
       supabase.from('attendance').select('*').eq('staff_id', profile.id)
         .gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
       supabase.from('leave_requests').select('*').eq('staff_id', profile.id)
-        .gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
+        .order('created_at', { ascending: false }).limit(50),
     ]);
 
     setTodayRecord(todayRes.data || null);
