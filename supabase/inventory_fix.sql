@@ -24,14 +24,15 @@ begin
   return NEW;
 end $$;
 
--- 2) Cảnh báo khi tồn < 10 → báo admin + điều dưỡng + kế toán (cần notify_relevant từ notify_activity.sql)
+-- 2) Cảnh báo khi tồn DƯỚI mức tối thiểu → báo admin + điều dưỡng (cần notify_relevant từ notify_activity.sql)
 create or replace function notify_low_stock() returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if NEW.current_stock < 10 and (OLD.current_stock is null or OLD.current_stock >= 10) then
+  if NEW.current_stock <= coalesce(NEW.min_stock, 0)
+     and (OLD.current_stock is null or OLD.current_stock > coalesce(OLD.min_stock, 0)) then
     perform notify_relevant(null, 'low_stock',
       'Vật tư sắp hết: ' || NEW.name,
-      'Tồn chỉ còn ' || NEW.current_stock || ' ' || coalesce(NEW.unit, ''),
-      null, array['dieu_duong', 'accountant']);
+      'Tồn còn ' || NEW.current_stock || ' ' || coalesce(NEW.unit, '') || ' (mức tối thiểu ' || coalesce(NEW.min_stock, 0) || ')',
+      null, array['dieu_duong']);
   end if;
   return NEW;
 end $$;

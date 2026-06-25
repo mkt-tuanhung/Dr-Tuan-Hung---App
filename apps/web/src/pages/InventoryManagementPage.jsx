@@ -21,7 +21,7 @@ export default function InventoryManagementPage({ isNested = false }) {
   const [saving, setSaving] = useState(false);
 
   // Forms
-  const [itemForm, setItemForm] = useState({ name: '', unit: '', min_stock: 0, notes: '' });
+  const [itemForm, setItemForm] = useState({ name: '', unit: '', min_stock: 10, notes: '' });
   const [importForm, setImportForm] = useState({ item_id: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const loadData = useCallback(async () => {
@@ -76,7 +76,7 @@ export default function InventoryManagementPage({ isNested = false }) {
     else {
       toast.success('Thêm vật tư thành công!');
       setShowItemModal(false);
-      setItemForm({ name: '', unit: '', min_stock: 0, notes: '' });
+      setItemForm({ name: '', unit: '', min_stock: 10, notes: '' });
       loadData();
     }
     setSaving(false);
@@ -127,8 +127,8 @@ export default function InventoryManagementPage({ isNested = false }) {
           <div className="text-3xl font-black text-slate-800">{items.length}</div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm flex flex-col">
-          <div className="text-red-600 font-bold text-sm mb-2 flex items-center gap-2"><ArrowUpRight className="w-4 h-4"/> Vật tư sắp hết (Tồn dưới 10)</div>
-          <div className="text-3xl font-black text-red-600">{items.filter(i => i.current_stock < 10).length}</div>
+          <div className="text-red-600 font-bold text-sm mb-2 flex items-center gap-2"><ArrowUpRight className="w-4 h-4"/> Vật tư sắp hết (Dưới mức tối thiểu)</div>
+          <div className="text-3xl font-black text-red-600">{items.filter(i => i.current_stock <= i.min_stock).length}</div>
         </div>
         <div className="bg-emerald-600 p-6 rounded-2xl shadow-md flex flex-col text-white">
           <div className="text-emerald-100 font-bold text-sm mb-2 flex items-center gap-2"><ArrowDownLeft className="w-4 h-4"/> Giao dịch nhập xuất (Gần đây)</div>
@@ -184,25 +184,27 @@ export default function InventoryManagementPage({ isNested = false }) {
                     <th className="px-6 py-4 font-semibold">Tên Vật Tư</th>
                     <th className="px-6 py-4 font-semibold text-center">Đơn vị</th>
                     <th className="px-6 py-4 font-semibold text-right">Tồn kho hiện tại</th>
+                    <th className="px-6 py-4 font-semibold text-right">Mức tối thiểu</th>
                     <th className="px-6 py-4 font-semibold">Ghi chú</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {loading ? (
-                    <tr><td colSpan="4" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
+                    <tr><td colSpan="5" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
                   ) : filteredItems.length === 0 ? (
-                    <tr><td colSpan="4" className="text-center py-10 text-slate-400">Chưa có vật tư nào</td></tr>
+                    <tr><td colSpan="5" className="text-center py-10 text-slate-400">Chưa có vật tư nào</td></tr>
                   ) : filteredItems.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-800">{item.name}</td>
                       <td className="px-6 py-4 text-center text-slate-600 font-medium">{item.unit}</td>
                       <td className="px-6 py-4 text-right">
                         <span className={`inline-flex items-center justify-center px-3 py-1 rounded-lg font-bold ${
-                          item.current_stock < 10 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                          item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
                         }`}>
-                          {item.current_stock}{item.current_stock < 10 ? ' ⚠️' : ''}
+                          {item.current_stock}{item.current_stock <= item.min_stock ? ' ⚠️' : ''}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-right text-slate-500">{item.min_stock}</td>
                       <td className="px-6 py-4 text-slate-500">{item.notes}</td>
                     </tr>
                   ))}
@@ -314,9 +316,15 @@ export default function InventoryManagementPage({ isNested = false }) {
                 <label className="block text-sm font-semibold mb-2 text-slate-700">Tên vật tư *</label>
                 <input required type="text" value={itemForm.name} onChange={e => setItemForm({...itemForm, name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: Bơm tiêm 5ml" />
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Đơn vị *</label>
-                <input required type="text" value={itemForm.unit} onChange={e => setItemForm({...itemForm, unit: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Cái, Hộp, Vỉ..." />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-slate-700">Đơn vị *</label>
+                  <input required type="text" value={itemForm.unit} onChange={e => setItemForm({...itemForm, unit: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Cái, Hộp, Vỉ..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-slate-700">Tồn tối thiểu</label>
+                  <input type="number" min="0" value={itemForm.min_stock} onChange={e => setItemForm({...itemForm, min_stock: Number(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: 10" />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2 text-slate-700">Ghi chú</label>
