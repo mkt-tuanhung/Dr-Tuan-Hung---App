@@ -27,6 +27,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   const [feeForm, setFeeForm] = useState({ amount: '', method: 'cash', proof: '' });
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
+  const didLoad = React.useRef(false);
   const [saving, setSaving] = useState(false);
 
   // Modal Vật tư
@@ -44,7 +45,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   });
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    if (!didLoad.current) setLoading(true);
     const { data: appsData, error: appsErr } = await supabase
       .from('customer_appointments')
       .select('*, profiles!customer_appointments_created_by_fkey(full_name), telesale:telesale_id(full_name), sale:sale_id(full_name)')
@@ -71,6 +72,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     }
     
     if (nursesData) setNurses(nursesData);
+    didLoad.current = true;
     setLoading(false);
   }, []);
 
@@ -189,11 +191,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   const handleDeleteConsumed = async (ids, name) => {
     if (!window.confirm(`Xoá "${name}" khỏi báo cáo? Tồn kho sẽ được hoàn lại.`)) return;
+    setConsumedItems(prev => prev.filter(t => !ids.includes(t.id))); // xoá cục bộ, không reload trang
     const { error } = await supabase.from('inventory_transactions').delete().in('id', ids);
-    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    if (error) { toast.error('Lỗi: ' + error.message); reloadConsumed(selectedApp.id); return; }
     toast.success('Đã xoá vật tư khỏi báo cáo');
-    await reloadConsumed(selectedApp.id);
-    loadData();
   };
 
   const handleAddMaterialRow = () => {
