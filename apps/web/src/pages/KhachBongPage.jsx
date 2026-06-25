@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft } from 'lucide-react';
+import ConsultButton from '@/components/ConsultButton.jsx';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -200,7 +201,8 @@ const KhachBongPage = ({ isNested = false }) => {
               <div className="text-slate-500 text-xs">Sale</div>
               <div className="text-slate-700 text-right">{careApp.sale?.full_name || 'N/A'}</div>
             </div>
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-3">
+              <ConsultButton app={careApp} />
               <button type="button" onClick={() => openRevert(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
                 <RotateCcw className="w-4 h-4" /> Quay lại lịch hẹn
               </button>

@@ -593,10 +593,13 @@ const AppointmentManagementPage = () => {
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {groupedByDate[dateStr].map(app => (
                       <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <User className="w-5 h-5 text-teal-600" />
-                            <span className="font-bold text-slate-800 text-base">{app.customer_name}</span>
+                        <div className="p-4 border-b border-slate-100 flex items-start justify-between">
+                          <div className="flex items-start gap-2 min-w-0">
+                            <User className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                              <div className="font-bold text-slate-800 text-base truncate">{app.customer_name}</div>
+                              {app.phone && <a href={`tel:${app.phone}`} className="text-sm text-blue-600 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>}
+                            </div>
                           </div>
                           <StatusBadge status={app.status} />
                         </div>

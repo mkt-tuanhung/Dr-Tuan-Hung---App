@@ -7,6 +7,7 @@ import {
   Clock, Activity, Banknote, UserCheck, ShieldCheck, X, Image as ImageIcon, PackageOpen, Plus, Trash2, Loader2, Ban
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import ConsultButton from '@/components/ConsultButton.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
@@ -378,6 +379,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                             )}
                           </div>
                         )}
+
+                        <div className="pt-1">
+                          <ConsultButton app={app} className="w-full flex justify-center items-center gap-1.5 py-2 bg-teal-50 text-teal-700 text-xs font-bold rounded-xl border border-teal-200 hover:bg-teal-100 transition-colors" />
+                        </div>
 
                         {['admin', 'accountant', 'dieu_duong', 'cskh'].includes(profile?.role) && (
                           <div className="pt-1">
