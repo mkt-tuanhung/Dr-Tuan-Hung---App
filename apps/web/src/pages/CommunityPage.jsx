@@ -113,11 +113,21 @@ const CommunityPage = () => {
     return out;
   };
 
+  // Bộ phận được xem chi tiết khách theo trạng thái khách
+  const CUSTOMER_VIEW_ROLES = {
+    scheduled: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'cskh', 'dieu_duong', 'marketing'],
+    coc: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'],
+    bong: ['telesale', 'sale_offline', 'cskh'],
+    phau_thuat: ['dieu_duong', 'cskh', 'accountant', 'shareholder'],
+  };
   const openCustomer = async (id) => {
     const { data } = await supabase.from('customer_appointments')
       .select('*, telesale:profiles!telesale_id(full_name), sale:profiles!sale_id(full_name)').eq('id', id).single();
-    if (data) setCustomerView(data);
-    else toast.error('Không tìm thấy khách hàng');
+    if (!data) { toast.error('Không tìm thấy khách hàng'); return; }
+    const allowed = CUSTOMER_VIEW_ROLES[data.status] || [];
+    const canView = isAdmin || allowed.includes(profile?.role) || allowed.includes(profile?.role_2);
+    if (!canView) { toast.warning('Bạn bị giới hạn quyền truy cập khách hàng này'); return; }
+    setCustomerView(data);
   };
   const [reactWho, setReactWho] = useState(null);        // { post, list }
   const [lightbox, setLightbox] = useState(null);        // { urls, index }
@@ -268,7 +278,7 @@ const CommunityPage = () => {
     const post = posts.find(p => p.id === postId);
     const rows = ids.map(uid => ({
       user_id: uid, actor_id: profile.id, type: 'mention',
-      title: `${profile.full_name} đã nhắc tên bạn` + (post?.title ? ` tại bài "${post.title}"` : ' trong cộng đồng'),
+      title: `${profile.full_name} đã nhắc đến bạn trong 1 bình luận` + (post?.title ? ` (bài "${post.title}")` : ''),
       body: text.replace(MENTION_RE, '@$1').slice(0, 120), link: 'community',
     }));
     await supabase.from('notifications').insert(rows);
