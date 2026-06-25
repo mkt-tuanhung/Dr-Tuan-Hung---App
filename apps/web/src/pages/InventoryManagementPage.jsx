@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X } from 'lucide-react';
+import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X, Pencil, Trash2 } from 'lucide-react';
 
 export default function InventoryManagementPage({ isNested = false }) {
   const { profile } = useAuth();
@@ -21,7 +21,7 @@ export default function InventoryManagementPage({ isNested = false }) {
   const [saving, setSaving] = useState(false);
 
   // Forms
-  const [itemForm, setItemForm] = useState({ name: '', unit: '', min_stock: 10, notes: '' });
+  const [itemForm, setItemForm] = useState({ id: null, name: '', unit: '', min_stock: 10, notes: '' });
   const [importForm, setImportForm] = useState({ item_id: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const loadData = useCallback(async () => {
@@ -61,25 +61,40 @@ export default function InventoryManagementPage({ isNested = false }) {
     if (profile) loadData();
   }, [loadData, profile]);
 
-  // Handle Add New Item
+  // Thêm / Sửa vật tư
   const handleItemSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const { error } = await supabase.from('inventory_items').insert([{
+    const payload = {
       name: itemForm.name,
       unit: itemForm.unit,
       min_stock: itemForm.min_stock || 0,
-      notes: itemForm.notes
-    }]);
+      notes: itemForm.notes,
+    };
+    const { error } = itemForm.id
+      ? await supabase.from('inventory_items').update(payload).eq('id', itemForm.id)
+      : await supabase.from('inventory_items').insert([payload]);
 
     if (error) toast.error(error.message);
     else {
-      toast.success('Thêm vật tư thành công!');
+      toast.success(itemForm.id ? 'Đã cập nhật vật tư!' : 'Thêm vật tư thành công!');
       setShowItemModal(false);
-      setItemForm({ name: '', unit: '', min_stock: 10, notes: '' });
+      setItemForm({ id: null, name: '', unit: '', min_stock: 10, notes: '' });
       loadData();
     }
     setSaving(false);
+  };
+
+  const openEditItem = (item) => {
+    setItemForm({ id: item.id, name: item.name, unit: item.unit, min_stock: item.min_stock || 0, notes: item.notes || '' });
+    setShowItemModal(true);
+  };
+
+  const deleteItem = async (item) => {
+    if (!window.confirm(`Xoá vật tư "${item.name}"? Hành động này không thể hoàn tác.`)) return;
+    const { error } = await supabase.from('inventory_items').delete().eq('id', item.id);
+    if (error) toast.error('Không xoá được (có thể vật tư đã phát sinh giao dịch): ' + error.message);
+    else { toast.success('Đã xoá vật tư'); loadData(); }
   };
 
   // Handle Import Transaction
@@ -154,7 +169,7 @@ export default function InventoryManagementPage({ isNested = false }) {
 
           {activeTab === 'stock' && canWrite && (
             <div className="flex gap-2 w-full md:w-auto">
-              <button onClick={() => setShowItemModal(true)} className="flex-1 md:flex-none bg-white border border-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-sm flex items-center justify-center gap-2">
+              <button onClick={() => { setItemForm({ id: null, name: '', unit: '', min_stock: 10, notes: '' }); setShowItemModal(true); }} className="flex-1 md:flex-none bg-white border border-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-sm flex items-center justify-center gap-2">
                 <Plus className="w-4 h-4" /> Danh mục mới
               </button>
               <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center gap-2">
@@ -186,13 +201,14 @@ export default function InventoryManagementPage({ isNested = false }) {
                     <th className="px-6 py-4 font-semibold text-right">Tồn kho hiện tại</th>
                     <th className="px-6 py-4 font-semibold text-right">Mức tối thiểu</th>
                     <th className="px-6 py-4 font-semibold">Ghi chú</th>
+                    {canWrite && <th className="px-6 py-4 font-semibold text-right">Thao tác</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {loading ? (
-                    <tr><td colSpan="5" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
                   ) : filteredItems.length === 0 ? (
-                    <tr><td colSpan="5" className="text-center py-10 text-slate-400">Chưa có vật tư nào</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Chưa có vật tư nào</td></tr>
                   ) : filteredItems.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-800">{item.name}</td>
@@ -206,6 +222,14 @@ export default function InventoryManagementPage({ isNested = false }) {
                       </td>
                       <td className="px-6 py-4 text-right text-slate-500">{item.min_stock}</td>
                       <td className="px-6 py-4 text-slate-500">{item.notes}</td>
+                      {canWrite && (
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => openEditItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600" title="Sửa"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -308,7 +332,7 @@ export default function InventoryManagementPage({ isNested = false }) {
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleItemSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50">
-              <h3 className="font-bold text-indigo-800 text-lg">Thêm Danh mục Vật tư</h3>
+              <h3 className="font-bold text-indigo-800 text-lg">{itemForm.id ? 'Sửa Danh mục Vật tư' : 'Thêm Danh mục Vật tư'}</h3>
               <button type="button" onClick={() => setShowItemModal(false)}><X className="w-5 h-5 text-indigo-400 hover:text-indigo-600" /></button>
             </div>
             <div className="p-6 space-y-4">
