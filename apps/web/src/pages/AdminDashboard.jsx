@@ -31,24 +31,35 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-const MENU = [
-  { id: 'overview',      label: 'Tổng quan',        shortLabel: 'Tổng quan',  icon: LayoutDashboard },
-  { id: 'hr',            label: 'Quản lý Nhân sự',  shortLabel: 'Nhân sự',    icon: Users },
-  { id: 'deposit_management', label: 'Quản lý Đặt cọc', shortLabel: 'Đặt cọc', icon: ClipboardList },
-  { id: 'appointments',  label: 'Lịch hẹn',          shortLabel: 'Lịch hẹn',  icon: CalendarDays },
-  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', shortLabel: 'Phẫu thuật', icon: Activity },
-  { id: 'hau_phau',      label: 'Hậu phẫu',          shortLabel: 'Hậu phẫu',   icon: ClipboardList },
-  { id: 'kpi',           label: 'KPI & Hoa hồng',    shortLabel: 'KPI',        icon: Target },
-  { id: 'payroll',       label: 'Bảng lương',        shortLabel: 'Lương',      icon: Wallet },
-  { id: 'finance',       label: 'Doanh thu / Tài chính', shortLabel: 'Tài chính', icon: Banknote },
-  { id: 'advances',      label: 'Tạm ứng chi',       shortLabel: 'Tạm ứng',    icon: Wallet },
-  { id: 'cashflow',      label: 'Kế toán dòng tiền', shortLabel: 'Dòng tiền',  icon: BarChart2 },
-  { id: 'marketing',     label: 'Marketing',         shortLabel: 'Marketing',  icon: Target },
-  { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', shortLabel: 'VP/VT', icon: Activity },
-  { id: 'community',     label: 'Cộng đồng',         shortLabel: 'Cộng đồng', icon: MessagesSquare },
-  { id: 'notifications', label: 'Thông báo',         shortLabel: 'Thông báo', icon: Bell },
-  { id: 'permissions',   label: 'Phân quyền',        shortLabel: 'Phân quyền',icon: ShieldCheck },
+const MENU_GROUPS = [
+  { title: null, items: [
+    { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
+  ]},
+  { title: 'KHÁCH HÀNG', items: [
+    { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
+    { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
+    { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
+    { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
+  ]},
+  { title: 'NHÂN SỰ', items: [
+    { id: 'hr', label: 'Quản lý Nhân sự', icon: Users },
+    { id: 'kpi', label: 'KPI & Hoa hồng', icon: Target },
+    { id: 'payroll', label: 'Bảng lương', icon: Wallet },
+  ]},
+  { title: 'TÀI CHÍNH', items: [
+    { id: 'finance', label: 'Doanh thu / Tài chính', icon: Banknote },
+    { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
+    { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
+    { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
+    { id: 'marketing', label: 'Marketing / Ads', icon: Target },
+  ]},
+  { title: 'VẬN HÀNH', items: [
+    { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
+    { id: 'notifications', label: 'Thông báo', icon: Bell },
+    { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
+  ]},
 ];
+const MENU = MENU_GROUPS.flatMap(g => g.items);
 
 const BOTTOM_NAV = ['overview', 'hr', 'appointments', 'kpi'];
 
@@ -315,34 +326,43 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {MENU.map((item) => {
-            const Icon = item.icon;
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-                className={`
-                  w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
-                  ${active
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200'
-                    : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {item.label}
-                </div>
-                {item.id === 'attendance' && pendingLeaves > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                    {pendingLeaves}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {MENU_GROUPS.map((group, gi) => (
+            <div key={group.title || `g${gi}`} className={group.title ? 'pt-2' : ''}>
+              {group.title && (
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{group.title}</div>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                      className={`
+                        w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
+                        ${active
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200'
+                          : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {item.label}
+                      </div>
+                      {item.id === 'hr' && pendingLeaves > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                          {pendingLeaves}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
       </aside>
