@@ -14,6 +14,21 @@ const TABS = [
   { id: 'Có biến chứng', label: 'Có biến chứng' }
 ];
 
+// Màu cho chip trạng thái
+const STATUS_STYLE = {
+  'Đang theo dõi': 'bg-amber-100 text-amber-700 border-amber-200',
+  'Tái khám': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Đã ổn định': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'Có biến chứng': 'bg-red-100 text-red-700 border-red-200',
+};
+
+// Thẻ ghi chú nhanh theo mốc chăm sóc hậu phẫu
+const QUICK_NOTES = [
+  'Vết thương khô, sạch', 'Đã cắt chỉ', 'Hết sưng nề', 'Ăn ngủ tốt',
+  'Còn sưng nhẹ', 'Đã thay băng', 'Uống thuốc đầy đủ', 'Ổn định, bình thường',
+  'Hẹn tái khám', 'Có dấu hiệu bất thường',
+];
+
 const HauPhauPage = () => {
   const { profile } = useAuth();
   const [customers, setCustomers] = useState([]);
@@ -112,6 +127,8 @@ const HauPhauPage = () => {
       }
     }
   }, [customers]);
+
+  const addQuickNote = (text) => setForm(f => ({ ...f, post_op_notes: f.post_op_notes + (f.post_op_notes ? '\n' : '') + text }));
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -420,47 +437,77 @@ const HauPhauPage = () => {
         </>
       )}
 
-      {/* Modal Cập nhật (Ghi chú mới) */}
+      {/* Modal Nhật ký chăm sóc hậu phẫu */}
       {showNoteModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSave} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
-              <h3 className="font-bold text-slate-800">Cập nhật hậu phẫu: {selectedApp?.customer_name}</h3>
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <form onSubmit={handleSave} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
+              <div>
+                <h3 className="font-bold text-slate-800">Nhật ký chăm sóc</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{selectedApp?.customer_name} · {selectedApp?.phone}</p>
+              </div>
               <button type="button" onClick={() => setShowNoteModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-            <div className="p-6 space-y-4">
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Trạng thái dạng chip */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Tình trạng hiện tại</label>
-                <select value={form.post_op_status} onChange={e => setForm({...form, post_op_status: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
-                  {TABS.filter(t => t.id !== 'all').map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                </select>
+                <label className="block text-sm font-semibold mb-2 text-slate-600">Tình trạng hiện tại</label>
+                <div className="flex flex-wrap gap-2">
+                  {TABS.filter(t => t.id !== 'all').map(t => (
+                    <button key={t.id} type="button" onClick={() => setForm({ ...form, post_op_status: t.id })}
+                      className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${form.post_op_status === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {form.post_op_status === 'Tái khám' && (
-                <div className="grid grid-cols-2 gap-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-emerald-800">Ngày hẹn tái khám</label>
-                    <input type="date" required value={form.recheck_date} onChange={e => setForm({...form, recheck_date: e.target.value})} className="w-full border border-emerald-200 p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                    <label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám</label>
+                    <input type="date" required value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-emerald-800">Giờ hẹn</label>
-                    <input type="time" required value={form.recheck_time} onChange={e => setForm({...form, recheck_time: e.target.value})} className="w-full border border-emerald-200 p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                    <label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label>
+                    <input type="time" required value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
                   </div>
                 </div>
               )}
+
+              {/* Timeline lịch sử các mốc */}
               <div>
-                <div className="flex justify-between items-end mb-2">
-                  <label className="block text-sm font-semibold">Ghi chú theo dõi</label>
-                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-emerald-100">
-                    {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
-                  </button>
-                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                <label className="block text-sm font-semibold mb-2 text-slate-600">Lịch sử theo dõi</label>
+                <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 max-h-48 overflow-y-auto text-sm text-slate-700">
+                  {selectedApp?.post_op_notes ? renderNotes(selectedApp.post_op_notes) : (
+                    <div className="text-slate-400 text-center py-4">Chưa có ghi chú nào</div>
+                  )}
                 </div>
-                <textarea required rows={4} value={form.post_op_notes} onChange={e => setForm({...form, post_op_notes: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none" placeholder="Vết thương khô, đã cắt chỉ..." />
+              </div>
+
+              {/* Ghi nhanh theo thẻ */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-600">Thêm mốc mới — chạm thẻ nhanh</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {QUICK_NOTES.map(q => (
+                    <button key={q} type="button" onClick={() => addQuickNote(q)}
+                      className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100 hover:bg-emerald-100">
+                      + {q}
+                    </button>
+                  ))}
+                </div>
+                <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="mt-2 text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-emerald-100">
+                  {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+                </button>
+                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end shrink-0">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu lại'}</button>
+
+            <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
+              <span className="text-xs text-slate-400">Mốc mới sẽ được đóng dấu ngày giờ tự động</span>
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
             </div>
           </form>
         </div>
