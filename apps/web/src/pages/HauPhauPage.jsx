@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 
@@ -43,13 +43,12 @@ const HauPhauPage = () => {
   const isCskh = profile?.role === 'cskh' || profile?.role_2 === 'cskh';
   const canSeeAll = isAdmin || isHeadNurse || isCskh;
 
-  // Modal
-  const [showNoteModal, setShowNoteModal] = useState(false);
+  // Trang chăm sóc riêng (full-page) + modal phân công
+  const [careApp, setCareApp] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({ id: null, additional_hau_phau_ids: [] });
   const [selectedNurseId, setSelectedNurseId] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
-  const [detailApp, setDetailApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewImage, setViewImage] = useState(null);
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
@@ -105,15 +104,15 @@ const HauPhauPage = () => {
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments', loadData);
 
-  const openNote = (app) => {
+  const openCare = (app) => {
     setSelectedApp(app);
+    setCareApp(app);
     setForm({
       post_op_status: app.post_op_status || 'Đang theo dõi',
       post_op_notes: '',
       recheck_date: new Date().toISOString().split('T')[0],
       recheck_time: '09:00'
     });
-    setShowNoteModal(true);
   };
 
   useEffect(() => {
@@ -121,11 +120,18 @@ const HauPhauPage = () => {
     if (focusId && customers.length > 0) {
       const app = customers.find(c => c.id === focusId);
       if (app) {
-        setDetailApp(app);
-        setActiveTab('all');
+        openCare(app);
         sessionStorage.removeItem('focusHauPhauId');
       }
     }
+  }, [customers]);
+
+  // Đồng bộ trang chăm sóc với dữ liệu mới (khi loadData/realtime cập nhật)
+  useEffect(() => {
+    if (!careApp) return;
+    const fresh = customers.find(c => c.id === careApp.id);
+    if (fresh) setCareApp(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customers]);
 
   const addQuickNote = (text) => setForm(f => ({ ...f, post_op_notes: f.post_op_notes + (f.post_op_notes ? '\n' : '') + text }));
@@ -166,9 +172,10 @@ const HauPhauPage = () => {
           toast.success('Đã tự động tạo Lịch Tái Khám!');
         }
       }
-      toast.success('Cập nhật chăm sóc hậu phẫu thành công!'); 
-      setShowNoteModal(false); 
-      loadData(); 
+      toast.success('Đã lưu mốc chăm sóc!');
+      setCareApp(prev => prev ? { ...prev, post_op_status: form.post_op_status, post_op_notes: updatedNotes } : prev);
+      setForm(f => ({ ...f, post_op_notes: '' }));
+      loadData();
     }
     setSaving(false);
   };
@@ -269,6 +276,129 @@ const HauPhauPage = () => {
     return elements;
   };
 
+  // ===== TRANG CHĂM SÓC RIÊNG (full-page) =====
+  if (careApp) {
+    const st = form.post_op_status;
+    const addNurses = (careApp.additional_hau_phau_ids || []).map(id => nurses.find(n => n.id === id)?.full_name || id);
+    return (
+      <form onSubmit={handleSave} className="max-w-3xl mx-auto space-y-4 pb-32">
+        <button type="button" onClick={() => setCareApp(null)} className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-semibold">
+          <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
+        </button>
+
+        {/* Thông tin khách */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
+              <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {careApp.phone}</div>
+            </div>
+            <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>
+              {careApp.post_op_status || 'Đang theo dõi'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm bg-slate-50 p-3 rounded-xl">
+            <div className="text-slate-500 text-xs">Dịch vụ</div>
+            <div className="font-semibold text-slate-800 text-right">{careApp.service || '—'}</div>
+            <div className="text-slate-500 text-xs">Ngày mổ</div>
+            <div className="text-slate-700 text-right">{careApp.surgery_date ? new Date(careApp.surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
+            <div className="text-slate-500 text-xs">Phụ trách</div>
+            <div className="text-slate-700 text-right">{careApp.hau_phau?.full_name || 'N/A'}{addNurses.length > 0 && <span className="text-xs text-slate-400"> + {addNurses.join(', ')}</span>}</div>
+          </div>
+          {canSeeAll && (
+            <button type="button" onClick={() => { setAssignForm({ id: careApp.id, additional_hau_phau_ids: careApp.additional_hau_phau_ids || [] }); setSelectedNurseId(''); setShowAssignModal(true); }}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+              <UserPlus className="w-4 h-4" /> Phân công thêm điều dưỡng
+            </button>
+          )}
+        </div>
+
+        {/* Nhật ký theo dõi (thread) */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-emerald-600" /> Nhật ký theo dõi</h3>
+          <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+            {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
+          </div>
+        </div>
+
+        {/* Thêm mốc mới */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h3 className="font-bold text-slate-800">Thêm mốc chăm sóc</h3>
+          <div>
+            <label className="block text-sm font-semibold mb-2 text-slate-600">Cập nhật trạng thái</label>
+            <div className="flex flex-wrap gap-2">
+              {TABS.filter(t => t.id !== 'all').map(t => (
+                <button key={t.id} type="button" onClick={() => setForm({ ...form, post_op_status: t.id })}
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${st === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {st === 'Tái khám' && (
+            <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám</label>
+                <input type="date" required value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label>
+                <input type="time" required value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {QUICK_NOTES.map(q => (
+              <button key={q} type="button" onClick={() => addQuickNote(q)}
+                className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100 hover:bg-emerald-100">
+                + {q}
+              </button>
+            ))}
+          </div>
+          <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-emerald-100">
+              {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+            </button>
+            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
+          </div>
+        </div>
+
+        {/* Modal phân công + xem ảnh dùng chung (render dưới) */}
+        {showAssignModal && (
+          <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="px-6 py-4 border-b flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 text-lg">Phân công thêm Điều dưỡng</h3>
+                <button type="button" onClick={() => setShowAssignModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-6">
+                <label className="block text-sm font-semibold mb-2">Chọn nhân sự Điều dưỡng</label>
+                <select value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <option value="">-- Chọn Điều dưỡng --</option>
+                  {nurses.filter(n => n.role === 'dieu_duong' && !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
+                    <option key={n.id} value={n.id}>{n.full_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="p-4 border-t bg-slate-50 flex justify-end">
+                <button type="button" onClick={handleAssignMoreSubmit} disabled={saving} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700">{saving ? 'Đang lưu...' : 'Lưu phân công'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {viewImage && (
+          <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4" onClick={() => setViewImage(null)}>
+            <img src={viewImage} alt="" className="max-w-full max-h-[88vh] rounded-2xl object-contain" onClick={e => e.stopPropagation()} />
+          </div>
+        )}
+      </form>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
       <div className="flex-1 min-w-0 space-y-6 w-full">
@@ -333,18 +463,22 @@ const HauPhauPage = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {apps.map(app => (
-                  <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-emerald-300 transition-colors">
+                {apps.map(app => {
+                  const st = app.post_op_status || 'Đang theo dõi';
+                  const noteCount = app.post_op_notes ? app.post_op_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
+                  return (
+                  <button key={app.id} type="button" onClick={() => openCare(app)}
+                    className="text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-emerald-400 hover:shadow-md transition-all">
                     {/* Header */}
                     <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-slate-800 text-lg truncate">{app.customer_name}</h4>
                         <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5">
                           <Phone className="w-3.5 h-3.5" /> {app.phone}
                         </div>
                       </div>
-                      <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg text-xs border border-emerald-100 whitespace-nowrap">
-                        {app.post_op_status || 'Đang theo dõi'}
+                      <span className={`font-semibold px-2 py-1 rounded-lg text-xs border whitespace-nowrap shrink-0 ${STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']}`}>
+                        {st}
                       </span>
                     </div>
 
@@ -352,49 +486,17 @@ const HauPhauPage = () => {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm bg-slate-50 p-3 rounded-xl">
                       <div className="text-slate-500 text-xs">Dịch vụ:</div>
                       <div className="font-semibold text-slate-800 text-right truncate">{app.service || 'Chưa rõ'}</div>
-                      <div className="text-slate-500 text-xs">Phụ trách hậu phẫu:</div>
-                      <div className="text-slate-700 text-right">
-                        <div>{app.hau_phau?.full_name || 'N/A'}</div>
-                        {app.additional_hau_phau_ids && app.additional_hau_phau_ids.length > 0 && (
-                           <div className="text-xs text-slate-500 mt-1">
-                             + {app.additional_hau_phau_ids.map(id => nurses.find(n => n.id === id)?.full_name || id).join(', ')}
-                           </div>
-                        )}
-                      </div>
+                      <div className="text-slate-500 text-xs">Phụ trách:</div>
+                      <div className="text-slate-700 text-right truncate">{app.hau_phau?.full_name || 'N/A'}</div>
                     </div>
 
-                    {/* Note Box */}
-                    {app.post_op_notes && (
-                      <div className="mt-auto mb-4 relative">
-                        <div className="text-xs text-slate-600 bg-yellow-50/50 p-3 pb-8 rounded-lg border border-yellow-200/50 max-h-36 overflow-hidden whitespace-pre-wrap relative">
-                          {renderNotes(app.post_op_notes)}
-                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#fefce8] to-transparent pointer-events-none rounded-b-lg"></div>
-                        </div>
-                        <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                          <button onClick={() => setDetailApp(app)} className="text-blue-600 text-[11px] font-bold bg-white px-4 py-1.5 rounded-full shadow-md hover:bg-slate-50 transition-colors border border-slate-100 flex items-center gap-1 z-10">
-                            Xem chi tiết
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="mt-auto pt-2 flex gap-2">
-                      <button onClick={() => openNote(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl transition-colors border border-slate-200">
-                        <MessageCircle className="w-4 h-4" /> Ghi chú
-                      </button>
-                      {canSeeAll && (
-                        <button onClick={() => {
-                          setAssignForm({ id: app.id, additional_hau_phau_ids: app.additional_hau_phau_ids || [] });
-                          setSelectedNurseId('');
-                          setShowAssignModal(true);
-                        }} className="w-10 h-10 flex shrink-0 justify-center items-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-colors border border-blue-200" title="Phân công thêm">
-                          <UserPlus className="w-4 h-4" />
-                        </button>
-                      )}
+                    <div className="mt-auto flex items-center justify-between pt-1 text-sm">
+                      <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {noteCount} mốc ghi chú</span>
+                      <span className="text-emerald-600 font-semibold">Mở nhật ký →</span>
                     </div>
-                  </div>
-                ))}
+                  </button>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -402,116 +504,6 @@ const HauPhauPage = () => {
       )}
       </div> {/* End main content */}
 
-      {/* Panel Xem Chi tiết Ghi chú (Desktop + Mobile) */}
-      {detailApp && (
-        <>
-          {/* Mobile Modal */}
-          <div className="lg:hidden fixed inset-0 bg-slate-900/50 z-[60] flex items-end p-4 backdrop-blur-sm transition-opacity" onClick={() => setDetailApp(null)}>
-            <div className="bg-white w-full rounded-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8" onClick={e => e.stopPropagation()}>
-              <div className="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
-                <h3 className="font-bold text-slate-800 truncate pr-2">Chi tiết Ghi chú - {detailApp.customer_name}</h3>
-                <button onClick={() => setDetailApp(null)} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="p-5 flex-1 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 bg-yellow-50/30">
-                {renderNotes(detailApp.post_op_notes)}
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop Panel */}
-          <div className="hidden lg:flex flex-col lg:w-[320px] xl:w-[380px] shrink-0 sticky top-6 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" style={{ height: 'calc(100vh - 3rem)' }}>
-            <div className="px-4 py-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 truncate pr-2" title={detailApp.customer_name}>
-                Ghi chú: {detailApp.customer_name}
-              </h3>
-              <button onClick={() => setDetailApp(null)} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 flex-1 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 bg-yellow-50/30">
-              {renderNotes(detailApp.post_op_notes)}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Modal Nhật ký chăm sóc hậu phẫu */}
-      {showNoteModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleSave} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-5 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
-              <div>
-                <h3 className="font-bold text-slate-800">Nhật ký chăm sóc</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{selectedApp?.customer_name} · {selectedApp?.phone}</p>
-              </div>
-              <button type="button" onClick={() => setShowNoteModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Trạng thái dạng chip */}
-              <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-600">Tình trạng hiện tại</label>
-                <div className="flex flex-wrap gap-2">
-                  {TABS.filter(t => t.id !== 'all').map(t => (
-                    <button key={t.id} type="button" onClick={() => setForm({ ...form, post_op_status: t.id })}
-                      className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${form.post_op_status === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {form.post_op_status === 'Tái khám' && (
-                <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám</label>
-                    <input type="date" required value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label>
-                    <input type="time" required value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-                  </div>
-                </div>
-              )}
-
-              {/* Timeline lịch sử các mốc */}
-              <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-600">Lịch sử theo dõi</label>
-                <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 max-h-48 overflow-y-auto text-sm text-slate-700">
-                  {selectedApp?.post_op_notes ? renderNotes(selectedApp.post_op_notes) : (
-                    <div className="text-slate-400 text-center py-4">Chưa có ghi chú nào</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Ghi nhanh theo thẻ */}
-              <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-600">Thêm mốc mới — chạm thẻ nhanh</label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {QUICK_NOTES.map(q => (
-                    <button key={q} type="button" onClick={() => addQuickNote(q)}
-                      className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100 hover:bg-emerald-100">
-                      + {q}
-                    </button>
-                  ))}
-                </div>
-                <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
-                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="mt-2 text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-emerald-100">
-                  {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
-                </button>
-                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-              </div>
-            </div>
-
-            <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
-              <span className="text-xs text-slate-400">Mốc mới sẽ được đóng dấu ngày giờ tự động</span>
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Modal Phân công thêm */}
       {showAssignModal && (
