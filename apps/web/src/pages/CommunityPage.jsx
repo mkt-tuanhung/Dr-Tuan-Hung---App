@@ -105,9 +105,9 @@ const CommunityPage = () => {
       if (m.index > last) out.push(text.slice(last, m.index));
       const [full, name, type, id] = m;
       if (type === 'cust') {
-        out.push(<button key={m.index} type="button" onClick={() => openCustomer(id)} className="text-blue-600 font-semibold hover:underline">@{name}</button>);
+        out.push(<button key={m.index} type="button" onClick={() => openCustomer(id)} className="inline-flex items-center gap-1 align-middle mx-0.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[13px] font-semibold hover:bg-blue-200 transition-colors">👤 {name}</button>);
       } else {
-        out.push(<span key={m.index} className="text-emerald-600 font-semibold">@{name}</span>);
+        out.push(<span key={m.index} className="inline-flex items-center align-middle mx-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[13px] font-semibold">@{name}</span>);
       }
       last = m.index + full.length;
     }
@@ -177,8 +177,8 @@ const CommunityPage = () => {
 
   // Đổi token trong HTML bài viết thành chip nhân sự / link khách
   const renderPostHtml = (html) => (html || '')
-    .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="color:#059669;font-weight:600">@$1</span>')
-    .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="color:#2563eb;font-weight:600;cursor:pointer;background:none;border:none;padding:0;font:inherit">@$1</button>');
+    .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#d1fae5;color:#047857;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
+    .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;cursor:pointer;margin:0 2px;font-family:inherit">👤 $1</button>');
 
   const handlePostContentClick = (e) => {
     const id = e.target?.dataset?.cust;
