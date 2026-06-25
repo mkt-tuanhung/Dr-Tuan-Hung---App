@@ -93,11 +93,11 @@ const FinanceManagementPage = () => {
       .gte('surgery_date', startDate)
       .lte('surgery_date', endDate);
 
-    // Phân quyền hiển thị
-    if (profile?.role === 'telesale') {
-      query = query.eq('telesale_id', profile.id);
-    } else if (profile?.role === 'sale_offline') {
-      query = query.eq('sale_id', profile.id);
+    // Phân quyền hiển thị: nhóm quản lý xem tất cả, còn lại chỉ xem doanh thu cá nhân
+    const canSeeAll = ['admin', 'accountant', 'shareholder', 'marketing'].includes(profile?.role)
+      || ['admin', 'accountant', 'shareholder', 'marketing'].includes(profile?.role_2);
+    if (!canSeeAll && profile?.id) {
+      query = query.or(`telesale_id.eq.${profile.id},telesale_id_2.eq.${profile.id},sale_id.eq.${profile.id}`);
     }
 
     const { data, error } = await query.order('surgery_date', { ascending: false });
@@ -155,8 +155,9 @@ const FinanceManagementPage = () => {
         .gte('deposit_date', startDate)
         .lte('deposit_date', endDate);
       
-      if (profile?.role === 'telesale') cocQuery = cocQuery.eq('telesale_id', profile.id);
-      else if (profile?.role === 'sale_offline') cocQuery = cocQuery.eq('sale_id', profile.id);
+      if (!canSeeAll && profile?.id) {
+        cocQuery = cocQuery.or(`telesale_id.eq.${profile.id},telesale_id_2.eq.${profile.id},sale_id.eq.${profile.id}`);
+      }
 
       const { data: cocData } = await cocQuery;
       let tCocRev = 0;
