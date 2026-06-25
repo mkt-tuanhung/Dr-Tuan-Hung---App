@@ -547,8 +547,13 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         <tr><th className="px-4 py-2">Tên vật tư</th><th className="px-4 py-2 text-right">SL</th></tr>
                       </thead>
                       <tbody className="divide-y">
-                        {consumedItems.map(item => (
-                          <tr key={item.id}><td className="px-4 py-3 font-semibold">{item.inventory_items?.name}</td><td className="px-4 py-3 text-right font-bold text-red-600">-{item.quantity}</td></tr>
+                        {Object.values(consumedItems.reduce((acc, t) => {
+                          const key = t.item_id || t.inventory_items?.name;
+                          if (!acc[key]) acc[key] = { name: t.inventory_items?.name, qty: 0 };
+                          acc[key].qty += Number(t.quantity || 0);
+                          return acc;
+                        }, {})).map((m, i) => (
+                          <tr key={i}><td className="px-4 py-3 font-semibold">{m.name}</td><td className="px-4 py-3 text-right font-bold text-red-600">-{m.qty}</td></tr>
                         ))}
                       </tbody>
                     </table>

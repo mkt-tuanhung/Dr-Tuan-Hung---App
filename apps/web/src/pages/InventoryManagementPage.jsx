@@ -328,6 +328,13 @@ export default function InventoryManagementPage({ isNested = false }) {
                 <div className="text-center py-10 text-slate-400">Chưa có khách nào dùng vật tư.</div>
               ) : entries.map(([ref, list]) => {
                 const cust = customerMap[ref];
+                // Gộp cùng 1 loại vật tư (cộng dồn qua các lần báo cáo)
+                const merged = Object.values(list.reduce((acc, t) => {
+                  const key = t.item_id || t.inventory_items?.name;
+                  if (!acc[key]) acc[key] = { name: t.inventory_items?.name, unit: t.inventory_items?.unit, qty: 0 };
+                  acc[key].qty += Number(t.quantity || 0);
+                  return acc;
+                }, {}));
                 return (
                   <div key={ref} className="border border-slate-200 rounded-2xl overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -335,14 +342,14 @@ export default function InventoryManagementPage({ isNested = false }) {
                         <div className="font-bold text-slate-800">{cust?.name || 'Khách (đã xóa)'}</div>
                         <div className="text-xs text-slate-400">{cust?.date ? 'Ngày mổ: ' + new Date(cust.date).toLocaleDateString('vi-VN') : ''}</div>
                       </div>
-                      <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full">{list.length} loại vật tư</span>
+                      <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full">{merged.length} loại vật tư</span>
                     </div>
                     <table className="w-full text-sm">
                       <tbody className="divide-y divide-slate-50">
-                        {list.map(t => (
-                          <tr key={t.id} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-2.5 font-medium text-slate-700">{t.inventory_items?.name}</td>
-                            <td className="px-4 py-2.5 text-right font-bold text-red-600">-{t.quantity} <span className="text-xs font-normal text-slate-400 ml-1">{t.inventory_items?.unit}</span></td>
+                        {merged.map((m, i) => (
+                          <tr key={i} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-2.5 font-medium text-slate-700">{m.name}</td>
+                            <td className="px-4 py-2.5 text-right font-bold text-red-600">-{m.qty} <span className="text-xs font-normal text-slate-400 ml-1">{m.unit}</span></td>
                           </tr>
                         ))}
                       </tbody>
