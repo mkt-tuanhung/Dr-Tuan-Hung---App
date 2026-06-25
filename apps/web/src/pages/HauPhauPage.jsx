@@ -88,6 +88,8 @@ const HauPhauPage = () => {
       toast.error('Lỗi tải dữ liệu: ' + appointmentsRes.error.message);
     } else {
       let data = appointmentsRes.data || [];
+      // Chỉ đẩy sang Hậu phẫu/CSKH khi đã phân công điều dưỡng trực hậu phẫu
+      data = data.filter(d => d.hau_phau_id);
       // Điều dưỡng thường chỉ thấy ca được phân công; admin/trưởng bp/CSKH thấy tất cả
       if (!canSeeAll && profile?.id) {
          data = data.filter(d => d.hau_phau_id === profile.id || (d.additional_hau_phau_ids && d.additional_hau_phau_ids.includes(profile.id)));
