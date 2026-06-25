@@ -16,11 +16,8 @@ export default function MentionInput({ value, onChange, onEnter, placeholder, st
     const q = m[1];
     const start = caret - m[0].length;
     if (/^\d{3,}$/.test(q)) {
-      const { data } = await supabase.from('customer_appointments')
-        .select('id, customer_name, phone').ilike('phone', `%${q}%`).limit(6);
-      const seen = new Set();
-      const items = (data || []).filter(c => { if (seen.has(c.phone)) return false; seen.add(c.phone); return true; })
-        .map(c => ({ type: 'cust', id: c.id, name: c.customer_name || c.phone, sub: c.phone }));
+      const { data } = await supabase.rpc('search_customer_by_phone', { q });
+      const items = (data || []).map(c => ({ type: 'cust', id: c.id, name: c.customer_name || c.phone, sub: c.phone }));
       setDrop({ items, start }); setActive(0);
     } else {
       const ql = q.toLowerCase();

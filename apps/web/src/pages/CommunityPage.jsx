@@ -113,20 +113,10 @@ const CommunityPage = () => {
     return out;
   };
 
-  // Bộ phận được xem chi tiết khách theo trạng thái khách
-  const CUSTOMER_VIEW_ROLES = {
-    scheduled: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'cskh', 'dieu_duong', 'marketing'],
-    coc: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'],
-    bong: ['telesale', 'sale_offline', 'cskh'],
-    phau_thuat: ['dieu_duong', 'cskh', 'accountant', 'shareholder'],
-  };
   const openCustomer = async (id) => {
-    const { data } = await supabase.from('customer_appointments')
-      .select('*, telesale:profiles!telesale_id(full_name), sale:profiles!sale_id(full_name)').eq('id', id).single();
-    if (!data) { toast.error('Không tìm thấy khách hàng'); return; }
-    const allowed = CUSTOMER_VIEW_ROLES[data.status] || [];
-    const canView = isAdmin || allowed.includes(profile?.role) || allowed.includes(profile?.role_2);
-    if (!canView) { toast.warning('Bạn bị giới hạn quyền truy cập khách hàng này'); return; }
+    const { data, error } = await supabase.rpc('get_customer_card', { p_id: id });
+    if (error || !data) { toast.error('Không tìm thấy khách hàng'); return; }
+    if (data.denied) { toast.warning('Bạn bị giới hạn quyền truy cập khách hàng này'); return; }
     setCustomerView(data);
   };
   const [reactWho, setReactWho] = useState(null);        // { post, list }
@@ -602,8 +592,8 @@ const CommunityPage = () => {
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm bg-slate-50 rounded-xl p-3">
                 <div className="text-slate-500 text-xs">Dịch vụ</div><div className="text-right font-medium text-slate-700">{customerView.service || '—'}</div>
                 <div className="text-slate-500 text-xs">Trạng thái</div><div className="text-right text-slate-700">{customerView.status}</div>
-                <div className="text-slate-500 text-xs">Telesale</div><div className="text-right text-slate-700">{customerView.telesale?.full_name || '—'}</div>
-                <div className="text-slate-500 text-xs">Sale</div><div className="text-right text-slate-700">{customerView.sale?.full_name || '—'}</div>
+                <div className="text-slate-500 text-xs">Telesale</div><div className="text-right text-slate-700">{customerView.telesale || '—'}</div>
+                <div className="text-slate-500 text-xs">Sale</div><div className="text-right text-slate-700">{customerView.sale || '—'}</div>
                 {customerView.surgery_date && (<><div className="text-slate-500 text-xs">Ngày mổ</div><div className="text-right text-slate-700">{new Date(customerView.surgery_date).toLocaleDateString('vi-VN')}</div></>)}
               </div>
               {customerView.notes && <div className="text-xs text-slate-500 bg-yellow-50/50 border border-yellow-100 rounded-lg p-2 whitespace-pre-wrap">{customerView.notes}</div>}
