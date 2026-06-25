@@ -267,21 +267,6 @@ const CommunityPage = () => {
       .insert({ post_id: postId, author_id: profile.id, content: t, parent_id: parentId || null }).select('*').single();
     if (error) { toast.error(error.message); return; }
     setComments(prev => [...prev, { ...data, author: meUser }]);
-    notifyMentions(t, postId);
-  };
-
-  // Báo cho nhân sự được nhắc (@) trong nội dung
-  const notifyMentions = async (text, postId) => {
-    const ids = [...new Set([...text.matchAll(/@\[[^\]]+\]\(staff:([0-9a-fA-F-]+)\)/g)].map(m => m[1]))]
-      .filter(id => id !== profile.id);
-    if (!ids.length) return;
-    const post = posts.find(p => p.id === postId);
-    const rows = ids.map(uid => ({
-      user_id: uid, actor_id: profile.id, type: 'mention',
-      title: `${profile.full_name} đã nhắc đến bạn trong 1 bình luận` + (post?.title ? ` (bài "${post.title}")` : ''),
-      body: text.replace(MENTION_RE, '@$1').slice(0, 120), link: 'community',
-    }));
-    await supabase.from('notifications').insert(rows);
   };
 
   const deletePost = async (id) => {
