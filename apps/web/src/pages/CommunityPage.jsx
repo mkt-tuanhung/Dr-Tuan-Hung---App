@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
+import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight, Phone, Clock } from 'lucide-react';
 import MentionInput, { MENTION_RE } from '@/components/MentionInput.jsx';
 
 const REACTIONS = [
@@ -18,6 +18,35 @@ const EMOJI_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.emoji]));
 const LABEL_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.label]));
 const TEXT_COLORS = ['#0f172a', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
 const QUICK_COMMENTS = ['Đã xét nghiệm xong', 'Vào phẫu thuật', 'KH phẫu thuật xong', 'Khách hàng về phòng nghỉ ngơi'];
+
+// Nhận diện mốc thời gian: 9h, 9h30, 9:30, 9 giờ 30 phút, ngày 25/06(/2026)
+const TIME_SRC = '\\d{1,2}\\s*giờ(?:\\s*\\d{1,2})?(?:\\s*phút)?|\\d{1,2}h\\d{0,2}|\\d{1,2}:\\d{2}|\\d{1,2}\\/\\d{1,2}(?:\\/\\d{2,4})?';
+// "09:30" -> "9h30", "14:00" -> "14h"
+const fmtTime = (v) => {
+  const [h, m] = (v || '').split(':');
+  const hh = parseInt(h, 10);
+  if (isNaN(hh)) return v;
+  return m && m !== '00' ? `${hh}h${m}` : `${hh}h`;
+};
+// Nối thêm 1 đoạn vào nội dung đang soạn (giữ phần đã gõ, thêm space)
+const joinText = (prev, add) => ((prev && prev.trim()) ? prev.replace(/\s*$/, '') + ' ' : '') + add + ' ';
+
+// Nút chọn giờ -> gọi onPick(label) để chèn vào ô soạn thảo
+function TimeButton({ onPick, size = 'p-2' }) {
+  const ref = useRef(null);
+  return (
+    <span className="relative inline-flex shrink-0">
+      <button type="button" title="Thêm mốc thời gian"
+        onClick={() => { const el = ref.current; if (!el) return; try { el.showPicker ? el.showPicker() : el.focus(); } catch { el.focus(); } }}
+        className={`${size} rounded-full text-rose-500 hover:bg-rose-50`}>
+        <Clock className="w-4 h-4" />
+      </button>
+      <input ref={ref} type="time" tabIndex={-1} aria-hidden
+        className="absolute bottom-0 left-0 w-0 h-0 opacity-0 pointer-events-none"
+        onChange={(e) => { const v = e.target.value; if (v) { onPick(fmtTime(v)); e.target.value = ''; } }} />
+    </span>
+  );
+}
 
 // Làm sạch HTML soạn thảo: chỉ giữ định dạng cơ bản + màu chữ
 const sanitizeHtml = (html) => {
@@ -98,11 +127,24 @@ const CommunityPage = () => {
   }, []);
 
   // Render nội dung có tag: @nhân sự (xanh) / @khách (link mở thông tin)
+  // Bôi đỏ mốc thời gian trong 1 đoạn text thường -> mảng node
+  const pushTimes = (out, str, keyBase) => {
+    if (!str) return;
+    let last = 0; let t; const tre = new RegExp(TIME_SRC, 'gi');
+    while ((t = tre.exec(str)) !== null) {
+      if (t.index > last) out.push(str.slice(last, t.index));
+      out.push(<span key={`${keyBase}-t${t.index}`} className="text-rose-600 font-semibold bg-rose-50 rounded px-1">{t[0]}</span>);
+      last = t.index + t[0].length;
+      if (t.index === tre.lastIndex) tre.lastIndex++;
+    }
+    if (last < str.length) out.push(str.slice(last));
+  };
+
   const renderMentions = (text) => {
     if (!text) return null;
     const out = []; let last = 0; let m; const re = new RegExp(MENTION_RE);
     while ((m = re.exec(text)) !== null) {
-      if (m.index > last) out.push(text.slice(last, m.index));
+      if (m.index > last) pushTimes(out, text.slice(last, m.index), `m${m.index}`);
       const [full, name, type, id] = m;
       if (type === 'cust') {
         out.push(<button key={m.index} type="button" onClick={() => openCustomer(id)} className="inline-flex items-center gap-1 align-middle mx-0.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[13px] font-semibold hover:bg-blue-200 transition-colors">👤 {name}</button>);
@@ -111,7 +153,7 @@ const CommunityPage = () => {
       }
       last = m.index + full.length;
     }
-    if (last < text.length) out.push(text.slice(last));
+    if (last < text.length) pushTimes(out, text.slice(last), 'mEnd');
     return out;
   };
 
@@ -175,10 +217,17 @@ const CommunityPage = () => {
     else if (e.key === 'Escape') { setEditorMention(null); }
   };
 
-  // Đổi token trong HTML bài viết thành chip nhân sự / link khách
-  const renderPostHtml = (html) => (html || '')
-    .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#d1fae5;color:#047857;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
-    .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;cursor:pointer;margin:0 2px;font-family:inherit">👤 $1</button>');
+  // Đổi token trong HTML bài viết thành chip nhân sự / link khách + bôi đỏ mốc thời gian
+  const renderPostHtml = (html) => {
+    const withChips = (html || '')
+      .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#d1fae5;color:#047857;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
+      .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;cursor:pointer;margin:0 2px;font-family:inherit">👤 $1</button>');
+    // Chỉ tô màu phần text (bỏ qua bên trong các thẻ <...>)
+    return withChips.split(/(<[^>]+>)/).map(seg =>
+      seg.startsWith('<') ? seg
+        : seg.replace(new RegExp(TIME_SRC, 'gi'), '<span style="color:#e11d48;font-weight:600;background:#fff1f2;border-radius:4px;padding:0 3px">$&</span>')
+    ).join('');
+  };
 
   const handlePostContentClick = (e) => {
     const id = e.target?.dataset?.cust;
@@ -371,6 +420,7 @@ const CommunityPage = () => {
                 onEnter={() => addComment(c.post_id, c.id, replyText)}
                 placeholder={`Trả lời ${c.author?.full_name || ''}... (@ tag nhân sự · # SĐT tag khách)`}
                 className="w-full bg-white rounded-full px-3 py-1.5 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
+              <TimeButton size="p-1.5" onPick={(label) => setReplyText(t => joinText(t, label))} />
               <button onClick={() => addComment(c.post_id, c.id, replyText)} className="p-1.5 rounded-full text-emerald-600 hover:bg-emerald-50"><Send className="w-4 h-4" /></button>
             </div>
           )}
@@ -577,26 +627,21 @@ const CommunityPage = () => {
                     {repliesOf(c.id).map(r => renderComment(r, true))}
                   </div>
                 ))}
-                {(() => {
-                  const used = comments.filter(c => c.post_id === post.id).map(c => c.content);
-                  const avail = QUICK_COMMENTS.filter(q => !used.includes(q));
-                  return avail.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {avail.map(q => (
-                        <button key={q} onClick={() => addComment(post.id, null, q)}
-                          className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 border border-emerald-100">
-                          + {q}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_COMMENTS.map(q => (
+                    <button key={q} onClick={() => setCommentText(c => ({ ...c, [post.id]: joinText(c[post.id], q) }))}
+                      className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 border border-emerald-100">
+                      + {q}
+                    </button>
+                  ))}
+                </div>
                 <div className="flex gap-2 items-center">
                   <Avatar url={profile?.avatar_url} name={profile?.full_name} size="w-8 h-8" />
                   <MentionInput value={commentText[post.id] || ''} onChange={(v) => setCommentText(c => ({ ...c, [post.id]: v }))} staff={mentionStaff}
                     onEnter={() => addComment(post.id, null, commentText[post.id])}
                     placeholder="Viết bình luận... (@ tag nhân sự · # SĐT tag khách)"
                     className="w-full bg-white rounded-full px-4 py-2 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
+                  <TimeButton onPick={(label) => setCommentText(c => ({ ...c, [post.id]: joinText(c[post.id], label) }))} />
                   <button onClick={() => addComment(post.id, null, commentText[post.id])} className="p-2 rounded-full text-emerald-600 hover:bg-emerald-50"><Send className="w-4 h-4" /></button>
                 </div>
               </div>
