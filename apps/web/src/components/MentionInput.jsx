@@ -11,20 +11,20 @@ export default function MentionInput({ value, onChange, onEnter, placeholder, st
 
   const detect = async (text, caret) => {
     const before = text.slice(0, caret);
-    const m = before.match(/@([^\s@]*)$/);
-    if (!m) { setDrop(null); return; }
-    const q = m[1];
-    const start = caret - m[0].length;
-    if (/^\d{3,}$/.test(q)) {
+    const mCust = before.match(/#(\d*)$/);          // # + SĐT khách
+    const mStaff = before.match(/@([^\s@#]*)$/);    // @ + tên nhân sự
+    if (mCust) {
+      const q = mCust[1];
+      if (q.length < 2) { setDrop(null); return; }
       const { data } = await supabase.rpc('search_customer_by_phone', { q });
       const items = (data || []).map(c => ({ type: 'cust', id: c.id, name: c.customer_name || c.phone, sub: c.phone }));
-      setDrop({ items, start }); setActive(0);
-    } else {
-      const ql = q.toLowerCase();
+      setDrop({ items, start: caret - mCust[0].length }); setActive(0);
+    } else if (mStaff) {
+      const ql = mStaff[1].toLowerCase();
       const items = staff.filter(s => s.full_name?.toLowerCase().includes(ql)).slice(0, 6)
         .map(s => ({ type: 'staff', id: s.id, name: s.full_name, sub: s.employee_id || '' }));
-      setDrop({ items, start }); setActive(0);
-    }
+      setDrop({ items, start: caret - mStaff[0].length }); setActive(0);
+    } else { setDrop(null); }
   };
 
   const handleChange = (e) => {

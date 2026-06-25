@@ -130,18 +130,20 @@ const CommunityPage = () => {
     const node = range.startContainer;
     if (node.nodeType !== 3) { setEditorMention(null); return; }
     const before = node.textContent.slice(0, range.startOffset);
-    const m = before.match(/@([^\s@]*)$/);
-    if (!m) { setEditorMention(null); return; }
-    const q = m[1];
-    let items;
-    if (/^\d{3,}$/.test(q)) {
-      const { data } = await supabase.rpc('search_customer_by_phone', { q });
+    const mCust = before.match(/#(\d*)$/);
+    const mStaff = before.match(/@([^\s@#]*)$/);
+    let items, m;
+    if (mCust) {
+      if (mCust[1].length < 2) { setEditorMention(null); return; }
+      m = mCust;
+      const { data } = await supabase.rpc('search_customer_by_phone', { q: mCust[1] });
       items = (data || []).map(c => ({ type: 'cust', id: c.id, name: c.customer_name || c.phone, sub: c.phone }));
-    } else {
-      const ql = q.toLowerCase();
+    } else if (mStaff) {
+      m = mStaff;
+      const ql = mStaff[1].toLowerCase();
       items = mentionStaff.filter(s => s.full_name?.toLowerCase().includes(ql)).slice(0, 6)
         .map(s => ({ type: 'staff', id: s.id, name: s.full_name, sub: s.employee_id || '' }));
-    }
+    } else { setEditorMention(null); return; }
     const rect = range.getBoundingClientRect();
     setEmActive(0);
     setEditorMention({ items, node, start: range.startOffset - m[0].length, end: range.startOffset, rect });
@@ -367,7 +369,7 @@ const CommunityPage = () => {
               <Avatar url={profile?.avatar_url} name={profile?.full_name} size="w-7 h-7" />
               <MentionInput value={replyText} onChange={setReplyText} staff={mentionStaff}
                 onEnter={() => addComment(c.post_id, c.id, replyText)}
-                placeholder={`Trả lời ${c.author?.full_name || ''}... (gõ @ để tag)`}
+                placeholder={`Trả lời ${c.author?.full_name || ''}... (@ tag nhân sự · # SĐT tag khách)`}
                 className="w-full bg-white rounded-full px-3 py-1.5 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
               <button onClick={() => addComment(c.post_id, c.id, replyText)} className="p-1.5 rounded-full text-emerald-600 hover:bg-emerald-50"><Send className="w-4 h-4" /></button>
             </div>
@@ -435,7 +437,7 @@ const CommunityPage = () => {
         </div>
         <div ref={editorRef} contentEditable suppressContentEditableWarning
           onInput={detectEditorMention} onKeyDown={handleEditorKeyDown} onBlur={() => setTimeout(() => setEditorMention(null), 200)}
-          data-ph="Chia sẻ gì đó với cả nhà... (gõ @ để tag nhân sự / SĐT khách)"
+          data-ph="Chia sẻ gì đó với cả nhà... (@ tag nhân sự · # SĐT tag khách)"
           className="community-editor min-h-[60px] text-[15px] text-slate-700 focus:outline-none px-1" />
         {editorMention && editorMention.items.length > 0 && (
           <div className="fixed w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-[60] overflow-hidden"
@@ -593,7 +595,7 @@ const CommunityPage = () => {
                   <Avatar url={profile?.avatar_url} name={profile?.full_name} size="w-8 h-8" />
                   <MentionInput value={commentText[post.id] || ''} onChange={(v) => setCommentText(c => ({ ...c, [post.id]: v }))} staff={mentionStaff}
                     onEnter={() => addComment(post.id, null, commentText[post.id])}
-                    placeholder="Viết bình luận... (gõ @ để tag nhân sự / SĐT khách)"
+                    placeholder="Viết bình luận... (@ tag nhân sự · # SĐT tag khách)"
                     className="w-full bg-white rounded-full px-4 py-2 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
                   <button onClick={() => addComment(post.id, null, commentText[post.id])} className="p-2 rounded-full text-emerald-600 hover:bg-emerald-50"><Send className="w-4 h-4" /></button>
                 </div>
