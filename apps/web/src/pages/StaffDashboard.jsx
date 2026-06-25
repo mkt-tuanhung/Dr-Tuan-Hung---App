@@ -21,6 +21,8 @@ import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
+import CashFlowPage from '@/pages/CashFlowPage.jsx';
+import PayrollPage from '@/pages/PayrollPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
@@ -34,18 +36,20 @@ const ROLE_LABELS = {
 
 const FULL_MENU = [
   { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'] },
-  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'] },
-  { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'] },
+  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant'] },
+  { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant'] },
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
 
   // MKT / Finance / Sales
-  { id: 'ads_report', label: 'Báo cáo Ads',     icon: BarChart2, roles: ['marketing', 'admin'] },
+  { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
+  { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin'] },
+  { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin'] },
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong'] },
 
   // CRM
-  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
+  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['accountant'] },
   { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
@@ -220,7 +224,10 @@ const StaffDashboard = () => {
     return () => window.removeEventListener('NAVIGATE', handleNav);
   }, []);
 
-  const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role) || m.roles.includes(profile?.role_2));
+  const allowedMenu = FULL_MENU.filter(m =>
+    (m.roles.includes('all') || m.roles.includes(profile?.role) || m.roles.includes(profile?.role_2))
+    && !(m.exclude && (m.exclude.includes(profile?.role) || m.exclude.includes(profile?.role_2)))
+  );
 
   // Nếu tab khôi phục không thuộc quyền của nhân sự → về Tổng quan
   useEffect(() => {
@@ -266,6 +273,8 @@ const StaffDashboard = () => {
     if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
     if (activeTab === 'hau_phau') return <HauPhauPage setActiveTab={setActiveTab} />;
     if (activeTab === 'ads_report') return <AdsReportPage />;
+    if (activeTab === 'cashflow') return <CashFlowPage />;
+    if (activeTab === 'payroll') return <PayrollPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
