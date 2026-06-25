@@ -186,7 +186,7 @@ const FinanceManagementPage = () => {
       setServiceGroupData(Object.keys(svcMap).map(name => ({ name, value: svcMap[name] })));
     }
     setLoading(false);
-  }, [month, year, profile?.id, profile?.role]);
+  }, [month, year, profile?.id, profile?.role, profile?.role_2]);
 
   useEffect(() => {
     if (activeTab === 'revenue' && profile) loadData();
