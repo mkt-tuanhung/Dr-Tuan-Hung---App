@@ -219,8 +219,10 @@ const ComingSoon = ({ label }) => (
 const AdminDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('admin_active_tab') || 'overview');
   const [hrInitialTab, setHrInitialTab] = useState('staff');
+
+  useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingLeaves, setPendingLeaves] = useState(0);
 

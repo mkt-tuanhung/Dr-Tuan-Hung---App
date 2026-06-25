@@ -203,7 +203,9 @@ const ComingSoon = ({ label }) => (
 const StaffDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('staff_active_tab') || 'overview');
+
+  useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -219,6 +221,14 @@ const StaffDashboard = () => {
   }, []);
 
   const allowedMenu = FULL_MENU.filter(m => m.roles.includes('all') || m.roles.includes(profile?.role) || m.roles.includes(profile?.role_2));
+
+  // Nếu tab khôi phục không thuộc quyền của nhân sự → về Tổng quan
+  useEffect(() => {
+    if (profile && activeTab !== 'overview' && !allowedMenu.some(m => m.id === activeTab)) {
+      setActiveTab('overview');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
 
   const renderContent = () => {
     if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} />;
