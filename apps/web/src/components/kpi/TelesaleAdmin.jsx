@@ -29,9 +29,9 @@ const TelesaleAdmin = ({ month, year }) => {
     const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', safe),
       supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, revenue, bong_date, deposit_date').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2').gte('bong_date', ms).lte('bong_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2').gte('deposit_date', ms).lte('deposit_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, revenue, bong_date, deposit_date, surgery_type').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', me2),
+      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', me2),
       supabase.from('page_daily_reports').select('telesale_id, total_phones').in('telesale_id', safe).gte('date', ms).lte('date', me2),
     ]);
     setStaff(staffData || []);

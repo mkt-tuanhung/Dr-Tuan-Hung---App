@@ -90,16 +90,24 @@ export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows
   const dtRate = telesaleRevRate(doanhThu);
   const thuongDoanhThu = Math.round(doanhThu * dtRate / 100);
 
-  // Thưởng lịch hẹn (trả theo tháng diễn ra sự kiện) — cũng chia đều theo số telesale
+  // Thưởng hẹn khách — trả theo từng giai đoạn (bong/cọc → phẫu thuật).
+  // Tổng mỗi ca: Đại phẫu 500k, Tiểu phẫu 300k. Co-care 2 telesale → chia đôi.
+  //   Tiểu: bong 150k (+150k khi PT) | cọc 200k (+100k khi PT) | trực tiếp 300k
+  //   Đại : bong 200k (+300k khi PT) | cọc 300k (+200k khi PT) | trực tiếp 500k
+  const isDai = (a) => a?.surgery_type === 'Đại phẫu';
   let thuongLichHen = 0;
-  thuongLichHen += bongRows.reduce((s, a) => s + 200000 * telesaleShare(a), 0);
-  thuongLichHen += cocRows.reduce((s, a) => s + 300000 * telesaleShare(a), 0);
+  // Khách bị BONG (chưa lên PT)
+  thuongLichHen += bongRows.reduce((s, a) => s + (isDai(a) ? 200000 : 150000) * telesaleShare(a), 0);
+  // Khách CỌC (chưa lên PT)
+  thuongLichHen += cocRows.reduce((s, a) => s + (isDai(a) ? 300000 : 200000) * telesaleShare(a), 0);
+  // Khi lên PHẪU THUẬT — cộng phần còn lại tùy hành trình
   let direct = 0, fromBong = 0, fromCoc = 0;
   for (const a of surgRows) {
     const sh = telesaleShare(a);
-    if (a.bong_date) { thuongLichHen += 300000 * sh; fromBong++; }
-    else if (a.deposit_date) { thuongLichHen += 200000 * sh; fromCoc++; }
-    else { thuongLichHen += 500000 * sh; direct++; }
+    const dai = isDai(a);
+    if (a.bong_date) { thuongLichHen += (dai ? 300000 : 150000) * sh; fromBong++; }
+    else if (a.deposit_date) { thuongLichHen += (dai ? 200000 : 100000) * sh; fromCoc++; }
+    else { thuongLichHen += (dai ? 500000 : 300000) * sh; direct++; }
   }
   thuongLichHen = Math.round(thuongLichHen);
 
