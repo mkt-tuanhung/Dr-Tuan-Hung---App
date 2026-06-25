@@ -95,10 +95,12 @@ const AppointmentManagementPage = () => {
   };
 
   const [evalApp, setEvalApp] = useState(null);
+  const [consultFiles, setConsultFiles] = useState([]);
+  const [consultView, setConsultView] = useState(null);
   const [evalForm, setEvalForm] = useState({
     status: 'phau_thuat',
     expected_surgery_date: today.toISOString().split('T')[0], revenue: '', upsale_revenue: '', service: '',
-    deposit_date: today.toISOString().split('T')[0], deposit_amount: '', notes: ''
+    deposit_date: today.toISOString().split('T')[0], deposit_amount: '', notes: '', consult_note: ''
   });
 
   const loadData = useCallback(async () => {
@@ -289,8 +291,10 @@ const AppointmentManagementPage = () => {
       service: app.service || '',
       deposit_date: app.deposit_date || today.toISOString().split('T')[0],
       deposit_amount: app.deposit_amount || '',
-      notes: app.notes || ''
+      notes: app.notes || '',
+      consult_note: app.consult_note || ''
     });
+    setConsultFiles([]);
     setShowEvalModal(true);
   };
 
@@ -306,7 +310,13 @@ const AppointmentManagementPage = () => {
       } else if (evalForm.status === 'bong') {
         updateData = { ...updateData, notes: evalForm.notes, bong_date: new Date().toISOString().split('T')[0] };
       }
-      
+
+      // Hồ sơ tư vấn: upload ảnh mới + giữ ảnh cũ + ghi chú
+      const consultUrls = [...(evalApp.consult_image_urls || [])];
+      for (const f of consultFiles) consultUrls.push(await uploadToR2(f, 'consult-files'));
+      updateData.consult_note = evalForm.consult_note || null;
+      updateData.consult_image_urls = consultUrls;
+
       const { error } = await supabase.from('customer_appointments').update(updateData).eq('id', evalApp.id);
       if (error) throw error;
       
@@ -637,6 +647,11 @@ const AppointmentManagementPage = () => {
                               <MessageCircle className="w-4 h-4" /> Lịch sử tư vấn
                             </button>
                           )}
+                          {((app.consult_image_urls || []).length > 0 || app.consult_note) && (
+                            <button onClick={() => setConsultView(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
+                              <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
+                            </button>
+                          )}
                           <div className="flex items-center gap-2 w-full">
                             {['admin', 'sale_offline'].includes(profile?.role) && (
                               <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
@@ -920,6 +935,29 @@ const AppointmentManagementPage = () => {
                     <textarea rows={4} value={evalForm.notes} onChange={e => setEvalForm({...evalForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-orange-400 outline-none resize-none" placeholder="Khách báo kẹt tiền, khách đổi ý..." />
                   </div>
                 )}
+
+                {/* Hồ sơ tư vấn (ghi chú + ảnh) — áp dụng mọi trạng thái */}
+                <div className="border-t border-slate-100 pt-4">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Hồ sơ tư vấn</label>
+                  <textarea rows={2} value={evalForm.consult_note} onChange={e => setEvalForm({ ...evalForm, consult_note: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none resize-none text-sm" placeholder="Ghi chú hồ sơ tư vấn..." />
+                  {((evalApp.consult_image_urls || []).length > 0 || consultFiles.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(evalApp.consult_image_urls || []).map((u, i) => (
+                        <img key={'old' + i} src={u} alt="" onClick={() => setViewImage(u)} className="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" />
+                      ))}
+                      {consultFiles.map((f, i) => (
+                        <div key={'new' + i} className="relative w-16 h-16">
+                          <img src={URL.createObjectURL(f)} alt="" className="w-16 h-16 rounded-lg object-cover border border-emerald-300" />
+                          <button type="button" onClick={() => setConsultFiles(fs => fs.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <label className="mt-2 inline-flex items-center gap-2 px-3 py-2 border border-dashed border-teal-300 rounded-xl cursor-pointer hover:bg-teal-50 text-teal-700 text-sm font-semibold">
+                    <ImagePlus className="w-4 h-4" /> Thêm ảnh hồ sơ tư vấn
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={e => setConsultFiles(fs => [...fs, ...Array.from(e.target.files || [])])} />
+                  </label>
+                </div>
               </div>
 
               <button type="submit" disabled={saving}
@@ -969,6 +1007,33 @@ const AppointmentManagementPage = () => {
               {careHistoryApp.care_notes ? renderNotes(careHistoryApp.care_notes) : (
                 <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử tư vấn.</div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Hồ sơ tư vấn (ảnh + ghi chú) */}
+      {consultView && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
+              <div>
+                <h3 className="font-bold text-teal-800 text-lg">Hồ sơ tư vấn</h3>
+                <p className="text-xs text-teal-500 mt-0.5">{consultView.customer_name} · {consultView.phone}</p>
+              </div>
+              <button onClick={() => setConsultView(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4">
+              {consultView.consult_note && (
+                <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-700 whitespace-pre-wrap">{consultView.consult_note}</div>
+              )}
+              {(consultView.consult_image_urls || []).length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {consultView.consult_image_urls.map((u, i) => (
+                    <img key={i} src={u} alt="" onClick={() => setViewImage(u)} className="w-full h-28 rounded-xl object-cover border border-slate-200 cursor-zoom-in hover:opacity-90" />
+                  ))}
+                </div>
+              ) : (!consultView.consult_note && <div className="text-slate-400 italic text-center py-4">Chưa có hồ sơ tư vấn.</div>)}
             </div>
           </div>
         </div>
