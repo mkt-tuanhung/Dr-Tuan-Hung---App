@@ -1,13 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { uploadToR2 } from '@/lib/r2Client';
+import { toast } from 'sonner';
+import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X, ChevronLeft, ChevronRight, Pencil, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 const VienPhiPage = ({ isNested = false }) => {
+  const { profile } = useAuth();
+  const canEdit = ['admin', 'accountant'].includes(profile?.role);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewImage, setViewImage] = useState(null);
   const [search, setSearch] = useState('');
+  const [editApp, setEditApp] = useState(null);
+  const [editForm, setEditForm] = useState({ amount: '', method: 'cash', date: '', proof: '' });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -52,6 +62,45 @@ const VienPhiPage = ({ isNested = false }) => {
   ];
 
   const fmt = (n) => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+  const fmtInput = (v) => { const x = String(v || '').replace(/\D/g, ''); return x ? new Intl.NumberFormat('vi-VN').format(x) : ''; };
+
+  const openEdit = (app) => {
+    setEditApp(app);
+    setEditForm({
+      amount: fmtInput(app.hospital_fee),
+      method: app.hospital_fee_method || 'cash',
+      date: app.hospital_fee_date ? new Date(app.hospital_fee_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      proof: app.hospital_fee_proof || '',
+    });
+  };
+
+  const handleEditUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try { const url = await uploadToR2(file, 'vien-phi'); setEditForm(f => ({ ...f, proof: url })); toast.success('Đã tải ảnh'); }
+    catch (err) { toast.error('Lỗi tải ảnh: ' + err.message); }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleSaveEdit = async () => {
+    const amount = Number(String(editForm.amount).replace(/\D/g, '')) || 0;
+    if (!amount) { toast.error('Nhập số tiền'); return; }
+    setSaving(true);
+    const payload = {
+      hospital_fee: amount,
+      hospital_fee_method: editForm.method,
+      hospital_fee_proof: editForm.proof || null,
+      hospital_fee_date: new Date(editForm.date).toISOString(),
+    };
+    const { error } = await supabase.from('customer_appointments').update(payload).eq('id', editApp.id);
+    if (error) { toast.error('Lỗi: ' + error.message); setSaving(false); return; }
+    setData(prev => prev.map(d => d.id === editApp.id ? { ...d, ...payload } : d));
+    toast.success('Đã cập nhật viện phí');
+    setEditApp(null);
+    setSaving(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -171,6 +220,7 @@ const VienPhiPage = ({ isNested = false }) => {
                     </span>
                     <span className="text-xs text-slate-400">{app.hospital_fee_date ? new Date(app.hospital_fee_date).toLocaleDateString('vi-VN') : '—'}</span>
                     {app.hospital_fee_proof && <button onClick={() => setViewImage(app.hospital_fee_proof)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><ImageIcon className="w-4 h-4" /></button>}
+                    {canEdit && <button onClick={() => openEdit(app)} className="p-1.5 bg-slate-100 text-slate-600 rounded-lg ml-auto"><Pencil className="w-4 h-4" /></button>}
                   </div>
                 </div>
               ))}
@@ -218,13 +268,18 @@ const VienPhiPage = ({ isNested = false }) => {
                         {app.hospital_fee_date ? new Date(app.hospital_fee_date).toLocaleString('vi-VN') : '—'}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {app.hospital_fee_proof ? (
-                          <button onClick={() => setViewImage(app.hospital_fee_proof)} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors inline-flex">
-                            <ImageIcon className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Không có</span>
-                        )}
+                        <div className="flex items-center justify-center gap-2">
+                          {app.hospital_fee_proof ? (
+                            <button onClick={() => setViewImage(app.hospital_fee_proof)} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors inline-flex">
+                              <ImageIcon className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Không có</span>
+                          )}
+                          {canEdit && (
+                            <button onClick={() => openEdit(app)} className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors inline-flex" title="Sửa"><Pencil className="w-4 h-4" /></button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -236,6 +291,43 @@ const VienPhiPage = ({ isNested = false }) => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal sửa viện phí */}
+      {editApp && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50 shrink-0">
+              <div>
+                <h3 className="font-bold text-blue-800">Sửa viện phí</h3>
+                <p className="text-xs text-blue-400">{editApp.customer_name}</p>
+              </div>
+              <button onClick={() => setEditApp(null)}><X className="w-5 h-5 text-blue-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền (VNĐ)</label>
+                <input type="text" inputMode="numeric" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: fmtInput(e.target.value) }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-700 text-lg" placeholder="1.000.000" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Ngày thu</label>
+                <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" />
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEditForm(f => ({ ...f, method: 'transfer' }))} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${editForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
+                <button type="button" onClick={() => setEditForm(f => ({ ...f, method: 'cash' }))} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${editForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
+              </div>
+              <button type="button" onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-blue-400">
+                {uploading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : (editForm.proof ? <img src={editForm.proof} alt="" className="max-h-20 mx-auto" /> : 'Tải / đổi bill')}
+              </button>
+              <input type="file" accept="image/*" className="hidden" ref={fileRef} onChange={handleEditUpload} />
+            </div>
+            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
+              <button onClick={() => setEditApp(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Đóng</button>
+              <button onClick={handleSaveEdit} disabled={saving || uploading} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50">{saving ? 'Đang lưu...' : 'Lưu'}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Image Viewer */}
