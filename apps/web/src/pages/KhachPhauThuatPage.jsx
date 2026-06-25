@@ -181,6 +181,21 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setShowMaterialModal(true);
   };
 
+  const reloadConsumed = async (appId) => {
+    const { data } = await supabase.from('inventory_transactions')
+      .select('*, inventory_items(name, unit)').eq('reference_id', appId).eq('type', 'export');
+    setConsumedItems(data || []);
+  };
+
+  const handleDeleteConsumed = async (ids, name) => {
+    if (!window.confirm(`Xoá "${name}" khỏi báo cáo? Tồn kho sẽ được hoàn lại.`)) return;
+    const { error } = await supabase.from('inventory_transactions').delete().in('id', ids);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success('Đã xoá vật tư khỏi báo cáo');
+    await reloadConsumed(selectedApp.id);
+    loadData();
+  };
+
   const handleAddMaterialRow = () => {
     setMaterialForm([...materialForm, { item_id: '', quantity: 1 }]);
   };
@@ -544,16 +559,23 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                   <div className="bg-slate-50 border rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-100 text-slate-500">
-                        <tr><th className="px-4 py-2">Tên vật tư</th><th className="px-4 py-2 text-right">SL</th></tr>
+                        <tr><th className="px-4 py-2">Tên vật tư</th><th className="px-4 py-2 text-right">SL</th><th className="px-2 py-2"></th></tr>
                       </thead>
                       <tbody className="divide-y">
                         {Object.values(consumedItems.reduce((acc, t) => {
                           const key = t.item_id || t.inventory_items?.name;
-                          if (!acc[key]) acc[key] = { name: t.inventory_items?.name, qty: 0 };
+                          if (!acc[key]) acc[key] = { name: t.inventory_items?.name, qty: 0, ids: [] };
                           acc[key].qty += Number(t.quantity || 0);
+                          acc[key].ids.push(t.id);
                           return acc;
                         }, {})).map((m, i) => (
-                          <tr key={i}><td className="px-4 py-3 font-semibold">{m.name}</td><td className="px-4 py-3 text-right font-bold text-red-600">-{m.qty}</td></tr>
+                          <tr key={i}>
+                            <td className="px-4 py-3 font-semibold">{m.name}</td>
+                            <td className="px-4 py-3 text-right font-bold text-red-600">-{m.qty}</td>
+                            <td className="px-2 py-3 text-right">
+                              <button onClick={() => handleDeleteConsumed(m.ids, m.name)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá khỏi báo cáo"><Trash2 className="w-4 h-4" /></button>
+                            </td>
+                          </tr>
                         ))}
                       </tbody>
                     </table>
