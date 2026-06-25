@@ -8,7 +8,7 @@ const ROLE_DASHBOARD = {
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isLoggedIn, loading, profile, mfaRequired } = useAuth();
+  const { isLoggedIn, loading, profile, mfaRequired, deviceApprovalRequired } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -25,6 +25,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // Đã đăng nhập nhưng chưa qua bước 2FA → về trang đăng nhập để nhập mã
   if (mfaRequired) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Thiết bị mới chưa được admin duyệt → về trang đăng nhập (hiện màn chờ duyệt)
+  if (deviceApprovalRequired) {
     return <Navigate to="/" replace />;
   }
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { getDeviceId, getDeviceLabel } from '@/lib/device';
 
 const AuthContext = createContext();
 
@@ -14,6 +15,30 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mfaRequired, setMfaRequired] = useState(false);
+  const [deviceApprovalRequired, setDeviceApprovalRequired] = useState(false);
+
+  // Kiểm tra thiết bị có được duyệt chưa. Admin miễn duyệt. Thiết bị đầu tiên tự duyệt (do DB trigger).
+  const checkDevice = async (uid, role) => {
+    if (role === 'admin') { setDeviceApprovalRequired(false); return false; }
+    try {
+      const deviceId = getDeviceId();
+      const { data: devices } = await supabase.from('trusted_devices').select('device_id, approved').eq('user_id', uid);
+      const mine = (devices || []).find(d => d.device_id === deviceId);
+      if (mine?.approved) { setDeviceApprovalRequired(false); return false; }
+      if (!mine) {
+        await supabase.from('trusted_devices').insert({ user_id: uid, device_id: deviceId, device_label: getDeviceLabel() });
+        const { data: again } = await supabase.from('trusted_devices').select('approved').eq('user_id', uid).eq('device_id', deviceId).maybeSingle();
+        const need = !again?.approved;
+        setDeviceApprovalRequired(need);
+        return need;
+      }
+      setDeviceApprovalRequired(true);
+      return true;
+    } catch {
+      setDeviceApprovalRequired(false);
+      return false;
+    }
+  };
 
   // Kiểm tra phiên hiện tại có cần bước 2FA (aal1 → aal2) không
   const checkMfa = async () => {
@@ -52,7 +77,8 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user);
         const p = await fetchProfile(session.user.id);
         setProfile(p);
-        await checkMfa();
+        const need = await checkMfa();
+        if (!need) await checkDevice(session.user.id, p?.role);
       }
       setLoading(false);
     });
@@ -63,11 +89,13 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user);
         const p = await fetchProfile(session.user.id);
         setProfile(p);
-        await checkMfa();
+        const need = await checkMfa();
+        if (!need) await checkDevice(session.user.id, p?.role);
       } else {
         setUser(null);
         setProfile(null);
         setMfaRequired(false);
+        setDeviceApprovalRequired(false);
       }
     });
 
@@ -91,7 +119,13 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Tài khoản đã bị khóa. Vui lòng liên hệ Admin.');
     }
     const needMfa = await checkMfa();
+    if (!needMfa) await checkDevice(data.user.id, p?.role);
     return { user: data.user, profile: p, mfaRequired: needMfa };
+  };
+
+  const recheckDevice = async () => {
+    if (user) return checkDevice(user.id, profile?.role);
+    return false;
   };
 
   // Xác minh mã 2FA (TOTP) để nâng phiên lên aal2
@@ -110,6 +144,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setProfile(null);
     setMfaRequired(false);
+    setDeviceApprovalRequired(false);
   };
 
   const refreshProfile = async () => {
@@ -133,6 +168,8 @@ export const AuthProvider = ({ children }) => {
       isAccountant,
       isShareholder,
       mfaRequired,
+      deviceApprovalRequired,
+      recheckDevice,
       login,
       verifyMfa,
       logout,
