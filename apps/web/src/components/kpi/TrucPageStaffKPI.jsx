@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, AlertCircle, Phone, MessageCircle, Percent, Target, Plus, Trash2, Upload, Download, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertCircle, Phone, MessageCircle, Percent, Target, Plus, Trash2, Upload, Download, X, Pencil } from 'lucide-react';
 import { computeTrucPage, PHONE_COMMISSION } from '@/lib/kpiCalc';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 
@@ -131,6 +131,19 @@ const TrucPageStaffKPI = () => {
       loadData();
     } catch (err) { toast.error(err.message); }
     finally { setImporting(false); }
+  };
+
+  const editReport = (r) => {
+    setForm({
+      date: r.date,
+      total_phones: String(r.total_phones ?? ''),
+      total_interested_phones: String(r.total_interested_phones ?? ''),
+      total_messages: String(r.total_messages ?? ''),
+      total_spam_messages: String(r.total_spam_messages ?? ''),
+      telesale_id: r.telesale_id || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast.info('Đang sửa báo cáo ngày ' + r.date + ' — lưu lại để cập nhật');
   };
 
   const deleteReport = async (id) => {
@@ -293,7 +306,10 @@ const TrucPageStaffKPI = () => {
                       <td className="text-center px-3 py-2.5 text-slate-400">{fmt(r.total_spam_messages)}</td>
                       <td className="px-4 py-2.5 text-slate-600">{r.telesale?.full_name || '—'}</td>
                       <td className="px-3 py-2.5 text-right">
-                        <button onClick={() => deleteReport(r.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => editReport(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Sửa"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => deleteReport(r.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá"><Trash2 className="w-4 h-4" /></button>
+                        </div>
                       </td>
                     </tr>
                   ))}
