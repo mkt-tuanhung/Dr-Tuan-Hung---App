@@ -35,31 +35,39 @@ const MENU_GROUPS = [
   { title: null, items: [
     { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
   ]},
-  { title: 'KHÁCH HÀNG', items: [
+  { title: 'KHÁCH HÀNG', color: 'blue', items: [
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
     { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
     { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
   ]},
-  { title: 'NHÂN SỰ', items: [
+  { title: 'NHÂN SỰ', color: 'violet', items: [
     { id: 'hr', label: 'Quản lý Nhân sự', icon: Users },
     { id: 'kpi', label: 'KPI & Hoa hồng', icon: Target },
     { id: 'payroll', label: 'Bảng lương', icon: Wallet },
   ]},
-  { title: 'TÀI CHÍNH', items: [
+  { title: 'TÀI CHÍNH', color: 'amber', items: [
     { id: 'finance', label: 'Doanh thu / Tài chính', icon: Banknote },
     { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
     { id: 'marketing', label: 'Marketing / Ads', icon: Target },
   ]},
-  { title: 'VẬN HÀNH', items: [
+  { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
   ]},
 ];
 const MENU = MENU_GROUPS.flatMap(g => g.items);
+
+// Màu nền/nhãn nhẹ theo nhóm (class tĩnh để Tailwind không purge)
+const GROUP_STYLE = {
+  blue:   { box: 'bg-blue-50/50',   label: 'text-blue-500',   bar: 'bg-blue-400' },
+  violet: { box: 'bg-violet-50/50', label: 'text-violet-500', bar: 'bg-violet-400' },
+  amber:  { box: 'bg-amber-50/50',  label: 'text-amber-600',  bar: 'bg-amber-400' },
+  rose:   { box: 'bg-rose-50/50',   label: 'text-rose-500',   bar: 'bg-rose-400' },
+};
 
 const BOTTOM_NAV = ['overview', 'hr', 'appointments', 'kpi'];
 
@@ -326,11 +334,16 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          {MENU_GROUPS.map((group, gi) => (
-            <div key={group.title || `g${gi}`} className={group.title ? 'pt-2' : ''}>
+        <nav className="flex-1 overflow-y-auto p-3 space-y-2">
+          {MENU_GROUPS.map((group, gi) => {
+            const gs = GROUP_STYLE[group.color] || {};
+            return (
+            <div key={group.title || `g${gi}`} className={group.title ? `rounded-2xl p-1.5 ${gs.box}` : ''}>
               {group.title && (
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{group.title}</div>
+                <div className={`flex items-center gap-1.5 px-2.5 pt-1.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider ${gs.label}`}>
+                  <span className={`w-1 h-3 rounded-full ${gs.bar}`} />
+                  {group.title}
+                </div>
               )}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
@@ -362,7 +375,8 @@ const AdminDashboard = () => {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </nav>
 
       </aside>
