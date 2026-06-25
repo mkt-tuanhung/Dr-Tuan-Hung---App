@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
+import MentionInput, { MENTION_RE } from '@/components/MentionInput.jsx';
 
 const REACTIONS = [
   { key: 'like', emoji: '👍', label: 'Thích' },
@@ -86,6 +87,38 @@ const CommunityPage = () => {
   const [commentText, setCommentText] = useState({});    // postId -> text (top-level)
   const [replyFor, setReplyFor] = useState(null);        // comment id
   const [replyText, setReplyText] = useState('');
+  const [mentionStaff, setMentionStaff] = useState([]);
+  const [customerView, setCustomerView] = useState(null);
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, full_name, employee_id').eq('is_active', true).order('full_name')
+      .then(({ data }) => setMentionStaff(data || []));
+  }, []);
+
+  // Render nội dung có tag: @nhân sự (xanh) / @khách (link mở thông tin)
+  const renderMentions = (text) => {
+    if (!text) return null;
+    const out = []; let last = 0; let m; const re = new RegExp(MENTION_RE);
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) out.push(text.slice(last, m.index));
+      const [full, name, type, id] = m;
+      if (type === 'cust') {
+        out.push(<button key={m.index} type="button" onClick={() => openCustomer(id)} className="text-blue-600 font-semibold hover:underline">@{name}</button>);
+      } else {
+        out.push(<span key={m.index} className="text-emerald-600 font-semibold">@{name}</span>);
+      }
+      last = m.index + full.length;
+    }
+    if (last < text.length) out.push(text.slice(last));
+    return out;
+  };
+
+  const openCustomer = async (id) => {
+    const { data } = await supabase.from('customer_appointments')
+      .select('*, telesale:profiles!telesale_id(full_name), sale:profiles!sale_id(full_name)').eq('id', id).single();
+    if (data) setCustomerView(data);
+    else toast.error('Không tìm thấy khách hàng');
+  };
   const [reactWho, setReactWho] = useState(null);        // { post, list }
   const [lightbox, setLightbox] = useState(null);        // { urls, index }
   const [showMembers, setShowMembers] = useState(false);
@@ -224,6 +257,21 @@ const CommunityPage = () => {
       .insert({ post_id: postId, author_id: profile.id, content: t, parent_id: parentId || null }).select('*').single();
     if (error) { toast.error(error.message); return; }
     setComments(prev => [...prev, { ...data, author: meUser }]);
+    notifyMentions(t, postId);
+  };
+
+  // Báo cho nhân sự được nhắc (@) trong nội dung
+  const notifyMentions = async (text, postId) => {
+    const ids = [...new Set([...text.matchAll(/@\[[^\]]+\]\(staff:([0-9a-fA-F-]+)\)/g)].map(m => m[1]))]
+      .filter(id => id !== profile.id);
+    if (!ids.length) return;
+    const post = posts.find(p => p.id === postId);
+    const rows = ids.map(uid => ({
+      user_id: uid, actor_id: profile.id, type: 'mention',
+      title: `${profile.full_name} đã nhắc tên bạn` + (post?.title ? ` tại bài "${post.title}"` : ' trong cộng đồng'),
+      body: text.replace(MENTION_RE, '@$1').slice(0, 120), link: 'community',
+    }));
+    await supabase.from('notifications').insert(rows);
   };
 
   const deletePost = async (id) => {
@@ -248,7 +296,7 @@ const CommunityPage = () => {
         <div className="flex-1 min-w-0">
           <div className="bg-white rounded-2xl px-3 py-2 inline-block max-w-full relative">
             <div className="text-xs font-semibold text-slate-700">{c.author?.full_name || 'Nhân sự'}</div>
-            <div className="text-sm text-slate-700 whitespace-pre-wrap break-words">{c.content}</div>
+            <div className="text-sm text-slate-700 whitespace-pre-wrap break-words">{renderMentions(c.content)}</div>
             {cl.length > 0 && (
               <div className="absolute -bottom-2 right-1 bg-white border border-slate-100 rounded-full px-1.5 py-0.5 text-[11px] shadow-sm flex items-center gap-0.5">
                 {[...new Set(cl.map(l => l.reaction))].slice(0, 3).map(r => <span key={r}>{EMOJI_OF[r]}</span>)} {cl.length}
@@ -269,10 +317,10 @@ const CommunityPage = () => {
           {replyFor === c.id && (
             <div className="flex gap-2 items-center mt-2">
               <Avatar url={profile?.avatar_url} name={profile?.full_name} size="w-7 h-7" />
-              <input autoFocus value={replyText} onChange={e => setReplyText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addComment(c.post_id, c.id, replyText); }}
-                placeholder={`Trả lời ${c.author?.full_name || ''}...`}
-                className="flex-1 bg-white rounded-full px-3 py-1.5 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
+              <MentionInput value={replyText} onChange={setReplyText} staff={mentionStaff}
+                onEnter={() => addComment(c.post_id, c.id, replyText)}
+                placeholder={`Trả lời ${c.author?.full_name || ''}... (gõ @ để tag)`}
+                className="w-full bg-white rounded-full px-3 py-1.5 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
               <button onClick={() => addComment(c.post_id, c.id, replyText)} className="p-1.5 rounded-full text-emerald-600 hover:bg-emerald-50"><Send className="w-4 h-4" /></button>
             </div>
           )}
@@ -482,10 +530,10 @@ const CommunityPage = () => {
                 })()}
                 <div className="flex gap-2 items-center">
                   <Avatar url={profile?.avatar_url} name={profile?.full_name} size="w-8 h-8" />
-                  <input value={commentText[post.id] || ''} onChange={e => setCommentText(c => ({ ...c, [post.id]: e.target.value }))}
-                    onKeyDown={e => { if (e.key === 'Enter') addComment(post.id, null, commentText[post.id]); }}
-                    placeholder="Viết bình luận..."
-                    className="flex-1 bg-white rounded-full px-4 py-2 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
+                  <MentionInput value={commentText[post.id] || ''} onChange={(v) => setCommentText(c => ({ ...c, [post.id]: v }))} staff={mentionStaff}
+                    onEnter={() => addComment(post.id, null, commentText[post.id])}
+                    placeholder="Viết bình luận... (gõ @ để tag nhân sự / SĐT khách)"
+                    className="w-full bg-white rounded-full px-4 py-2 text-sm border border-slate-200 focus:outline-none focus:border-emerald-400" />
                   <button onClick={() => addComment(post.id, null, commentText[post.id])} className="p-2 rounded-full text-emerald-600 hover:bg-emerald-50"><Send className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -538,6 +586,32 @@ const CommunityPage = () => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Thông tin khách hàng (khi bấm tag khách) */}
+      {customerView && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setCustomerView(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-blue-50">
+              <h3 className="font-bold text-blue-800">Thông tin khách hàng</h3>
+              <button onClick={() => setCustomerView(null)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <div className="text-lg font-bold text-slate-800">{customerView.customer_name}</div>
+                <a href={`tel:${customerView.phone}`} className="text-sm text-blue-600 flex items-center gap-1.5 mt-1"><Phone className="w-3.5 h-3.5" /> {customerView.phone}</a>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm bg-slate-50 rounded-xl p-3">
+                <div className="text-slate-500 text-xs">Dịch vụ</div><div className="text-right font-medium text-slate-700">{customerView.service || '—'}</div>
+                <div className="text-slate-500 text-xs">Trạng thái</div><div className="text-right text-slate-700">{customerView.status}</div>
+                <div className="text-slate-500 text-xs">Telesale</div><div className="text-right text-slate-700">{customerView.telesale?.full_name || '—'}</div>
+                <div className="text-slate-500 text-xs">Sale</div><div className="text-right text-slate-700">{customerView.sale?.full_name || '—'}</div>
+                {customerView.surgery_date && (<><div className="text-slate-500 text-xs">Ngày mổ</div><div className="text-right text-slate-700">{new Date(customerView.surgery_date).toLocaleDateString('vi-VN')}</div></>)}
+              </div>
+              {customerView.notes && <div className="text-xs text-slate-500 bg-yellow-50/50 border border-yellow-100 rounded-lg p-2 whitespace-pre-wrap">{customerView.notes}</div>}
             </div>
           </div>
         </div>
