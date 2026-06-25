@@ -21,29 +21,69 @@ const QUICK_COMMENTS = ['Đã xét nghiệm xong', 'Vào phẫu thuật', 'KH ph
 
 // Nhận diện mốc thời gian: 9h, 9h30, 9:30, 9 giờ 30 phút, ngày 25/06(/2026)
 const TIME_SRC = '\\d{1,2}\\s*giờ(?:\\s*\\d{1,2})?(?:\\s*phút)?|\\d{1,2}h\\d{0,2}|\\d{1,2}:\\d{2}|\\d{1,2}\\/\\d{1,2}(?:\\/\\d{2,4})?';
-// "09:30" -> "9h30", "14:00" -> "14h"
-const fmtTime = (v) => {
-  const [h, m] = (v || '').split(':');
-  const hh = parseInt(h, 10);
-  if (isNaN(hh)) return v;
-  return m && m !== '00' ? `${hh}h${m}` : `${hh}h`;
-};
 // Nối thêm 1 đoạn vào nội dung đang soạn (giữ phần đã gõ, thêm space)
 const joinText = (prev, add) => ((prev && prev.trim()) ? prev.replace(/\s*$/, '') + ' ' : '') + add + ' ';
 
-// Nút chọn giờ -> gọi onPick(label) để chèn vào ô soạn thảo
+// Nút chọn giờ -> popover giờ/phút (theo tông emerald), gọi onPick(label) để chèn vào ô soạn
 function TimeButton({ onPick, size = 'p-2' }) {
-  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [h, setH] = useState(() => new Date().getHours());
+  const [mi, setMi] = useState(() => new Date().getMinutes());
+  const wrapRef = useRef(null);
+  const pad = (n) => String(n).padStart(2, '0');
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    // cuộn mục đang chọn vào giữa cột (không làm cuộn cả trang)
+    setTimeout(() => wrapRef.current?.querySelectorAll('.tb-sel').forEach(el => {
+      const p = el.parentElement; if (p) p.scrollTop = el.offsetTop - p.clientHeight / 2 + el.clientHeight / 2;
+    }), 0);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const confirm = () => { onPick(mi === 0 ? `${h}h` : `${h}h${pad(mi)}`); setOpen(false); };
+  const setNow = () => { const d = new Date(); setH(d.getHours()); setMi(d.getMinutes()); };
+  const colCls = 'relative h-44 w-16 overflow-y-auto py-1 rounded-xl bg-slate-50 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  const itemCls = (sel) => `block w-full text-center py-1.5 my-0.5 text-sm rounded-lg transition-colors ${sel ? 'tb-sel bg-emerald-500 text-white font-semibold shadow-sm' : 'text-slate-600 hover:bg-emerald-100'}`;
+
   return (
-    <span className="relative inline-flex shrink-0">
-      <button type="button" title="Thêm mốc thời gian"
-        onClick={() => { const el = ref.current; if (!el) return; try { el.showPicker ? el.showPicker() : el.focus(); } catch { el.focus(); } }}
-        className={`${size} rounded-full text-rose-500 hover:bg-rose-50`}>
+    <span ref={wrapRef} className="relative inline-flex shrink-0">
+      <button type="button" title="Thêm mốc thời gian" onClick={() => setOpen(o => !o)}
+        className={`${size} rounded-full ${open ? 'bg-rose-100 text-rose-600' : 'text-rose-500 hover:bg-rose-50'}`}>
         <Clock className="w-4 h-4" />
       </button>
-      <input ref={ref} type="time" tabIndex={-1} aria-hidden
-        className="absolute bottom-0 left-0 w-0 h-0 opacity-0 pointer-events-none"
-        onChange={(e) => { const v = e.target.value; if (v) { onPick(fmtTime(v)); e.target.value = ''; } }} />
+      {open && (
+        <div className="absolute bottom-full right-0 mb-2 z-40 w-60 bg-white rounded-2xl shadow-xl border border-slate-100 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500">Chọn mốc thời gian</span>
+            <span className="text-base font-bold text-emerald-600 tabular-nums">{mi === 0 ? `${h}h` : `${h}h${pad(mi)}`}</span>
+          </div>
+          <div className="flex gap-2 justify-center">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[11px] text-slate-400 font-medium">Giờ</span>
+              <div className={colCls}>
+                {Array.from({ length: 24 }, (_, i) => i).map(v => (
+                  <button key={v} type="button" onClick={() => setH(v)} className={itemCls(v === h)}>{pad(v)}</button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[11px] text-slate-400 font-medium">Phút</span>
+              <div className={colCls}>
+                {Array.from({ length: 60 }, (_, i) => i).map(v => (
+                  <button key={v} type="button" onClick={() => setMi(v)} className={itemCls(v === mi)}>{pad(v)}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <button type="button" onClick={setNow} className="flex-1 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200">Bây giờ</button>
+            <button type="button" onClick={confirm} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600">Chèn</button>
+          </div>
+        </div>
+      )}
     </span>
   );
 }
