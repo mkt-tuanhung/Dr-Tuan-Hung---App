@@ -10,7 +10,7 @@ begin
   select p.id, p_actor, p_type, p_title, p_body, p_link
   from profiles p
   where coalesce(p.is_active, true) = true
-    and (p.role = 'admin' or p.role = any(p_roles) or p.role_2 = any(p_roles))
+    and (p.role::text = 'admin' or p.role::text = any(p_roles) or p.role_2::text = any(p_roles))
     and p.id is distinct from p_actor;
 end $$;
 
