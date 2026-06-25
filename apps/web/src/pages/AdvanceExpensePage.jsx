@@ -433,44 +433,66 @@ export default function AdvanceExpensePage() {
           </>
         )}
 
-        {isAdminOrAccountant && activeTab === 'staff' && (
-          <div className="p-4 sm:p-6 bg-white overflow-x-auto">
-            <h3 className="font-bold text-slate-800 mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
-            <table className="w-full min-w-[560px] text-left border-collapse border border-slate-200">
-              <thead>
-                <tr className="bg-slate-50 text-slate-600 text-sm">
-                  <th className="p-3 border">Nhân sự</th>
-                  <th className="p-3 border">Tổng phiếu hợp lệ</th>
-                  <th className="p-3 border">Đã chi (Tạm ứng)</th>
-                  <th className="p-3 border">Đã hoàn ứng</th>
-                  <th className="p-3 border">Còn nợ (Cần hoàn)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const staffMap = {};
-                  data.forEach(d => {
-                    if (d.status === 'approved' || d.status === 'paid') {
-                      if (!staffMap[d.staff_id]) staffMap[d.staff_id] = { name: d.profiles?.full_name, total: 0, repaid: 0, count: 0 };
-                      staffMap[d.staff_id].count++;
-                      staffMap[d.staff_id].total += Number(d.amount);
-                      if (d.status === 'paid') staffMap[d.staff_id].repaid += Number(d.advance_repaid_amount || d.amount);
-                    }
-                  });
-                  return Object.values(staffMap).map((s, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      <td className="p-3 border font-semibold text-slate-800">{s.name}</td>
-                      <td className="p-3 border text-center">{s.count}</td>
-                      <td className="p-3 border font-bold text-amber-600">{fmt(s.total)}</td>
-                      <td className="p-3 border font-bold text-emerald-600">{fmt(s.repaid)}</td>
-                      <td className="p-3 border font-bold text-red-600">{fmt(s.total - s.repaid)}</td>
+        {isAdminOrAccountant && activeTab === 'staff' && (() => {
+          const staffMap = {};
+          data.forEach(d => {
+            if (d.status === 'approved' || d.status === 'paid') {
+              if (!staffMap[d.staff_id]) staffMap[d.staff_id] = { name: d.profiles?.full_name, total: 0, repaid: 0, count: 0 };
+              staffMap[d.staff_id].count++;
+              staffMap[d.staff_id].total += Number(d.amount);
+              if (d.status === 'paid') staffMap[d.staff_id].repaid += Number(d.advance_repaid_amount || d.amount);
+            }
+          });
+          const rows = Object.values(staffMap);
+          return (
+            <div className="p-4 sm:p-6 bg-white">
+              <h3 className="font-bold text-slate-800 mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
+
+              {/* Mobile: thẻ */}
+              <div className="md:hidden space-y-3">
+                {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có dữ liệu</div> : rows.map((s, i) => (
+                  <div key={i} className="border border-slate-200 rounded-2xl p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{s.name}</span>
+                      <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{s.count} phiếu</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                      <div className="bg-amber-50 rounded-lg py-2"><div className="text-[10px] text-amber-500 uppercase">Đã chi</div><div className="font-bold text-amber-600 text-sm">{fmt(s.total)}</div></div>
+                      <div className="bg-emerald-50 rounded-lg py-2"><div className="text-[10px] text-emerald-500 uppercase">Đã hoàn</div><div className="font-bold text-emerald-600 text-sm">{fmt(s.repaid)}</div></div>
+                      <div className="bg-red-50 rounded-lg py-2"><div className="text-[10px] text-red-500 uppercase">Còn nợ</div><div className="font-bold text-red-600 text-sm">{fmt(s.total - s.repaid)}</div></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: bảng */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse border border-slate-200">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-600 text-sm">
+                      <th className="p-3 border">Nhân sự</th>
+                      <th className="p-3 border">Tổng phiếu hợp lệ</th>
+                      <th className="p-3 border">Đã chi (Tạm ứng)</th>
+                      <th className="p-3 border">Đã hoàn ứng</th>
+                      <th className="p-3 border">Còn nợ (Cần hoàn)</th>
                     </tr>
-                  ));
-                })()}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </thead>
+                  <tbody>
+                    {rows.map((s, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="p-3 border font-semibold text-slate-800">{s.name}</td>
+                        <td className="p-3 border text-center">{s.count}</td>
+                        <td className="p-3 border font-bold text-amber-600">{fmt(s.total)}</td>
+                        <td className="p-3 border font-bold text-emerald-600">{fmt(s.repaid)}</td>
+                        <td className="p-3 border font-bold text-red-600">{fmt(s.total - s.repaid)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
 
         {isAdminOrAccountant && activeTab === 'stats' && (
           <div className="p-6 bg-white grid grid-cols-1 lg:grid-cols-2 gap-6">

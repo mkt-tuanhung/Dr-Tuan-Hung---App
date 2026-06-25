@@ -126,7 +126,33 @@ const VienPhiPage = ({ isNested = false }) => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile: thẻ */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredData.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 italic text-sm">Không tìm thấy dữ liệu.</div>
+              ) : filteredData.map(app => (
+                <div key={app.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-800">{app.customer_name}</div>
+                      <div className="text-xs text-slate-400">{app.phone || 'Không có SĐT'}</div>
+                    </div>
+                    <div className="font-bold text-blue-600 text-base shrink-0">{fmt(app.hospital_fee)}</div>
+                  </div>
+                  <div className="text-sm text-slate-600 mt-1">{app.service || 'Chưa rõ'}</div>
+                  <div className="flex items-center gap-2 flex-wrap mt-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${app.hospital_fee_method === 'cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                      <Banknote className="w-3 h-3" /> {app.hospital_fee_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}
+                    </span>
+                    <span className="text-xs text-slate-400">{app.hospital_fee_date ? new Date(app.hospital_fee_date).toLocaleDateString('vi-VN') : '—'}</span>
+                    {app.hospital_fee_proof && <button onClick={() => setViewImage(app.hospital_fee_proof)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><ImageIcon className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: bảng */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[560px] text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">

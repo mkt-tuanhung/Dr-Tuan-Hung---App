@@ -295,7 +295,40 @@ const AdsReportPage = () => {
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-800 text-white flex justify-between items-center">
           <h3 className="font-bold">Chi tiết theo ngày</h3>
         </div>
-        <div className="overflow-x-auto">
+        {/* Mobile: dạng thẻ */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {performanceData.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">Chưa có dữ liệu</div>
+          ) : performanceData.map((item) => (
+            <div key={item.id} className="p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800">{item.date}</span>
+                <div className="flex gap-2">
+                  <button onClick={() => openEntry(item)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Edit className="w-4 h-4" /></button>
+                  <button onClick={() => deleteEntry(item.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                <div className="bg-slate-50 rounded-lg py-2">
+                  <div className="text-[10px] text-slate-400 uppercase">Chi phí</div>
+                  <div className="font-bold text-slate-700 text-sm">{fmt(item.amount_spent)}đ</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg py-2">
+                  <div className="text-[10px] text-blue-400 uppercase">Số SĐT</div>
+                  <div className="font-bold text-blue-600 text-sm">{fmt(item.leads)}</div>
+                </div>
+                <div className="bg-emerald-50 rounded-lg py-2">
+                  <div className="text-[10px] text-emerald-400 uppercase">CP/số</div>
+                  <div className="font-bold text-emerald-600 text-sm">{item.leads > 0 ? fmt(Math.round(item.amount_spent / item.leads)) : 0}đ</div>
+                </div>
+              </div>
+              {item.impressions ? <div className="text-xs text-slate-400 mt-2">Ghi chú: {item.impressions}</div> : null}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: bảng */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[680px] text-sm text-left">
             <thead className="bg-amber-400 text-slate-800 uppercase text-xs font-bold">
               <tr>
