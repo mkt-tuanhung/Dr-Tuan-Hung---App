@@ -89,6 +89,8 @@ const CommunityPage = () => {
   const [replyText, setReplyText] = useState('');
   const [mentionStaff, setMentionStaff] = useState([]);
   const [customerView, setCustomerView] = useState(null);
+  const [editorMention, setEditorMention] = useState(null); // { items, node, start, end, rect }
+  const [emActive, setEmActive] = useState(0);
 
   useEffect(() => {
     supabase.from('profiles').select('id, full_name, employee_id').eq('is_active', true).order('full_name')
@@ -118,6 +120,67 @@ const CommunityPage = () => {
     if (error || !data) { toast.error('Không tìm thấy khách hàng'); return; }
     if (data.denied) { toast.warning('Bạn bị giới hạn quyền truy cập khách hàng này'); return; }
     setCustomerView(data);
+  };
+
+  // ----- Tag @ trong trình soạn thảo bài viết (contentEditable) -----
+  const detectEditorMention = async () => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) { setEditorMention(null); return; }
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType !== 3) { setEditorMention(null); return; }
+    const before = node.textContent.slice(0, range.startOffset);
+    const m = before.match(/@([^\s@]*)$/);
+    if (!m) { setEditorMention(null); return; }
+    const q = m[1];
+    let items;
+    if (/^\d{3,}$/.test(q)) {
+      const { data } = await supabase.rpc('search_customer_by_phone', { q });
+      items = (data || []).map(c => ({ type: 'cust', id: c.id, name: c.customer_name || c.phone, sub: c.phone }));
+    } else {
+      const ql = q.toLowerCase();
+      items = mentionStaff.filter(s => s.full_name?.toLowerCase().includes(ql)).slice(0, 6)
+        .map(s => ({ type: 'staff', id: s.id, name: s.full_name, sub: s.employee_id || '' }));
+    }
+    const rect = range.getBoundingClientRect();
+    setEmActive(0);
+    setEditorMention({ items, node, start: range.startOffset - m[0].length, end: range.startOffset, rect });
+  };
+
+  const pickEditorMention = (item) => {
+    if (!editorMention) return;
+    const { node, start, end } = editorMention;
+    const token = `@[${item.name}](${item.type}:${item.id}) `;
+    const r = document.createRange();
+    try { r.setStart(node, start); r.setEnd(node, end); } catch { setEditorMention(null); return; }
+    r.deleteContents();
+    const tn = document.createTextNode(token);
+    r.insertNode(tn);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    const nr = document.createRange();
+    nr.setStartAfter(tn); nr.collapse(true);
+    sel.addRange(nr);
+    editorRef.current?.focus();
+    setEditorMention(null);
+  };
+
+  const handleEditorKeyDown = (e) => {
+    if (!editorMention || !editorMention.items.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setEmActive(a => (a + 1) % editorMention.items.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setEmActive(a => (a - 1 + editorMention.items.length) % editorMention.items.length); }
+    else if (e.key === 'Enter') { e.preventDefault(); pickEditorMention(editorMention.items[emActive]); }
+    else if (e.key === 'Escape') { setEditorMention(null); }
+  };
+
+  // Đổi token trong HTML bài viết thành chip nhân sự / link khách
+  const renderPostHtml = (html) => (html || '')
+    .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="color:#059669;font-weight:600">@$1</span>')
+    .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="color:#2563eb;font-weight:600;cursor:pointer;background:none;border:none;padding:0;font:inherit">@$1</button>');
+
+  const handlePostContentClick = (e) => {
+    const id = e.target?.dataset?.cust;
+    if (id) { e.preventDefault(); openCustomer(id); }
   };
   const [reactWho, setReactWho] = useState(null);        // { post, list }
   const [lightbox, setLightbox] = useState(null);        // { urls, index }
@@ -371,8 +434,21 @@ const CommunityPage = () => {
           ))}
         </div>
         <div ref={editorRef} contentEditable suppressContentEditableWarning
-          data-ph="Chia sẻ gì đó với cả nhà..."
+          onInput={detectEditorMention} onKeyDown={handleEditorKeyDown} onBlur={() => setTimeout(() => setEditorMention(null), 200)}
+          data-ph="Chia sẻ gì đó với cả nhà... (gõ @ để tag nhân sự / SĐT khách)"
           className="community-editor min-h-[60px] text-[15px] text-slate-700 focus:outline-none px-1" />
+        {editorMention && editorMention.items.length > 0 && (
+          <div className="fixed w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-[60] overflow-hidden"
+            style={{ top: editorMention.rect.bottom + 4, left: editorMention.rect.left }}>
+            {editorMention.items.map((it, i) => (
+              <button key={it.type + it.id} type="button" onMouseDown={(e) => { e.preventDefault(); pickEditorMention(it); }}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between ${i === emActive ? 'bg-emerald-50' : ''} hover:bg-emerald-50`}>
+                <span className="font-medium text-slate-700">{it.type === 'cust' ? '👤 ' : '@'}{it.name}</span>
+                <span className="text-xs text-slate-400">{it.type === 'cust' ? '📞 ' + it.sub : it.sub}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {files.map((f, i) => (
@@ -411,7 +487,7 @@ const CommunityPage = () => {
               {posts.map(p => {
                 const cmt = comments.filter(c => c.post_id === p.id).length;
                 const rea = likes.filter(l => l.post_id === p.id).length;
-                const excerpt = (p.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                const excerpt = (p.content || '').replace(MENTION_RE, '@$1').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
                 return (
                   <button key={p.id} onClick={() => { setViewMode('feed'); setTimeout(() => document.getElementById(`post-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
                     className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start justify-between gap-3">
@@ -457,7 +533,7 @@ const CommunityPage = () => {
             </div>
 
             {post.title && <div className="px-4 pb-1 font-bold text-slate-800 text-[16px]">{post.title}</div>}
-            {post.content && <div className="px-4 pb-3 text-slate-700 text-[15px] break-words" dangerouslySetInnerHTML={{ __html: post.content }} />}
+            {post.content && <div className="px-4 pb-3 text-slate-700 text-[15px] break-words" onClick={handlePostContentClick} dangerouslySetInnerHTML={{ __html: renderPostHtml(post.content) }} />}
             {post.image_urls?.length > 0 && (
               <div className={`grid gap-0.5 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {post.image_urls.map((u, i) => (
