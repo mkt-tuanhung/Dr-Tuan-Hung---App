@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const AppointmentManagementPage = () => {
@@ -28,6 +28,7 @@ const AppointmentManagementPage = () => {
   const [saving, setSaving] = useState(false);
   const [activeViewTab, setActiveViewTab] = useState('appointments');
   const [viewNoteApp, setViewNoteApp] = useState(null);
+  const [careHistoryApp, setCareHistoryApp] = useState(null);
   const [viewImage, setViewImage] = useState(null);
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
@@ -631,6 +632,11 @@ const AppointmentManagementPage = () => {
                               <FileText className="w-4 h-4" /> Tình trạng KH
                             </button>
                           )}
+                          {app.care_notes && (
+                            <button onClick={() => setCareHistoryApp(app)} className="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                              <MessageCircle className="w-4 h-4" /> Lịch sử tư vấn
+                            </button>
+                          )}
                           <div className="flex items-center gap-2 w-full">
                             {['admin', 'sale_offline'].includes(profile?.role) && (
                               <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
@@ -940,6 +946,28 @@ const AppointmentManagementPage = () => {
                 renderNotes(viewNoteApp.notes)
               ) : (
                 <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử chăm sóc.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Lịch sử tư vấn (care_notes từ Khách Cọc/Bong) */}
+      {careHistoryApp && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50 shrink-0">
+              <div>
+                <h3 className="font-bold text-indigo-800 text-lg">Lịch sử tư vấn</h3>
+                <p className="text-xs text-indigo-400 mt-0.5">{careHistoryApp.customer_name} · {careHistoryApp.phone}</p>
+              </div>
+              <button onClick={() => setCareHistoryApp(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 flex-1">
+              {careHistoryApp.care_notes ? renderNotes(careHistoryApp.care_notes) : (
+                <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử tư vấn.</div>
               )}
             </div>
           </div>
