@@ -329,8 +329,45 @@ export default function AdvanceExpensePage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto bg-white">
-              {/* Bảng danh sách phiếu (đã có ở trên) */}
+            {/* Mobile: dạng thẻ */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {loading ? (
+                <div className="text-center py-10 text-slate-400 text-sm">Đang tải...</div>
+              ) : data.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-sm">Không có dữ liệu</div>
+              ) : data.map(d => (
+                <div key={d.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-800">{d.profiles?.full_name}</div>
+                      <div className="text-xs text-slate-400">{new Date(d.date).toLocaleDateString('vi-VN')} · {CATEGORIES[d.category] || d.category}</div>
+                    </div>
+                    <div className="font-bold text-slate-800 text-base shrink-0">{fmt(d.amount)}</div>
+                  </div>
+                  {d.description && <div className="text-sm text-slate-500 mt-1">{d.description}</div>}
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    {renderStatus(d)}
+                    {d.status === 'rejected' && <span className="text-xs text-red-500 italic">"{d.reject_reason}"</span>}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    {d.proof_image_urls?.[0] && <button onClick={() => setViewImage(d.proof_image_urls[0])} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg" title="Bill chi"><ImageIcon className="w-4 h-4" /></button>}
+                    {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
+                    {isAdminOrAccountant && d.status === 'pending' && (
+                      <>
+                        <button onClick={() => handleApprove(d.id)} className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold text-xs">Duyệt</button>
+                        <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="flex-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg font-semibold text-xs">Từ chối</button>
+                      </>
+                    )}
+                    {isAdminOrAccountant && d.status === 'approved' && (
+                      <button onClick={() => { setSelectedExpense(d); setRepayForm(prev => ({ ...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount) })); setShowRepayModal(true); }} className="flex-1 px-3 py-2 bg-amber-500 text-white rounded-lg font-semibold text-xs">Hoàn ứng</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: bảng */}
+            <div className="hidden md:block overflow-x-auto bg-white">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b">

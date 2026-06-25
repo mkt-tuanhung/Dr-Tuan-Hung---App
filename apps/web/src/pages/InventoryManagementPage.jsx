@@ -192,7 +192,35 @@ export default function InventoryManagementPage({ isNested = false }) {
                 />
               </div>
             </div>
-            <div className="overflow-auto flex-1">
+            {/* Mobile: dạng thẻ */}
+            <div className="md:hidden overflow-auto flex-1 divide-y divide-slate-100">
+              {loading ? (
+                <div className="text-center py-10 text-slate-400 text-sm">Đang tải...</div>
+              ) : filteredItems.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-sm">Chưa có vật tư nào</div>
+              ) : filteredItems.map((item) => (
+                <div key={item.id} className="p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-800">{item.name}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{item.unit} · Tối thiểu {item.min_stock}{item.notes ? ' · ' + item.notes : ''}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg font-bold text-sm ${item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {item.current_stock}{item.current_stock <= item.min_stock ? ' ⚠️' : ''}
+                    </span>
+                    {canWrite && (
+                      <>
+                        <button onClick={() => openEditItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: bảng */}
+            <div className="hidden md:block overflow-auto flex-1">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50 sticky top-0 z-10">
                   <tr className="text-slate-500 text-xs uppercase tracking-wider">
