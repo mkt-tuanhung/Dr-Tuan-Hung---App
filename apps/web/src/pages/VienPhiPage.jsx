@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X } from 'lucide-react';
+import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 const VienPhiPage = ({ isNested = false }) => {
@@ -8,6 +8,11 @@ const VienPhiPage = ({ isNested = false }) => {
   const [loading, setLoading] = useState(true);
   const [viewImage, setViewImage] = useState(null);
   const [search, setSearch] = useState('');
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   useEffect(() => {
     const loadData = async () => {
@@ -24,15 +29,22 @@ const VienPhiPage = ({ isNested = false }) => {
     loadData();
   }, []);
 
-  const filteredData = data.filter(d => 
+  // Lọc theo tháng đang chọn (theo ngày thu viện phí)
+  const monthData = data.filter(d => {
+    if (!d.hospital_fee_date) return false;
+    const dt = new Date(d.hospital_fee_date);
+    return dt.getMonth() + 1 === month && dt.getFullYear() === year;
+  });
+
+  const filteredData = monthData.filter(d =>
     d.customer_name.toLowerCase().includes(search.toLowerCase()) ||
     (d.phone && d.phone.includes(search)) ||
     (d.service && d.service.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const totalFee = data.reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
-  const totalCash = data.filter(d => d.hospital_fee_method === 'cash').reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
-  const totalTransfer = data.filter(d => d.hospital_fee_method === 'transfer').reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
+  const totalFee = monthData.reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
+  const totalCash = monthData.filter(d => d.hospital_fee_method === 'cash').reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
+  const totalTransfer = monthData.filter(d => d.hospital_fee_method === 'transfer').reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
 
   const pieData = [
     { name: 'Tiền mặt', value: totalCash, color: '#10b981' },
@@ -62,10 +74,10 @@ const VienPhiPage = ({ isNested = false }) => {
               <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-lg shadow-blue-200">
                 <div className="flex items-center gap-3 mb-4 opacity-80">
                   <Banknote className="w-6 h-6" />
-                  <h3 className="font-semibold">Tổng viện phí thu được</h3>
+                  <h3 className="font-semibold">Tổng viện phí đã tạm ứng</h3>
                 </div>
                 <div className="text-3xl font-bold mb-2">{fmt(totalFee)}</div>
-                <div className="text-blue-100 text-sm flex items-center gap-1.5"><TrendingUp className="w-4 h-4" /> Tổng số: {data.length} lượt thu</div>
+                <div className="text-blue-100 text-sm flex items-center gap-1.5"><TrendingUp className="w-4 h-4" /> Tháng {month}/{year} · {monthData.length} lượt</div>
               </div>
 
               <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
@@ -112,26 +124,33 @@ const VienPhiPage = ({ isNested = false }) => {
 
           {/* List */}
           <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-bold text-slate-800 text-lg">Danh sách thu viện phí</h3>
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-50 bg-slate-50/50 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bold text-slate-800 text-base sm:text-lg whitespace-nowrap">Danh sách viện phí tạm ứng</h3>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={prevMonth} className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4" /></button>
+                  <span className="text-sm font-semibold text-slate-700 w-24 text-center">Tháng {month}/{year}</span>
+                  <button onClick={nextMonth} className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4" /></button>
+                </div>
+              </div>
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input 
-                  type="text" 
-                  placeholder="Tìm khách hàng..." 
+                <input
+                  type="text"
+                  placeholder="Tìm khách hàng..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:border-blue-500 outline-none w-64"
+                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
 
             {/* Mobile: thẻ */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="md:hidden p-3 space-y-3">
               {filteredData.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 italic text-sm">Không tìm thấy dữ liệu.</div>
+                <div className="text-center py-10 text-slate-400 italic text-sm">Không có viện phí trong tháng {month}/{year}.</div>
               ) : filteredData.map(app => (
-                <div key={app.id} className="p-4">
+                <div key={app.id} className="border border-slate-200 rounded-2xl p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="font-bold text-slate-800">{app.customer_name}</div>
