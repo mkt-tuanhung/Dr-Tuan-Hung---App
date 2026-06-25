@@ -2,9 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, Upload, Download } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
+import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+
+const IMPORT_HEADERS = ['ngay_mo', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'ma_dieu_duong', 'ghi_chu'];
+const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
+  '2026-05-10,Nguyễn Thị A,0901234567,Nâng mũi,NV010,Khách cũ chăm sóc lại\n' +
+  '2026-04-22,Trần Văn B,0907654321,Gọt hàm,NV010,\n';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -45,6 +51,9 @@ const HauPhauPage = () => {
 
   // Trang chăm sóc riêng (full-page) + modal phân công
   const [careApp, setCareApp] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importing, setImporting] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({ id: null, additional_hau_phau_ids: [] });
   const [selectedNurseId, setSelectedNurseId] = useState('');
@@ -137,6 +146,56 @@ const HauPhauPage = () => {
   }, [customers]);
 
   const addQuickNote = (text) => setForm(f => ({ ...f, post_op_notes: f.post_op_notes + (f.post_op_notes ? '\n' : '') + text }));
+
+  // ----- Import khách hàng chăm sóc -----
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportPreview(null);
+    const rows = parseCSV(await file.text());
+    if (rows.length < 2) { toast.error('File trống hoặc thiếu dữ liệu'); e.target.value = ''; return; }
+
+    const { data: profs } = await supabase.from('profiles').select('id, employee_id');
+    const empMap = {};
+    (profs || []).forEach(p => { if (p.employee_id) empMap[p.employee_id.trim().toUpperCase()] = p.id; });
+
+    const valid = [], errors = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const get = (idx) => (r[idx] || '').trim();
+      const lineNo = i + 1;
+      const date = get(0), name = get(1), nurseCode = get(4).toUpperCase();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { errors.push(`Dòng ${lineNo}: ngày mổ sai định dạng (YYYY-MM-DD)`); continue; }
+      if (!name) { errors.push(`Dòng ${lineNo}: thiếu tên khách hàng`); continue; }
+      if (!nurseCode) { errors.push(`Dòng ${lineNo}: thiếu mã điều dưỡng phụ trách`); continue; }
+      if (!empMap[nurseCode]) { errors.push(`Dòng ${lineNo}: không tìm thấy mã điều dưỡng "${nurseCode}"`); continue; }
+      const ghichu = get(5);
+      valid.push({
+        customer_name: name, phone: get(2),
+        appointment_date: date, surgery_date: date,
+        service: get(3) || null,
+        hau_phau_id: empMap[nurseCode],
+        status: 'phau_thuat', post_op_status: 'Đang theo dõi',
+        post_op_notes: ghichu ? `[${new Date().toLocaleDateString('vi-VN')}] ${ghichu}` : null,
+        customer_source: 'CSKH', customer_type: 'Cũ',
+      });
+    }
+    setImportPreview({ valid, errors });
+    e.target.value = '';
+  };
+
+  const handleImport = async () => {
+    if (!importPreview?.valid?.length) { toast.error('Không có dòng hợp lệ'); return; }
+    setImporting(true);
+    try {
+      const { error } = await supabase.from('customer_appointments').insert(importPreview.valid);
+      if (error) throw error;
+      toast.success(`Đã import ${importPreview.valid.length} khách`);
+      setShowImportModal(false); setImportPreview(null);
+      loadData();
+    } catch (err) { toast.error(err.message); }
+    finally { setImporting(false); }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -409,8 +468,15 @@ const HauPhauPage = () => {
           <h2 className="text-2xl font-bold text-slate-800">{mainTab === 'cskh' ? 'Chăm sóc khách hàng (CSKH)' : 'Chăm sóc Hậu phẫu'}</h2>
           <p className="text-slate-500 text-sm mt-1">{mainTab === 'cskh' ? 'Khách đã mổ trên 1 tháng — CSKH tiếp quản chăm sóc' : 'Khách mổ trong vòng 1 tháng — theo dõi sau mổ'}</p>
         </div>
-        <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold">
-          {mainTabCustomers.length} Khách
+        <div className="flex items-center gap-2">
+          {canSeeAll && (
+            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">
+              <Upload className="w-4 h-4" /> Import khách
+            </button>
+          )}
+          <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold">
+            {mainTabCustomers.length} Khách
+          </div>
         </div>
       </div>
 
@@ -541,6 +607,73 @@ const HauPhauPage = () => {
               <X className="w-8 h-8" />
             </button>
             <img src={viewImage} alt="Phóng to" className="max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={e => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Import khách hàng chăm sóc */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-emerald-50 shrink-0">
+              <h3 className="font-bold text-emerald-800">Import khách hàng chăm sóc</h3>
+              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-600 space-y-2">
+                <div className="font-semibold text-blue-700">Các cột BẮT BUỘC đúng thứ tự (dòng đầu là tiêu đề):</div>
+                <ol className="list-decimal ml-5 space-y-0.5 text-xs">
+                  <li><b>ngay_mo</b> — định dạng <code>YYYY-MM-DD</code> (khách mổ ≥1 tháng sẽ vào tab CSKH)</li>
+                  <li><b>ten_khach_hang</b></li>
+                  <li><b>so_dien_thoai</b></li>
+                  <li><b>dich_vu</b></li>
+                  <li><b>ma_dieu_duong</b> — mã NV điều dưỡng phụ trách (vd NV010) <b>bắt buộc</b></li>
+                  <li><b>ghi_chu</b> — ghi chú đầu tiên (tùy chọn)</li>
+                </ol>
+                <button onClick={() => downloadCsv('mau_import_khach_cham_soc.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline">
+                  <Download className="w-4 h-4" /> Tải file mẫu (.csv)
+                </button>
+              </div>
+
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 text-emerald-700 font-semibold">
+                <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
+                <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
+              </label>
+
+              {importPreview && (
+                <div className="space-y-3">
+                  <div className="flex gap-3 text-sm">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
+                    {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
+                  </div>
+                  {importPreview.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-3 max-h-32 overflow-y-auto text-xs text-red-600 space-y-0.5">
+                      {importPreview.errors.map((er, i) => <div key={i}>• {er}</div>)}
+                    </div>
+                  )}
+                  {importPreview.valid.length > 0 && (
+                    <div className="border border-slate-100 rounded-xl max-h-48 overflow-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-50 text-slate-500 sticky top-0"><tr>
+                          <th className="text-left px-3 py-2">Ngày mổ</th><th className="text-left px-3 py-2">Khách</th><th className="text-left px-3 py-2">Dịch vụ</th>
+                        </tr></thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {importPreview.valid.slice(0, 50).map((v, i) => (
+                            <tr key={i}><td className="px-3 py-1.5">{v.surgery_date}</td><td className="px-3 py-1.5">{v.customer_name}</td><td className="px-3 py-1.5">{v.service || '—'}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
+              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
+              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50">
+                {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} khách`}
+              </button>
+            </div>
           </div>
         </div>
       )}

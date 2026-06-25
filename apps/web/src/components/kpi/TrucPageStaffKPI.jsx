@@ -2,8 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, AlertCircle, Phone, MessageCircle, Percent, Target, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertCircle, Phone, MessageCircle, Percent, Target, Plus, Trash2, Upload, Download, X } from 'lucide-react';
 import { computeTrucPage, PHONE_COMMISSION } from '@/lib/kpiCalc';
+import { parseCSV, downloadCsv } from '@/lib/csv';
+
+const IMPORT_HEADERS = ['ngay', 'so_dien_thoai', 'so_sdt_quan_tam', 'so_tin_nhan', 'so_tin_spam'];
+const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
+  '2026-06-01,12,8,40,5\n2026-06-02,9,6,33,3\n';
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
@@ -39,6 +44,9 @@ const TrucPageStaffKPI = () => {
   const [telesales, setTelesales] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importing, setImporting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
@@ -86,6 +94,43 @@ const TrucPageStaffKPI = () => {
       loadData();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportPreview(null);
+    const rows = parseCSV(await file.text());
+    if (rows.length < 2) { toast.error('File trống hoặc thiếu dữ liệu'); e.target.value = ''; return; }
+    const valid = [], errors = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const get = (idx) => (r[idx] || '').trim();
+      const date = get(0);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { errors.push(`Dòng ${i + 1}: ngày sai định dạng (YYYY-MM-DD)`); continue; }
+      valid.push({
+        staff_id: profile.id, date,
+        total_phones: Number(get(1).replace(/\D/g, '')) || 0,
+        total_interested_phones: Number(get(2).replace(/\D/g, '')) || 0,
+        total_messages: Number(get(3).replace(/\D/g, '')) || 0,
+        total_spam_messages: Number(get(4).replace(/\D/g, '')) || 0,
+      });
+    }
+    setImportPreview({ valid, errors });
+    e.target.value = '';
+  };
+
+  const handleImport = async () => {
+    if (!importPreview?.valid?.length) { toast.error('Không có dòng hợp lệ'); return; }
+    setImporting(true);
+    try {
+      const { error } = await supabase.from('page_daily_reports').upsert(importPreview.valid, { onConflict: 'staff_id,date' });
+      if (error) throw error;
+      toast.success(`Đã import ${importPreview.valid.length} ngày báo cáo`);
+      setShowImport(false); setImportPreview(null);
+      loadData();
+    } catch (err) { toast.error(err.message); }
+    finally { setImporting(false); }
   };
 
   const deleteReport = async (id) => {
@@ -170,7 +215,12 @@ const TrucPageStaffKPI = () => {
         <>
           {/* Form báo cáo ngày */}
           <div className="bg-white border border-emerald-100 rounded-2xl shadow-sm p-5">
-            <h3 className="font-bold text-emerald-700 mb-4 flex items-center gap-2"><Plus className="w-4 h-4" /> Báo cáo số điện thoại trong ngày</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-emerald-700 flex items-center gap-2"><Plus className="w-4 h-4" /> Báo cáo số điện thoại trong ngày</h3>
+              <button onClick={() => { setImportPreview(null); setShowImport(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">
+                <Upload className="w-4 h-4" /> Import nhiều ngày
+              </button>
+            </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Ngày</label>
@@ -252,6 +302,73 @@ const TrucPageStaffKPI = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal Import báo cáo số */}
+      {showImport && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-emerald-50 shrink-0">
+              <h3 className="font-bold text-emerald-800">Import báo cáo số điện thoại</h3>
+              <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-600 space-y-2">
+                <div className="font-semibold text-blue-700">Các cột đúng thứ tự (dòng đầu là tiêu đề):</div>
+                <ol className="list-decimal ml-5 space-y-0.5 text-xs">
+                  <li><b>ngay</b> — định dạng <code>YYYY-MM-DD</code></li>
+                  <li><b>so_dien_thoai</b> — tổng SĐT xin được trong ngày</li>
+                  <li><b>so_sdt_quan_tam</b> — SĐT khách quan tâm</li>
+                  <li><b>so_tin_nhan</b> — tổng tin nhắn</li>
+                  <li><b>so_tin_spam</b> — tin nhắn spam</li>
+                </ol>
+                <div className="text-xs text-slate-400">Trùng ngày sẽ được cập nhật đè (không tạo trùng).</div>
+                <button onClick={() => downloadCsv('mau_bao_cao_so.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline">
+                  <Download className="w-4 h-4" /> Tải file mẫu (.csv)
+                </button>
+              </div>
+
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 text-emerald-700 font-semibold">
+                <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
+                <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
+              </label>
+
+              {importPreview && (
+                <div className="space-y-3">
+                  <div className="flex gap-3 text-sm">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">{importPreview.valid.length} ngày hợp lệ</span>
+                    {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
+                  </div>
+                  {importPreview.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-3 max-h-32 overflow-y-auto text-xs text-red-600 space-y-0.5">
+                      {importPreview.errors.map((er, i) => <div key={i}>• {er}</div>)}
+                    </div>
+                  )}
+                  {importPreview.valid.length > 0 && (
+                    <div className="border border-slate-100 rounded-xl max-h-48 overflow-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-50 text-slate-500 sticky top-0"><tr>
+                          <th className="text-left px-3 py-2">Ngày</th><th className="text-right px-3 py-2">SĐT</th><th className="text-right px-3 py-2">Quan tâm</th><th className="text-right px-3 py-2">Tin nhắn</th>
+                        </tr></thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {importPreview.valid.slice(0, 50).map((v, i) => (
+                            <tr key={i}><td className="px-3 py-1.5">{v.date}</td><td className="px-3 py-1.5 text-right">{v.total_phones}</td><td className="px-3 py-1.5 text-right">{v.total_interested_phones}</td><td className="px-3 py-1.5 text-right">{v.total_messages}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
+              <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
+              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50">
+                {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} ngày`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
