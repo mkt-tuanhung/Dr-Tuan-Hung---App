@@ -200,10 +200,12 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     if (validRows.length === 0) return toast.error('Vui lòng nhập vật tư hợp lệ');
     setSaving(true);
 
+    const today = new Date().toISOString().split('T')[0];
     const inserts = validRows.map(r => ({
       item_id: r.item_id,
       type: 'export',
       quantity: r.quantity,
+      date: today,
       reference_id: selectedApp.id,
       notes: `Xuất cho KH: ${selectedApp.customer_name}`,
       created_by: profile.id
