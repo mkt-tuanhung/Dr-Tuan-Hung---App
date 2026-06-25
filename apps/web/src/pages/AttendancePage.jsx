@@ -80,6 +80,8 @@ const AttendancePage = () => {
   const [now, setNow] = useState(new Date());
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [leaveForm, setLeaveForm] = useState({ type: 'late', date: todayStr, half_day_period: 'morning', reason: '' });
+  const [showOtForm, setShowOtForm] = useState(false);
+  const [otForm, setOtForm] = useState({ date: todayStr, hours: '' });
   const [locationInfo, setLocationInfo] = useState(null); // { lat, lng, distance, inOffice, ip }
 
   useEffect(() => {
@@ -206,6 +208,22 @@ const AttendancePage = () => {
       loadData();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
+  };
+
+  const handleOtSubmit = async () => {
+    const hours = Number(otForm.hours);
+    if (!otForm.date) { toast.error('Chọn ngày'); return; }
+    if (!hours || hours <= 0) { toast.error('Nhập số giờ tăng ca (chỉ số)'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('attendance')
+      .upsert({ staff_id: profile.id, date: otForm.date, overtime_hours: hours }, { onConflict: 'staff_id,date' });
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`Đã ghi ${hours} giờ tăng ca ngày ${new Date(otForm.date).toLocaleDateString('vi-VN')}`);
+      setShowOtForm(false); setOtForm({ date: todayStr, hours: '' });
+      loadData();
+    }
+    setSaving(false);
   };
 
   const handleLeaveSubmit = async () => {
@@ -489,12 +507,20 @@ const AttendancePage = () => {
       <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-50">
           <h3 className="text-sm font-semibold text-slate-700">Đơn xin phép</h3>
-          <button
-            onClick={() => setShowLeaveForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Tạo đơn
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setOtForm({ date: todayStr, hours: '' }); setShowOtForm(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5" /> Ghi tăng ca
+            </button>
+            <button
+              onClick={() => setShowLeaveForm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" /> Tạo đơn
+            </button>
+          </div>
         </div>
         {leaveRequests.length === 0 ? (
           <div className="text-center py-8 text-slate-400 text-sm">Chưa có đơn xin phép</div>
@@ -567,6 +593,35 @@ const AttendancePage = () => {
           </div>
         )}
       </div>
+
+      {/* Overtime form modal */}
+      {showOtForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2"><Clock className="w-5 h-5 text-amber-500" /> Ghi giờ tăng ca</h3>
+              <button onClick={() => setShowOtForm(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1.5">Ngày</label>
+                <input type="date" value={otForm.date} onChange={e => setOtForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1.5">Số giờ tăng ca</label>
+                <input type="number" min="0" step="0.5" inputMode="decimal" value={otForm.hours}
+                  onChange={e => setOtForm(f => ({ ...f, hours: e.target.value.replace(/[^\d.]/g, '') }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" placeholder="VD: 2" />
+                <p className="text-[11px] text-slate-400 mt-1">Chỉ nhập số. Tăng ca CN tính 200%, ngày thường 150%.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowOtForm(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm">Hủy</button>
+              <button onClick={handleOtSubmit} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 disabled:opacity-50">Lưu tăng ca</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Leave form modal */}
       {showLeaveForm && (

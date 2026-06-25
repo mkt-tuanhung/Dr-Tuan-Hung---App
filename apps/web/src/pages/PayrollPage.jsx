@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import {
   computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, isRecheck,
@@ -29,6 +29,11 @@ const PayrollPage = () => {
   const [edits, setEdits] = useState({}); // staff_id -> { other_bonus, other_deduction }
   const [locked, setLocked] = useState(false);
   const [history, setHistory] = useState([]);
+  const [pendingSA, setPendingSA] = useState([]);          // đơn ứng lương chờ duyệt
+  const [saModal, setSaModal] = useState(null);            // { staff } khi tạo đơn ứng lương
+  const [saForm, setSaForm] = useState({ amount: '', reason: '' });
+  const [rejectSA, setRejectSA] = useState(null);          // { id } khi từ chối
+  const [rejectReason, setRejectReason] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -41,8 +46,8 @@ const PayrollPage = () => {
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
 
-    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes] = await Promise.all([
-      supabase.from('attendance').select('staff_id, status').gte('date', ms).lte('date', meDay).in('staff_id', safe),
+    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes] = await Promise.all([
+      supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2').gte('bong_date', ms).lte('bong_date', meDay),
@@ -51,14 +56,22 @@ const PayrollPage = () => {
       supabase.from('expenses').select('staff_id, amount').eq('is_advance', true).eq('status', 'approved'),
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
       supabase.from('payroll').select('month, year, net_salary'),
+      supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];
     const bong = bongRes.data || [], coc = cocRes.data || [], pages = pageRes.data || [];
-    const adv = advRes.data || [], payroll = payRes.data || [];
+    const adv = advRes.data || [], payroll = payRes.data || [], salAdv = salRes.data || [];
 
     const workingDaysOf = (id) => att.filter(a => a.staff_id === id && ['present', 'late', 'early_leave'].includes(a.status)).length;
     const advanceOf = (id) => adv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
+    const salaryAdvanceOf = (id) => salAdv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
+    // Tăng ca: số giờ × (CN:200% | thường:150%) × lương cơ bản/26/8
+    const overtimeOf = (id, base) => att.filter(a => a.staff_id === id && Number(a.overtime_hours) > 0)
+      .reduce((s, a) => {
+        const rate = new Date(a.date).getDay() === 0 ? 2 : 1.5;
+        return s + Number(a.overtime_hours) * rate * (Number(base || 0) / STANDARD_DAYS / 8);
+      }, 0);
 
     const computed = (staff || []).map(s => {
       const workingDays = workingDaysOf(s.id);
@@ -90,11 +103,13 @@ const PayrollPage = () => {
       const saved = payroll.find(p => p.staff_id === s.id);
       const otherBonus = Number(saved?.other_bonus || 0);
       const otherDeduction = Number(saved?.other_deduction || 0);
-      const advance = advanceOf(s.id);
-      const gross = luongCong + phuCap + commission + otherBonus;
-      const net = gross - advance - otherDeduction;
+      const advance = advanceOf(s.id);              // tạm ứng chi (NV chi hộ) → CỘNG (hoàn lại)
+      const overtime = Math.round(overtimeOf(s.id, s.base_salary)); // lương tăng ca → CỘNG
+      const salaryAdvance = salaryAdvanceOf(s.id);  // ứng lương → TRỪ
+      const gross = luongCong + phuCap + commission + overtime + advance + otherBonus;
+      const net = gross - salaryAdvance - otherDeduction;
 
-      return { staff: s, workingDays, luongCong, phuCap, commission, otherBonus, otherDeduction, advance, gross, net, savedStatus: saved?.status };
+      return { staff: s, workingDays, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status };
     });
 
     setRows(computed);
@@ -109,8 +124,39 @@ const PayrollPage = () => {
     });
     setHistory(Object.entries(hist).sort().slice(-6).map(([k, v]) => ({ name: k, 'Tổng lương': v })));
 
+    // Đơn ứng lương chờ duyệt
+    const { data: pend } = await supabase.from('salary_advances')
+      .select('*, staff:profiles!staff_id(full_name)').eq('status', 'pending').order('created_at', { ascending: false });
+    setPendingSA(pend || []);
+
     setLoading(false);
   }, [month, year]);
+
+  // Tạo đơn ứng lương cho 1 nhân sự
+  const submitSalaryAdvance = async () => {
+    const amount = Number(String(saForm.amount).replace(/\D/g, '')) || 0;
+    if (!amount) { toast.error('Nhập số tiền'); return; }
+    const { error } = await supabase.from('salary_advances').insert({
+      staff_id: saModal.staff.id, amount, reason: saForm.reason || null,
+      month, year, status: 'pending',
+    });
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success('Đã gửi yêu cầu ứng lương — chờ duyệt');
+    setSaModal(null); setSaForm({ amount: '', reason: '' });
+    loadData();
+  };
+
+  const approveSA = async (id) => {
+    const { error } = await supabase.from('salary_advances').update({ status: 'approved', reviewed_by: me?.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã duyệt ứng lương'); loadData();
+  };
+
+  const doRejectSA = async () => {
+    const { error } = await supabase.from('salary_advances').update({ status: 'rejected', reject_reason: rejectReason || 'Không nêu lý do', reviewed_by: me?.id, reviewed_at: new Date().toISOString() }).eq('id', rejectSA.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã từ chối'); setRejectSA(null); setRejectReason(''); loadData();
+  };
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -122,8 +168,8 @@ const PayrollPage = () => {
     const e = edits[r.staff.id] || {};
     const otherBonus = Number(e.other_bonus || 0);
     const otherDeduction = Number(e.other_deduction || 0);
-    const gross = r.luongCong + r.phuCap + r.commission + otherBonus;
-    const net = gross - r.advance - otherDeduction;
+    const gross = r.luongCong + r.phuCap + r.commission + (r.overtime || 0) + r.advance + otherBonus;
+    const net = gross - (r.salaryAdvance || 0) - otherDeduction;
     return { ...r, otherBonus, otherDeduction, gross, net };
   });
   const totalNet = rowsView.reduce((s, r) => s + r.net, 0);
@@ -138,8 +184,9 @@ const PayrollPage = () => {
         base_salary: r.staff.base_salary || 0, allowance: r.phuCap,
         working_days: r.workingDays, salary_by_attendance: r.luongCong,
         total_commission: r.commission, other_bonus: r.otherBonus,
+        overtime_pay: r.overtime || 0, salary_advance: r.salaryAdvance || 0,
         unpaid_advance: r.advance, other_deduction: r.otherDeduction,
-        gross_income: r.gross, total_deductions: r.advance + r.otherDeduction, net_salary: r.net,
+        gross_income: r.gross, total_deductions: (r.salaryAdvance || 0) + r.otherDeduction, net_salary: r.net,
         status: lock ? 'locked' : 'draft',
         locked_at: lock ? new Date().toISOString() : null, locked_by: lock ? me?.id : null,
         updated_at: new Date().toISOString(),
@@ -181,10 +228,12 @@ const PayrollPage = () => {
         ${line('Lương theo công (' + r.workingDays + '/' + STANDARD_DAYS + ' công)', fmtM(r.luongCong))}
         ${line('Phụ cấp', fmtM(r.phuCap))}
         ${line('Hoa hồng / thưởng', fmtM(r.commission))}
+        ${r.overtime ? line('Lương tăng ca', '+' + fmtM(r.overtime)) : ''}
+        ${r.advance ? line('Hoàn tạm ứng chi (NV chi hộ)', '+' + fmtM(r.advance)) : ''}
         ${line('Thưởng khác', fmtM(r.otherBonus))}
         <tr><td colspan="2"><hr></td></tr>
         ${line('Tổng thu nhập', fmtM(r.gross), true)}
-        ${line('Trừ: Tạm ứng chưa hoàn', '-' + fmtM(r.advance))}
+        ${r.salaryAdvance ? line('Trừ: Ứng lương', '-' + fmtM(r.salaryAdvance)) : ''}
         ${line('Trừ: Khấu trừ khác', '-' + fmtM(r.otherDeduction))}
       </table></div>
       <div class="net"><div style="font-weight:700">THỰC NHẬN</div><b>${fmtM(r.net)}</b></div>
@@ -250,15 +299,17 @@ const PayrollPage = () => {
                 <th className="text-right px-4 py-3 font-medium">Lương theo công</th>
                 <th className="text-right px-4 py-3 font-medium">Phụ cấp</th>
                 <th className="text-right px-4 py-3 font-medium">Hoa hồng</th>
+                <th className="text-right px-4 py-3 font-medium">Lương tăng ca</th>
                 <th className="text-right px-4 py-3 font-medium">Thưởng khác</th>
-                <th className="text-right px-4 py-3 font-medium">Tạm ứng</th>
+                <th className="text-right px-4 py-3 font-medium">Tạm ứng chi (hoàn)</th>
+                <th className="text-right px-4 py-3 font-medium">Ứng lương</th>
                 <th className="text-right px-4 py-3 font-medium">Khấu trừ</th>
                 <th className="text-right px-4 py-3 font-medium">Thực nhận</th>
                 <th className="px-3 py-3"></th>
               </tr></thead>
               <tbody className="divide-y divide-slate-50">
                 {rowsView.length === 0 ? (
-                  <tr><td colSpan={10} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
+                  <tr><td colSpan={12} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
                 ) : rowsView.map(r => (
                   <tr key={r.staff.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}
@@ -267,18 +318,23 @@ const PayrollPage = () => {
                     <td className="text-right px-4 py-2.5">{fmtM(r.luongCong)}</td>
                     <td className="text-right px-4 py-2.5 text-slate-500">{fmtM(r.phuCap)}</td>
                     <td className="text-right px-4 py-2.5 text-emerald-700 font-semibold">{fmtM(r.commission)}</td>
+                    <td className="text-right px-4 py-2.5 text-emerald-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
                         className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-emerald-400 disabled:bg-slate-50" />
                     </td>
-                    <td className="text-right px-4 py-2.5 text-rose-600">{fmtM(r.advance)}</td>
+                    <td className="text-right px-4 py-2.5 text-emerald-700">{r.advance ? '+' + fmtM(r.advance) : '0đ'}</td>
+                    <td className="text-right px-4 py-2.5 text-rose-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
                         className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-emerald-400 disabled:bg-slate-50" />
                     </td>
                     <td className="text-right px-4 py-2.5 font-bold text-slate-900">{fmtM(r.net)}</td>
-                    <td className="px-3 py-2.5 text-right">
-                      <button onClick={() => printPayslip(r)} title="In phiếu lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"><Printer className="w-4 h-4" /></button>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1 justify-end">
+                        <button onClick={() => { setSaModal({ staff: r.staff }); setSaForm({ amount: '', reason: '' }); }} title="Ứng lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600"><HandCoins className="w-4 h-4" /></button>
+                        <button onClick={() => printPayslip(r)} title="In phiếu lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"><Printer className="w-4 h-4" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -288,10 +344,77 @@ const PayrollPage = () => {
         </div>
       )}
 
+      {/* Đơn ứng lương chờ duyệt */}
+      {pendingSA.length > 0 && (
+        <div className="bg-white border border-amber-200 rounded-2xl shadow-sm p-4">
+          <h3 className="font-bold text-amber-700 mb-3 flex items-center gap-2"><HandCoins className="w-5 h-5" /> Đơn ứng lương chờ duyệt ({pendingSA.length})</h3>
+          <div className="space-y-2">
+            {pendingSA.map(sa => (
+              <div key={sa.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-xl p-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-800">{sa.staff?.full_name} · <span className="text-amber-600">{fmtM(sa.amount)}</span></div>
+                  <div className="text-xs text-slate-400">{sa.reason || 'Không nêu lý do'} · {new Date(sa.created_at).toLocaleDateString('vi-VN')}</div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => approveSA(sa.id)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Duyệt</button>
+                  <button onClick={() => { setRejectSA(sa); setRejectReason(''); }} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">Từ chối</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-xs text-slate-400">
-        Lương theo công = (Lương cơ bản {'×'} 85% nếu thử việc) ÷ {STANDARD_DAYS} công {'×'} số công thực tế. Thực nhận = Lương theo công + Phụ cấp + Hoa hồng + Thưởng khác − Tạm ứng − Khấu trừ.
-        Sửa "Thưởng khác"/"Khấu trừ" rồi bấm <b>Lưu nháp</b> hoặc <b>Chốt lương</b> để lưu.
+        Thực nhận = Lương theo công + Phụ cấp + Hoa hồng + Lương tăng ca + Tạm ứng chi (hoàn lại) + Thưởng khác − Ứng lương − Khấu trừ.
+        Tăng ca = số giờ {'×'} (150% ngày thường / 200% chủ nhật) {'×'} Lương cơ bản ÷ {STANDARD_DAYS} ÷ 8.
       </p>
+
+      {/* Modal tạo đơn ứng lương */}
+      {saModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
+              <div><h3 className="font-bold text-amber-800">Ứng lương</h3><p className="text-xs text-amber-500">{saModal.staff.full_name}</p></div>
+              <button onClick={() => setSaModal(null)}><X className="w-5 h-5 text-amber-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền ứng (VNĐ)</label>
+                <input type="text" inputMode="numeric" value={saForm.amount} onChange={e => setSaForm(f => ({ ...f, amount: fmt(Number(e.target.value.replace(/\D/g, ''))) }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-amber-700 text-lg" placeholder="2.000.000" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Lý do</label>
+                <textarea rows={2} value={saForm.reason} onChange={e => setSaForm(f => ({ ...f, reason: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 resize-none text-sm" placeholder="Lý do ứng lương..." />
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
+              <button onClick={() => setSaModal(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
+              <button onClick={submitSalaryAdvance} className="px-6 py-2 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-700">Gửi duyệt</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal từ chối ứng lương */}
+      {rejectSA && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-red-50">
+              <h3 className="font-bold text-red-800">Từ chối ứng lương</h3>
+              <button onClick={() => setRejectSA(null)}><X className="w-5 h-5 text-red-400" /></button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-semibold mb-2 text-slate-700">Lý do từ chối</label>
+              <textarea rows={3} value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-red-500 resize-none text-sm" placeholder="Nhập lý do..." />
+            </div>
+            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
+              <button onClick={() => setRejectSA(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
+              <button onClick={doRejectSA} className="px-6 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700">Từ chối</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
