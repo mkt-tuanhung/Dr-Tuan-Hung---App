@@ -161,12 +161,12 @@ const PayrollPage = () => {
       <html><head><meta charset="utf-8"><title>Phiếu lương ${s.full_name}</title>
       <style>body{font-family:Arial,sans-serif;color:#0f172a;max-width:640px;margin:24px auto;padding:0 16px;position:relative}
       h1{font-size:20px;margin:0}.sub{color:#64748b;font-size:13px}table{width:100%;border-collapse:collapse;font-size:14px}
-      .box{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:16px;position:relative;background:rgba(255,255,255,.6)}
-      .net{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:16px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;position:relative}
+      .box{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:16px}
+      .net{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:16px;margin-top:16px;display:flex;justify-content:space-between;align-items:center}
       .net b{font-size:22px;color:#047857}hr{border:none;border-top:1px dashed #cbd5e1;margin:8px 0}
-      .watermark{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:-1;pointer-events:none}
-      .watermark span{font-size:64px;font-weight:800;color:#047857;opacity:.08;transform:rotate(-30deg);white-space:nowrap;letter-spacing:6px}
-      @media print{.watermark span{opacity:.1;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+      .watermark{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9999;pointer-events:none}
+      .watermark span{font-size:64px;font-weight:800;color:#0f766e;opacity:.12;transform:rotate(-30deg);white-space:nowrap;letter-spacing:6px}
+      @media print{.watermark span{opacity:.14;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
       <div class="watermark"><span>DR TUAN HUNG</span></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><h1>PHIẾU LƯƠNG</h1><div class="sub">Tháng ${month}/${year}</div></div>
