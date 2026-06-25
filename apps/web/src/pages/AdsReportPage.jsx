@@ -296,7 +296,7 @@ const AdsReportPage = () => {
           <h3 className="font-bold">Chi tiết theo ngày</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full min-w-[680px] text-sm text-left">
             <thead className="bg-amber-400 text-slate-800 uppercase text-xs font-bold">
               <tr>
                 <th className="px-4 py-3">Date (Day)</th>

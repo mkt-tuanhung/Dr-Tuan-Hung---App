@@ -155,6 +155,26 @@ const Overview = ({ profile, setActiveTab }) => {
       </div>
 
       {/* Summary Metrics */}
+      {profile?.role === 'accountant' ? (
+        <div className="grid grid-cols-2 gap-4">
+          <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Banknote className="w-6 h-6" /></div>
+            <p className="text-sm font-semibold text-slate-700 text-center">Doanh thu</p>
+          </div>
+          <div onClick={() => setActiveTab('cashflow')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group">
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><BarChart2 className="w-6 h-6" /></div>
+            <p className="text-sm font-semibold text-slate-700 text-center">Kế toán dòng tiền</p>
+          </div>
+          <div onClick={() => setActiveTab('payroll')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group">
+            <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Wallet className="w-6 h-6" /></div>
+            <p className="text-sm font-semibold text-slate-700 text-center">Bảng lương</p>
+          </div>
+          <div onClick={() => setActiveTab('advances')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group">
+            <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><ClipboardList className="w-6 h-6" /></div>
+            <p className="text-sm font-semibold text-slate-700 text-center">Tạm ứng chi</p>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-2 gap-4">
         <div onClick={() => setActiveTab('attendance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group">
           <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -188,6 +208,7 @@ const Overview = ({ profile, setActiveTab }) => {
           <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.todayAppts)} <span className="text-xs text-slate-400 font-medium normal-case">khách</span></p>
         </div>
       </div>
+      )}
 
       <p className="text-center text-xs text-slate-300">
         {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}

@@ -434,9 +434,9 @@ export default function AdvanceExpensePage() {
         )}
 
         {isAdminOrAccountant && activeTab === 'staff' && (
-          <div className="p-6 bg-white">
+          <div className="p-4 sm:p-6 bg-white overflow-x-auto">
             <h3 className="font-bold text-slate-800 mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
-            <table className="w-full text-left border-collapse border border-slate-200">
+            <table className="w-full min-w-[560px] text-left border-collapse border border-slate-200">
               <thead>
                 <tr className="bg-slate-50 text-slate-600 text-sm">
                   <th className="p-3 border">Nhân sự</th>
