@@ -13,7 +13,7 @@ const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.roun
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
   media: 'Media', marketing: 'Marketing', editor: 'Editor', dieu_duong: 'Điều dưỡng', accountant: 'Kế toán',
-  shareholder: 'Cổ đông', admin: 'Admin',
+  shareholder: 'Cổ đông', outsource: 'Outsource', admin: 'Admin',
 };
 const MANAGER_ROLES = ['admin', 'accountant', 'shareholder'];
 

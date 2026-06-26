@@ -31,6 +31,7 @@ const ROLES = [
   { value: 'dieu_duong',   label: 'Điều dưỡng' },
   { value: 'accountant',   label: 'Kế toán' },
   { value: 'shareholder',  label: 'Cổ đông' },
+  { value: 'outsource',    label: 'Outsource' },
   { value: 'admin',        label: 'Admin' },
 ];
 
@@ -46,6 +47,7 @@ const ROLE_COLORS = {
   truc_page:    'bg-pink-100 text-pink-700',
   media:        'bg-cyan-100 text-cyan-700',
   editor:       'bg-teal-100 text-teal-700',
+  outsource:    'bg-slate-100 text-slate-600',
   marketing:    'bg-indigo-100 text-indigo-700',
   dieu_duong:   'bg-teal-100 text-teal-700',
 };
