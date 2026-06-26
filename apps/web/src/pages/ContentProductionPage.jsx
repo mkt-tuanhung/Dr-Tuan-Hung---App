@@ -5,264 +5,279 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Film, Hand,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen,
 } from 'lucide-react';
 
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
-const STAGES = [
-  { key: 'source_ready', label: 'Chờ dựng', cls: 'bg-slate-100 text-slate-600' },
-  { key: 'editing', label: 'Đang dựng', cls: 'bg-blue-100 text-blue-700' },
-  { key: 'review', label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
-  { key: 'revision', label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
-  { key: 'approved', label: 'Đã duyệt / Chạy', cls: 'bg-violet-100 text-violet-700' },
-  { key: 'done', label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-700' },
-];
-const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-emerald-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
 const parseLinks = (t) => (t || '').split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s));
+const STAGE = {
+  submitted: { label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
+  revision: { label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
+  approved: { label: 'Đã duyệt', cls: 'bg-violet-100 text-violet-700' },
+  done: { label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-700' },
+};
+const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-emerald-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
 
 const ContentProductionPage = () => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const isAdmin = roles.includes('admin');
-  const canMedia = roles.includes('media') || isAdmin;
+  const isManager = isAdmin || roles.includes('accountant') || roles.includes('shareholder');
+  const canAddMedia = roles.includes('media') || isAdmin;
   const canEdit = roles.includes('editor') || isAdmin;
   const canAds = roles.includes('marketing') || isAdmin;
 
-  const [tasks, setTasks] = useState([]);
+  const tabs = [];
+  if (canAddMedia || canEdit || isManager) tabs.push('kho');
+  if (canAds || isManager) tabs.push('duyet');
+  const [tab, setTab] = useState(tabs[0] || 'kho');
+
+  const [stores, setStores] = useState([]);
+  const [clips, setClips] = useState([]);
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [submitFor, setSubmitFor] = useState(null);   // task đang nộp clip
-  const [reviewFor, setReviewFor] = useState(null);    // task đang duyệt
-  const [evalFor, setEvalFor] = useState(null);        // task đang chấm Win
   const [search, setSearch] = useState('');
-  const [mineOnly, setMineOnly] = useState(false);     // chỉ hiện việc liên quan tôi
+  const [addOpen, setAddOpen] = useState(false);
+  const [editSource, setEditSource] = useState(null);
+  const [linkFor, setLinkFor] = useState(null);
+  const [buildFor, setBuildFor] = useState(null);
+  const [reviewFor, setReviewFor] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
-    const { data } = await supabase.from('content_tasks')
-      .select('*, media:profiles!media_id(full_name), editor:profiles!editor_id(full_name), ads:profiles!ads_id(full_name)')
-      .order('updated_at', { ascending: false });
-    setTasks(data || []);
+    const [scRes, clRes] = await Promise.all([
+      supabase.from('media_customers').select('*, media:profiles!media_id(full_name)').order('updated_at', { ascending: false }),
+      supabase.from('media_clips').select('*, editor:profiles!editor_id(full_name), ads:profiles!ads_id(full_name)').order('updated_at', { ascending: false }),
+    ]);
+    setStores(scRes.data || []);
+    setClips(clRes.data || []);
     didLoad.current = true;
     setLoading(false);
   }, []);
-
   useEffect(() => { loadData(); }, [loadData]);
-  useRealtimeReload('content_tasks', loadData);
+  useRealtimeReload('media_customers,media_clips', loadData);
 
-  // ---- Hành động ----
-  const patch = async (id, payload, okMsg) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...payload } : t)); // cập nhật lạc quan
-    const { error } = await supabase.from('content_tasks').update(payload).eq('id', id);
-    if (error) { toast.error('Lỗi: ' + error.message); loadData(); return false; }
-    if (okMsg) toast.success(okMsg);
-    return true;
+  const clipsOf = (storeId) => clips.filter(c => c.media_customer_id === storeId);
+  const storeOf = (id) => stores.find(s => s.id === id);
+
+  const patchClip = async (id, payload, msg) => {
+    setClips(prev => prev.map(c => c.id === id ? { ...c, ...payload } : c));
+    const { error } = await supabase.from('media_clips').update(payload).eq('id', id);
+    if (error) { toast.error('Lỗi: ' + error.message); loadData(); return; }
+    if (msg) toast.success(msg);
   };
-  const claim = (t) => patch(t.id, { editor_id: me.id, stage: 'editing' }, 'Đã nhận việc dựng video');
-  const approve = (t) => patch(t.id, { stage: 'approved', approved_at: new Date().toISOString(), ads_id: me.id }, 'Đã duyệt video');
-  const setAd = (t, ad_status) => patch(t.id, { ad_status, ads_id: me.id }, 'Đã cập nhật trạng thái chạy');
-  const removeTask = async (t) => {
-    if (!confirm('Xoá video này?')) return;
-    setTasks(prev => prev.filter(x => x.id !== t.id));
-    await supabase.from('content_tasks').delete().eq('id', t.id);
+  const delStore = async (s) => {
+    if (!confirm('Xoá media khách hàng này (kèm các clip)?')) return;
+    setStores(prev => prev.filter(x => x.id !== s.id));
+    await supabase.from('media_customers').delete().eq('id', s.id);
   };
 
   // Bảng xếp hạng editor theo Win tháng này
   const now = new Date();
-  const winsThisMonth = tasks.filter(t => t.win && t.evaluated_at && new Date(t.evaluated_at).getMonth() === now.getMonth() && new Date(t.evaluated_at).getFullYear() === now.getFullYear());
-  const lb = Object.values(winsThisMonth.reduce((acc, t) => {
-    const id = t.editor_id; if (!id) return acc;
-    acc[id] = acc[id] || { id, name: t.editor?.full_name || 'Editor', wins: 0, money: 0 };
-    acc[id].wins += 1; acc[id].money += Number(t.win_amount || 0);
-    return acc;
-  }, {})).sort((a, b) => b.wins - a.wins).slice(0, 5);
+  const wins = clips.filter(c => c.win && c.evaluated_at && new Date(c.evaluated_at).getMonth() === now.getMonth() && new Date(c.evaluated_at).getFullYear() === now.getFullYear());
+  const lb = Object.values(wins.reduce((a, c) => {
+    if (!c.editor_id) return a;
+    a[c.editor_id] = a[c.editor_id] || { id: c.editor_id, name: c.editor?.full_name || 'Editor', w: 0, m: 0 };
+    a[c.editor_id].w++; a[c.editor_id].m += Number(c.win_amount || 0); return a;
+  }, {})).sort((x, y) => y.w - x.w).slice(0, 5);
 
-  // Lọc: "việc của tôi" (gồm hàng chờ để nhận/duyệt) + tìm theo khách
-  const isMine = (t) => t.media_id === me?.id || t.editor_id === me?.id || t.ads_id === me?.id
-    || (canEdit && t.stage === 'source_ready') || (canAds && t.stage === 'review');
   const q = search.trim().toLowerCase();
-  const visible = tasks.filter(t =>
-    (!mineOnly || isMine(t)) &&
-    (!q || (t.customer_name || '').toLowerCase().includes(q) || (t.customer_phone || '').includes(q)));
+  const visStores = stores.filter(s => !q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q));
+  // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
+  const reviewClips = clips.filter(c => {
+    const st = storeOf(c.media_customer_id);
+    if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q))) return false;
+    const d = new Date(c.submitted_at || c.created_at);
+    return c.stage !== 'done' || (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
+  });
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Clapperboard className="w-6 h-6 text-emerald-600" /> Sản xuất content quảng cáo</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Media → Editor → Ads · theo dõi & chấm Win</p>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Clapperboard className="w-6 h-6 text-emerald-600" /> Sản xuất Ads</h2>
+          <p className="text-slate-400 text-sm mt-0.5">Kho media (Media) → Editor dựng clip → Ads duyệt &amp; chấm Win</p>
         </div>
-        {canMedia && (
+        {tab === 'kho' && canAddMedia && (
           <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700">
-            <Plus className="w-4 h-4" /> Thêm video
+            <Plus className="w-4 h-4" /> Thêm media
           </button>
         )}
       </div>
 
-      {/* Bảng xếp hạng Editor */}
+      {/* Tabs nội bộ */}
+      {tabs.length > 1 && (
+        <div className="flex gap-2">
+          {tabs.includes('kho') && <TabBtn active={tab === 'kho'} onClick={() => setTab('kho')} icon={FolderOpen} label="Kho media" />}
+          {tabs.includes('duyet') && <TabBtn active={tab === 'duyet'} onClick={() => setTab('duyet')} icon={CheckCircle2} label="Duyệt Ads" />}
+        </div>
+      )}
+
+      {/* Leaderboard */}
       {lb.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h3 className="font-bold text-amber-600 mb-3 flex items-center gap-2"><Trophy className="w-4 h-4" /> Bảng xếp hạng Editor — Win tháng {now.getMonth() + 1}</h3>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <h3 className="font-bold text-amber-600 mb-2 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4" /> Editor Win tháng {now.getMonth() + 1}</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {lb.map((e, i) => (
               <div key={e.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
-                <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span>
-                  {e.name}
-                </span>
-                <span className="text-sm font-bold text-emerald-600">{e.wins} Win · {fmtM(e.money)}</span>
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700"><span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span>{e.name}</span>
+                <span className="text-sm font-bold text-emerald-600">{e.w} Win · {fmtM(e.m)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Thanh công cụ: tìm source/khách + lọc việc của tôi */}
-      {tasks.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm source theo tên / SĐT khách…"
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
-          </div>
-          <button onClick={() => setMineOnly(v => !v)}
-            className={`px-3 py-2 rounded-xl text-sm font-semibold border ${mineOnly ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-            Chỉ việc của tôi
-          </button>
-        </div>
-      )}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
-      ) : tasks.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
-          <Clapperboard className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600 font-semibold">Chưa có video nào trong quy trình</p>
-          <p className="text-slate-400 text-sm mt-1 max-w-lg mx-auto leading-relaxed">
-            Quy trình bắt đầu khi <b>Media</b> bấm “Thêm video” (chọn khách + dán link source).
-            Sau đó <b>Editor</b> bấm <b>Nhận dựng</b> → <b>Nộp clip</b> → <b>Ads</b> duyệt &amp; chấm Win.
-            Các nút thao tác sẽ hiện ngay trên từng thẻ video.
-          </p>
-          {canMedia
-            ? <button onClick={() => setAddOpen(true)} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700"><Plus className="w-4 h-4" /> Thêm video đầu tiên</button>
-            : canEdit ? <p className="text-xs text-emerald-600 mt-3 font-medium">Bạn là Editor — khi có source mới, nó xuất hiện ở cột “Chờ dựng” để bạn bấm Nhận dựng.</p>
-              : <p className="text-xs text-slate-400 mt-3">Chờ Media thêm video & Editor dựng clip.</p>}
-        </div>
+      ) : tab === 'kho' ? (
+        visStores.length === 0 ? (
+          <Empty icon={FolderOpen} title="Kho media trống"
+            desc={canAddMedia ? 'Bấm “Thêm media” để up link nguồn và gắn với khách hàng.' : canEdit ? 'Khi Media up nguồn, bạn vào đây bấm “Dựng video” cho từng khách.' : 'Chưa có dữ liệu media.'}
+            cta={canAddMedia ? { label: 'Thêm media', onClick: () => setAddOpen(true) } : null} />
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {visStores.map(s => (
+              <StoreCard key={s.id} s={s} clips={clipsOf(s.id)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onDelete={() => delStore(s)} />
+            ))}
+          </div>
+        )
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {STAGES.map(st => {
-            const list = visible.filter(t => t.stage === st.key);
-            return (
-              <div key={st.key} className="bg-slate-50/70 rounded-2xl p-3">
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${st.cls}`}>{st.label}</span>
-                  <span className="text-xs text-slate-400 font-medium">{list.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {list.length === 0 && <p className="text-xs text-slate-300 text-center py-4">—</p>}
-                  {list.map(t => (
-                    <TaskCard key={t.id} t={t} me={me} canEdit={canEdit} canAds={canAds} isAdmin={isAdmin}
-                      onClaim={claim} onSubmit={() => setSubmitFor(t)} onReview={() => setReviewFor(t)}
-                      onApprove={approve} onSetAd={setAd} onEval={() => setEvalFor(t)} onDelete={removeTask} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        reviewClips.length === 0 ? (
+          <Empty icon={CheckCircle2} title="Chưa có clip cần duyệt" desc="Khi Editor đẩy clip lên, danh sách sẽ hiện ở đây để bạn đánh giá." />
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+            {reviewClips.map(c => (
+              <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} canAds={canAds}
+                onReview={() => setReviewFor(c)} onSetAd={(ad_status) => patchClip(c.id, { ad_status, ads_id: me.id }, 'Đã cập nhật trạng thái chạy')} />
+            ))}
+          </div>
+        )
       )}
 
-      {addOpen && <AddModal me={me} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
-      {submitFor && <SubmitModal task={submitFor} onClose={() => setSubmitFor(null)} onSaved={async (links, note) => {
-        await patch(submitFor.id, { edited_links: links, editor_note: note, stage: 'review', edited_at: new Date().toISOString() }, 'Đã nộp clip — chờ Ads duyệt');
-        setSubmitFor(null);
-      }} />}
-      {reviewFor && <ReviewModal task={reviewFor} onClose={() => setReviewFor(null)}
-        onApprove={async () => { await approve(reviewFor); setReviewFor(null); }}
-        onRevise={async (note) => { await patch(reviewFor.id, { stage: 'revision', revision_note: note, revision_count: (reviewFor.revision_count || 0) + 1, ads_id: me.id }, 'Đã gửi yêu cầu sửa'); setReviewFor(null); }} />}
-      {evalFor && <EvalModal task={evalFor} onClose={() => setEvalFor(null)} onSaved={async (payload) => {
-        await patch(evalFor.id, { ...payload, evaluated_at: new Date().toISOString(), stage: 'done', ads_id: me.id }, payload.win ? '🏆 Đã chấm WIN!' : 'Đã lưu đánh giá');
-        setEvalFor(null);
-      }} />}
+      {addOpen && <AddMediaModal me={me} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
+      {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
+      {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
+      {buildFor && <BuildClipModal store={buildFor} me={me} onClose={() => setBuildFor(null)} onSaved={() => { setBuildFor(null); loadData(); }} />}
+      {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
+        onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
     </div>
   );
 };
 
-// ---------- Thẻ công việc ----------
-const LinkList = ({ links }) => (
+const TabBtn = ({ active, onClick, icon: Icon, label }) => (
+  <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+    <Icon className="w-4 h-4" /> {label}
+  </button>
+);
+
+const Empty = ({ icon: Icon, title, desc, cta }) => (
+  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
+    <Icon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+    <p className="text-slate-600 font-semibold">{title}</p>
+    <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto leading-relaxed">{desc}</p>
+    {cta && <button onClick={cta.onClick} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700"><Plus className="w-4 h-4" /> {cta.label}</button>}
+  </div>
+);
+
+const LinkList = ({ links, label = 'Link', icon: Icon = ExternalLink }) => (
   (links || []).length === 0 ? <span className="text-xs text-slate-300">—</span> :
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-wrap gap-1.5">
       {(links || []).map((l, i) => (
-        <a key={i} href={l} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate">
-          <ExternalLink className="w-3 h-3 shrink-0" /> Link {i + 1}
-        </a>
+        <a key={i} href={l} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg"><Icon className="w-3 h-3" /> {label} {i + 1}</a>
       ))}
     </div>
 );
 
-const TaskCard = ({ t, me, canEdit, canAds, isAdmin, onClaim, onSubmit, onReview, onApprove, onSetAd, onEval, onDelete }) => {
-  const mineEditor = t.editor_id === me?.id;
-  const Btn = ({ onClick, children, cls = 'bg-emerald-600 hover:bg-emerald-700' }) => (
-    <button onClick={onClick} className={`text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg ${cls}`}>{children}</button>
-  );
-  return (
-    <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-semibold text-slate-800 text-sm truncate">{t.customer_name || 'Khách'}</div>
-          <div className="text-xs text-slate-400">{t.customer_phone}</div>
-        </div>
-        {t.win && <span className="shrink-0 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1"><Trophy className="w-3 h-3" /> Win</span>}
+// ---------- Thẻ Kho media (1 khách) ----------
+const StoreCard = ({ s, clips, me, canAddMedia, canEdit, onEditSource, onLink, onBuild, onDelete }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="font-bold text-slate-800 truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
+        <div className="text-xs text-slate-400">{s.customer_phone}{s.media?.full_name ? ` · Media: ${s.media.full_name}` : ''}</div>
       </div>
-
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-        <div><div className="text-slate-400 flex items-center gap-1"><Film className="w-3 h-3" /> Source</div><LinkList links={t.source_links} /></div>
-        <div><div className="text-slate-400 flex items-center gap-1"><Scissors className="w-3 h-3" /> Clip</div><LinkList links={t.edited_links} /></div>
-      </div>
-
-      <div className="mt-2 text-xs text-slate-500 space-y-0.5">
-        {t.media?.full_name && <div>Media: <b className="text-slate-600">{t.media.full_name}</b></div>}
-        {t.editor?.full_name && <div>Editor: <b className="text-slate-600">{t.editor.full_name}</b></div>}
-        {t.revision_count > 0 && <div className="text-rose-500">Đã sửa {t.revision_count} lần</div>}
-        {t.ad_status && AD_STATUS[t.ad_status] && (
-          <div className={`flex items-center gap-1 font-medium ${AD_STATUS[t.ad_status].cls}`}>
-            {React.createElement(AD_STATUS[t.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[t.ad_status].label}
-          </div>
-        )}
-        {t.win_amount > 0 && <div className="text-emerald-600 font-medium">Thưởng: {fmtM(t.win_amount)}</div>}
-        {t.revision_note && t.stage === 'revision' && <div className="text-rose-500 italic">“{t.revision_note}”</div>}
-      </div>
-
-      {/* Hành động theo trạng thái + vai trò */}
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {t.stage === 'source_ready' && canEdit && <Btn onClick={() => onClaim(t)}><Hand className="w-3 h-3 inline mr-0.5" />Nhận dựng</Btn>}
-        {(t.stage === 'editing' || t.stage === 'revision') && (mineEditor || isAdmin) && <Btn onClick={onSubmit}>Nộp clip</Btn>}
-        {t.stage === 'review' && canAds && <Btn onClick={onReview} cls="bg-amber-500 hover:bg-amber-600">Duyệt video</Btn>}
-        {(t.stage === 'approved' || t.stage === 'done') && canAds && (
-          <>
-            <select value={t.ad_status || ''} onChange={e => onSetAd(t, e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
-              <option value="">Trạng thái…</option>
-              <option value="dang_chay">Đang chạy</option>
-              <option value="tam_dung">Tạm dừng</option>
-              <option value="chua_chay">Chưa chạy</option>
-            </select>
-            <Btn onClick={onEval} cls="bg-violet-600 hover:bg-violet-700">{t.win == null ? 'Chấm Win' : 'Sửa đánh giá'}</Btn>
-          </>
-        )}
-        {(t.media_id === me?.id || isAdmin) && t.stage === 'source_ready' && (
-          <button onClick={() => onDelete(t)} className="text-xs text-rose-500 px-2 py-1.5 hover:bg-rose-50 rounded-lg">Xoá</button>
-        )}
-      </div>
+      {s.appointment_id
+        ? <span className="shrink-0 text-[11px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Đã liên kết KH</span>
+        : <span className="shrink-0 text-[11px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Chưa liên kết</span>}
     </div>
-  );
-};
 
-// ---------- Modal: Media thêm video ----------
-const AddModal = ({ me, onClose, onSaved }) => {
+    <div className="mt-2">
+      <div className="text-xs text-slate-400 flex items-center gap-1 mb-1"><Film className="w-3 h-3" /> Nguồn (Media up)</div>
+      <LinkList links={s.source_links} label="Nguồn" icon={Film} />
+    </div>
+
+    {clips.length > 0 && (
+      <div className="mt-3 space-y-2 border-t border-slate-50 pt-2">
+        {clips.map(c => (
+          <div key={c.id} className="bg-slate-50 rounded-xl p-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600 flex items-center gap-1"><Scissors className="w-3 h-3" /> Clip{c.editor?.full_name ? ` · ${c.editor.full_name}` : ''}</span>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}{c.win ? ' · 🏆' : ''}</span>
+            </div>
+            <div className="mt-1 flex flex-col gap-1">
+              <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
+              <LinkList links={c.thumb_links} label="Thumb" icon={Image} />
+              {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng video</button>}
+      {(canAddMedia || s.media_id === me?.id) && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
+      {!s.appointment_id && (canAddMedia || s.media_id === me?.id) && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline mr-0.5" />Kết nối KH</button>}
+      {(canAddMedia || s.media_id === me?.id) && <button onClick={onDelete} className="text-xs text-rose-500 px-2 py-1.5 hover:bg-rose-50 rounded-lg">Xoá</button>}
+    </div>
+  </div>
+);
+
+// ---------- Thẻ Ads duyệt clip ----------
+const ClipReviewCard = ({ c, store, canAds, onReview, onSetAd }) => (
+  <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="font-semibold text-slate-800 text-sm truncate">{store?.customer_name || 'Khách'}</div>
+        <div className="text-xs text-slate-400">{store?.customer_phone} · Editor: {c.editor?.full_name || '—'}</div>
+      </div>
+      <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}</span>
+    </div>
+    <div className="mt-2 flex flex-col gap-1">
+      <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
+      <LinkList links={c.thumb_links} label="Thumb" icon={Image} />
+      {c.win && <span className="text-xs font-bold text-amber-600">🏆 Win · {fmtM(c.win_amount)}</span>}
+      {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
+    </div>
+    {canAds && (
+      <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
+        <button onClick={onReview} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700">Đánh giá</button>
+        <select value={c.ad_status || ''} onChange={e => onSetAd(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
+          <option value="">Trạng thái…</option>
+          <option value="dang_chay">Đang chạy</option>
+          <option value="tam_dung">Tạm dừng</option>
+          <option value="chua_chay">Chưa chạy</option>
+        </select>
+      </div>
+    )}
+  </div>
+);
+
+// ---------- Modal: Thêm media (Media up nguồn) ----------
+const AddMediaModal = ({ me, onClose, onSaved }) => {
+  const [mode, setMode] = useState('existing'); // existing | new
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [picked, setPicked] = useState(null);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [links, setLinks] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -279,46 +294,60 @@ const AddModal = ({ me, onClose, onSaved }) => {
   useEffect(() => { supabase.rpc('search_content_customers', { q: '' }).then(({ data }) => setResults(data || [])); }, []);
 
   const save = async () => {
-    if (!picked) { toast.error('Chọn khách hàng'); return; }
     const arr = parseLinks(links);
-    if (arr.length === 0) { toast.error('Dán ít nhất 1 link Google Drive (http...)'); return; }
+    if (arr.length === 0) { toast.error('Dán ít nhất 1 link nguồn (http...)'); return; }
+    let payload = { media_id: me.id, source_links: arr, note: note || null };
+    if (mode === 'existing') {
+      if (!picked) { toast.error('Chọn khách hàng (Thông tin khách hàng)'); return; }
+      payload = { ...payload, appointment_id: picked.appointment_id, customer_name: picked.customer_name, customer_phone: picked.phone };
+    } else {
+      if (!name.trim()) { toast.error('Nhập tên media khách hàng'); return; }
+      payload = { ...payload, appointment_id: null, customer_name: name.trim(), customer_phone: phone.trim() || null };
+    }
     setSaving(true);
-    const { error } = await supabase.from('content_tasks').insert({
-      appointment_id: picked.appointment_id, customer_name: picked.customer_name, customer_phone: picked.phone,
-      media_id: me.id, source_links: arr, media_note: note || null, stage: 'source_ready',
-    });
+    const { error } = await supabase.from('media_customers').insert(payload);
     setSaving(false);
     if (error) { toast.error('Lỗi: ' + error.message); return; }
-    toast.success('Đã thêm video — chờ editor nhận'); onSaved();
+    toast.success('Đã thêm vào kho media'); onSaved();
   };
 
   return (
-    <Modal title="Thêm video báo cáo" onClose={onClose}>
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Khách hàng</label>
-      {picked ? (
-        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 mb-3">
-          <span className="text-sm font-medium text-slate-700">{picked.customer_name} · {picked.phone}</span>
-          <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
-        </div>
+    <Modal title="Thêm media khách hàng" onClose={onClose}>
+      <div className="flex gap-2 mb-3">
+        <button onClick={() => setMode('existing')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'existing' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Khách đã có</button>
+        <button onClick={() => setMode('new')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Tạo mới (liên kết sau)</button>
+      </div>
+
+      {mode === 'existing' ? (
+        picked ? (
+          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 mb-3">
+            <span className="text-sm font-medium text-slate-700">{picked.customer_name} · {picked.phone}</span>
+            <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+        ) : (
+          <div className="mb-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm Thông tin khách hàng (tên/SĐT)…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+            </div>
+            <div className="max-h-40 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
+              {results.map(r => (
+                <button key={r.appointment_id} onClick={() => setPicked(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
+                  <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
+                </button>
+              ))}
+              {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không thấy. Hãy chọn “Tạo mới (liên kết sau)”.</div>}
+            </div>
+          </div>
+        )
       ) : (
-        <div className="mb-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…"
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
-          </div>
-          <div className="max-h-44 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
-            {results.map(r => (
-              <button key={r.appointment_id} onClick={() => setPicked(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
-                <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
-                <div className="text-xs text-slate-400">{r.service || ''}{r.last_date ? ` · ${new Date(r.last_date).toLocaleDateString('vi-VN')}` : ''}</div>
-              </button>
-            ))}
-            {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không tìm thấy khách (từ lịch hẹn/tái khám)</div>}
-          </div>
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Tên khách" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="SĐT (nếu có)" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
         </div>
       )}
-      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5" /> Link source (mỗi dòng 1 link)</label>
+
+      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5" /> Link nguồn (mỗi dòng 1 link)</label>
       <textarea value={links} onChange={e => setLinks(e.target.value)} rows={3} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
       <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
       <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
@@ -327,77 +356,142 @@ const AddModal = ({ me, onClose, onSaved }) => {
   );
 };
 
-// ---------- Modal: Editor nộp clip ----------
-const SubmitModal = ({ task, onClose, onSaved }) => {
-  const [links, setLinks] = useState((task.edited_links || []).join('\n'));
-  const [note, setNote] = useState(task.editor_note || '');
+// ---------- Modal: Sửa nguồn ----------
+const SourceModal = ({ store, onClose, onSaved }) => {
+  const [links, setLinks] = useState((store.source_links || []).join('\n'));
+  const [note, setNote] = useState(store.note || '');
   const [saving, setSaving] = useState(false);
   const save = async () => {
-    const arr = parseLinks(links);
-    if (arr.length === 0) { toast.error('Dán link clip đã dựng (http...)'); return; }
-    setSaving(true); await onSaved(arr, note || null); setSaving(false);
+    setSaving(true);
+    const { error } = await supabase.from('media_customers').update({ source_links: parseLinks(links), note: note || null }).eq('id', store.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã cập nhật nguồn'); onSaved();
   };
   return (
-    <Modal title="Nộp clip đã dựng" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-3">Khách: <b>{task.customer_name}</b></p>
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Link clip (mỗi dòng 1 link)</label>
-      <textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+    <Modal title="Sửa nguồn media" onClose={onClose}>
+      <p className="text-sm text-slate-500 mb-2">Khách: <b>{store.customer_name}</b></p>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Link nguồn (mỗi dòng 1 link)</label>
+      <textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
       <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
       <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
-      <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel="Nộp clip" />
+      <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
 };
 
-// ---------- Modal: Ads duyệt ----------
-const ReviewModal = ({ task, onClose, onApprove, onRevise }) => {
-  const [note, setNote] = useState('');
+// ---------- Modal: Kết nối Thông tin khách hàng ----------
+const LinkCustomerModal = ({ store, onClose, onSaved }) => {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState([]);
+  const timer = useRef(null);
+  const onSearch = (val) => {
+    setQ(val);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(async () => { const { data } = await supabase.rpc('search_content_customers', { q: val }); setResults(data || []); }, 250);
+  };
+  useEffect(() => { supabase.rpc('search_content_customers', { q: store.customer_phone || store.customer_name || '' }).then(({ data }) => setResults(data || [])); }, [store]);
+  const link = async (r) => {
+    const { error } = await supabase.from('media_customers').update({ appointment_id: r.appointment_id, customer_name: r.customer_name, customer_phone: r.phone }).eq('id', store.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã kết nối với khách hàng'); onSaved();
+  };
   return (
-    <Modal title="Duyệt video" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-2">Khách: <b>{task.customer_name}</b></p>
-      <div className="mb-3"><LinkList links={task.edited_links} /></div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Yêu cầu chỉnh sửa (nếu có)</label>
-      <textarea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="Mô tả cần sửa…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
-      <div className="flex justify-end gap-2">
-        <button onClick={() => { if (!note.trim()) { toast.error('Nhập yêu cầu sửa'); return; } onRevise(note.trim()); }} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa</button>
-        <button onClick={onApprove} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Đạt yêu cầu</button>
+    <Modal title="Kết nối với Thông tin khách hàng" onClose={onClose}>
+      <div className="relative mb-2">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm tên/SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+      </div>
+      <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-xl divide-y">
+        {results.map(r => (
+          <button key={r.appointment_id} onClick={() => link(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
+            <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
+          </button>
+        ))}
+        {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không tìm thấy khách hàng phù hợp</div>}
       </div>
     </Modal>
   );
 };
 
-// ---------- Modal: Ads chấm Win ----------
-const EvalModal = ({ task, onClose, onSaved }) => {
-  const [win, setWin] = useState(task.win ?? false);
-  const [amount, setAmount] = useState(task.win_amount ? String(task.win_amount) : '');
-  const [score, setScore] = useState(task.score ? String(task.score) : '');
-  const [note, setNote] = useState(task.result_note || '');
+// ---------- Modal: Editor dựng video ----------
+const BuildClipModal = ({ store, me, onClose, onSaved }) => {
+  const [clip, setClip] = useState('');
+  const [thumb, setThumb] = useState('');
+  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const save = async () => {
+    const clipArr = parseLinks(clip);
+    if (clipArr.length === 0) { toast.error('Dán link clip đã dựng (http...)'); return; }
     setSaving(true);
-    await onSaved({
-      win, win_amount: win ? (Number(String(amount).replace(/\D/g, '')) || 0) : 0,
-      score: Number(score) || 0, result_note: note || null,
+    const { error } = await supabase.from('media_clips').insert({
+      media_customer_id: store.id, editor_id: me.id, clip_links: clipArr, thumb_links: parseLinks(thumb), editor_note: note || null, stage: 'submitted', submitted_at: new Date().toISOString(),
     });
+    setSaving(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success('Đã đẩy clip — Ads sẽ duyệt'); onSaved();
+  };
+  return (
+    <Modal title="Dựng video" onClose={onClose}>
+      <p className="text-sm text-slate-500 mb-2">Khách: <b>{store.customer_name}</b></p>
+      <div className="mb-3"><div className="text-xs text-slate-400 mb-1">Nguồn để dựng:</div><LinkList links={store.source_links} label="Nguồn" icon={Film} /></div>
+      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><Scissors className="w-3.5 h-3.5" /> Link clip đã dựng (mỗi dòng 1 link)</label>
+      <textarea autoFocus value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><Image className="w-3.5 h-3.5" /> Link ảnh thumbnail (mỗi dòng 1 link)</label>
+      <textarea value={thumb} onChange={e => setThumb(e.target.value)} rows={2} placeholder="https://..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
+      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
+      <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel="Đẩy clip" />
+    </Modal>
+  );
+};
+
+// ---------- Modal: Ads đánh giá clip ----------
+const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
+  const [feedback, setFeedback] = useState(clip.ads_feedback || '');
+  const [win, setWin] = useState(clip.win ?? false);
+  const [amount, setAmount] = useState(clip.win_amount ? String(clip.win_amount) : '');
+  const [score, setScore] = useState(clip.score ? String(clip.score) : '');
+  const [note, setNote] = useState(clip.result_note || '');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (stage) => {
+    setSaving(true);
+    const payload = {
+      ads_id: me.id, ads_feedback: feedback || null, stage,
+      win: stage === 'revision' ? false : win,
+      win_amount: stage !== 'revision' && win ? (Number(String(amount).replace(/\D/g, '')) || 0) : 0,
+      score: Number(score) || 0, result_note: note || null,
+      evaluated_at: stage === 'revision' ? null : new Date().toISOString(),
+    };
+    await onSaved(payload);
     setSaving(false);
   };
   return (
-    <Modal title="Đánh giá hiệu quả & chấm Win" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-3">Khách: <b>{task.customer_name}</b> · Editor: <b>{task.editor?.full_name || '—'}</b></p>
-      <button onClick={() => setWin(w => !w)} className={`w-full mb-3 py-3 rounded-xl font-bold flex items-center justify-center gap-2 ${win ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-slate-100 text-slate-500 border-2 border-transparent'}`}>
-        <Trophy className="w-5 h-5" /> {win ? 'WIN — clip hiệu quả' : 'Chưa Win (bấm để đánh dấu Win)'}
+    <Modal title="Đánh giá clip" onClose={onClose}>
+      <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b> · Editor: <b>{clip.editor?.full_name || '—'}</b></p>
+      <div className="mb-3"><LinkList links={clip.clip_links} label="Clip" icon={Scissors} /> <span className="inline-block ml-1"><LinkList links={clip.thumb_links} label="Thumb" icon={Image} /></span></div>
+
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý</label>
+      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} placeholder="Nhận xét cho editor…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+
+      <button onClick={() => setWin(w => !w)} className={`w-full mb-3 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 ${win ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-slate-100 text-slate-500 border-2 border-transparent'}`}>
+        <Trophy className="w-5 h-5" /> {win ? 'WIN — clip hiệu quả' : 'Chấm WIN (bấm để bật)'}
       </button>
       {win && (
         <>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">Tiền thưởng cho editor</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">Tiền thưởng editor</label>
           <input value={amount} onChange={e => setAmount(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="VD: 100000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
         </>
       )}
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Điểm chất lượng (tuỳ chọn)</label>
-      <input value={score} onChange={e => setScore(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="0–10" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Nhận xét kết quả</label>
-      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
-      <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel="Lưu đánh giá" />
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <input value={score} onChange={e => setScore(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="Điểm (0–10)" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+        <input value={note} onChange={e => setNote(e.target.value)} placeholder="Nhận xét kết quả" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa</button>
+        <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
+      </div>
     </Modal>
   );
 };

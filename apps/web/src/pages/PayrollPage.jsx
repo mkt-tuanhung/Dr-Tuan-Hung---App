@@ -79,7 +79,7 @@ const PayrollPage = () => {
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
       supabase.from('payroll').select('month, year, net_salary'),
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
-      supabase.from('content_tasks').select('editor_id, win_amount').eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
+      supabase.from('media_clips').select('editor_id, win_amount').eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];

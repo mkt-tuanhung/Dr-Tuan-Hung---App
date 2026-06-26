@@ -84,7 +84,7 @@ const MyPayrollPage = () => {
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').or(`staff_id.eq.${tid},telesale_id.eq.${tid}`).gte('date', ms).lte('date', meDay),
       supabase.from('expenses').select('staff_id, amount').eq('staff_id', tid).eq('is_advance', true).eq('status', 'approved'),
       supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
-      supabase.from('content_tasks').select('editor_id, win_amount').eq('editor_id', tid).eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
+      supabase.from('media_clips').select('editor_id, win_amount').eq('editor_id', tid).eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
     ]);
 
     if (profRes.data) setTargetProfile(profRes.data);

@@ -53,7 +53,7 @@ const MENU_GROUPS = [
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
     { id: 'marketing', label: 'Marketing / Ads', icon: Target },
-    { id: 'content', label: 'Sản xuất content', icon: Clapperboard },
+    { id: 'content', label: 'Sản xuất Ads', icon: Clapperboard },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },

@@ -50,7 +50,7 @@ const FULL_MENU = [
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
 
   // MKT / Finance / Sales
-  { id: 'content',    label: 'Sản xuất content', icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
+  { id: 'content',    label: 'Sản xuất Ads',     icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
   { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
   { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin'] },
@@ -79,9 +79,9 @@ const EditorOverview = ({ profile, setActiveTab }) => {
     const meNext = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
     (async () => {
       const [winRes, pendRes, apprRes, pay] = await Promise.all([
-        supabase.from('content_tasks').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
-        supabase.from('content_tasks').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['editing', 'review', 'revision']),
-        supabase.from('content_tasks').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['approved', 'done']),
+        supabase.from('media_clips').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
+        supabase.from('media_clips').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['submitted', 'revision']),
+        supabase.from('media_clips').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['approved', 'done']),
         loadPayrollDetail(profile.id, m, y),
       ]);
       setS({ win: winRes.count ?? 0, pending: pendRes.count ?? 0, approved: apprRes.count ?? 0, net: pay.detail?.net_salary ?? 0 });
