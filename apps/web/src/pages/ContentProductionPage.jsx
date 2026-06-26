@@ -18,6 +18,31 @@ const STAGE = {
 };
 const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-emerald-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
 
+// ----- Xem trước video / ảnh từ link (Google Drive, YouTube, file trực tiếp) -----
+const driveId = (url) => {
+  const m = (url || '').match(/\/d\/([a-zA-Z0-9_-]+)/) || (url || '').match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+};
+const embedUrl = (url) => {
+  const id = driveId(url);
+  if (id) return `https://drive.google.com/file/d/${id}/preview`;
+  const yt = (url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  return null;
+};
+const isVideoFile = (url) => /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url || '');
+const VideoPreview = ({ url }) => {
+  const emb = embedUrl(url);
+  if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className="w-full aspect-video rounded-lg border border-slate-200 bg-black" />;
+  if (isVideoFile(url)) return <video src={url} controls className="w-full rounded-lg border border-slate-200 bg-black" />;
+  return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
+};
+const ThumbPreview = ({ url }) => {
+  const id = driveId(url);
+  const src = id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url;
+  return <a href={url} target="_blank" rel="noreferrer"><img src={src} loading="lazy" alt="thumbnail" className="h-24 rounded-lg border border-slate-200 object-cover" /></a>;
+};
+
 const ContentProductionPage = () => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
@@ -250,9 +275,15 @@ const ClipReviewCard = ({ c, store, canAds, onReview, onSetAd }) => (
       </div>
       <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}</span>
     </div>
-    <div className="mt-2 flex flex-col gap-1">
-      <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
-      <LinkList links={c.thumb_links} label="Thumb" icon={Image} />
+    <div className="mt-2 flex flex-col gap-2">
+      {(c.clip_links || []).length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {(c.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
+        </div>
+      ) : <span className="text-xs text-slate-300">Chưa có clip</span>}
+      {(c.thumb_links || []).length > 0 && (
+        <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <ThumbPreview key={i} url={l} />)}</div>
+      )}
       {c.win && <span className="text-xs font-bold text-amber-600">🏆 Win · {fmtM(c.win_amount)}</span>}
       {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
     </div>
@@ -470,7 +501,11 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
   return (
     <Modal title="Đánh giá clip" onClose={onClose}>
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b> · Editor: <b>{clip.editor?.full_name || '—'}</b></p>
-      <div className="mb-3"><LinkList links={clip.clip_links} label="Clip" icon={Scissors} /> <span className="inline-block ml-1"><LinkList links={clip.thumb_links} label="Thumb" icon={Image} /></span></div>
+      <div className="mb-3 flex flex-col gap-2">
+        {(clip.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
+        {(clip.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2">{(clip.thumb_links || []).map((l, i) => <ThumbPreview key={i} url={l} />)}</div>}
+        {(clip.clip_links || []).length === 0 && <span className="text-xs text-slate-300">Chưa có clip</span>}
+      </div>
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý</label>
       <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} placeholder="Nhận xét cho editor…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
