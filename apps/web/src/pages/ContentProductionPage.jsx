@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -38,11 +38,29 @@ const VideoPreview = ({ url }) => {
   if (isVideoFile(url)) return <video src={url} controls className="w-full rounded-lg border border-slate-200 bg-black" />;
   return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
 };
-const ThumbPreview = ({ url }) => {
-  const id = driveId(url);
-  const src = id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url;
-  return <a href={url} target="_blank" rel="noreferrer"><img src={src} loading="lazy" alt="thumbnail" className="h-24 rounded-lg border border-slate-200 object-cover" /></a>;
+const thumbSrc = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url; };
+const ThumbPreview = ({ url }) => (
+  <a href={url} target="_blank" rel="noreferrer"><img src={thumbSrc(url)} loading="lazy" alt="thumbnail" className="h-24 rounded-lg border border-slate-200 object-cover" /></a>
+);
+const downloadFile = async (url, name) => {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const obj = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = obj; a.download = name || 'thumbnail.jpg';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(obj), 1000);
+  } catch { window.open(url, '_blank'); }
 };
+// Thumb cho Ads: ảnh preview + nút tải về
+const ThumbDownload = ({ url, idx }) => (
+  <div className="relative group">
+    <img src={thumbSrc(url)} loading="lazy" alt="thumbnail" className="h-24 rounded-lg border border-slate-200 object-cover" />
+    <button type="button" onClick={() => downloadFile(url, `thumb-${(idx || 0) + 1}.jpg`)} title="Tải ảnh về"
+      className="absolute bottom-1 right-1 bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1 shadow"><Download className="w-3.5 h-3.5" /></button>
+  </div>
+);
 
 const ContentProductionPage = () => {
   const { profile: me } = useAuth();
@@ -283,7 +301,7 @@ const ClipReviewCard = ({ c, store, canAds, onReview, onSetAd }) => (
         </div>
       ) : <span className="text-xs text-slate-300">Chưa có clip</span>}
       {(c.thumb_links || []).length > 0 && (
-        <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <ThumbPreview key={i} url={l} />)}</div>
+        <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <ThumbDownload key={i} url={l} idx={i} />)}</div>
       )}
       {c.win && <span className="text-xs font-bold text-amber-600">🏆 Win · {fmtM(c.win_amount)}</span>}
       {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
@@ -536,7 +554,7 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b> · Editor: <b>{clip.editor?.full_name || '—'}</b></p>
       <div className="mb-3 flex flex-col gap-2">
         {(clip.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
-        {(clip.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2">{(clip.thumb_links || []).map((l, i) => <ThumbPreview key={i} url={l} />)}</div>}
+        {(clip.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2">{(clip.thumb_links || []).map((l, i) => <ThumbDownload key={i} url={l} idx={i} />)}</div>}
         {(clip.clip_links || []).length === 0 && <span className="text-xs text-slate-300">Chưa có clip</span>}
       </div>
 
