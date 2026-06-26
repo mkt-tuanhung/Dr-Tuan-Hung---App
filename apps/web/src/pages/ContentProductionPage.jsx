@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -39,9 +39,6 @@ const VideoPreview = ({ url }) => {
   return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
 };
 const thumbSrc = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url; };
-const ThumbPreview = ({ url }) => (
-  <a href={url} target="_blank" rel="noreferrer"><img src={thumbSrc(url)} loading="lazy" alt="thumbnail" className="h-24 rounded-lg border border-slate-200 object-cover" /></a>
-);
 const downloadFile = async (url, name) => {
   try {
     const res = await fetch(url);
@@ -115,6 +112,12 @@ const ContentProductionPage = () => {
     setStores(prev => prev.filter(x => x.id !== s.id));
     await supabase.from('media_customers').delete().eq('id', s.id);
   };
+  const delClip = async (id) => {
+    if (!confirm('Xoá clip này?')) return;
+    setClips(prev => prev.filter(c => c.id !== id));
+    const { error } = await supabase.from('media_clips').delete().eq('id', id);
+    if (error) { toast.error(error.message); loadData(); }
+  };
 
   // Bảng xếp hạng editor theo Win tháng này
   const now = new Date();
@@ -185,10 +188,10 @@ const ContentProductionPage = () => {
             desc={canAddMedia ? 'Bấm “Thêm media” để up link nguồn và gắn với khách hàng.' : canEdit ? 'Khi Media up nguồn, bạn vào đây bấm “Dựng video” cho từng khách.' : 'Chưa có dữ liệu media.'}
             cta={canAddMedia ? { label: 'Thêm media', onClick: () => setAddOpen(true) } : null} />
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
-              <StoreCard key={s.id} s={s} clips={clipsOf(s.id)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
-                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onDelete={() => delStore(s)} />
+              <StoreCard key={s.id} s={s} clips={clipsOf(s.id)} me={me} isAdmin={isAdmin} canAddMedia={canAddMedia} canEdit={canEdit}
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onDelete={() => delStore(s)} onDelClip={delClip} />
             ))}
           </div>
         )
@@ -239,50 +242,58 @@ const LinkList = ({ links, label = 'Link', icon: Icon = ExternalLink }) => (
     </div>
 );
 
-// ---------- Thẻ Kho media (1 khách) ----------
-const StoreCard = ({ s, clips, me, canAddMedia, canEdit, onEditSource, onLink, onBuild, onDelete }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
-    <div className="flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <div className="font-bold text-slate-800 truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
-        <div className="text-xs text-slate-400">{s.customer_phone}{s.media?.full_name ? ` · Media: ${s.media.full_name}` : ''}</div>
+// ---------- Thẻ Kho media (1 khách) — gọn ----------
+const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, onLink, onBuild, onDelete, onDelClip }) => {
+  const owner = canAddMedia || s.media_id === me?.id;
+  return (
+    <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-bold text-slate-800 text-sm truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
+          <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+        </div>
+        {s.appointment_id
+          ? <span className="shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Đã liên kết</span>
+          : <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Chưa LK</span>}
       </div>
-      {s.appointment_id
-        ? <span className="shrink-0 text-[11px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Đã liên kết KH</span>
-        : <span className="shrink-0 text-[11px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Chưa liên kết</span>}
-    </div>
 
-    <div className="mt-2">
-      <div className="text-xs text-slate-400 flex items-center gap-1 mb-1"><Film className="w-3 h-3" /> Nguồn (Media up)</div>
-      <LinkList links={s.source_links} label="Nguồn" icon={Film} />
-    </div>
-
-    {clips.length > 0 && (
-      <div className="mt-3 space-y-2 border-t border-slate-50 pt-2">
-        {clips.map(c => (
-          <div key={c.id} className="bg-slate-50 rounded-xl p-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600 flex items-center gap-1"><Scissors className="w-3 h-3" /> Clip{c.editor?.full_name ? ` · ${c.editor.full_name}` : ''}</span>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}{c.win ? ' · 🏆' : ''}</span>
-            </div>
-            <div className="mt-1 flex flex-col gap-1.5">
-              <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
-              {(c.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-1.5">{(c.thumb_links || []).map((u, i) => <ThumbPreview key={i} url={u} />)}</div>}
-              {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
-            </div>
-          </div>
-        ))}
+      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+        <span className="text-[11px] text-slate-400 flex items-center gap-1"><Film className="w-3 h-3" /> Nguồn:</span>
+        <LinkList links={s.source_links} label="Nguồn" icon={Film} />
       </div>
-    )}
 
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng video</button>}
-      {(canAddMedia || s.media_id === me?.id) && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
-      {!s.appointment_id && (canAddMedia || s.media_id === me?.id) && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline mr-0.5" />Kết nối KH</button>}
-      {(canAddMedia || s.media_id === me?.id) && <button onClick={onDelete} className="text-xs text-rose-500 px-2 py-1.5 hover:bg-rose-50 rounded-lg">Xoá</button>}
+      {clips.length > 0 && (
+        <div className="mt-2 space-y-1.5 border-t border-slate-50 pt-2">
+          {clips.map(c => (
+            <div key={c.id} className="bg-slate-50 rounded-lg p-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1 min-w-0 truncate"><Scissors className="w-3 h-3 shrink-0" /> {c.editor?.full_name || 'Clip'}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}{c.win ? ' 🏆' : ''}</span>
+                  {(c.editor_id === me?.id || isAdmin) && <button onClick={() => onDelClip(c.id)} title="Xoá clip" className="text-rose-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>}
+                </div>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
+                {(c.thumb_links || []).map((u, i) => (
+                  <a key={i} href={u} target="_blank" rel="noreferrer"><img src={thumbSrc(u)} loading="lazy" alt="" className="h-10 w-10 object-cover rounded-md border border-slate-200" /></a>
+                ))}
+              </div>
+              {c.ads_feedback && <div className="text-[10px] text-rose-500 italic mt-0.5 truncate">Ads: “{c.ads_feedback}”</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng video</button>}
+        {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
+        {!s.appointment_id && owner && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline mr-0.5" />Kết nối</button>}
+        {owner && <button onClick={onDelete} className="text-xs text-rose-500 px-2 py-1.5 hover:bg-rose-50 rounded-lg">Xoá</button>}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ---------- Thẻ Ads duyệt clip ----------
 const ClipReviewCard = ({ c, store, canAds, onReview, onSetAd }) => (
