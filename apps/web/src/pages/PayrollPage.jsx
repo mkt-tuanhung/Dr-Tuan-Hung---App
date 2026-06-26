@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
@@ -54,6 +54,7 @@ const PayrollPage = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [codeReveal, setCodeReveal] = useState(null);      // { name, code } — hiện mã 1 lần cho admin sau khi in
   const [copied, setCopied] = useState(false);
+  const autosavedRef = useRef('');                         // chống tự-lưu nháp lặp lại cùng 1 tháng
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -136,6 +137,29 @@ const PayrollPage = () => {
     setEdits(Object.fromEntries(computed.map(r => [r.staff.id, { other_bonus: r.otherBonus, other_deduction: r.otherDeduction }])));
     setLocked((payroll[0]?.status) === 'locked' && payroll.length > 0 && payroll.every(p => p.status === 'locked'));
 
+    // Tự lưu BẢN NHÁP để nhân sự xem được ngay (chỉ admin/kế toán; KHÔNG đụng dòng đã chốt).
+    // Chạy 1 lần/tháng để tránh ghi lặp.
+    const monthKey = `${year}-${month}`;
+    if (['admin', 'accountant'].includes(me?.role) && autosavedRef.current !== monthKey) {
+      autosavedRef.current = monthKey;
+      const draft = computed
+        .filter(r => r.savedStatus !== 'locked')
+        .map(r => ({
+          staff_id: r.staff.id, month, year,
+          base_salary: r.staff.base_salary || 0, allowance: r.phuCap,
+          working_days: r.workingDays, salary_by_attendance: r.luongCong,
+          total_commission: r.commission, other_bonus: r.otherBonus,
+          overtime_pay: r.overtime || 0, salary_advance: r.salaryAdvance || 0,
+          unpaid_advance: r.advance, other_deduction: r.otherDeduction,
+          gross_income: r.gross, total_deductions: (r.salaryAdvance || 0) + r.otherDeduction, net_salary: r.net,
+          status: 'draft', updated_at: new Date().toISOString(),
+        }));
+      if (draft.length) {
+        const { error: draftErr } = await supabase.from('payroll').upsert(draft, { onConflict: 'staff_id,month,year' });
+        if (draftErr) toast.error('Tự lưu nháp lỗi (chạy salary_overtime.sql?): ' + draftErr.message);
+      }
+    }
+
     // Chart: tổng lương thực nhận theo tháng (từ bảng payroll đã lưu)
     const hist = {};
     (histRes.data || []).forEach(p => {
@@ -150,7 +174,7 @@ const PayrollPage = () => {
     setPendingSA(pend || []);
 
     setLoading(false);
-  }, [month, year]);
+  }, [month, year, me?.role]);
 
   // Tạo đơn ứng lương cho 1 nhân sự
   const submitSalaryAdvance = async () => {
