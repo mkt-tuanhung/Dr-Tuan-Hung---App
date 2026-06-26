@@ -35,7 +35,7 @@ const AppointmentManagementPage = () => {
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
     customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm',
     expected_bill: '', deposit_amount: '', telesale_id: '', telesale_id_2: '', sale_id: '', social_link: '', notes: '',
-    service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
+    service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới',
     used_service: '', surgery_date: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -98,7 +98,7 @@ const AppointmentManagementPage = () => {
   const [consultFiles, setConsultFiles] = useState([]);
   const [consultView, setConsultView] = useState(null);
   const [evalForm, setEvalForm] = useState({
-    status: 'phau_thuat',
+    status: 'phau_thuat', surgery_type: 'Tiểu phẫu',
     expected_surgery_date: today.toISOString().split('T')[0], revenue: '', upsale_revenue: '', service: '',
     deposit_date: today.toISOString().split('T')[0], deposit_amount: '', notes: '', consult_note: ''
   });
@@ -226,6 +226,7 @@ const AppointmentManagementPage = () => {
         social_link: createForm.social_link,
         notes: createForm.notes,
         service_group: createForm.service_group,
+        surgery_type: createForm.surgery_type,
         customer_source: isRecheck ? 'CSKH' : createForm.customer_source,
         customer_type: isRecheck ? 'Cũ' : createForm.customer_type,
         ...(isRecheck ? { used_service: createForm.used_service || null, surgery_date: createForm.surgery_date || null } : {}),
@@ -273,6 +274,7 @@ const AppointmentManagementPage = () => {
       social_link: app.social_link || '',
       notes: app.notes || '',
       service_group: app.service_group || 'Hàm mặt',
+      surgery_type: app.surgery_type || 'Tiểu phẫu',
       customer_source: app.customer_source || 'Ads',
       customer_type: app.customer_type || 'Mới',
       used_service: app.used_service || '',
@@ -285,6 +287,7 @@ const AppointmentManagementPage = () => {
     setEvalApp(app);
     setEvalForm({
       status: app.status === 'scheduled' ? 'phau_thuat' : app.status,
+      surgery_type: app.surgery_type || 'Tiểu phẫu',
       expected_surgery_date: app.expected_surgery_date || app.surgery_date || today.toISOString().split('T')[0],
       revenue: app.revenue || '',
       upsale_revenue: app.upsale_revenue || '',
@@ -302,7 +305,7 @@ const AppointmentManagementPage = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      let updateData = { status: evalForm.status };
+      let updateData = { status: evalForm.status, surgery_type: evalForm.surgery_type };
       if (evalForm.status === 'phau_thuat') {
         updateData = { ...updateData, surgery_date: evalForm.expected_surgery_date, expected_surgery_date: evalForm.expected_surgery_date, revenue: evalForm.revenue || 0, upsale_revenue: evalForm.upsale_revenue || 0, service: evalForm.service };
       } else if (evalForm.status === 'coc') {
@@ -362,7 +365,7 @@ const AppointmentManagementPage = () => {
                 appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
                 customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
                 expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
+                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
               });
               setShowCreateModal(true);
             }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
@@ -376,7 +379,7 @@ const AppointmentManagementPage = () => {
                 appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
                 customer_name: '', phone: '', service: '', test_status: 'Không cần', 
                 expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', customer_source: 'CSKH', customer_type: 'Cũ'
+                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ'
               });
               setShowCreateModal(true);
             }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
@@ -760,6 +763,14 @@ const AppointmentManagementPage = () => {
                       <option value="Tiểu phẫu">Tiểu phẫu</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Loại phẫu thuật <span className="text-red-500">*</span></label>
+                    <select value={createForm.surgery_type} onChange={e => setCreateForm({...createForm, surgery_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                      <option value="Tiểu phẫu">Tiểu phẫu</option>
+                      <option value="Đại phẫu">Đại phẫu</option>
+                    </select>
+                    <p className="mt-1 text-xs text-slate-400">Quyết định thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
+                  </div>
                   {createForm.appointment_type === 'recheck' && (
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Ngày phẫu thuật</label>
@@ -882,6 +893,20 @@ const AppointmentManagementPage = () => {
                   className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${evalForm.status === 'phau_thuat' ? 'bg-orange-300 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>
                   Phẫu thuật
                 </button>
+              </div>
+
+              {/* Loại phẫu thuật — quyết định mức thưởng hẹn telesale (Tiểu 300k / Đại 500k) */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Loại phẫu thuật <span className="text-red-500">*</span></label>
+                <div className="flex gap-2">
+                  {['Tiểu phẫu', 'Đại phẫu'].map(t => (
+                    <button key={t} type="button" onClick={() => setEvalForm({...evalForm, surgery_type: t})}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-xl border transition-colors ${evalForm.surgery_type === t ? 'bg-purple-500 text-white border-purple-500 shadow' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
               </div>
 
               {/* Form Nội dung */}

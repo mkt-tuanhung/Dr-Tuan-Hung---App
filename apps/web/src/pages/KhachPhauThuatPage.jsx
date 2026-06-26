@@ -38,7 +38,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   const [form, setForm] = useState({
     activeTab: 'phu_mo',
-    surgery_type: 'Tiểu phẫu',
     phu_mo_1_id: '', phu_mo_2_id: '', phu_mo_3_id: '', surgery_notes: '',
     truc_dem_id: '', truc_dem_id_2: '', truc_dem_notes: '',
     hau_phau_id: ''
@@ -83,7 +82,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setSelectedApp(app);
     setForm({
       activeTab: 'phu_mo',
-      surgery_type: app.surgery_type || 'Tiểu phẫu',
       phu_mo_1_id: app.phu_mo_1_id || '',
       phu_mo_2_id: app.phu_mo_2_id || '',
       phu_mo_3_id: app.phu_mo_3_id || '',
@@ -101,7 +99,6 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setSaving(true);
     const { error } = await supabase.from('customer_appointments')
       .update({
-        surgery_type: form.surgery_type,
         phu_mo_1_id: form.phu_mo_1_id || null,
         phu_mo_2_id: form.phu_mo_2_id || null,
         phu_mo_3_id: form.phu_mo_3_id || null,
@@ -445,10 +442,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                 <>
                   <div>
                     <label className="block text-sm font-semibold mb-2">Loại phẫu thuật</label>
-                    <select value={form.surgery_type} onChange={e => setForm({...form, surgery_type: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
-                      <option>Tiểu phẫu</option>
-                      <option>Đại phẫu</option>
-                    </select>
+                    <div className="w-full border bg-slate-50 text-slate-700 p-2.5 rounded-xl font-medium">
+                      {selectedApp?.surgery_type || 'Tiểu phẫu'}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">Theo lịch hẹn / đánh giá đã chọn — không sửa ở đây</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-2">Phụ mổ 1</label>
