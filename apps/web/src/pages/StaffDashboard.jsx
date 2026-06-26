@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
-  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare
+  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -62,6 +62,7 @@ const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actua
 
 const Overview = ({ profile, setActiveTab }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
+  const [showSalary, setShowSalary] = useState(false); // mặc định ẩn lương, bấm mắt mới hiện
 
   const [stats, setStats] = useState({ workingDays: null, kpiPct: null, advance: null, todayAppts: null });
 
@@ -143,7 +144,13 @@ const Overview = ({ profile, setActiveTab }) => {
         <div className="mt-4 pt-4 border-t border-emerald-400/40 grid grid-cols-2 gap-4">
           <div>
             <p className="text-emerald-200 text-xs">Lương cơ bản</p>
-            <p className="text-white font-semibold mt-0.5">{fmt(profile?.base_salary)}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-white font-semibold tabular-nums">{showSalary ? fmt(profile?.base_salary) : '••••••••'}</p>
+              <button onClick={() => setShowSalary(v => !v)} title={showSalary ? 'Ẩn lương' : 'Hiện lương'}
+                className="text-emerald-100 hover:text-white p-0.5">
+                {showSalary ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <p className="text-emerald-200 text-xs">Trạng thái</p>

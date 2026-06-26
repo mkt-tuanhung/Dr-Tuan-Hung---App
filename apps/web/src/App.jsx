@@ -7,6 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 import LoginPage from '@/pages/LoginPage.jsx';
 import AdminDashboard from '@/pages/AdminDashboard.jsx';
 import StaffDashboard from '@/pages/StaffDashboard.jsx';
+import PayslipViewPage from '@/pages/PayslipViewPage.jsx';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/quan-tri" element={<LoginPage adminMode />} />
+          <Route path="/phieu-luong" element={<PayslipViewPage />} />
 
           <Route
             path="/admin-dashboard"
