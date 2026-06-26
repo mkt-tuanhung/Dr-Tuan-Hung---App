@@ -23,6 +23,7 @@ import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
+import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
@@ -39,6 +40,7 @@ const FULL_MENU = [
   { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant'] },
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant'] },
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
+  { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
 
   // MKT / Finance / Sales
@@ -303,6 +305,7 @@ const StaffDashboard = () => {
     if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'cashflow') return <CashFlowPage />;
     if (activeTab === 'payroll') return <PayrollPage />;
+    if (activeTab === 'my_payroll') return <MyPayrollPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
