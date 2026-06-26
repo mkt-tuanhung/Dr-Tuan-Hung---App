@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
-  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard
+  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard,
+  Trophy, Scissors, CheckCircle2
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -25,6 +26,7 @@ import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
+import { loadPayrollDetail } from '@/lib/payrollData';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
@@ -66,6 +68,43 @@ const FULL_MENU = [
 ];
 
 const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actual || 0) / target) * 100), 100) : 0;
+
+// Tổng quan dành cho Editor: clip Win / đang xử lý / đã duyệt + tổng lương tháng
+const EditorOverview = ({ profile, setActiveTab }) => {
+  const [s, setS] = useState({ win: null, pending: null, approved: null, net: null });
+  useEffect(() => {
+    if (!profile?.id) return;
+    const now = new Date(); const y = now.getFullYear(); const m = now.getMonth() + 1;
+    const ms = `${y}-${String(m).padStart(2, '0')}-01`;
+    const meNext = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+    (async () => {
+      const [winRes, pendRes, apprRes, pay] = await Promise.all([
+        supabase.from('content_tasks').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
+        supabase.from('content_tasks').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['editing', 'review', 'revision']),
+        supabase.from('content_tasks').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['approved', 'done']),
+        loadPayrollDetail(profile.id, m, y),
+      ]);
+      setS({ win: winRes.count ?? 0, pending: pendRes.count ?? 0, approved: apprRes.count ?? 0, net: pay.detail?.net_salary ?? 0 });
+    })();
+  }, [profile?.id]);
+
+  const Card = ({ icon: Icon, color, label, value, unit, onClick }) => (
+    <div onClick={onClick} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all group">
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform ${color}`}><Icon className="w-6 h-6" /></div>
+      <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">{label}</p>
+      <p className="text-xl font-bold text-slate-800 mt-1">{value === null ? '—' : value}{unit && <span className="text-xs text-slate-400 font-medium normal-case"> {unit}</span>}</p>
+    </div>
+  );
+  const fmtM = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n || 0)));
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <Card icon={Trophy} color="bg-amber-50 text-amber-600" label="Clip Win (tháng)" value={s.win} unit="clip" onClick={() => setActiveTab('content')} />
+      <Card icon={Scissors} color="bg-blue-50 text-blue-600" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content')} />
+      <Card icon={CheckCircle2} color="bg-violet-50 text-violet-600" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content')} />
+      <Card icon={Wallet} color="bg-emerald-50 text-emerald-600" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
+    </div>
+  );
+};
 
 const Overview = ({ profile, setActiveTab }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
@@ -169,7 +208,9 @@ const Overview = ({ profile, setActiveTab }) => {
       </div>
 
       {/* Summary Metrics */}
-      {profile?.role === 'accountant' ? (
+      {[profile?.role, profile?.role_2].includes('editor') ? (
+        <EditorOverview profile={profile} setActiveTab={setActiveTab} />
+      ) : profile?.role === 'accountant' ? (
         <div className="grid grid-cols-2 gap-4">
           <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group">
             <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Banknote className="w-6 h-6" /></div>
