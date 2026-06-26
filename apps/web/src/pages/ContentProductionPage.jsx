@@ -75,6 +75,7 @@ const ContentProductionPage = () => {
   const [linkFor, setLinkFor] = useState(null);
   const [buildFor, setBuildFor] = useState(null);
   const [reviewFor, setReviewFor] = useState(null);
+  const [videoFor, setVideoFor] = useState(null);   // clip đang xem video
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -183,7 +184,7 @@ const ContentProductionPage = () => {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
               <StoreCard key={s.id} s={s} clips={clipsOf(s.id)} me={me} isAdmin={isAdmin} canAddMedia={canAddMedia} canEdit={canEdit}
-                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onDelete={() => delStore(s)} onDelClip={delClip} />
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onDelete={() => delStore(s)} onDelClip={delClip} onView={setVideoFor} />
             ))}
           </div>
         )
@@ -206,6 +207,14 @@ const ContentProductionPage = () => {
       {buildFor && <BuildClipModal store={buildFor} me={me} onClose={() => setBuildFor(null)} onSaved={() => { setBuildFor(null); loadData(); }} />}
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
+      {videoFor && (
+        <Modal title="Xem video clip" onClose={() => setVideoFor(null)}>
+          <div className="space-y-3">
+            {(videoFor.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
+            {(videoFor.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2 pt-1">{(videoFor.thumb_links || []).map((u, i) => <Thumb key={i} url={u} idx={i} size="h-24 w-24" download />)}</div>}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -259,7 +268,7 @@ const Thumb = ({ url, size = 'h-10 w-10', download = false, idx = 0 }) => {
 };
 
 // ---------- Thẻ Kho media (1 khách) — gọn ----------
-const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, onLink, onBuild, onDelete, onDelClip }) => {
+const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, onLink, onBuild, onDelete, onDelClip, onView }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
     <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm">
@@ -289,9 +298,13 @@ const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, 
                   {(c.editor_id === me?.id || isAdmin) && <button onClick={() => onDelClip(c.id)} title="Xoá clip" className="text-rose-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>}
                 </div>
               </div>
-              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
-                {(c.thumb_links || []).map((u, i) => <Thumb key={i} url={u} size="h-10 w-10" />)}
+              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                {(c.clip_links || []).length > 0 && (
+                  <button onClick={() => onView(c)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold shadow-sm hover:bg-violet-700">
+                    <PlayCircle className="w-4 h-4" /> Xem video
+                  </button>
+                )}
+                {(c.thumb_links || []).map((u, i) => <Thumb key={i} url={u} size="h-16 w-16" />)}
               </div>
               {c.ads_feedback && <div className="text-[10px] text-rose-500 italic mt-0.5 truncate">Ads: “{c.ads_feedback}”</div>}
             </div>
