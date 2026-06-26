@@ -98,7 +98,7 @@ const AppointmentManagementPage = () => {
   const [consultFiles, setConsultFiles] = useState([]);
   const [consultView, setConsultView] = useState(null);
   const [evalForm, setEvalForm] = useState({
-    status: 'phau_thuat',
+    status: 'phau_thuat', surgery_type: 'Tiểu phẫu',
     expected_surgery_date: today.toISOString().split('T')[0], revenue: '', upsale_revenue: '', service: '',
     deposit_date: today.toISOString().split('T')[0], deposit_amount: '', notes: '', consult_note: ''
   });
@@ -287,6 +287,7 @@ const AppointmentManagementPage = () => {
     setEvalApp(app);
     setEvalForm({
       status: app.status === 'scheduled' ? 'phau_thuat' : app.status,
+      surgery_type: app.surgery_type || 'Tiểu phẫu',
       expected_surgery_date: app.expected_surgery_date || app.surgery_date || today.toISOString().split('T')[0],
       revenue: app.revenue || '',
       upsale_revenue: app.upsale_revenue || '',
@@ -304,7 +305,7 @@ const AppointmentManagementPage = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      let updateData = { status: evalForm.status };
+      let updateData = { status: evalForm.status, surgery_type: evalForm.surgery_type };
       if (evalForm.status === 'phau_thuat') {
         updateData = { ...updateData, surgery_date: evalForm.expected_surgery_date, expected_surgery_date: evalForm.expected_surgery_date, revenue: evalForm.revenue || 0, upsale_revenue: evalForm.upsale_revenue || 0, service: evalForm.service };
       } else if (evalForm.status === 'coc') {
@@ -892,6 +893,20 @@ const AppointmentManagementPage = () => {
                   className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${evalForm.status === 'phau_thuat' ? 'bg-orange-300 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>
                   Phẫu thuật
                 </button>
+              </div>
+
+              {/* Loại phẫu thuật — quyết định mức thưởng hẹn telesale (Tiểu 300k / Đại 500k) */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Loại phẫu thuật <span className="text-red-500">*</span></label>
+                <div className="flex gap-2">
+                  {['Tiểu phẫu', 'Đại phẫu'].map(t => (
+                    <button key={t} type="button" onClick={() => setEvalForm({...evalForm, surgery_type: t})}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-xl border transition-colors ${evalForm.surgery_type === t ? 'bg-purple-500 text-white border-purple-500 shadow' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
               </div>
 
               {/* Form Nội dung */}
