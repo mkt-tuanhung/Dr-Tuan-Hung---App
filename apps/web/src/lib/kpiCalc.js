@@ -166,6 +166,7 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 // Trả về đúng tên trường như bảng `payroll` để hiển thị thống nhất.
 // ============================================================
 export const PAYROLL_STANDARD_DAYS = 26;
+export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip được Ads duyệt chạy Ads
 
 export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], saved = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
@@ -188,8 +189,9 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
     if (role === 'dieu_duong') return computeDieuDuong(surg, staff.id).tongHH;
     return 0;
   };
-  // Thưởng Win clip quảng cáo (cho editor) — cộng vào hoa hồng/thưởng
-  const winBonus = contentWins.filter(w => w.editor_id === staff.id).reduce((s, w) => s + Number(w.win_amount || 0), 0);
+  // Thưởng content cho editor: Win (win_amount) + Duyệt chạy Ads (500k/clip)
+  const winBonus = contentWins.filter(w => w.editor_id === staff.id)
+    .reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? CLIP_APPROVE_BONUS : 0), 0);
   const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonus;
 
   const otherBonus = Number(saved?.other_bonus || 0);

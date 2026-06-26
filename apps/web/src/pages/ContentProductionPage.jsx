@@ -117,6 +117,7 @@ const ContentProductionPage = () => {
   const [reviewFor, setReviewFor] = useState(null);
   const [videoFor, setVideoFor] = useState(null);   // clip đang xem video
   const [scoreFor, setScoreFor] = useState(null);   // store đang chấm điểm/góp ý source
+  const [clipsModal, setClipsModal] = useState(null); // { store, clips } xem video đã dựng từ source
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -140,6 +141,11 @@ const ContentProductionPage = () => {
     const { error } = await supabase.from('media_clips').update(payload).eq('id', id);
     if (error) { toast.error('Lỗi: ' + error.message); loadData(); return; }
     if (msg) toast.success(msg);
+  };
+  const approveRun = (c) => {
+    if (c.approved_to_run) return;
+    if (!confirm('Duyệt cho clip này chạy Ads? Editor sẽ được thưởng 500.000đ.')) return;
+    patchClip(c.id, { approved_to_run: true, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ');
   };
   const delStore = async (s) => {
     if (!confirm('Xoá media khách hàng này (kèm các clip)?')) return;
@@ -246,6 +252,7 @@ const ContentProductionPage = () => {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
             {visStores.map(s => (
               <StoreRow key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
@@ -257,7 +264,7 @@ const ContentProductionPage = () => {
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)}
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)}
                 onSetAd={(ad_status) => patchClip(c.id, { ad_status, ads_id: me.id }, 'Đã cập nhật trạng thái chạy')} />
             ))}
           </div>
@@ -273,6 +280,22 @@ const ContentProductionPage = () => {
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
       {videoFor && <VideoModal clip={videoFor} onClose={() => setVideoFor(null)} />}
+      {clipsModal && (
+        <Modal title={`Video đã dựng — ${clipsModal.store.customer_name || ''}`} onClose={() => setClipsModal(null)}>
+          {clipsModal.clips.length === 0 ? <p className="text-sm text-slate-400">Chưa có video nào.</p> : (
+            <div className="space-y-2">
+              {clipsModal.clips.map(c => { const cat = scoreCat(c.score, c.win); return (
+                <div key={c.id} className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-700 text-sm truncate">{c.title || '(Chưa đặt tiêu đề)'}</div>
+                    <div className="text-[11px] text-slate-400">{c.editor?.full_name || '—'} · {STAGE[c.stage]?.label || c.stage}{(c.win || c.score > 0) ? ` · ${c.win ? 10 : c.score}/10 ${cat.label}` : ''}</div>
+                  </div>
+                  {(c.clip_links || []).length > 0 && <button onClick={() => { setVideoFor(c); setClipsModal(null); }} className="shrink-0 text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 inline-flex items-center gap-1"><PlayCircle className="w-3.5 h-3.5" /> Xem</button>}
+                </div>); })}
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 };
@@ -326,7 +349,7 @@ const Thumb = ({ url, size = 'h-10 w-10', download = false, idx = 0 }) => {
 };
 
 // ---------- Hàng Kho media (danh sách) ----------
-const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSource, onLink, onBuild, onScore, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
     <div className="p-3 hover:bg-slate-50/60 flex flex-col lg:flex-row lg:items-center gap-3">
@@ -351,7 +374,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onEditSource, onLink
         <LinkList links={s.source_links} label="Nguồn" icon={Film} />
         <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
         {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
-        <span className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg">{clipCount} clip</span>
+        <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
         {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
         {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
         {s.updated_at && <span className="text-[11px] text-slate-300 ml-auto">{new Date(s.updated_at).toLocaleDateString('vi-VN')}</span>}
@@ -391,7 +414,7 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
 };
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView, onApproveRun }) => {
   const mine = c.editor_id === me?.id;
   return (
     <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm flex flex-col">
@@ -411,12 +434,14 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 w-fit ${cat.cls}`}>
             {cat.warn && '⚠️'}{c.win ? '🏆' : ''} Điểm {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}
           </span>); })()}
+        {c.approved_to_run && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full w-fit inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Đã duyệt chạy Ads</span>}
         {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
         {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
       </div>
       <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
         {(c.clip_links || []).length > 0 && <button onClick={onView} className="text-xs font-semibold text-violet-600 px-2 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50 inline-flex items-center gap-1"><Maximize2 className="w-3.5 h-3.5" /> Xem lớn</button>}
         {canAds && <button onClick={onReview} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700">Đánh giá</button>}
+        {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Duyệt chạy Ads</button>}
         {canAds && (
           <select value={c.ad_status || ''} onChange={e => onSetAd(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
             <option value="">Trạng thái…</option>

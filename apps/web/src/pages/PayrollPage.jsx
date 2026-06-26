@@ -79,14 +79,14 @@ const PayrollPage = () => {
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
       supabase.from('payroll').select('month, year, net_salary'),
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
-      supabase.from('media_clips').select('editor_id, win_amount').eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
+      supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').gte('evaluated_at', ms).lt('evaluated_at', meNext),
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];
     const bong = bongRes.data || [], coc = cocRes.data || [], pages = pageRes.data || [];
     const adv = advRes.data || [], payroll = payRes.data || [], salAdv = salRes.data || [];
     const contentWins = winRes.data || [];
-    const winBonusOf = (id) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + Number(w.win_amount || 0), 0);
+    const winBonusOf = (id) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? 500000 : 0), 0);
 
     const workingDaysOf = (id) => att.filter(a => a.staff_id === id && ['present', 'late', 'early_leave'].includes(a.status)).length;
     const advanceOf = (id) => adv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
