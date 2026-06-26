@@ -11,6 +11,15 @@ import { uploadToR2 } from '@/lib/r2Client';
 
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
 const parseLinks = (t) => (t || '').split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s));
+const noDiacritics = (s) => (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+// Quy định ID source: Tên khách (tên gọi) + ngày quay chụp (ddmmyyyy) + _STT. VD: Dung27062026_01
+const suggestSourceId = (name, date) => {
+  const given = noDiacritics(name).trim().split(/\s+/).pop().replace(/[^a-zA-Z]/g, '');
+  const cap = given ? given.charAt(0).toUpperCase() + given.slice(1).toLowerCase() : '';
+  let d = '';
+  if (date) { const dt = new Date(date); if (!isNaN(dt.getTime())) d = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${dt.getFullYear()}`; }
+  return cap && d ? `${cap}${d}_01` : '';
+};
 const STAGE = {
   submitted: { label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
   revision: { label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
@@ -268,7 +277,14 @@ const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="font-bold text-slate-800 text-sm truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
-          <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+          <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}{s.media_in_charge ? ` · ${s.media_in_charge}` : ''}</div>
+          {(s.source_id || s.service || s.shoot_date) && (
+            <div className="text-[11px] text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
+              {s.source_id && <span className="font-mono text-violet-600">#{s.source_id}</span>}
+              {s.service && <span>{s.service}</span>}
+              {s.shoot_date && <span>📅 {new Date(s.shoot_date).toLocaleDateString('vi-VN')}</span>}
+            </div>
+          )}
         </div>
         {s.appointment_id
           ? <span className="shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Đã liên kết</span>
@@ -352,13 +368,21 @@ const ClipReviewCard = ({ c, store, canAds, onReview, onSetAd }) => (
 );
 
 // ---------- Modal: Thêm media (Media up nguồn) ----------
+const inpCls = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none';
+const Field = ({ label, children }) => (
+  <div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>
+);
 const AddMediaModal = ({ me, onClose, onSaved }) => {
-  const [mode, setMode] = useState('existing'); // existing | new
+  const [mode, setMode] = useState('existing'); // existing (tag khách) | new
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [picked, setPicked] = useState(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [service, setService] = useState('');
+  const [shootDate, setShootDate] = useState('');
+  const [sourceId, setSourceId] = useState('');
+  const [mediaCharge, setMediaCharge] = useState('');
   const [links, setLinks] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -374,16 +398,26 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   };
   useEffect(() => { supabase.rpc('search_content_customers', { q: '' }).then(({ data }) => setResults(data || [])); }, []);
 
+  const cname = mode === 'existing' ? (picked?.customer_name || '') : name;
+  const fillId = () => {
+    const s = suggestSourceId(cname, shootDate);
+    if (!s) { toast.error('Cần Tên khách + Ngày quay/chụp để gợi ý ID'); return; }
+    setSourceId(s);
+  };
+
   const save = async () => {
     const arr = parseLinks(links);
-    if (arr.length === 0) { toast.error('Dán ít nhất 1 link nguồn (http...)'); return; }
-    let payload = { media_id: me.id, source_links: arr, note: note || null };
+    if (arr.length === 0) { toast.error('Dán ít nhất 1 link Google Drive (http...)'); return; }
+    let payload = {
+      media_id: me.id, source_links: arr, note: note || null,
+      source_id: sourceId.trim() || null, shoot_date: shootDate || null, media_in_charge: mediaCharge.trim() || null,
+    };
     if (mode === 'existing') {
-      if (!picked) { toast.error('Chọn khách hàng (Thông tin khách hàng)'); return; }
-      payload = { ...payload, appointment_id: picked.appointment_id, customer_name: picked.customer_name, customer_phone: picked.phone };
+      if (!picked) { toast.error('Hãy TAG (chọn) khách hàng'); return; }
+      payload = { ...payload, appointment_id: picked.appointment_id, customer_name: picked.customer_name, customer_phone: picked.phone, service: picked.service || null };
     } else {
-      if (!name.trim()) { toast.error('Nhập tên media khách hàng'); return; }
-      payload = { ...payload, appointment_id: null, customer_name: name.trim(), customer_phone: phone.trim() || null };
+      if (!name.trim()) { toast.error('Nhập tên khách hàng'); return; }
+      payload = { ...payload, appointment_id: null, customer_name: name.trim(), customer_phone: phone.trim() || null, service: service.trim() || null };
     }
     setSaving(true);
     const { error } = await supabase.from('media_customers').insert(payload);
@@ -395,21 +429,21 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   return (
     <Modal title="Thêm media khách hàng" onClose={onClose}>
       <div className="flex gap-2 mb-3">
-        <button onClick={() => setMode('existing')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'existing' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Khách đã có</button>
-        <button onClick={() => setMode('new')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Tạo mới (liên kết sau)</button>
+        <button onClick={() => setMode('existing')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'existing' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Tag khách đã có</button>
+        <button onClick={() => setMode('new')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Khách chưa có (tạo mới)</button>
       </div>
 
       {mode === 'existing' ? (
         picked ? (
           <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 mb-3">
-            <span className="text-sm font-medium text-slate-700">{picked.customer_name} · {picked.phone}</span>
+            <span className="text-sm font-medium text-slate-700">{picked.customer_name} · {picked.phone}{picked.service ? ` · ${picked.service}` : ''}</span>
             <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
         ) : (
           <div className="mb-3">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm Thông tin khách hàng (tên/SĐT)…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tag khách: tìm theo tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
             </div>
             <div className="max-h-40 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
               {results.map(r => (
@@ -417,21 +451,38 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
                   <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
                 </button>
               ))}
-              {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không thấy. Hãy chọn “Tạo mới (liên kết sau)”.</div>}
+              {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không thấy. Hãy chọn “Khách chưa có (tạo mới)”.</div>}
             </div>
           </div>
         )
       ) : (
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Tên khách" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
-          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="SĐT (nếu có)" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
-        </div>
+        <>
+          <Field label="Tên khách hàng"><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="VD: Nguyễn Thị Dung" className={inpCls} /></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Số điện thoại"><input value={phone} onChange={e => setPhone(e.target.value)} className={inpCls} /></Field>
+            <Field label="Dịch vụ"><input value={service} onChange={e => setService(e.target.value)} className={inpCls} /></Field>
+          </div>
+        </>
       )}
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5" /> Link nguồn (mỗi dòng 1 link)</label>
-      <textarea value={links} onChange={e => setLinks(e.target.value)} rows={3} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
-      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
+      {(mode === 'new' || picked) && (
+        <>
+          <Field label="ID source">
+            <div className="flex gap-2">
+              <input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} />
+              <button type="button" onClick={fillId} className="shrink-0 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200 hover:bg-emerald-100">Gợi ý</button>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Quy định: <b>Tên khách</b> + <b>ngày quay/chụp</b> (ddmmyyyy) + <b>_STT</b>. VD: <span className="font-mono text-slate-500">Dung27062026_01</span></p>
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Ngày quay/chụp"><input type="date" value={shootDate} onChange={e => setShootDate(e.target.value)} className={inpCls} /></Field>
+            <Field label={mode === 'existing' ? 'Media phụ' : 'Media phụ trách'}><input value={mediaCharge} onChange={e => setMediaCharge(e.target.value)} placeholder="Tên người quay/chụp" className={inpCls} /></Field>
+          </div>
+          <Field label="Link Google Drive (mỗi dòng 1 link)"><textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
+          <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
+        </>
+      )}
+
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
