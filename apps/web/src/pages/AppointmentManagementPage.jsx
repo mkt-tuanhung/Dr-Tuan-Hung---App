@@ -35,7 +35,7 @@ const AppointmentManagementPage = () => {
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
     customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm',
     expected_bill: '', deposit_amount: '', telesale_id: '', telesale_id_2: '', sale_id: '', social_link: '', notes: '',
-    service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
+    service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới',
     used_service: '', surgery_date: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -226,6 +226,7 @@ const AppointmentManagementPage = () => {
         social_link: createForm.social_link,
         notes: createForm.notes,
         service_group: createForm.service_group,
+        surgery_type: createForm.surgery_type,
         customer_source: isRecheck ? 'CSKH' : createForm.customer_source,
         customer_type: isRecheck ? 'Cũ' : createForm.customer_type,
         ...(isRecheck ? { used_service: createForm.used_service || null, surgery_date: createForm.surgery_date || null } : {}),
@@ -273,6 +274,7 @@ const AppointmentManagementPage = () => {
       social_link: app.social_link || '',
       notes: app.notes || '',
       service_group: app.service_group || 'Hàm mặt',
+      surgery_type: app.surgery_type || 'Tiểu phẫu',
       customer_source: app.customer_source || 'Ads',
       customer_type: app.customer_type || 'Mới',
       used_service: app.used_service || '',
@@ -362,7 +364,7 @@ const AppointmentManagementPage = () => {
                 appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
                 customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
                 expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới'
+                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
               });
               setShowCreateModal(true);
             }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
@@ -376,7 +378,7 @@ const AppointmentManagementPage = () => {
                 appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
                 customer_name: '', phone: '', service: '', test_status: 'Không cần', 
                 expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', customer_source: 'CSKH', customer_type: 'Cũ'
+                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ'
               });
               setShowCreateModal(true);
             }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
@@ -759,6 +761,14 @@ const AppointmentManagementPage = () => {
                       <option value="Body">Body</option>
                       <option value="Tiểu phẫu">Tiểu phẫu</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Loại phẫu thuật <span className="text-red-500">*</span></label>
+                    <select value={createForm.surgery_type} onChange={e => setCreateForm({...createForm, surgery_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                      <option value="Tiểu phẫu">Tiểu phẫu</option>
+                      <option value="Đại phẫu">Đại phẫu</option>
+                    </select>
+                    <p className="mt-1 text-xs text-slate-400">Quyết định thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
                   </div>
                   {createForm.appointment_type === 'recheck' && (
                     <div>
