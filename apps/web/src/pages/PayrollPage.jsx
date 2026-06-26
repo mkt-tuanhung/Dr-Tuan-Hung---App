@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
@@ -10,7 +10,12 @@ import {
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
-const PASSCODE_KEY = 'payslip_passcode';
+// Sinh mã bảo mật ngẫu nhiên cho MỖI lần in (bỏ ký tự dễ nhầm: 0 O 1 I L)
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genPayslipCode = () => {
+  const arr = crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(arr, b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+};
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const STANDARD_DAYS = 26;
@@ -38,9 +43,8 @@ const PayrollPage = () => {
   const [saForm, setSaForm] = useState({ amount: '', reason: '' });
   const [rejectSA, setRejectSA] = useState(null);          // { id } khi từ chối
   const [rejectReason, setRejectReason] = useState('');
-  const [passModal, setPassModal] = useState(false);       // modal đặt mã bảo mật phiếu lương
-  const [passInput, setPassInput] = useState('');
-  const [hasPass, setHasPass] = useState(() => !!localStorage.getItem(PASSCODE_KEY));
+  const [codeReveal, setCodeReveal] = useState(null);      // { name, code } — hiện mã 1 lần cho admin sau khi in
+  const [copied, setCopied] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -207,12 +211,7 @@ const PayrollPage = () => {
   };
 
   const printPayslip = async (r) => {
-    const passcode = localStorage.getItem(PASSCODE_KEY);
-    if (!passcode) {
-      toast.error('Hãy đặt Mã bảo mật phiếu lương trước khi in');
-      setPassModal(true);
-      return;
-    }
+    const passcode = genPayslipCode();   // mỗi lần in 1 mã ngẫu nhiên mới
     const s = r.staff;
 
     // Chi tiết lương -> mã hoá -> QR. Phiếu in KHÔNG hiện số tiền nào.
@@ -278,16 +277,10 @@ const PayrollPage = () => {
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 400);
-  };
 
-  const savePasscode = () => {
-    const code = passInput.trim();
-    if (code.length < 4) { toast.error('Mã bảo mật cần tối thiểu 4 ký tự'); return; }
-    localStorage.setItem(PASSCODE_KEY, code);
-    setHasPass(true);
-    setPassModal(false);
-    setPassInput('');
-    toast.success('Đã lưu mã bảo mật phiếu lương trên thiết bị này');
+    // Hiện mã 1 lần cho admin để gửi riêng cho nhân sự (KHÔNG in lên giấy)
+    setCopied(false);
+    setCodeReveal({ name: s.full_name, code: passcode });
   };
 
   return (
@@ -298,10 +291,6 @@ const PayrollPage = () => {
           <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-emerald-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setPassInput(''); setPassModal(true); }} title="Đặt mã bảo mật phiếu lương"
-            className={`flex items-center gap-1.5 px-3 h-8 rounded-xl border text-xs font-semibold ${hasPass ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50' : 'border-amber-300 text-amber-600 hover:bg-amber-50'}`}>
-            <KeyRound className="w-3.5 h-3.5" /> {hasPass ? 'Mã bảo mật' : 'Đặt mã bảo mật'}
-          </button>
           <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
           <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month - 1]} {year}</span>
           <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
@@ -466,27 +455,30 @@ const PayrollPage = () => {
         </div>
       )}
 
-      {passModal && (
+      {codeReveal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
               <h3 className="font-bold text-emerald-800 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Mã bảo mật phiếu lương</h3>
-              <button onClick={() => setPassModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
+              <button onClick={() => setCodeReveal(null)}><X className="w-5 h-5 text-emerald-400" /></button>
             </div>
-            <div className="p-6">
-              <p className="text-sm text-slate-500 mb-4">
-                Mã này dùng để mã hoá QR trên phiếu lương. Nhân sự quét QR rồi nhập đúng mã mới xem được lương.
-                Mã được lưu trên thiết bị này; hãy đặt <b>cùng một mã</b> trên mọi thiết bị in lương và chia sẻ mã cho nhân sự.
-              </p>
-              <label className="block text-sm font-semibold mb-2 text-slate-700">Mã bảo mật (tối thiểu 4 ký tự)</label>
-              <input type="text" inputMode="numeric" autoFocus value={passInput} onChange={e => setPassInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') savePasscode(); }}
-                className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 text-center tracking-widest text-lg" placeholder="VD: 2468" />
-              {hasPass && <p className="text-xs text-slate-400 mt-2">Đã có mã trên thiết bị này. Nhập mã mới để thay đổi.</p>}
+            <div className="p-6 text-center">
+              <p className="text-sm text-slate-500 mb-1">Mã xem phiếu lương của</p>
+              <p className="font-bold text-slate-800 mb-4">{codeReveal.name}</p>
+              <div className="bg-slate-50 border-2 border-dashed border-emerald-200 rounded-xl py-4 mb-2">
+                <span className="text-3xl font-bold tracking-[0.3em] text-emerald-700">{codeReveal.code}</span>
+              </div>
+              <button onClick={() => { navigator.clipboard?.writeText(codeReveal.code); setCopied(true); toast.success('Đã copy mã'); }}
+                className="inline-flex items-center gap-1.5 text-sm text-emerald-600 font-semibold hover:text-emerald-700">
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? 'Đã copy' : 'Copy mã'}
+              </button>
+              <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-3 text-left text-xs text-amber-700 leading-relaxed">
+                ⚠️ Mã này <b>chỉ hiện 1 lần</b> và <b>không in lên giấy</b>. Hãy gửi riêng cho nhân sự (Zalo/tin nhắn) để họ quét QR và nhập mã.
+                Mỗi lần in sẽ tạo mã mới — nếu quên, chỉ cần in lại.
+              </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-              <button onClick={() => setPassModal(false)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={savePasscode} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700">Lưu mã</button>
+            <div className="p-4 bg-slate-50 border-t flex justify-end">
+              <button onClick={() => setCodeReveal(null)} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700">Xong</button>
             </div>
           </div>
         </div>
