@@ -33,14 +33,17 @@ import NotificationBell from '@/components/NotificationBell.jsx';
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
   truc_page: 'Trực Page', media: 'Media', marketing: 'Marketing', editor: 'Editor',
-  dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', outsource: 'Outsource', admin: 'Admin',
+  dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin',
 };
+
+// Chức vụ Outsource (field position) bị ẩn các module này
+const OUTSOURCE_HIDE = ['appointments', 'attendance', 'advances'];
 
 const FULL_MENU = [
   { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'] },
-  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant', 'outsource'] },
+  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant'] },
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant'] },
-  { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'], exclude: ['outsource'] },
+  { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
   { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
 
@@ -53,7 +56,7 @@ const FULL_MENU = [
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong'] },
 
   // CRM
-  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['accountant', 'outsource'] },
+  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['accountant'] },
   { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
@@ -256,9 +259,11 @@ const StaffDashboard = () => {
     return () => window.removeEventListener('NAVIGATE', handleNav);
   }, []);
 
+  const isOutsource = profile?.position === 'Outsource';
   const allowedMenu = FULL_MENU.filter(m =>
     (m.roles.includes('all') || m.roles.includes(profile?.role) || m.roles.includes(profile?.role_2))
     && !(m.exclude && (m.exclude.includes(profile?.role) || m.exclude.includes(profile?.role_2)))
+    && !(isOutsource && OUTSOURCE_HIDE.includes(m.id))
   );
 
   // Nếu tab khôi phục không thuộc quyền của nhân sự → về Tổng quan

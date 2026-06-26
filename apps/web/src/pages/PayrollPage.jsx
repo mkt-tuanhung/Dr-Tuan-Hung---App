@@ -33,7 +33,7 @@ const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
   media: 'Media', marketing: 'Marketing', editor: 'Editor', dieu_duong: 'Điều dưỡng', accountant: 'Kế toán',
-  shareholder: 'Cổ đông', outsource: 'Outsource', admin: 'Admin',
+  shareholder: 'Cổ đông', admin: 'Admin',
 };
 
 const PayrollPage = () => {
