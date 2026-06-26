@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -76,6 +76,8 @@ const VideoPreview = ({ url }) => {
   return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
 };
 const thumbSrc = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url; };
+const imgFull = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1600` : url; };
+const viewImage = (url) => window.dispatchEvent(new CustomEvent('ads-view-image', { detail: imgFull(url) }));
 const downloadFile = async (url, name) => {
   try {
     const res = await fetch(url);
@@ -119,6 +121,8 @@ const ContentProductionPage = () => {
   const [videoFor, setVideoFor] = useState(null);   // clip đang xem video
   const [scoreFor, setScoreFor] = useState(null);   // store đang chấm điểm/góp ý source
   const [clipsModal, setClipsModal] = useState(null); // { store, clips } xem video đã dựng từ source
+  const [confirmState, setConfirmState] = useState(null); // hộp thoại xác nhận
+  const ask = (message, onOk, opts = {}) => setConfirmState({ message, onOk, ...opts });
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -145,20 +149,19 @@ const ContentProductionPage = () => {
   };
   const approveRun = (c) => {
     if (c.approved_to_run) return;
-    if (!confirm('Duyệt cho clip này chạy Ads? Editor sẽ được thưởng 500.000đ.')) return;
-    patchClip(c.id, { approved_to_run: true, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ');
+    ask('Duyệt cho clip này chạy Ads? Editor sẽ được thưởng 500.000đ.',
+      () => patchClip(c.id, { approved_to_run: true, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ'),
+      { okLabel: 'Duyệt chạy Ads' });
   };
-  const delStore = async (s) => {
-    if (!confirm('Xoá media khách hàng này (kèm các clip)?')) return;
+  const delStore = (s) => ask('Xoá media khách hàng này (kèm các clip)?', async () => {
     setStores(prev => prev.filter(x => x.id !== s.id));
     await supabase.from('media_customers').delete().eq('id', s.id);
-  };
-  const delClip = async (id) => {
-    if (!confirm('Xoá clip này?')) return;
+  }, { okLabel: 'Xoá', danger: true });
+  const delClip = (id) => ask('Xoá clip này?', async () => {
     setClips(prev => prev.filter(c => c.id !== id));
     const { error } = await supabase.from('media_clips').delete().eq('id', id);
     if (error) { toast.error(error.message); loadData(); }
-  };
+  }, { okLabel: 'Xoá', danger: true });
 
   // Bảng điểm Editor tháng này (theo điểm Ads chấm)
   const now = new Date();
@@ -287,6 +290,8 @@ const ContentProductionPage = () => {
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
       {videoFor && <VideoModal clip={videoFor} onClose={() => setVideoFor(null)} />}
+      {confirmState && <ConfirmDialog {...confirmState} onClose={() => setConfirmState(null)} />}
+      <ImageLightbox />
       {clipsModal && (
         <Modal title={`Video đã dựng — ${clipsModal.store.customer_name || ''}`} onClose={() => setClipsModal(null)}>
           {clipsModal.clips.length === 0 ? <p className="text-sm text-slate-400">Chưa có video nào.</p> : (
@@ -346,7 +351,9 @@ const Thumb = ({ url, size = 'h-10 w-10', download = false, idx = 0 }) => {
   if (err) return <div className={`${size} rounded-md border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300`}><Image className="w-4 h-4" /></div>;
   return (
     <div className="relative group">
-      <a href={url} target="_blank" rel="noreferrer"><img src={thumbSrc(url)} onError={() => setErr(true)} loading="lazy" alt="thumbnail" className={`${size} object-cover rounded-md border border-slate-200`} /></a>
+      <button type="button" onClick={() => viewImage(url)} title="Xem ảnh" className="block">
+        <img src={thumbSrc(url)} onError={() => setErr(true)} loading="lazy" alt="thumbnail" className={`${size} object-cover rounded-md border border-slate-200 cursor-zoom-in`} />
+      </button>
       {download && (
         <button type="button" onClick={() => downloadFile(url, `thumb-${idx + 1}.jpg`)} title="Tải ảnh về"
           className="absolute bottom-1 right-1 bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1 shadow opacity-0 group-hover:opacity-100 transition-opacity"><Download className="w-3.5 h-3.5" /></button>
@@ -354,6 +361,42 @@ const Thumb = ({ url, size = 'h-10 w-10', download = false, idx = 0 }) => {
     </div>
   );
 };
+
+// ---------- Lightbox xem ảnh ----------
+const ImageLightbox = () => {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    const open = (e) => setUrl(e.detail);
+    const esc = (e) => { if (e.key === 'Escape') setUrl(null); };
+    window.addEventListener('ads-view-image', open);
+    window.addEventListener('keydown', esc);
+    return () => { window.removeEventListener('ads-view-image', open); window.removeEventListener('keydown', esc); };
+  }, []);
+  if (!url) return null;
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4" onClick={() => setUrl(null)}>
+      <button onClick={() => setUrl(null)} className="absolute top-4 right-4 text-white/80 hover:text-white"><X className="w-7 h-7" /></button>
+      <button onClick={(e) => { e.stopPropagation(); downloadFile(url, 'thumbnail.jpg'); }} title="Tải ảnh" className="absolute top-4 right-16 text-white/80 hover:text-white"><Download className="w-6 h-6" /></button>
+      <img src={url} alt="" onClick={(e) => e.stopPropagation()} className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl" />
+    </div>
+  );
+};
+
+// ---------- Hộp thoại xác nhận (thay confirm mặc định) ----------
+const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk, onClose }) => (
+  <div className="fixed inset-0 bg-slate-900/50 z-[55] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="p-5 flex gap-3">
+        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${danger ? 'bg-rose-50 text-rose-500' : 'bg-amber-50 text-amber-500'}`}><AlertTriangle className="w-5 h-5" /></div>
+        <p className="text-sm text-slate-700 leading-relaxed pt-1.5">{message}</p>
+      </div>
+      <div className="px-4 py-3 bg-slate-50 border-t flex justify-end gap-2">
+        <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-white text-sm">Hủy</button>
+        <button onClick={() => { onOk(); onClose(); }} className={`px-5 py-2 rounded-xl text-white font-semibold text-sm ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{okLabel}</button>
+      </div>
+    </div>
+  </div>
+);
 
 // ---------- Hàng Kho media (danh sách) ----------
 const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSource, onLink, onBuild, onScore, onDelete }) => {
