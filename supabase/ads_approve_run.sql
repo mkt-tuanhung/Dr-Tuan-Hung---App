@@ -52,7 +52,8 @@ begin
     if NEW.editor_id is not null then
       insert into notifications(user_id, actor_id, type, title, body, link)
       values (NEW.editor_id, NEW.ads_id, 'clip_approved',
-        '✅ Clip được DUYỆT chạy Ads — thưởng 500.000đ' || coalesce(' — ' || NEW.title, ''), '', 'content');
+        'Video của bạn đã được duyệt chạy Ads',
+        coalesce(NEW.title, '') || ' — thưởng 500.000đ', 'content');
     end if;
   end if;
   return NEW;
