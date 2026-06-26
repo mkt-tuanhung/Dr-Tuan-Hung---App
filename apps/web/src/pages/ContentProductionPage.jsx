@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -207,14 +207,7 @@ const ContentProductionPage = () => {
       {buildFor && <BuildClipModal store={buildFor} me={me} onClose={() => setBuildFor(null)} onSaved={() => { setBuildFor(null); loadData(); }} />}
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
-      {videoFor && (
-        <Modal title="Xem video clip" onClose={() => setVideoFor(null)}>
-          <div className="space-y-3">
-            {(videoFor.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
-            {(videoFor.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2 pt-1">{(videoFor.thumb_links || []).map((u, i) => <Thumb key={i} url={u} idx={i} size="h-24 w-24" download />)}</div>}
-          </div>
-        </Modal>
-      )}
+      {videoFor && <VideoModal clip={videoFor} onClose={() => setVideoFor(null)} />}
     </div>
   );
 };
@@ -617,6 +610,49 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
         <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
       </div>
     </Modal>
+  );
+};
+
+// ---------- Trình phát video (phóng to/thu nhỏ + toàn màn hình) ----------
+const VID_SIZES = [{ name: 'Nhỏ', w: '480px' }, { name: 'Vừa', w: '720px' }, { name: 'Lớn', w: '960px' }, { name: 'Tối đa', w: '100%' }];
+const VideoModal = ({ clip, onClose }) => {
+  const links = clip.clip_links || [];
+  const [ci, setCi] = useState(0);
+  const [zi, setZi] = useState(1);
+  const playerRef = useRef(null);
+  const cur = links[ci] || links[0];
+  const goFs = () => { const el = playerRef.current; if (el?.requestFullscreen) el.requestFullscreen(); else if (el?.webkitRequestFullscreen) el.webkitRequestFullscreen(); };
+  const IconBtn = ({ onClick, disabled, title, children }) => (
+    <button type="button" onClick={onClick} disabled={disabled} title={title}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40">{children}</button>
+  );
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><PlayCircle className="w-5 h-5 text-violet-600" /> Xem video clip</h3>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+        </div>
+        <div className="p-4">
+          {links.length > 1 && (
+            <div className="flex gap-1.5 mb-3 flex-wrap">
+              {links.map((_, i) => <button key={i} onClick={() => setCi(i)} className={`px-3 py-1 rounded-lg text-xs font-semibold ${i === ci ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Video {i + 1}</button>)}
+            </div>
+          )}
+          <div ref={playerRef} className="mx-auto bg-black rounded-xl overflow-hidden" style={{ width: VID_SIZES[zi].w, maxWidth: '100%' }}>
+            <VideoPreview url={cur} />
+          </div>
+          <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+            <IconBtn onClick={() => setZi(z => Math.max(0, z - 1))} disabled={zi === 0} title="Thu nhỏ"><ZoomOut className="w-4 h-4" /></IconBtn>
+            <span className="text-xs font-semibold text-slate-500 w-12 text-center">{VID_SIZES[zi].name}</span>
+            <IconBtn onClick={() => setZi(z => Math.min(VID_SIZES.length - 1, z + 1))} disabled={zi === VID_SIZES.length - 1} title="Phóng to"><ZoomIn className="w-4 h-4" /></IconBtn>
+            <span className="w-px h-5 bg-slate-200 mx-1" />
+            <IconBtn onClick={goFs} title="Toàn màn hình"><Maximize2 className="w-4 h-4" /> Toàn màn hình</IconBtn>
+            <a href={cur} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50"><ExternalLink className="w-4 h-4" /> Mở Drive</a>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
