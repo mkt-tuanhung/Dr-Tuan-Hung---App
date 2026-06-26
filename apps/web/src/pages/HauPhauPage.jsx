@@ -6,6 +6,7 @@ import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIc
 import { uploadToR2 } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import MediaCustomerButton from '@/components/MediaCustomerButton.jsx';
 
 const IMPORT_HEADERS = ['ngay_mo', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'ma_dieu_duong', 'ghi_chu'];
 const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
@@ -366,12 +367,16 @@ const HauPhauPage = () => {
             <div className="text-slate-500 text-xs">Phụ trách</div>
             <div className="text-slate-700 text-right">{careApp.hau_phau?.full_name || 'N/A'}{addNurses.length > 0 && <span className="text-xs text-slate-400"> + {addNurses.join(', ')}</span>}</div>
           </div>
-          {canSeeAll && (
-            <button type="button" onClick={() => { setAssignForm({ id: careApp.id, additional_hau_phau_ids: careApp.additional_hau_phau_ids || [] }); setSelectedNurseId(''); setShowAssignModal(true); }}
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
-              <UserPlus className="w-4 h-4" /> Phân công thêm điều dưỡng
-            </button>
-          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {canSeeAll && (
+              <button type="button" onClick={() => { setAssignForm({ id: careApp.id, additional_hau_phau_ids: careApp.additional_hau_phau_ids || [] }); setSelectedNurseId(''); setShowAssignModal(true); }}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                <UserPlus className="w-4 h-4" /> Phân công thêm điều dưỡng
+              </button>
+            )}
+            <MediaCustomerButton appointment={careApp} me={profile}
+              canAdd={['media', 'dieu_duong', 'cskh', 'marketing', 'admin'].some(r => [profile?.role, profile?.role_2].includes(r))} />
+          </div>
         </div>
 
         {/* Nhật ký theo dõi (thread) */}
