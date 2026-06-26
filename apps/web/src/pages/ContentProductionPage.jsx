@@ -543,10 +543,12 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.media,role_2.eq.media,role.eq.admin').order('full_name').then(({ data }) => setMediaStaff(data || [])); }, []);
 
   const cname = mode === 'existing' ? (picked?.customer_name || '') : name;
+  const canSuggest = !!(cname && cname.trim() && shootDate);
   const fillId = () => {
     const s = suggestSourceId(cname, shootDate);
-    if (!s) { toast.error('Cần Tên khách + Ngày quay/chụp để gợi ý ID'); return; }
+    if (!s) { toast('Nhập Tên khách + Ngày quay/chụp để gợi ý ID', { icon: 'ℹ️' }); return; }
     setSourceId(s);
+    toast.success('Đã gợi ý ID source');
   };
 
   const save = async () => {
@@ -617,7 +619,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
           <Field label="ID source">
             <div className="flex gap-2">
               <input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} />
-              <button type="button" onClick={fillId} className="shrink-0 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200 hover:bg-emerald-100">Gợi ý</button>
+              <button type="button" onClick={fillId} disabled={!canSuggest} title={canSuggest ? 'Tự tạo ID source' : 'Nhập Tên khách + Ngày quay/chụp trước'} className="shrink-0 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-50">Gợi ý</button>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Quy định: <b>Tên khách</b> + <b>ngày quay/chụp</b> (ddmmyyyy) + <b>_STT</b>. VD: <span className="font-mono text-slate-500">Dung27062026_01</span></p>
           </Field>
