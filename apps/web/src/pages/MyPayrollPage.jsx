@@ -162,7 +162,7 @@ const MyPayrollPage = () => {
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
           <Wallet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500">Chưa có bảng lương {MONTHS[month - 1]} {year}.</p>
-          <p className="text-slate-400 text-sm mt-1">Bảng lương sẽ hiển thị sau khi được tính & lưu.</p>
+          <p className="text-slate-400 text-sm mt-1">{isManager ? 'Hãy vào "Bảng lương" để tính rồi bấm Lưu/Chốt tháng này.' : 'Bảng lương sẽ hiển thị sau khi quản lý tính & lưu/chốt tháng này.'}</p>
         </div>
       ) : (
         <>
