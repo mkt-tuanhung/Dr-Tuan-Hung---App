@@ -20,6 +20,14 @@ const suggestSourceId = (name, date) => {
   if (date) { const dt = new Date(date); if (!isNaN(dt.getTime())) d = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${dt.getFullYear()}`; }
   return cap && d ? `${cap}${d}_01` : '';
 };
+const SOURCE_TYPES = ['Before/After', 'Feedback', 'Hậu phẫu', 'Quá trình làm', 'Tư vấn bác sĩ', 'Khác'];
+const SOURCE_STATUS = {
+  chua_dung: { label: 'Chưa dựng', cls: 'bg-slate-100 text-slate-600' },
+  dang_dung: { label: 'Đang dựng', cls: 'bg-blue-100 text-blue-700' },
+  da_dung: { label: 'Đã dựng', cls: 'bg-emerald-100 text-emerald-700' },
+  loi: { label: 'Source lỗi', cls: 'bg-rose-100 text-rose-700' },
+  can_bo_sung: { label: 'Cần bổ sung', cls: 'bg-amber-100 text-amber-700' },
+};
 const STAGE = {
   submitted: { label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
   revision: { label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
@@ -79,6 +87,7 @@ const ContentProductionPage = () => {
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
   const [search, setSearch] = useState('');
+  const [khoStatus, setKhoStatus] = useState('');   // lọc trạng thái source
   const [addOpen, setAddOpen] = useState(false);
   const [editSource, setEditSource] = useState(null);
   const [linkFor, setLinkFor] = useState(null);
@@ -133,7 +142,9 @@ const ContentProductionPage = () => {
   }, {})).sort((x, y) => y.w - x.w).slice(0, 5);
 
   const q = search.trim().toLowerCase();
-  const visStores = stores.filter(s => !q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q));
+  const visStores = stores.filter(s =>
+    (!q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q)) &&
+    (!khoStatus || (s.source_status || 'chua_dung') === khoStatus));
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
@@ -179,9 +190,17 @@ const ContentProductionPage = () => {
         </div>
       )}
 
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+      <div className="flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+        </div>
+        {tab === 'kho' && (
+          <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+            <option value="">Mọi trạng thái source</option>
+            {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        )}
       </div>
 
       {loading ? (
@@ -298,9 +317,12 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onEditSource, onLink
 
       <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
         <LinkList links={s.source_links} label="Nguồn" icon={Film} />
-        <span className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg">{clipCount} clip đã dựng</span>
+        <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
+        {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
+        <span className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg">{clipCount} clip</span>
         {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
-        {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[220px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
+        {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
+        {s.updated_at && <span className="text-[11px] text-slate-300 ml-auto">{new Date(s.updated_at).toLocaleDateString('vi-VN')}</span>}
       </div>
 
       <div className="flex flex-wrap gap-1.5 lg:justify-end shrink-0">
@@ -390,7 +412,10 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   const [service, setService] = useState('');
   const [shootDate, setShootDate] = useState('');
   const [sourceId, setSourceId] = useState('');
-  const [mediaCharge, setMediaCharge] = useState('');
+  const [mediaChargeId, setMediaChargeId] = useState('');
+  const [sourceType, setSourceType] = useState('');
+  const [sourceStatus, setSourceStatus] = useState('chua_dung');
+  const [mediaStaff, setMediaStaff] = useState([]);
   const [links, setLinks] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -405,6 +430,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
     }, 250);
   };
   useEffect(() => { supabase.rpc('search_content_customers', { q: '' }).then(({ data }) => setResults(data || [])); }, []);
+  useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.media,role_2.eq.media,role.eq.admin').order('full_name').then(({ data }) => setMediaStaff(data || [])); }, []);
 
   const cname = mode === 'existing' ? (picked?.customer_name || '') : name;
   const fillId = () => {
@@ -416,9 +442,12 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   const save = async () => {
     const arr = parseLinks(links);
     if (arr.length === 0) { toast.error('Dán ít nhất 1 link Google Drive (http...)'); return; }
+    const chargeName = mediaStaff.find(s => s.id === mediaChargeId)?.full_name || null;
     let payload = {
       media_id: me.id, source_links: arr, note: note || null,
-      source_id: sourceId.trim() || null, shoot_date: shootDate || null, media_in_charge: mediaCharge.trim() || null,
+      source_id: sourceId.trim() || null, shoot_date: shootDate || null,
+      media_in_charge_id: mediaChargeId || null, media_in_charge: chargeName,
+      source_type: sourceType || null, source_status: sourceStatus || 'chua_dung',
     };
     if (mode === 'existing') {
       if (!picked) { toast.error('Hãy TAG (chọn) khách hàng'); return; }
@@ -484,7 +513,25 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
           </Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Ngày quay/chụp"><input type="date" value={shootDate} onChange={e => setShootDate(e.target.value)} className={inpCls} /></Field>
-            <Field label={mode === 'existing' ? 'Media phụ' : 'Media phụ trách'}><input value={mediaCharge} onChange={e => setMediaCharge(e.target.value)} placeholder="Tên người quay/chụp" className={inpCls} /></Field>
+            <Field label="Media phụ trách">
+              <select value={mediaChargeId} onChange={e => setMediaChargeId(e.target.value)} className={inpCls}>
+                <option value="">— Chọn nhân viên —</option>
+                {mediaStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Loại source">
+              <select value={sourceType} onChange={e => setSourceType(e.target.value)} className={inpCls}>
+                <option value="">— Chọn loại —</option>
+                {SOURCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field label="Trạng thái source">
+              <select value={sourceStatus} onChange={e => setSourceStatus(e.target.value)} className={inpCls}>
+                {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </Field>
           </div>
           <Field label="Link Google Drive (mỗi dòng 1 link)"><textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
           <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
@@ -500,10 +547,12 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
 const SourceModal = ({ store, onClose, onSaved }) => {
   const [links, setLinks] = useState((store.source_links || []).join('\n'));
   const [note, setNote] = useState(store.note || '');
+  const [sourceType, setSourceType] = useState(store.source_type || '');
+  const [sourceStatus, setSourceStatus] = useState(store.source_status || 'chua_dung');
   const [saving, setSaving] = useState(false);
   const save = async () => {
     setSaving(true);
-    const { error } = await supabase.from('media_customers').update({ source_links: parseLinks(links), note: note || null }).eq('id', store.id);
+    const { error } = await supabase.from('media_customers').update({ source_links: parseLinks(links), note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Đã cập nhật nguồn'); onSaved();
@@ -511,10 +560,21 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   return (
     <Modal title="Sửa nguồn media" onClose={onClose}>
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{store.customer_name}</b></p>
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Link nguồn (mỗi dòng 1 link)</label>
-      <textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
-      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Loại source">
+          <select value={sourceType} onChange={e => setSourceType(e.target.value)} className={inpCls}>
+            <option value="">— Chọn loại —</option>
+            {SOURCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Trạng thái source">
+          <select value={sourceStatus} onChange={e => setSourceStatus(e.target.value)} className={inpCls}>
+            {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </Field>
+      </div>
+      <Field label="Link nguồn (mỗi dòng 1 link)"><textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className={inpCls} /></Field>
+      <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
