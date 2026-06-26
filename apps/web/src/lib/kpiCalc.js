@@ -159,3 +159,48 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 
   return { total, cntPT, cntCoc, cntBong, closeRate, doanhThu, upsale, dtRate, hhDoanhThu, hhUpsale, tongHH };
 };
+
+// ============================================================
+// Tính 1 DÒNG LƯƠNG cho 1 nhân sự từ dữ liệu nguồn.
+// Dùng chung cho Bảng lương (admin) và trang "Lương của tôi" (tính live).
+// Trả về đúng tên trường như bảng `payroll` để hiển thị thống nhất.
+// ============================================================
+export const PAYROLL_STANDARD_DAYS = 26;
+
+export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], saved = null }) => {
+  const D = PAYROLL_STANDARD_DAYS;
+  const workingDays = att.filter(a => a.staff_id === staff.id && ['present', 'late', 'early_leave'].includes(a.status)).length;
+  const effectiveBase = Number(staff.base_salary || 0) * (staff.employment_status === 'probation' ? 0.85 : 1);
+  const luongCong = Math.round(effectiveBase / D * workingDays);
+  const phuCap = Number(staff.allowance || 0);
+  // Tăng ca: số giờ × (CN:200% | thường:150%) × lương cơ bản/26/8
+  const overtime = Math.round(att.filter(a => a.staff_id === staff.id && Number(a.overtime_hours) > 0)
+    .reduce((s, a) => s + Number(a.overtime_hours) * (new Date(a.date).getDay() === 0 ? 2 : 1.5) * (Number(staff.base_salary || 0) / D / 8), 0));
+
+  const commissionForRole = (role) => {
+    if (role === 'sale_offline') return computeSaleOffline(appts.filter(a => a.sale_id === staff.id && !isRecheck(a)), surg.filter(a => a.sale_id === staff.id)).tongHH;
+    if (role === 'telesale') {
+      const mine = (a) => a.telesale_id === staff.id || a.telesale_id_2 === staff.id;
+      const phones = pages.filter(p => p.telesale_id === staff.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
+      return computeTelesale({ phones, appts: appts.filter(a => mine(a) && !isRecheck(a)), bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine) }).tongHH;
+    }
+    if (role === 'truc_page') return computeTrucPage(pages.filter(p => p.staff_id === staff.id)).hh;
+    if (role === 'dieu_duong') return computeDieuDuong(surg, staff.id).tongHH;
+    return 0;
+  };
+  const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0);
+
+  const otherBonus = Number(saved?.other_bonus || 0);
+  const otherDeduction = Number(saved?.other_deduction || 0);
+  const advance = adv.filter(a => a.staff_id === staff.id).reduce((s, a) => s + Number(a.amount || 0), 0);       // tạm ứng chi (chi hộ) → CỘNG
+  const salaryAdvance = salAdv.filter(a => a.staff_id === staff.id).reduce((s, a) => s + Number(a.amount || 0), 0); // ứng lương → TRỪ
+  const gross = luongCong + phuCap + commission + overtime + advance + otherBonus;
+  const net = gross - salaryAdvance - otherDeduction;
+
+  return {
+    base_salary: Number(staff.base_salary || 0), working_days: workingDays, salary_by_attendance: luongCong,
+    allowance: phuCap, total_commission: commission, overtime_pay: overtime, unpaid_advance: advance,
+    salary_advance: salaryAdvance, other_bonus: otherBonus, other_deduction: otherDeduction,
+    gross_income: gross, total_deductions: salaryAdvance + otherDeduction, net_salary: net,
+  };
+};

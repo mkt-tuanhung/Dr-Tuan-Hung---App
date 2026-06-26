@@ -6,6 +6,7 @@ import {
   Clock, Lock, ShieldCheck, Search, Banknote, MinusCircle,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { computePayrollRow } from '@/lib/kpiCalc';
 
 const MONTHS = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
@@ -43,14 +44,16 @@ const MyPayrollPage = () => {
   const [targetId, setTargetId] = useState(profile?.id);
   const [search, setSearch] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [rows, setRows] = useState([]);
+  const [targetProfile, setTargetProfile] = useState(profile);
+  const [savedRows, setSavedRows] = useState([]);
+  const [src, setSrc] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Danh sách nhân sự cho bộ chọn (chỉ quản lý). RLS chặn nếu không đủ quyền.
   useEffect(() => {
     if (!isManager) return;
     supabase.from('profiles')
-      .select('id, full_name, employee_id, role, role_2, base_salary, employment_status, bank_name, bank_account')
+      .select('id, full_name, employee_id, role')
       .eq('is_active', true).order('full_name')
       .then(({ data }) => setStaffList(data || []));
   }, [isManager]);
@@ -61,18 +64,54 @@ const MyPayrollPage = () => {
   const loadData = useCallback(async () => {
     if (!targetId) return;
     setLoading(true);
-    // RLS tự giới hạn: NV chỉ lấy được dòng của mình; quản lý lấy được mọi người.
-    const { data } = await supabase.from('payroll').select('*').eq('staff_id', targetId);
-    setRows(data || []);
+    const tid = targetId;
+    const ms = `${year}-${String(month).padStart(2, '0')}-01`;
+    const meDay = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    const orTele = `telesale_id.eq.${tid},telesale_id_2.eq.${tid}`;
+    const orSale = `telesale_id.eq.${tid},telesale_id_2.eq.${tid},sale_id.eq.${tid}`;
+    // Ca PT có liên quan tới NV ở bất kỳ vị trí tính tiền nào (telesale/sale/phụ mổ/trực đêm)
+    const orSurg = `${orSale},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid},truc_dem_id.eq.${tid},truc_dem_id_2.eq.${tid},hau_phau_id.eq.${tid}`;
+
+    const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes] = await Promise.all([
+      supabase.from('profiles').select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
+      supabase.from('payroll').select('*').eq('staff_id', tid),
+      supabase.from('attendance').select('staff_id, status, date, overtime_hours').eq('staff_id', tid).gte('date', ms).lte('date', meDay),
+      supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').or(orSale).gte('appointment_date', ms).lte('appointment_date', meDay),
+      supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').or(orSurg).gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').or(orTele).gte('bong_date', ms).lte('bong_date', meDay),
+      supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').or(orTele).gte('deposit_date', ms).lte('deposit_date', meDay),
+      supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').or(`staff_id.eq.${tid},telesale_id.eq.${tid}`).gte('date', ms).lte('date', meDay),
+      supabase.from('expenses').select('staff_id, amount').eq('staff_id', tid).eq('is_advance', true).eq('status', 'approved'),
+      supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
+    ]);
+
+    if (profRes.data) setTargetProfile(profRes.data);
+    setSavedRows(payRes.data || []);
+    setSrc({
+      att: attRes.data || [], appts: apptRes.data || [], surg: surgRes.data || [],
+      bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
+      adv: advRes.data || [], salAdv: salRes.data || [],
+    });
     setLoading(false);
-  }, [targetId]);
+  }, [targetId, month, year]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const targetProfile = isManager ? (staffList.find(s => s.id === targetId) || profile) : profile;
-  const detail = rows.find(r => r.month === month && r.year === year);
-  const yearRows = rows.filter(r => r.year === year).sort((a, b) => a.month - b.month);
-  const chartData = yearRows.map(r => ({ name: 'T' + r.month, 'Thực nhận': Number(r.net_salary || 0) }));
+  const tp = targetProfile || profile;
+  const savedThisMonth = savedRows.find(r => r.month === month && r.year === year);
+  // Tính LIVE từ dữ liệu nguồn; nếu tháng đã CHỐT thì lấy số đã lưu (chính thức).
+  const live = (src && tp?.id) ? computePayrollRow({ staff: tp, ...src, saved: savedThisMonth }) : null;
+  const detail = !src ? null
+    : (savedThisMonth?.status === 'locked' ? { ...savedThisMonth, status: 'locked' }
+      : (live ? { ...live, status: 'draft' } : null));
+
+  // Biểu đồ: tháng đang xem = số hiện tại; các tháng khác = đã lưu (nếu có)
+  const chartData = [];
+  for (let mo = 1; mo <= 12; mo++) {
+    const sv = savedRows.find(r => r.month === mo && r.year === year);
+    if (mo === month && detail) chartData.push({ name: 'T' + mo, 'Thực nhận': detail.net_salary });
+    else if (sv) chartData.push({ name: 'T' + mo, 'Thực nhận': Number(sv.net_salary || 0) });
+  }
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -82,7 +121,7 @@ const MyPayrollPage = () => {
     (s.employee_id || '').toLowerCase().includes(search.toLowerCase()));
 
   const incomeRows = detail ? [
-    ['Lương theo công', `${detail.salary_by_attendance != null ? fmtM(detail.salary_by_attendance) : '0đ'}`, `${detail.working_days || 0} công`],
+    ['Lương theo công', fmtM(detail.salary_by_attendance), `${detail.working_days || 0} công`],
     ['Phụ cấp', fmtM(detail.allowance)],
     ['Hoa hồng / thưởng', fmtM(detail.total_commission)],
     ...(Number(detail.overtime_pay) ? [['Lương tăng ca', '+' + fmtM(detail.overtime_pay)]] : []),
@@ -101,7 +140,7 @@ const MyPayrollPage = () => {
         <div>
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Wallet className="w-6 h-6 text-emerald-600" /> {isManager ? 'Bảng lương nhân sự' : 'Bảng lương của tôi'}</h2>
           <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này'}
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này · cập nhật tự động'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -116,7 +155,7 @@ const MyPayrollPage = () => {
         <div className="relative">
           <button onClick={() => setPickerOpen(o => !o)}
             className="w-full sm:w-80 flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 text-sm">
-            <span className="font-semibold text-slate-700 truncate">{targetProfile?.full_name || 'Chọn nhân sự'}{targetProfile?.employee_id ? ` · ${targetProfile.employee_id}` : ''}</span>
+            <span className="font-semibold text-slate-700 truncate">{tp?.full_name || 'Chọn nhân sự'}{tp?.employee_id ? ` · ${tp.employee_id}` : ''}</span>
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
           </button>
           {pickerOpen && (
@@ -143,26 +182,25 @@ const MyPayrollPage = () => {
       {/* Hồ sơ + trạng thái */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div className="font-bold text-slate-800 text-lg">{targetProfile?.full_name}</div>
+          <div className="font-bold text-slate-800 text-lg">{tp?.full_name}</div>
           <div className="text-sm text-slate-500">
-            {ROLE_LABELS[targetProfile?.role] || targetProfile?.role}
-            {targetProfile?.employment_status === 'probation' && <span className="ml-1 text-amber-600">· Thử việc (85%)</span>}
+            {ROLE_LABELS[tp?.role] || tp?.role}
+            {tp?.employment_status === 'probation' && <span className="ml-1 text-amber-600">· Thử việc (85%)</span>}
           </div>
         </div>
         {detail && (
           detail.status === 'locked'
             ? <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full"><Lock className="w-3 h-3" /> Đã chốt</span>
-            : <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Tạm tính · chưa chốt</span>
+            : <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Tạm tính · cập nhật theo thời gian thực</span>
         )}
       </div>
 
-      {loading ? (
+      {loading && !detail ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
       ) : !detail ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
           <Wallet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">Chưa có bảng lương {MONTHS[month - 1]} {year}.</p>
-          <p className="text-slate-400 text-sm mt-1">{isManager ? 'Hãy vào "Bảng lương" để tính rồi bấm Lưu/Chốt tháng này.' : 'Bảng lương sẽ hiển thị sau khi quản lý tính & lưu/chốt tháng này.'}</p>
+          <p className="text-slate-500">Chưa có dữ liệu lương {MONTHS[month - 1]} {year}.</p>
         </div>
       ) : (
         <>
