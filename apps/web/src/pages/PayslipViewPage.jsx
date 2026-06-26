@@ -98,7 +98,7 @@ const PayslipViewPage = () => {
           spellCheck={false}
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Mã bảo mật (VD: K7M2QP)"
+          placeholder="Mã bảo mật (VD: K7M2QP4N)"
           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-400 outline-none text-center tracking-[0.3em] text-lg uppercase"
         />
         {error && <p className="text-sm text-rose-500 text-center mt-3 flex items-center justify-center gap-1"><AlertCircle className="w-4 h-4" /> {error}</p>}

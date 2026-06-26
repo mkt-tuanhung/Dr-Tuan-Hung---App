@@ -4,7 +4,11 @@
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
-const ITER = 100000; // số vòng PBKDF2
+
+// Byte phiên bản đứng đầu token -> số vòng PBKDF2 tương ứng.
+// Nhờ vậy sau này nâng số vòng vẫn giải được QR đã in trước đó (chỉ cần thêm version mới).
+const VERSION = 1;
+const ITER_BY_VERSION = { 1: 310000 }; // 310k vòng theo khuyến nghị OWASP (PBKDF2-SHA256)
 
 // base64url <-> bytes (an toàn cho URL/QR, không dùng dấu + / =)
 const toB64url = (bytes) => {
@@ -22,10 +26,10 @@ const fromB64url = (str) => {
   return arr;
 };
 
-const deriveKey = async (passcode, salt) => {
+const deriveKey = async (passcode, salt, iterations) => {
   const baseKey = await crypto.subtle.importKey('raw', enc.encode(passcode), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -33,26 +37,29 @@ const deriveKey = async (passcode, salt) => {
   );
 };
 
-// Mã hoá object -> chuỗi base64url (salt[16] + iv[12] + ciphertext)
+// Mã hoá object -> chuỗi base64url (version[1] + salt[16] + iv[12] + ciphertext)
 export const encryptPayslip = async (obj, passcode) => {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(passcode, salt);
+  const key = await deriveKey(passcode, salt, ITER_BY_VERSION[VERSION]);
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
-  const out = new Uint8Array(16 + 12 + ct.byteLength);
-  out.set(salt, 0);
-  out.set(iv, 16);
-  out.set(new Uint8Array(ct), 28);
+  const out = new Uint8Array(1 + 16 + 12 + ct.byteLength);
+  out[0] = VERSION;
+  out.set(salt, 1);
+  out.set(iv, 17);
+  out.set(new Uint8Array(ct), 29);
   return toB64url(out);
 };
 
 // Giải mã chuỗi base64url -> object. Sai mã / dữ liệu hỏng sẽ throw.
 export const decryptPayslip = async (payload, passcode) => {
   const bytes = fromB64url(payload);
-  const salt = bytes.slice(0, 16);
-  const iv = bytes.slice(16, 28);
-  const ct = bytes.slice(28);
-  const key = await deriveKey(passcode, salt);
+  const iterations = ITER_BY_VERSION[bytes[0]];
+  if (!iterations) throw new Error('Phiên bản phiếu lương không hỗ trợ');
+  const salt = bytes.slice(1, 17);
+  const iv = bytes.slice(17, 29);
+  const ct = bytes.slice(29);
+  const key = await deriveKey(passcode, salt, iterations);
   const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
   return JSON.parse(dec.decode(pt));
 };

@@ -12,10 +12,19 @@ import { encryptPayslip } from '@/lib/payslipCrypto';
 
 // Sinh mã bảo mật ngẫu nhiên cho MỖI lần in (bỏ ký tự dễ nhầm: 0 O 1 I L)
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_LEN = 8;
 const genPayslipCode = () => {
-  const arr = crypto.getRandomValues(new Uint8Array(6));
-  return Array.from(arr, b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+  const limit = 256 - (256 % CODE_ALPHABET.length); // loại byte gây lệch xác suất (modulo bias)
+  let out = '';
+  while (out.length < CODE_LEN) {
+    const [b] = crypto.getRandomValues(new Uint8Array(1));
+    if (b < limit) out += CODE_ALPHABET[b % CODE_ALPHABET.length];
+  }
+  return out;
 };
+
+// Escape ký tự HTML khi nhúng dữ liệu nhân sự vào cửa sổ in (chống vỡ layout / chèn mã)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const STANDARD_DAYS = 26;
@@ -248,7 +257,7 @@ const PayrollPage = () => {
     const win = window.open('', '_blank', 'width=800,height=900');
     if (!win) { toast.error('Trình duyệt chặn cửa sổ in'); return; }
     win.document.write(`
-      <html><head><meta charset="utf-8"><title>Phiếu lương ${s.full_name}</title>
+      <html><head><meta charset="utf-8"><title>Phiếu lương ${esc(s.full_name)}</title>
       <style>body{font-family:Arial,sans-serif;color:#0f172a;max-width:640px;margin:24px auto;padding:0 16px;position:relative}
       h1{font-size:20px;margin:0}.sub{color:#64748b;font-size:13px}
       .box{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:16px}
@@ -263,9 +272,9 @@ const PayrollPage = () => {
         <div style="text-align:right"><div style="font-weight:700">PK Dr Tuấn Hùng</div><div class="sub">Internal System</div></div>
       </div>
       <div class="box">
-        <div style="font-weight:700;font-size:16px">${s.full_name} <span class="sub">(${s.employee_id})</span></div>
-        <div class="sub">${ROLE_LABELS[s.role] || s.role}${s.employment_status === 'probation' ? ' · Thử việc (85%)' : ''}</div>
-        ${s.bank_name ? `<div class="sub">${s.bank_name} - ${s.bank_account || ''}</div>` : ''}
+        <div style="font-weight:700;font-size:16px">${esc(s.full_name)} <span class="sub">(${esc(s.employee_id)})</span></div>
+        <div class="sub">${esc(ROLE_LABELS[s.role] || s.role)}${s.employment_status === 'probation' ? ' · Thử việc (85%)' : ''}</div>
+        ${s.bank_name ? `<div class="sub">${esc(s.bank_name)} - ${esc(s.bank_account || '')}</div>` : ''}
       </div>
       <div class="qr"><img src="${qrDataUrl}" alt="QR phiếu lương"/></div>
       <div class="note">
