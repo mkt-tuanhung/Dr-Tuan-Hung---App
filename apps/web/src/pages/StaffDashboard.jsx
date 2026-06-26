@@ -71,20 +71,23 @@ const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actua
 
 // Tổng quan dành cho Editor: clip Win / đang xử lý / đã duyệt + tổng lương tháng
 const EditorOverview = ({ profile, setActiveTab }) => {
-  const [s, setS] = useState({ win: null, pending: null, approved: null, net: null });
+  const [s, setS] = useState({ win: null, pending: null, approved: null, net: null, avg: null });
   useEffect(() => {
     if (!profile?.id) return;
     const now = new Date(); const y = now.getFullYear(); const m = now.getMonth() + 1;
     const ms = `${y}-${String(m).padStart(2, '0')}-01`;
     const meNext = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
     (async () => {
-      const [winRes, pendRes, apprRes, pay] = await Promise.all([
+      const [winRes, pendRes, apprRes, scoreRes, pay] = await Promise.all([
         supabase.from('media_clips').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
         supabase.from('media_clips').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['submitted', 'revision']),
         supabase.from('media_clips').select('id', { count: 'exact', head: true }).eq('editor_id', profile.id).in('stage', ['approved', 'done']),
+        supabase.from('media_clips').select('score, win').eq('editor_id', profile.id).gte('evaluated_at', ms).lt('evaluated_at', meNext),
         loadPayrollDetail(profile.id, m, y),
       ]);
-      setS({ win: winRes.count ?? 0, pending: pendRes.count ?? 0, approved: apprRes.count ?? 0, net: pay.detail?.net_salary ?? 0 });
+      const sc = (scoreRes.data || []);
+      const avg = sc.length ? sc.reduce((t, c) => t + (c.win ? 10 : (Number(c.score) || 0)), 0) / sc.length : 0;
+      setS({ win: winRes.count ?? 0, pending: pendRes.count ?? 0, approved: apprRes.count ?? 0, net: pay.detail?.net_salary ?? 0, avg });
     })();
   }, [profile?.id]);
 
@@ -101,6 +104,7 @@ const EditorOverview = ({ profile, setActiveTab }) => {
       <Card icon={Trophy} color="bg-amber-50 text-amber-600" label="Clip Win (tháng)" value={s.win} unit="clip" onClick={() => setActiveTab('content')} />
       <Card icon={Scissors} color="bg-blue-50 text-blue-600" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content')} />
       <Card icon={CheckCircle2} color="bg-violet-50 text-violet-600" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content')} />
+      <Card icon={Target} color="bg-rose-50 text-rose-600" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content')} />
       <Card icon={Wallet} color="bg-emerald-50 text-emerald-600" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
     </div>
   );

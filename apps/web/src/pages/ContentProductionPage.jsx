@@ -28,6 +28,26 @@ const SOURCE_STATUS = {
   loi: { label: 'Source lỗi', cls: 'bg-rose-100 text-rose-700' },
   can_bo_sung: { label: 'Cần bổ sung', cls: 'bg-amber-100 text-amber-700' },
 };
+// Phân loại điểm video thành phẩm do Ads chấm (1-10)
+const scoreCat = (score, win) => {
+  const n = Number(score) || 0;
+  if (win || n >= 10) return { label: 'WIN', cls: 'bg-amber-100 text-amber-700', warn: false };
+  if (n >= 8) return { label: 'Tốt', cls: 'bg-emerald-100 text-emerald-700', warn: false };
+  if (n >= 5) return { label: 'Trung bình', cls: 'bg-yellow-100 text-yellow-700', warn: false };
+  if (n > 0) return { label: 'Tệ', cls: 'bg-rose-100 text-rose-700', warn: true };
+  return { label: 'Chưa chấm', cls: 'bg-slate-100 text-slate-500', warn: false };
+};
+const SCORE_FILTERS = { win: 'WIN (10đ)', tot: 'Tốt (≥8)', tb: 'Trung bình (5-7)', te: 'Tệ (<5)', chua: 'Chưa chấm' };
+const matchScoreFilter = (c, f) => {
+  if (!f) return true;
+  const n = c.win ? 10 : (Number(c.score) || 0);
+  if (f === 'win') return c.win || n >= 10;
+  if (f === 'tot') return !c.win && n >= 8 && n < 10;
+  if (f === 'tb') return n >= 5 && n <= 7;
+  if (f === 'te') return n > 0 && n < 5;
+  if (f === 'chua') return !c.win && n === 0;
+  return true;
+};
 const STAGE = {
   submitted: { label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
   revision: { label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
@@ -88,6 +108,7 @@ const ContentProductionPage = () => {
   const didLoad = useRef(false);
   const [search, setSearch] = useState('');
   const [khoStatus, setKhoStatus] = useState('');   // lọc trạng thái source
+  const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [addOpen, setAddOpen] = useState(false);
   const [editSource, setEditSource] = useState(null);
   const [linkFor, setLinkFor] = useState(null);
@@ -132,14 +153,15 @@ const ContentProductionPage = () => {
     if (error) { toast.error(error.message); loadData(); }
   };
 
-  // Bảng xếp hạng editor theo Win tháng này
+  // Bảng điểm Editor tháng này (theo điểm Ads chấm)
   const now = new Date();
-  const wins = clips.filter(c => c.win && c.evaluated_at && new Date(c.evaluated_at).getMonth() === now.getMonth() && new Date(c.evaluated_at).getFullYear() === now.getFullYear());
-  const lb = Object.values(wins.reduce((a, c) => {
-    if (!c.editor_id) return a;
-    a[c.editor_id] = a[c.editor_id] || { id: c.editor_id, name: c.editor?.full_name || 'Editor', w: 0, m: 0 };
-    a[c.editor_id].w++; a[c.editor_id].m += Number(c.win_amount || 0); return a;
-  }, {})).sort((x, y) => y.w - x.w).slice(0, 5);
+  const evalC = clips.filter(c => c.editor_id && c.evaluated_at && new Date(c.evaluated_at).getMonth() === now.getMonth() && new Date(c.evaluated_at).getFullYear() === now.getFullYear());
+  const lb = Object.values(evalC.reduce((a, c) => {
+    const pts = c.win ? 10 : (Number(c.score) || 0);
+    a[c.editor_id] = a[c.editor_id] || { id: c.editor_id, name: c.editor?.full_name || 'Editor', n: 0, sum: 0, w: 0, m: 0 };
+    a[c.editor_id].n++; a[c.editor_id].sum += pts; if (c.win) a[c.editor_id].w++; a[c.editor_id].m += Number(c.win_amount || 0);
+    return a;
+  }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
 
   const q = search.trim().toLowerCase();
   const visStores = stores.filter(s =>
@@ -148,7 +170,8 @@ const ContentProductionPage = () => {
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
-    if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q))) return false;
+    if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
+    if (!matchScoreFilter(c, videoScore)) return false;
     const d = new Date(c.submitted_at || c.created_at);
     return c.stage !== 'done' || (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
   });
@@ -178,14 +201,17 @@ const ContentProductionPage = () => {
       {/* Leaderboard */}
       {lb.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <h3 className="font-bold text-amber-600 mb-2 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4" /> Editor Win tháng {now.getMonth() + 1}</h3>
+          <h3 className="font-bold text-amber-600 mb-2 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4" /> Bảng điểm Editor tháng {now.getMonth() + 1}</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {lb.map((e, i) => (
-              <div key={e.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
-                <span className="flex items-center gap-2 text-sm font-medium text-slate-700"><span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span>{e.name}</span>
-                <span className="text-sm font-bold text-emerald-600">{e.w} Win · {fmtM(e.m)}</span>
+            {lb.map((e, i) => { const cat = scoreCat(e.avg, false); return (
+              <div key={e.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 gap-2">
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700 min-w-0"><span className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span><span className="truncate">{e.name}</span></span>
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cat.cls}`}>TB {e.avg.toFixed(1)}/10</span>
+                  <span className="text-[11px] text-slate-500">{e.n} clip · {e.w} Win</span>
+                </span>
               </div>
-            ))}
+            ); })}
           </div>
         </div>
       )}
@@ -199,6 +225,12 @@ const ContentProductionPage = () => {
           <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
             <option value="">Mọi trạng thái source</option>
             {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        )}
+        {tab === 'video' && (
+          <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+            <option value="">Mọi mức điểm</option>
+            {Object.entries(SCORE_FILTERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         )}
       </div>
@@ -375,7 +407,10 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
         {(c.thumb_links || []).length > 0 && (
           <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-24 w-24" download />)}</div>
         )}
-        {c.win && <span className="text-xs font-bold text-amber-600">🏆 Win · {fmtM(c.win_amount)}</span>}
+        {(c.win || c.score > 0) && (() => { const cat = scoreCat(c.score, c.win); return (
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 w-fit ${cat.cls}`}>
+            {cat.warn && '⚠️'}{c.win ? '🏆' : ''} Điểm {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}
+          </span>); })()}
         {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
         {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
       </div>
@@ -715,11 +750,19 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
         {(clip.clip_links || []).length === 0 && <span className="text-xs text-slate-300">Chưa có clip</span>}
       </div>
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý cho editor</label>
       <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} placeholder="Nhận xét cho editor…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
 
-      <button onClick={() => setWin(w => !w)} className={`w-full mb-3 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 ${win ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-slate-100 text-slate-500 border-2 border-transparent'}`}>
-        <Trophy className="w-5 h-5" /> {win ? 'WIN — clip hiệu quả' : 'Chấm WIN (bấm để bật)'}
+      {/* Điểm video thành phẩm */}
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Điểm video thành phẩm (1–10)</label>
+      <div className="flex items-center gap-2 mb-1">
+        <input value={score} onChange={e => { const v = Math.min(10, Number(e.target.value.replace(/[^\d]/g, '')) || 0); setScore(v ? String(v) : ''); if (v < 10 && win) setWin(false); if (v === 10) setWin(true); }} inputMode="numeric" placeholder="0–10" className="w-24 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none text-center font-bold" />
+        {(() => { const cat = scoreCat(score, win); return <span className={`text-xs font-bold px-2.5 py-1.5 rounded-lg ${cat.cls}`}>{cat.warn && '⚠️ '}{cat.label}</span>; })()}
+        <span className="text-[11px] text-slate-400">10=Win · ≥8 Tốt · 5–7 TB · &lt;5 Tệ</span>
+      </div>
+
+      <button onClick={() => setWin(w => { const nw = !w; if (nw) setScore('10'); return nw; })} className={`w-full my-2 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 ${win ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-slate-100 text-slate-500 border-2 border-transparent'}`}>
+        <Trophy className="w-5 h-5" /> {win ? 'WIN — 10 điểm' : 'Chấm WIN (=10đ)'}
       </button>
       {win && (
         <>
@@ -727,10 +770,8 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
           <input value={amount} onChange={e => setAmount(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="VD: 100000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
         </>
       )}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <input value={score} onChange={e => setScore(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="Điểm (0–10)" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
-        <input value={note} onChange={e => setNote(e.target.value)} placeholder="Nhận xét kết quả" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
-      </div>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Nhận xét kết quả</label>
+      <input value={note} onChange={e => setNote(e.target.value)} placeholder="VD: chuyển đổi tốt / cần đổi hook…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
       <div className="flex justify-end gap-2">
         <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa</button>
         <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
