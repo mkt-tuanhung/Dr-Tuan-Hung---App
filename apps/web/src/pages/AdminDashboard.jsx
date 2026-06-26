@@ -15,20 +15,19 @@ import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
-import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
-import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
+import MarketingHubPage from '@/pages/MarketingHubPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Clapperboard
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -53,7 +52,6 @@ const MENU_GROUPS = [
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
     { id: 'marketing', label: 'Marketing / Ads', icon: Target },
-    { id: 'content', label: 'Sản xuất Ads', icon: Clapperboard },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
@@ -294,8 +292,7 @@ const AdminDashboard = () => {
       case 'payroll': return <PayrollPage />;
       case 'community': return <CommunityPage />;
       case 'notifications': return <NotificationsPage />;
-      case 'ads_report': return <AdsReportPage />;
-      case 'content': return <ContentProductionPage />;
+      case 'marketing': return <MarketingHubPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
