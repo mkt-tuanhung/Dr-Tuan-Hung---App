@@ -110,6 +110,7 @@ const ContentProductionPage = () => {
   const [khoStatus, setKhoStatus] = useState('');   // lọc trạng thái source
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [addOpen, setAddOpen] = useState(false);
+  const [addVideoOpen, setAddVideoOpen] = useState(false);
   const [editSource, setEditSource] = useState(null);
   const [linkFor, setLinkFor] = useState(null);
   const [buildFor, setBuildFor] = useState(null);   // store đang dựng clip mới
@@ -194,6 +195,11 @@ const ContentProductionPage = () => {
             <Plus className="w-4 h-4" /> Thêm media
           </button>
         )}
+        {tab === 'video' && canEdit && (
+          <button onClick={() => setAddVideoOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700">
+            <Plus className="w-4 h-4" /> Thêm Video Ads
+          </button>
+        )}
       </div>
 
       {/* Tabs nội bộ */}
@@ -272,6 +278,7 @@ const ContentProductionPage = () => {
       )}
 
       {addOpen && <AddMediaModal me={me} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
+      {addVideoOpen && <AddVideoModal me={me} onClose={() => setAddVideoOpen(false)} onSaved={() => { setAddVideoOpen(false); loadData(); }} />}
       {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
       {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
       {buildFor && <BuildClipModal store={buildFor} me={me} onClose={() => setBuildFor(null)} onSaved={() => { setBuildFor(null); loadData(); }} />}
@@ -845,6 +852,128 @@ const VideoModal = ({ clip, onClose }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// ---------- Modal: Thêm Video Ads (tạo clip + tự gán/kết nối kho media với khách) ----------
+const AddVideoModal = ({ me, onClose, onSaved }) => {
+  const [title, setTitle] = useState('');
+  const [name, setName] = useState('');
+  const [picked, setPicked] = useState(null);   // THÔNG TIN KHÁCH HÀNG đã tag
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState([]);
+  const [sourceLink, setSourceLink] = useState('');
+  const [sourceId, setSourceId] = useState('');
+  const [clip, setClip] = useState('');
+  const [thumbs, setThumbs] = useState([]);
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const timer = useRef(null);
+  const fileRef = useRef(null);
+
+  const onSearch = (val) => {
+    setQ(val);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(async () => { const { data } = await supabase.rpc('search_content_customers', { q: val }); setResults(data || []); }, 250);
+  };
+  const onPickFiles = async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    if (!files.length) return;
+    setUploading(true);
+    try { for (const f of files) { if (!f.type.startsWith('image/')) { toast.error('Chỉ nhận file ảnh'); continue; } const url = await uploadToR2(f, 'ads-thumb'); setThumbs(p => [...p, url]); } }
+    catch (err) { toast.error('Lỗi tải ảnh: ' + err.message); }
+    setUploading(false);
+  };
+
+  const save = async () => {
+    if (!title.trim()) { toast.error('Nhập tiêu đề video'); return; }
+    if (!name.trim()) { toast.error('Nhập tên khách hàng'); return; }
+    const clipArr = parseLinks(clip);
+    if (clipArr.length === 0) { toast.error('Dán link clip đã dựng (http...)'); return; }
+    if (thumbs.length === 0) { toast.error('Tải ít nhất 1 ảnh thumbnail'); return; }
+    setSaving(true);
+    try {
+      // 1) Tìm/tạo kho media (tự gán với khách nếu đã tag)
+      let storeId = null;
+      if (picked?.appointment_id) {
+        const { data: ex } = await supabase.from('media_customers').select('id').eq('appointment_id', picked.appointment_id).limit(1);
+        if (ex && ex[0]) storeId = ex[0].id;
+      }
+      if (!storeId) {
+        const { data: ins, error: e1 } = await supabase.from('media_customers').insert({
+          appointment_id: picked?.appointment_id || null, customer_name: name.trim(), customer_phone: picked?.phone || null,
+          media_id: me.id, source_links: parseLinks(sourceLink), source_id: sourceId.trim() || null, source_status: 'dang_dung',
+          service: picked?.service || null,
+        }).select('id').single();
+        if (e1) throw e1;
+        storeId = ins.id;
+      }
+      // 2) Tạo clip
+      const { error: e2 } = await supabase.from('media_clips').insert({
+        media_customer_id: storeId, editor_id: me.id, title: title.trim(),
+        clip_links: clipArr, thumb_links: thumbs, editor_note: note || null, stage: 'submitted', submitted_at: new Date().toISOString(),
+      });
+      if (e2) throw e2;
+      toast.success('Đã thêm Video Ads'); onSaved();
+    } catch (err) { toast.error('Lỗi: ' + err.message); }
+    setSaving(false);
+  };
+
+  return (
+    <Modal title="Thêm Video Ads" onClose={onClose}>
+      <Field label="Tiêu đề video *"><input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Feedback nâng mũi - bản cảm xúc" className={inpCls} /></Field>
+
+      <Field label="Kết nối Thông tin khách hàng (@ tên / SĐT)">
+        {picked ? (
+          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            <span className="text-sm font-medium text-slate-700">@ {picked.customer_name} · {picked.phone}</span>
+            <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+        ) : (
+          <>
+            <input value={q} onChange={e => onSearch(e.target.value)} placeholder="Gõ tên hoặc SĐT để tag hồ sơ khách…" className={inpCls} />
+            {results.length > 0 && (
+              <div className="max-h-36 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
+                {results.map(r => (
+                  <button key={r.appointment_id} onClick={() => { setPicked(r); setName(r.customer_name || ''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
+                    <span className="font-medium text-slate-700">{r.customer_name}</span> <span className="text-slate-400">· {r.phone}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-slate-400 mt-1">Tag để tự kết nối hồ sơ khách + gán kho media với khách. Không tag thì tạo mới.</p>
+          </>
+        )}
+      </Field>
+
+      <Field label="Tên khách hàng *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Tên khách" className={inpCls} /></Field>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Nguồn Source (link)"><input value={sourceLink} onChange={e => setSourceLink(e.target.value)} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
+        <Field label="ID Source"><input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} /></Field>
+      </div>
+
+      <Field label="Link clip đã dựng * (link riêng clip)"><textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
+
+      <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh thumbnail * (tải trực tiếp)</label>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {thumbs.map((u, i) => (
+          <div key={i} className="relative">
+            <img src={u} alt="thumb" className="h-20 w-20 object-cover rounded-lg border border-slate-200" />
+            <button type="button" onClick={() => setThumbs(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center"><X className="w-3 h-3" /></button>
+          </div>
+        ))}
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-400 hover:text-emerald-500 disabled:opacity-50">
+          {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+          <span className="text-[10px] mt-0.5">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPickFiles} />
+      </div>
+
+      <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
+      <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel="Thêm Video Ads" />
+    </Modal>
   );
 };
 
