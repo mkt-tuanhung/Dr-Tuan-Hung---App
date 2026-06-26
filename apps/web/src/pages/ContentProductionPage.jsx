@@ -50,14 +50,6 @@ const downloadFile = async (url, name) => {
     setTimeout(() => URL.revokeObjectURL(obj), 1000);
   } catch { window.open(url, '_blank'); }
 };
-// Thumb cho Ads: ảnh preview + nút tải về
-const ThumbDownload = ({ url, idx }) => (
-  <div className="relative group">
-    <img src={thumbSrc(url)} loading="lazy" alt="thumbnail" className="h-24 rounded-lg border border-slate-200 object-cover" />
-    <button type="button" onClick={() => downloadFile(url, `thumb-${(idx || 0) + 1}.jpg`)} title="Tải ảnh về"
-      className="absolute bottom-1 right-1 bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1 shadow"><Download className="w-3.5 h-3.5" /></button>
-  </div>
-);
 
 const ContentProductionPage = () => {
   const { profile: me } = useAuth();
@@ -233,14 +225,38 @@ const Empty = ({ icon: Icon, title, desc, cta }) => (
   </div>
 );
 
+const LINK_TONE = {
+  Nguồn: 'border-sky-200 text-sky-700 hover:bg-sky-50 [&_svg]:text-sky-500',
+  Clip: 'border-violet-200 text-violet-700 hover:bg-violet-50 [&_svg]:text-violet-500',
+  Thumb: 'border-amber-200 text-amber-700 hover:bg-amber-50 [&_svg]:text-amber-500',
+};
 const LinkList = ({ links, label = 'Link', icon: Icon = ExternalLink }) => (
   (links || []).length === 0 ? <span className="text-xs text-slate-300">—</span> :
     <div className="flex flex-wrap gap-1.5">
       {(links || []).map((l, i) => (
-        <a key={i} href={l} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg"><Icon className="w-3 h-3" /> {label} {i + 1}</a>
+        <a key={i} href={l} target="_blank" rel="noreferrer"
+          className={`group inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-lg bg-white border text-xs font-semibold shadow-sm hover:shadow transition-all ${LINK_TONE[label] || 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+          <Icon className="w-3.5 h-3.5" /> {label} {links.length > 1 ? i + 1 : ''}
+          <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-70" />
+        </a>
       ))}
     </div>
 );
+
+// Thumbnail có fallback khi ảnh lỗi + nút tải (tuỳ chọn)
+const Thumb = ({ url, size = 'h-10 w-10', download = false, idx = 0 }) => {
+  const [err, setErr] = useState(false);
+  if (err) return <div className={`${size} rounded-md border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300`}><Image className="w-4 h-4" /></div>;
+  return (
+    <div className="relative group">
+      <a href={url} target="_blank" rel="noreferrer"><img src={thumbSrc(url)} onError={() => setErr(true)} loading="lazy" alt="thumbnail" className={`${size} object-cover rounded-md border border-slate-200`} /></a>
+      {download && (
+        <button type="button" onClick={() => downloadFile(url, `thumb-${idx + 1}.jpg`)} title="Tải ảnh về"
+          className="absolute bottom-1 right-1 bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1 shadow opacity-0 group-hover:opacity-100 transition-opacity"><Download className="w-3.5 h-3.5" /></button>
+      )}
+    </div>
+  );
+};
 
 // ---------- Thẻ Kho media (1 khách) — gọn ----------
 const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, onLink, onBuild, onDelete, onDelClip }) => {
@@ -275,9 +291,7 @@ const StoreCard = ({ s, clips, me, isAdmin, canAddMedia, canEdit, onEditSource, 
               </div>
               <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                 <LinkList links={c.clip_links} label="Clip" icon={Scissors} />
-                {(c.thumb_links || []).map((u, i) => (
-                  <a key={i} href={u} target="_blank" rel="noreferrer"><img src={thumbSrc(u)} loading="lazy" alt="" className="h-10 w-10 object-cover rounded-md border border-slate-200" /></a>
-                ))}
+                {(c.thumb_links || []).map((u, i) => <Thumb key={i} url={u} size="h-10 w-10" />)}
               </div>
               {c.ads_feedback && <div className="text-[10px] text-rose-500 italic mt-0.5 truncate">Ads: “{c.ads_feedback}”</div>}
             </div>
@@ -312,7 +326,7 @@ const ClipReviewCard = ({ c, store, canAds, onReview, onSetAd }) => (
         </div>
       ) : <span className="text-xs text-slate-300">Chưa có clip</span>}
       {(c.thumb_links || []).length > 0 && (
-        <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <ThumbDownload key={i} url={l} idx={i} />)}</div>
+        <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-24 w-24" download />)}</div>
       )}
       {c.win && <span className="text-xs font-bold text-amber-600">🏆 Win · {fmtM(c.win_amount)}</span>}
       {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
@@ -565,7 +579,7 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b> · Editor: <b>{clip.editor?.full_name || '—'}</b></p>
       <div className="mb-3 flex flex-col gap-2">
         {(clip.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
-        {(clip.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2">{(clip.thumb_links || []).map((l, i) => <ThumbDownload key={i} url={l} idx={i} />)}</div>}
+        {(clip.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2">{(clip.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-24 w-24" download />)}</div>}
         {(clip.clip_links || []).length === 0 && <span className="text-xs text-slate-300">Chưa có clip</span>}
       </div>
 
