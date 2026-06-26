@@ -35,6 +35,8 @@ const ContentProductionPage = () => {
   const [submitFor, setSubmitFor] = useState(null);   // task đang nộp clip
   const [reviewFor, setReviewFor] = useState(null);    // task đang duyệt
   const [evalFor, setEvalFor] = useState(null);        // task đang chấm Win
+  const [search, setSearch] = useState('');
+  const [mineOnly, setMineOnly] = useState(false);     // chỉ hiện việc liên quan tôi
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -76,6 +78,14 @@ const ContentProductionPage = () => {
     return acc;
   }, {})).sort((a, b) => b.wins - a.wins).slice(0, 5);
 
+  // Lọc: "việc của tôi" (gồm hàng chờ để nhận/duyệt) + tìm theo khách
+  const isMine = (t) => t.media_id === me?.id || t.editor_id === me?.id || t.ads_id === me?.id
+    || (canEdit && t.stage === 'source_ready') || (canAds && t.stage === 'review');
+  const q = search.trim().toLowerCase();
+  const visible = tasks.filter(t =>
+    (!mineOnly || isMine(t)) &&
+    (!q || (t.customer_name || '').toLowerCase().includes(q) || (t.customer_phone || '').includes(q)));
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -108,12 +118,41 @@ const ContentProductionPage = () => {
         </div>
       )}
 
+      {/* Thanh công cụ: tìm source/khách + lọc việc của tôi */}
+      {tasks.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm source theo tên / SĐT khách…"
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+          </div>
+          <button onClick={() => setMineOnly(v => !v)}
+            className={`px-3 py-2 rounded-xl text-sm font-semibold border ${mineOnly ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+            Chỉ việc của tôi
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+      ) : tasks.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
+          <Clapperboard className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-600 font-semibold">Chưa có video nào trong quy trình</p>
+          <p className="text-slate-400 text-sm mt-1 max-w-lg mx-auto leading-relaxed">
+            Quy trình bắt đầu khi <b>Media</b> bấm “Thêm video” (chọn khách + dán link source).
+            Sau đó <b>Editor</b> bấm <b>Nhận dựng</b> → <b>Nộp clip</b> → <b>Ads</b> duyệt &amp; chấm Win.
+            Các nút thao tác sẽ hiện ngay trên từng thẻ video.
+          </p>
+          {canMedia
+            ? <button onClick={() => setAddOpen(true)} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700"><Plus className="w-4 h-4" /> Thêm video đầu tiên</button>
+            : canEdit ? <p className="text-xs text-emerald-600 mt-3 font-medium">Bạn là Editor — khi có source mới, nó xuất hiện ở cột “Chờ dựng” để bạn bấm Nhận dựng.</p>
+              : <p className="text-xs text-slate-400 mt-3">Chờ Media thêm video & Editor dựng clip.</p>}
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {STAGES.map(st => {
-            const list = tasks.filter(t => t.stage === st.key);
+            const list = visible.filter(t => t.stage === st.key);
             return (
               <div key={st.key} className="bg-slate-50/70 rounded-2xl p-3">
                 <div className="flex items-center justify-between px-1 mb-2">
