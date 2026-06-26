@@ -870,15 +870,16 @@ const AppointmentManagementPage = () => {
       {/* Modal Đánh Giá */}
       {showEvalModal && evalApp && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-white">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-white shrink-0">
               <h3 className="font-bold text-slate-800 text-lg">Đánh giá lịch hẹn: {evalApp.customer_name}</h3>
               <button onClick={() => setShowEvalModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleEvalSubmit} className="p-6 space-y-6 bg-slate-50">
+            <form onSubmit={handleEvalSubmit} className="flex flex-col min-h-0 flex-1">
+              <div className="p-6 space-y-6 bg-slate-50 overflow-y-auto flex-1">
               {/* Tabs */}
               <div className="flex rounded-full bg-white border border-slate-200 p-1">
                 <button type="button" onClick={() => setEvalForm({...evalForm, status: 'bong'})}
@@ -987,11 +988,14 @@ const AppointmentManagementPage = () => {
                   </label>
                 </div>
               </div>
+              </div>
 
+              <div className="p-4 bg-white border-t shrink-0">
               <button type="submit" disabled={saving}
-                className="w-full py-3.5 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 transition-colors shadow-lg shadow-teal-600/20">
+                className="w-full py-3.5 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 transition-colors shadow-lg shadow-teal-600/20 disabled:opacity-50">
                 {saving ? 'Đang lưu...' : `Xác nhận khách ${evalForm.status === 'bong' ? 'Bong' : evalForm.status === 'coc' ? 'Cọc' : 'Phẫu thuật'}`}
               </button>
+              </div>
             </form>
           </div>
         </div>
