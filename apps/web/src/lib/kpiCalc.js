@@ -167,7 +167,7 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 // ============================================================
 export const PAYROLL_STANDARD_DAYS = 26;
 
-export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], saved = null }) => {
+export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], saved = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
   const workingDays = att.filter(a => a.staff_id === staff.id && ['present', 'late', 'early_leave'].includes(a.status)).length;
   const effectiveBase = Number(staff.base_salary || 0) * (staff.employment_status === 'probation' ? 0.85 : 1);
@@ -188,7 +188,9 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
     if (role === 'dieu_duong') return computeDieuDuong(surg, staff.id).tongHH;
     return 0;
   };
-  const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0);
+  // Thưởng Win clip quảng cáo (cho editor) — cộng vào hoa hồng/thưởng
+  const winBonus = contentWins.filter(w => w.editor_id === staff.id).reduce((s, w) => s + Number(w.win_amount || 0), 0);
+  const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonus;
 
   const otherBonus = Number(saved?.other_bonus || 0);
   const otherDeduction = Number(saved?.other_deduction || 0);

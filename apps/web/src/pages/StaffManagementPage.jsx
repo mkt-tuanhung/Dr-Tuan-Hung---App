@@ -26,6 +26,7 @@ const ROLES = [
   { value: 'cskh',         label: 'CSKH' },
   { value: 'truc_page',    label: 'Trực Page' },
   { value: 'media',        label: 'Media' },
+  { value: 'editor',       label: 'Editor' },
   { value: 'marketing',    label: 'Marketing' },
   { value: 'dieu_duong',   label: 'Điều dưỡng' },
   { value: 'accountant',   label: 'Kế toán' },
@@ -44,6 +45,7 @@ const ROLE_COLORS = {
   cskh:         'bg-yellow-100 text-yellow-700',
   truc_page:    'bg-pink-100 text-pink-700',
   media:        'bg-cyan-100 text-cyan-700',
+  editor:       'bg-teal-100 text-teal-700',
   marketing:    'bg-indigo-100 text-indigo-700',
   dieu_duong:   'bg-teal-100 text-teal-700',
 };

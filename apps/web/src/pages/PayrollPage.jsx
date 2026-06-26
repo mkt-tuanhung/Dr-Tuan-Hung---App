@@ -32,7 +32,7 @@ const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.roun
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
-  media: 'Media', marketing: 'Marketing', dieu_duong: 'Điều dưỡng', accountant: 'Kế toán',
+  media: 'Media', marketing: 'Marketing', editor: 'Editor', dieu_duong: 'Điều dưỡng', accountant: 'Kế toán',
   shareholder: 'Cổ đông', admin: 'Admin',
 };
 
@@ -60,6 +60,7 @@ const PayrollPage = () => {
     setLoading(true);
     const ms = `${year}-${String(month).padStart(2, '0')}-01`;
     const meDay = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    const meNext = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
     const { data: staff } = await supabase.from('profiles')
       .select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account')
@@ -67,7 +68,7 @@ const PayrollPage = () => {
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
 
-    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes] = await Promise.all([
+    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes] = await Promise.all([
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
@@ -78,11 +79,14 @@ const PayrollPage = () => {
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
       supabase.from('payroll').select('month, year, net_salary'),
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
+      supabase.from('content_tasks').select('editor_id, win_amount').eq('win', true).gte('evaluated_at', ms).lt('evaluated_at', meNext),
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];
     const bong = bongRes.data || [], coc = cocRes.data || [], pages = pageRes.data || [];
     const adv = advRes.data || [], payroll = payRes.data || [], salAdv = salRes.data || [];
+    const contentWins = winRes.data || [];
+    const winBonusOf = (id) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + Number(w.win_amount || 0), 0);
 
     const workingDaysOf = (id) => att.filter(a => a.staff_id === id && ['present', 'late', 'early_leave'].includes(a.status)).length;
     const advanceOf = (id) => adv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
@@ -119,7 +123,7 @@ const PayrollPage = () => {
         }
         return 0;
       };
-      const commission = [s.role, s.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0);
+      const commission = [s.role, s.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonusOf(s.id);
 
       const saved = payroll.find(p => p.staff_id === s.id);
       const otherBonus = Number(saved?.other_bonus || 0);
