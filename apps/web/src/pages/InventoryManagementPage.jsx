@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X, Pencil, Trash2 } from 'lucide-react';
+import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X, Trash2 } from 'lucide-react';
 
 export default function InventoryManagementPage({ isNested = false }) {
   const { profile } = useAuth();
@@ -19,6 +19,8 @@ export default function InventoryManagementPage({ isNested = false }) {
   const [showItemModal, setShowItemModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [stockModal, setStockModal] = useState(null);     // { item } khi sửa tồn kho hiện tại
+  const [stockValue, setStockValue] = useState('');
 
   // Forms
   const [itemForm, setItemForm] = useState({ id: null, name: '', unit: '', min_stock: 10, notes: '' });
@@ -88,6 +90,17 @@ export default function InventoryManagementPage({ isNested = false }) {
   const openEditItem = (item) => {
     setItemForm({ id: item.id, name: item.name, unit: item.unit, min_stock: item.min_stock || 0, notes: item.notes || '' });
     setShowItemModal(true);
+  };
+
+  const openStock = (item) => { setStockModal(item); setStockValue(String(item.current_stock ?? 0)); };
+  const saveStock = async () => {
+    const qty = Number(String(stockValue).replace(/[^\d.-]/g, ''));
+    if (Number.isNaN(qty)) { toast.error('Nhập số lượng hợp lệ'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('inventory_items').update({ current_stock: qty }).eq('id', stockModal.id);
+    setSaving(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success('Đã cập nhật tồn kho'); setStockModal(null); loadData();
   };
 
   const deleteItem = async (item) => {
@@ -210,7 +223,8 @@ export default function InventoryManagementPage({ isNested = false }) {
                     </span>
                     {canWrite && (
                       <>
-                        <button onClick={() => openEditItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Cập nhật</button>
+                        <button onClick={() => openStock(item)} title="Sửa tồn kho" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50">Sửa</button>
                         <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </>
                     )}
@@ -252,8 +266,9 @@ export default function InventoryManagementPage({ isNested = false }) {
                       <td className="px-6 py-4 text-slate-500">{item.notes}</td>
                       {canWrite && (
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => openEditItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600" title="Sửa"><Pencil className="w-4 h-4" /></button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Cập nhật</button>
+                            <button onClick={() => openStock(item)} title="Sửa số lượng tồn kho" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50">Sửa</button>
                             <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
@@ -434,6 +449,28 @@ export default function InventoryManagementPage({ isNested = false }) {
               <button type="submit" disabled={saving} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Hoàn tất Nhập</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {stockModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setStockModal(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
+              <h3 className="font-bold text-emerald-800 text-lg">Sửa tồn kho</h3>
+              <button type="button" onClick={() => setStockModal(null)}><X className="w-5 h-5 text-emerald-400 hover:text-emerald-600" /></button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-500 mb-3"><b className="text-slate-800">{stockModal.name}</b> · đơn vị {stockModal.unit}</p>
+              <label className="block text-sm font-semibold mb-2 text-slate-700">Số lượng tồn kho hiện tại</label>
+              <input type="number" autoFocus value={stockValue} onChange={e => setStockValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveStock(); }}
+                className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 font-bold text-lg text-emerald-600 text-center" placeholder="0" />
+              <p className="text-[11px] text-slate-400 mt-2">Chỉnh số tồn thực tế (kiểm kê). Nhập/xuất sau đó vẫn cộng/trừ bình thường.</p>
+            </div>
+            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
+              <button type="button" onClick={() => setStockModal(null)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
+              <button type="button" onClick={saveStock} disabled={saving} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md disabled:opacity-50">Lưu</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
