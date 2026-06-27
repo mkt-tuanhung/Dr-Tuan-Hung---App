@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -89,6 +89,82 @@ const downloadFile = async (url, name) => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(obj), 1000);
   } catch { window.open(url, '_blank'); }
+};
+
+// ---------- Bộ lọc khoảng ngày (kiểu FB Ads) ----------
+const ymd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+const parseYmd = (s) => { if (!s) return null; const [y, m, dd] = s.split('-').map(Number); return new Date(y, m - 1, dd); };
+const VN_DOW = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const DateRangeFilter = ({ from, to, onApply }) => {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState(() => parseYmd(from) || new Date());
+  const [a, setA] = useState(parseYmd(from));
+  const [b, setB] = useState(parseYmd(to));
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+
+  const pickDay = (d) => {
+    if (!a || (a && b)) { setA(d); setB(null); }
+    else if (d < a) { setB(a); setA(d); }
+    else setB(d);
+  };
+  const preset = (kind) => {
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const dow = (now.getDay() + 6) % 7; let f, t;
+    if (kind === 'week') { f = new Date(now); f.setDate(now.getDate() - dow); t = new Date(f); t.setDate(f.getDate() + 6); }
+    else if (kind === 'lastweek') { t = new Date(now); t.setDate(now.getDate() - dow - 1); f = new Date(t); f.setDate(t.getDate() - 6); }
+    else if (kind === 'month') { f = new Date(now.getFullYear(), now.getMonth(), 1); t = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+    else { f = new Date(now.getFullYear(), now.getMonth() - 1, 1); t = new Date(now.getFullYear(), now.getMonth(), 0); }
+    setA(f); setB(t); setView(f);
+  };
+
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const dim = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= dim; d++) cells.push(new Date(view.getFullYear(), view.getMonth(), d));
+  const inRange = (d) => a && b && d >= a && d <= b;
+  const isEnd = (d) => (a && +d === +a) || (b && +d === +b);
+  const label = from && to ? `${parseYmd(from).toLocaleDateString('vi-VN')} – ${parseYmd(to).toLocaleDateString('vi-VN')}` : 'Lọc theo ngày';
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(o => !o)} className={`px-3 py-2 text-sm rounded-xl border bg-white outline-none inline-flex items-center gap-1.5 ${from && to ? 'border-emerald-400 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+        <CalendarDays className="w-4 h-4" /> {label}
+      </button>
+      {open && (
+        <div className="absolute z-40 mt-1 right-0 w-[290px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3">
+          <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide mb-2">Lọc theo ngày quay/chụp</div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {[['week', 'Tuần này'], ['lastweek', 'Tuần trước'], ['month', 'Tháng này'], ['lastmonth', 'Tháng trước']].map(([k, l]) => (
+              <button key={k} onClick={() => preset(k)} className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700">{l}</button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mb-1">
+            <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} className="p-1 hover:bg-slate-100 rounded"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-sm font-semibold">Tháng {view.getMonth() + 1}/{view.getFullYear()}</span>
+            <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() + 1, 1))} className="p-1 hover:bg-slate-100 rounded"><ChevronRight className="w-4 h-4" /></button>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-slate-400 mb-1">{VN_DOW.map(d => <div key={d}>{d}</div>)}</div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((d, i) => d === null ? <div key={i} /> : (
+              <button key={i} onClick={() => pickDay(d)} className={`h-8 text-xs rounded-lg ${isEnd(d) ? 'bg-emerald-600 text-white font-bold' : inRange(d) ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-100 text-slate-600'}`}>{d.getDate()}</button>
+            ))}
+          </div>
+          <div className="flex justify-between gap-2 mt-3">
+            <button onClick={() => { setA(null); setB(null); onApply('', ''); setOpen(false); }} className="px-3 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50">Xoá lọc</button>
+            <button onClick={() => { onApply(ymd(a), ymd(b || a)); setOpen(false); }} disabled={!a} className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50">Lọc</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const ContentProductionPage = () => {
@@ -254,8 +330,7 @@ const ContentProductionPage = () => {
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
-            <input type="date" value={khoFrom} onChange={e => setKhoFrom(e.target.value)} title="Ngày quay từ" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
-            <input type="date" value={khoTo} onChange={e => setKhoTo(e.target.value)} title="Ngày quay đến" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+            <DateRangeFilter from={khoFrom} to={khoTo} onApply={(f, t) => { setKhoFrom(f); setKhoTo(t); }} />
             {(khoStatus || khoService || khoFrom || khoTo) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden">
               <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
