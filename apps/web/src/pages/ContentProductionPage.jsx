@@ -21,6 +21,7 @@ const suggestSourceId = (name, date) => {
   return cap && d ? `${cap}${d}_01` : '';
 };
 const SOURCE_TYPES = ['Before/After', 'Feedback', 'Hậu phẫu', 'Quá trình làm', 'Tư vấn bác sĩ', 'Khác'];
+const SERVICE_GROUPS = ['Hàm mặt', 'Body', 'Tiểu phẫu'];
 const SOURCE_STATUS = {
   chua_dung: { label: 'Chưa dựng', cls: 'bg-slate-100 text-slate-600' },
   dang_dung: { label: 'Đang dựng', cls: 'bg-blue-100 text-blue-700' },
@@ -178,11 +179,10 @@ const ContentProductionPage = () => {
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
 
   const q = search.trim().toLowerCase();
-  const services = [...new Set(stores.map(s => s.service).filter(Boolean))].sort();
   const visStores = stores.filter(s =>
     (!q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q)) &&
     (!khoStatus || (s.source_status || 'chua_dung') === khoStatus) &&
-    (!khoService || s.service === khoService) &&
+    (!khoService || (s.service || '').includes(khoService)) &&
     (!khoFrom || (s.shoot_date && s.shoot_date >= khoFrom)) &&
     (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)));
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
@@ -252,7 +252,7 @@ const ContentProductionPage = () => {
             </select>
             <select value={khoService} onChange={e => setKhoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
               <option value="">Mọi dịch vụ</option>
-              {services.map(sv => <option key={sv} value={sv}>{sv}</option>)}
+              {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <input type="date" value={khoFrom} onChange={e => setKhoFrom(e.target.value)} title="Ngày quay từ" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
             <input type="date" value={khoTo} onChange={e => setKhoTo(e.target.value)} title="Ngày quay đến" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
@@ -675,10 +675,16 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
       ) : (
         <>
           <Field label="Tên khách hàng"><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="VD: Nguyễn Thị Dung" className={inpCls} /></Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Số điện thoại"><input value={phone} onChange={e => setPhone(e.target.value)} className={inpCls} /></Field>
-            <Field label="Dịch vụ"><input value={service} onChange={e => setService(e.target.value)} className={inpCls} /></Field>
-          </div>
+          <Field label="Số điện thoại"><input value={phone} onChange={e => setPhone(e.target.value)} className={inpCls} /></Field>
+          <Field label="Dịch vụ (chọn nhiều)">
+            <div className="flex flex-wrap gap-1.5">
+              {SERVICE_GROUPS.map(g => {
+                const on = (service || '').split(',').map(x => x.trim()).includes(g);
+                return <button type="button" key={g} onClick={() => setService(prev => { const arr = (prev || '').split(',').map(x => x.trim()).filter(Boolean); return arr.includes(g) ? arr.filter(x => x !== g).join(', ') : [...arr, g].join(', '); })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{g}</button>;
+              })}
+            </div>
+          </Field>
         </>
       )}
 
