@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
-  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle,
+  Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -110,6 +110,10 @@ const ContentProductionPage = () => {
   const didLoad = useRef(false);
   const [search, setSearch] = useState('');
   const [khoStatus, setKhoStatus] = useState('');   // lọc trạng thái source
+  const [khoService, setKhoService] = useState(''); // lọc dịch vụ
+  const [khoFrom, setKhoFrom] = useState('');       // lọc ngày quay từ
+  const [khoTo, setKhoTo] = useState('');           // lọc ngày quay đến
+  const [khoView, setKhoView] = useState('list');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [addOpen, setAddOpen] = useState(false);
   const [addVideoOpen, setAddVideoOpen] = useState(false);
@@ -174,9 +178,13 @@ const ContentProductionPage = () => {
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
 
   const q = search.trim().toLowerCase();
+  const services = [...new Set(stores.map(s => s.service).filter(Boolean))].sort();
   const visStores = stores.filter(s =>
     (!q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q)) &&
-    (!khoStatus || (s.source_status || 'chua_dung') === khoStatus));
+    (!khoStatus || (s.source_status || 'chua_dung') === khoStatus) &&
+    (!khoService || s.service === khoService) &&
+    (!khoFrom || (s.shoot_date && s.shoot_date >= khoFrom)) &&
+    (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)));
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
@@ -237,10 +245,23 @@ const ContentProductionPage = () => {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
         </div>
         {tab === 'kho' && (
-          <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
-            <option value="">Mọi trạng thái source</option>
-            {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
+          <>
+            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+              <option value="">Mọi trạng thái source</option>
+              {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+              <option value="">Mọi dịch vụ</option>
+              {services.map(sv => <option key={sv} value={sv}>{sv}</option>)}
+            </select>
+            <input type="date" value={khoFrom} onChange={e => setKhoFrom(e.target.value)} title="Ngày quay từ" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+            <input type="date" value={khoTo} onChange={e => setKhoTo(e.target.value)} title="Ngày quay đến" className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+            {(khoStatus || khoService || khoFrom || khoTo) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+              <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
+            </div>
+          </>
         )}
         {tab === 'video' && (
           <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
@@ -257,6 +278,14 @@ const ContentProductionPage = () => {
           <Empty icon={FolderOpen} title="Kho media trống"
             desc={canAddMedia ? 'Bấm “Thêm media” để up link nguồn và gắn với khách hàng.' : canEdit ? 'Khi Media up nguồn, bạn vào đây bấm “Dựng video” cho từng khách.' : 'Chưa có dữ liệu media.'}
             cta={canAddMedia ? { label: 'Thêm media', onClick: () => setAddOpen(true) } : null} />
+        ) : khoView === 'card' ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {visStores.map(s => (
+              <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })}
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
+            ))}
+          </div>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
             {visStores.map(s => (
@@ -436,6 +465,45 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSourc
         {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
         {!s.appointment_id && owner && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline mr-0.5" />Kết nối</button>}
         {owner && <button onClick={onDelete} title="Xoá" className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 className="w-4 h-4" /></button>}
+      </div>
+    </div>
+  );
+};
+
+// ---------- Thẻ Kho media (chế độ thẻ) ----------
+const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+  const owner = canAddMedia || s.media_id === me?.id;
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-bold text-slate-800 text-sm truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
+          <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+        </div>
+        {s.appointment_id
+          ? <span className="shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">LK</span>
+          : <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Chưa LK</span>}
+      </div>
+      {(s.source_id || s.service || s.shoot_date) && (
+        <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-x-2">
+          {s.source_id && <span className="font-mono text-violet-600">#{s.source_id}</span>}
+          {s.service && <span>{s.service}</span>}
+          {s.shoot_date && <span>📅 {new Date(s.shoot_date).toLocaleDateString('vi-VN')}</span>}
+        </div>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <LinkList links={s.source_links} label="Nguồn" icon={Film} />
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
+        <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full hover:bg-violet-100 disabled:opacity-60">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
+        {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">★ {s.source_score}/10</span>}
+      </div>
+      {s.source_feedback && <div className="text-[11px] text-slate-500 italic mt-1 truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
+      <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-50 pt-2">
+        {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng</button>}
+        {canEdit && <button onClick={onScore} className="text-xs font-semibold text-amber-600 px-2 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-50">Chấm/Góp ý</button>}
+        {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
+        {!s.appointment_id && owner && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline" /></button>}
+        {owner && <button onClick={onDelete} className="text-rose-400 hover:text-rose-600 p-1.5 ml-auto"><Trash2 className="w-4 h-4" /></button>}
       </div>
     </div>
   );
