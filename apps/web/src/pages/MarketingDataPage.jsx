@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
-import { parseCSV } from '@/lib/csv';
-import { Database, Plus, Upload, Search, X, Trash2, Link2 } from 'lucide-react';
+import { parseCSV, downloadCsv } from '@/lib/csv';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -236,6 +236,16 @@ const ImportModal = ({ me, onClose, onDone }) => {
 
   const onFile = async (e) => { const file = e.target.files[0]; e.target.value = ''; if (!file) return; const t = await file.text(); setText(t); parse(t); };
 
+  const downloadSample = () => {
+    const rows = [
+      ['Tên khách hàng', 'SĐT', 'Mô tả', 'Trạng thái', 'Trao đổi gần nhất', 'Thông tin đã tiếp cận'],
+      ['Nguyễn Văn A', '0901234567', 'Quan tâm nâng mũi', 'Tiếp cận', 'Đã nhắn tư vấn báo giá', 'Khách hỏi giá nâng mũi cấu trúc'],
+      ['Trần Thị B', '0912345678', 'Hỏi cắt mí', 'Nóng', 'Hẹn gọi lại chiều nay', 'Đã gửi hình before/after'],
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadCsv('mau-data-khach-hang.csv', csv);
+  };
+
   const doImport = async () => {
     if (preview.length === 0) { toast.error('Chưa có dữ liệu hợp lệ (cần cột SĐT)'); return; }
     setSaving(true);
@@ -250,7 +260,10 @@ const ImportModal = ({ me, onClose, onDone }) => {
   return (
     <Modal title="Import Data khách (CSV)" onClose={onClose}>
       <p className="text-[12px] text-slate-500 mb-2">Cột nhận dạng tự động theo tiêu đề: <b>Tên</b>, <b>SĐT</b>, Mô tả, Trạng thái, Trao đổi gần nhất, Thông tin đã tiếp cận. Bắt buộc có cột <b>SĐT</b>. Trùng SĐT sẽ hợp nhất.</p>
-      <button type="button" onClick={() => fileRef.current?.click()} className="mb-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50"><Upload className="w-4 h-4" /> Chọn file CSV</button>
+      <div className="flex gap-2 mb-2 flex-wrap">
+        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50"><Upload className="w-4 h-4" /> Chọn file CSV</button>
+        <button type="button" onClick={downloadSample} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"><Download className="w-4 h-4" /> Tải file mẫu</button>
+      </div>
       <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
       <textarea value={text} onChange={e => { setText(e.target.value); parse(e.target.value); }} rows={5} placeholder="Hoặc dán nội dung CSV vào đây (dòng đầu là tiêu đề)…" className={inp + ' font-mono text-xs'} />
       {preview.length > 0 && <div className="mt-2 text-sm text-emerald-700 font-semibold">Nhận diện {preview.length} khách hợp lệ.</div>}
