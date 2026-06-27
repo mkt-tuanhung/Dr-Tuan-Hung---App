@@ -21,13 +21,14 @@ import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
 import MarketingHubPage from '@/pages/MarketingHubPage.jsx';
+import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -36,6 +37,7 @@ const MENU_GROUPS = [
     { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
   ]},
   { title: 'KHÁCH HÀNG', color: 'blue', items: [
+    { id: 'data_kh', label: 'Data khách hàng', icon: Database },
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
     { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
@@ -293,6 +295,7 @@ const AdminDashboard = () => {
       case 'community': return <CommunityPage />;
       case 'notifications': return <NotificationsPage />;
       case 'marketing': return <MarketingHubPage />;
+      case 'data_kh': return <MarketingDataPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;

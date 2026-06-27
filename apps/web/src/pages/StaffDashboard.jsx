@@ -6,7 +6,7 @@ import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard,
-  Trophy, Scissors, CheckCircle2
+  Trophy, Scissors, CheckCircle2, Database
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -26,6 +26,7 @@ import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
+import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
 import { loadPayrollDetail } from '@/lib/payrollData';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
@@ -50,6 +51,7 @@ const FULL_MENU = [
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
 
   // MKT / Finance / Sales
+  { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
   { id: 'content',    label: 'Sản xuất Ads',     icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
   { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
@@ -359,6 +361,7 @@ const StaffDashboard = () => {
     if (activeTab === 'payroll') return <PayrollPage />;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
     if (activeTab === 'content') return <ContentProductionPage />;
+    if (activeTab === 'data_kh') return <MarketingDataPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
