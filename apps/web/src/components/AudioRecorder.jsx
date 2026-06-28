@@ -25,6 +25,12 @@ export default function AudioRecorder({ onClose, onSaved }) {
   const timer = useRef(null);
   const segTimer = useRef(null);
   const canvasRef = useRef(null);
+  const wakeLock = useRef(null);
+
+  const acquireWake = useCallback(async () => {
+    try { if ('wakeLock' in navigator) wakeLock.current = await navigator.wakeLock.request('screen'); } catch { /* không hỗ trợ / từ chối */ }
+  }, []);
+  const releaseWake = useCallback(() => { try { wakeLock.current?.release(); } catch { /* noop */ } wakeLock.current = null; }, []);
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(raf.current);
@@ -32,8 +38,16 @@ export default function AudioRecorder({ onClose, onSaved }) {
     if (stream.current) stream.current.getTracks().forEach(t => t.stop());
     if (audioCtx.current && audioCtx.current.state !== 'closed') audioCtx.current.close();
     stream.current = null; audioCtx.current = null; analyser.current = null;
-  }, []);
+    releaseWake();
+  }, [releaseWake]);
   useEffect(() => () => cleanup(), [cleanup]);
+
+  // Khi quay lại tab mà đang ghi -> xin lại wake lock (wake lock tự mất khi ẩn tab)
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'visible' && recording) acquireWake(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [recording, acquireWake]);
 
   const draw = useCallback(() => {
     const cv = canvasRef.current; const an = analyser.current;
@@ -90,6 +104,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
       segBlobs.current = []; setSegs([]); setSeconds(0);
       startRecorder();
       setRecording(true);
+      acquireWake();
       timer.current = setInterval(() => setSeconds(x => x + 1), 1000);
       segTimer.current = setInterval(() => { rotating.current = true; if (mediaRec.current?.state === 'recording') mediaRec.current.stop(); }, SEGMENT_MS);
       draw();
@@ -103,6 +118,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
     rotating.current = false;
     if (mediaRec.current && mediaRec.current.state !== 'inactive') mediaRec.current.stop();
     setRecording(false);
+    releaseWake();
   };
 
   const reset = () => { setSegs([]); segBlobs.current = []; setSeconds(0); };
@@ -153,7 +169,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
               </button>
             </div>
           )}
-          {recording && <p className="text-[11px] text-rose-500 mt-3 animate-pulse">● Đang ghi… (tự cắt đoạn mỗi 10 phút) — bấm ô vuông để dừng</p>}
+          {recording && <p className="text-[11px] text-rose-500 mt-3 animate-pulse text-center">● Đang ghi… (giữ màn hình sáng) — bấm ô vuông để dừng.<br />Đừng khoá màn hình / chuyển app khác khi đang ghi.</p>}
           {!recording && !segs.length && <p className="text-[11px] text-slate-400 mt-3">Cuộc dài 30–90 phút được tự chia đoạn để transcribe nhanh & chính xác</p>}
         </div>
       </div>
