@@ -148,23 +148,23 @@ const KhachTuVanPage = () => {
             return (
             <div key={r.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-teal-100 transition-all p-4 flex flex-col">
               <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 shrink-0 rounded-xl ${avatarBg(r.customer_name)} text-white flex items-center justify-center font-bold text-sm shadow-sm`}>{initials(r.customer_name)}</div>
+                <div className={`w-11 h-11 shrink-0 rounded-xl ${avatarBg(r.customer_name)} text-white flex items-center justify-center font-bold text-base shadow-sm`}>{initials(r.customer_name)}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="font-bold text-slate-800 truncate flex-1">{r.customer_name}</div>
-                    <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}><span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{ST[r.status]?.label || r.status}</span>
+                    <div className="font-bold text-slate-800 text-[17px] truncate flex-1">{r.customer_name}</div>
+                    <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}><span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{ST[r.status]?.label || r.status}</span>
                   </div>
-                  <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" /> {maskPhone(r.phone)}</div>
+                  <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-3.5 h-3.5" /> {maskPhone(r.phone)}</div>
                 </div>
               </div>
 
-              {r.service && <div className="mt-2.5 text-xs text-slate-600 bg-slate-50 rounded-lg px-2.5 py-1.5 line-clamp-2">💉 {r.service}</div>}
-              {r.consult_note && <div className="mt-1.5 text-[11px] text-slate-500 line-clamp-2">📝 {r.consult_note}</div>}
+              {r.service && <div className="mt-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 line-clamp-2">💉 {r.service}</div>}
+              {r.consult_note && <div className="mt-1.5 text-sm text-slate-500 line-clamp-2">📝 {r.consult_note}</div>}
 
               {((r.consult_image_urls || []).length > 0 || rs.length > 0) && (
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                  {(r.consult_image_urls || []).length > 0 && <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">🖼 {(r.consult_image_urls || []).length} ảnh</span>}
-                  {rs.length > 0 && <span className="bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full">🎙 {rs.length} ghi âm</span>}
+                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                  {(r.consult_image_urls || []).length > 0 && <span className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">🖼 {(r.consult_image_urls || []).length} ảnh</span>}
+                  {rs.length > 0 && <span className="bg-rose-50 text-rose-500 px-2.5 py-1 rounded-full">🎙 {rs.length} ghi âm</span>}
                 </div>
               )}
 
@@ -181,11 +181,11 @@ const KhachTuVanPage = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-[11px] font-bold text-slate-600">{rec.ai_analysis.level}</span>}
-                            {(rec.segment_urls || []).length > 1 && <span className="text-[10px] text-slate-400">· {rec.segment_urls.length} đoạn</span>}
-                            {rec.status === 'processing' && <span className="text-[10px] text-amber-600">Đang phân tích…</span>}
+                            {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-sm font-bold text-slate-700">{rec.ai_analysis.level}</span>}
+                            {(rec.segment_urls || []).length > 1 && <span className="text-xs text-slate-400">· {rec.segment_urls.length} đoạn</span>}
+                            {rec.status === 'processing' && <span className="text-xs text-amber-600">Đang phân tích…</span>}
                             <div className="ml-auto flex items-center gap-1.5">
-                              {rec.delete_requested_by && <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Chờ duyệt xoá</span>}
+                              {rec.delete_requested_by && <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Chờ duyệt xoá</span>}
                               {isAdmin ? (rec.delete_requested_by
                                 ? <><button onClick={() => softDelete(rec, 'Duyệt xoá: chuyển ghi âm này vào Thùng rác?')} title="Duyệt xoá" className="text-rose-400 hover:text-rose-600"><Trash2 className="w-3.5 h-3.5" /></button><button onClick={() => rejectDelete(rec)} title="Từ chối" className="text-slate-300 hover:text-slate-500"><X className="w-3.5 h-3.5" /></button></>
                                 : <button onClick={() => softDelete(rec, 'Chuyển ghi âm này vào Thùng rác?')} title="Xoá" className="text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>)
@@ -195,10 +195,10 @@ const KhachTuVanPage = () => {
                           <audio src={rec.audio_url} controls className="h-7 w-full mt-1" />
                         </div>
                       </div>
-                      {rec.ai_analysis?.summary && <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">{rec.ai_analysis.summary}</div>}
-                      <div className="flex gap-3 mt-1.5">
-                        {rec.transcript && <button onClick={() => setTranscriptView(rec)} className="text-[11px] font-bold text-teal-600 hover:text-teal-700">Xem chi tiết →</button>}
-                        {rec.status !== 'processing' && <button onClick={() => reanalyze(rec.id)} className="text-[11px] font-semibold text-slate-400 hover:text-slate-600">Phân tích lại</button>}
+                      {rec.ai_analysis?.summary && <div className="text-sm text-slate-500 mt-1.5 line-clamp-3">{rec.ai_analysis.summary}</div>}
+                      <div className="flex gap-4 mt-2">
+                        {rec.transcript && <button onClick={() => setTranscriptView(rec)} className="text-sm font-bold text-teal-600 hover:text-teal-700">Xem chi tiết →</button>}
+                        {rec.status !== 'processing' && <button onClick={() => reanalyze(rec.id)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Phân tích lại</button>}
                       </div>
                     </div>
                   ))}
@@ -207,9 +207,9 @@ const KhachTuVanPage = () => {
 
               {canWrite && (
                 <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
-                  <button onClick={() => setConsultFor(r)} className="h-10 text-xs font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" />Hồ sơ tư vấn</button>
-                  <button onClick={() => setRecFor(r)} className="h-10 text-xs font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" />Ghi âm</button>
-                  <button onClick={() => setEvalFor(r)} className="col-span-2 h-10 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-sm shadow-teal-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
+                  <button onClick={() => setConsultFor(r)} className="h-11 text-sm font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" />Hồ sơ tư vấn</button>
+                  <button onClick={() => setRecFor(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" />Ghi âm</button>
+                  <button onClick={() => setEvalFor(r)} className="col-span-2 h-11 text-base font-bold text-white rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-sm shadow-teal-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
                 </div>
               )}
             </div>
@@ -231,44 +231,44 @@ const KhachTuVanPage = () => {
         <Modal title="Văn bản & đánh giá tư vấn" onClose={() => setTranscriptView(null)}>
           {transcriptView.ai_score != null && (
             <div className="mb-3 flex items-center gap-2">
-              <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreCls(transcriptView.ai_score)}`}>{transcriptView.ai_score}/10 · {transcriptView.ai_analysis?.level || ''}</span>
+              <span className={`text-base font-bold px-3 py-1.5 rounded-full ${scoreCls(transcriptView.ai_score)}`}>{transcriptView.ai_score}/10 · {transcriptView.ai_analysis?.level || ''}</span>
             </div>
           )}
-          {transcriptView.ai_analysis?.summary && <p className="text-sm text-slate-600 mb-3">{transcriptView.ai_analysis.summary}</p>}
+          {transcriptView.ai_analysis?.summary && <p className="text-[15px] text-slate-600 mb-3 leading-relaxed">{transcriptView.ai_analysis.summary}</p>}
           {transcriptView.ai_analysis?.criteria && (
-            <div className="grid grid-cols-2 gap-1.5 mb-3 text-xs">
+            <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
               {Object.entries({ thien_cam: 'Thiện cảm', khai_thac_nhu_cau: 'Khai thác nhu cầu', tu_van_chuyen_mon: 'Chuyên môn', xu_ly_tu_choi: 'Xử lý từ chối', chot: 'Chốt', thai_do: 'Thái độ' }).map(([k, l]) => (
-                <div key={k} className="flex justify-between bg-slate-50 rounded-lg px-2 py-1"><span className="text-slate-500">{l}</span><b className="text-slate-700">{transcriptView.ai_analysis.criteria[k] ?? '—'}/10</b></div>
+                <div key={k} className="flex justify-between bg-slate-50 rounded-lg px-3 py-2"><span className="text-slate-500">{l}</span><b className="text-slate-700">{transcriptView.ai_analysis.criteria[k] ?? '—'}/10</b></div>
               ))}
             </div>
           )}
-          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-teal-600 mb-1">Điểm mạnh</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
-          {(transcriptView.ai_analysis?.weaknesses || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-rose-600 mb-1">Điểm yếu</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
-          {(transcriptView.ai_analysis?.suggestions || []).length > 0 && <div className="mb-3"><div className="text-xs font-bold text-blue-600 mb-1">Gợi ý cải thiện</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-teal-600 mb-1">Điểm mạnh</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.weaknesses || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-rose-600 mb-1">Điểm yếu</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.suggestions || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-blue-600 mb-1">Gợi ý cải thiện</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.issues || []).length > 0 && (
             <div className="mb-3">
-              <div className="text-xs font-bold text-rose-600 mb-1">Câu/đoạn chưa phù hợp</div>
-              <ul className="space-y-1">
+              <div className="text-sm font-bold text-rose-600 mb-1">Câu/đoạn chưa phù hợp</div>
+              <ul className="space-y-1.5">
                 {transcriptView.ai_analysis.issues.map((it, i) => (
-                  <li key={i} className="text-xs bg-rose-50 border border-rose-100 rounded-lg p-2">
-                    <span className="text-rose-700 font-bold">“{it.quote}”</span>{it.time ? <span className="text-rose-400"> · {it.time}</span> : null}
+                  <li key={i} className="text-sm bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+                    <span className="text-rose-700 font-bold">“{it.quote}”</span>{it.time ? <span className="text-rose-400 text-xs"> · {it.time}</span> : null}
                     {it.reason && <div className="text-slate-500 mt-0.5">{it.reason}</div>}
                   </li>
                 ))}
               </ul>
             </div>
           )}
-          <div className="text-xs font-bold text-slate-500 mb-1">Văn bản theo mốc thời gian</div>
+          <div className="text-sm font-bold text-slate-500 mb-1">Văn bản theo mốc thời gian</div>
           {(() => { const quotes = (transcriptView.ai_analysis?.issues || []).map(x => x.quote); const tl = transcriptView.transcript_timeline || []; return (
-            <div className="bg-slate-50 rounded-xl p-3 max-h-72 overflow-y-auto space-y-2.5">
+            <div className="bg-slate-50 rounded-xl p-3 max-h-80 overflow-y-auto space-y-3">
               {tl.length > 0
                 ? tl.map((b, i) => (
                   <div key={i}>
-                    <div className="text-[11px] font-bold text-teal-600">{fmtTime(b.from)} – {fmtTime(b.to)}</div>
-                    <div className="text-xs text-slate-600 mt-0.5"><Highlight text={b.text} quotes={quotes} /></div>
+                    <div className="text-xs font-bold text-teal-600">{fmtTime(b.from)} – {fmtTime(b.to)}</div>
+                    <div className="text-sm text-slate-700 mt-0.5 leading-relaxed"><Highlight text={b.text} quotes={quotes} /></div>
                   </div>
                 ))
-                : <div className="text-xs text-slate-600 whitespace-pre-wrap"><Highlight text={transcriptView.transcript || '—'} quotes={quotes} /></div>}
+                : <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed"><Highlight text={transcriptView.transcript || '—'} quotes={quotes} /></div>}
             </div>
           ); })()}
         </Modal>
