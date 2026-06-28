@@ -4,9 +4,11 @@ import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-const SEGMENT_MS = 10 * 60 * 1000; // tự cắt đoạn mỗi 10 phút (mỗi đoạn 1 file độc lập, dễ transcribe)
+const SEGMENT_MS = 5 * 60 * 1000; // tự cắt đoạn mỗi 5 phút (file nhỏ, upload an toàn, dễ transcribe)
+// Tạo MediaRecorder bitrate thấp (32kbps đủ cho giọng nói) — không ép mimeType để iOS/Safari vẫn chạy
+const makeRecorder = (s) => { try { return new MediaRecorder(s, { audioBitsPerSecond: 32000 }); } catch { return new MediaRecorder(s); } };
 
-// Popup ghi âm tư vấn — như recorder điện thoại (sóng âm + dB). Cuộc dài tự cắt đoạn 10'.
+// Popup ghi âm tư vấn — như recorder điện thoại (sóng âm + dB). Cuộc dài tự cắt đoạn 5'.
 export default function AudioRecorder({ onClose, onSaved }) {
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -75,7 +77,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
 
   const startRecorder = () => {
     chunks.current = [];
-    const mr = new MediaRecorder(stream.current);
+    const mr = makeRecorder(stream.current);
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
     mr.onstop = () => {
       const blob = new Blob(chunks.current, { type: mr.mimeType || 'audio/webm' });
