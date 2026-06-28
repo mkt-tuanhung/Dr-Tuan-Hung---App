@@ -28,22 +28,30 @@ Deno.serve(async (req) => {
     if (!rec) return json({ error: 'không tìm thấy bản ghi' }, 404);
     await supabase.from('consult_recordings').update({ status: 'processing' }).eq('id', recId);
 
-    // 1) Tải audio từ R2
-    const audioRes = await fetch(rec.audio_url);
-    if (!audioRes.ok) throw new Error('Không tải được file audio');
-    const audioBlob = await audioRes.blob();
+    // Danh sách đoạn (cuộc dài đã chia 10 phút/đoạn). Fallback file đơn.
+    const urls: string[] = (Array.isArray(rec.segment_urls) && rec.segment_urls.length) ? rec.segment_urls : [rec.audio_url];
 
-    // 2) Whisper -> transcript tiếng Việt
-    const fd = new FormData();
-    fd.append('file', audioBlob, 'audio.webm');
-    fd.append('model', 'whisper-1');
-    fd.append('language', 'vi');
-    const wr = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST', headers: { Authorization: `Bearer ${OPENAI}` }, body: fd,
-    });
-    const wj = await wr.json();
-    if (!wr.ok) throw new Error('Whisper: ' + (wj.error?.message || wr.status));
-    const transcript: string = wj.text || '';
+    // Whisper từng đoạn -> transcript tiếng Việt (chạy song song, tối đa 4 đoạn cùng lúc)
+    const transcribe = async (u: string): Promise<string> => {
+      const ar = await fetch(u);
+      if (!ar.ok) throw new Error('Không tải được file audio');
+      const blob = await ar.blob();
+      const fd = new FormData();
+      fd.append('file', blob, 'audio.webm');
+      fd.append('model', 'whisper-1');
+      fd.append('language', 'vi');
+      const wr = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${OPENAI}` }, body: fd });
+      const wj = await wr.json();
+      if (!wr.ok) throw new Error('Whisper: ' + (wj.error?.message || wr.status));
+      return wj.text || '';
+    };
+    const texts: string[] = new Array(urls.length).fill('');
+    let next = 0;
+    const LIMIT = 4;
+    await Promise.all(Array.from({ length: Math.min(LIMIT, urls.length) }, async () => {
+      while (next < urls.length) { const i = next++; texts[i] = await transcribe(urls[i]); }
+    }));
+    const transcript: string = texts.join('\n');
 
     if (transcript.trim().length < 5) {
       await supabase.from('consult_recordings').update({ transcript, status: 'done', ai_score: null, ai_analysis: { summary: 'Bản ghi quá ngắn / không nghe rõ.' } }).eq('id', recId);

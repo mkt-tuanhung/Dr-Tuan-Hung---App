@@ -119,6 +119,7 @@ const KhachTuVanPage = () => {
                     <div key={rec.id} className="bg-slate-50 rounded-xl p-2">
                       <div className="flex items-center gap-2">
                         <audio src={rec.audio_url} controls className="h-7 flex-1 min-w-0" />
+                        {(rec.segment_urls || []).length > 1 && <span className="text-[10px] text-slate-400 shrink-0">{rec.segment_urls.length} đoạn</span>}
                         {rec.ai_score != null
                           ? <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${scoreCls(rec.ai_score)}`}>{rec.ai_score}/10</span>
                           : rec.status === 'processing' ? <span className="text-[10px] text-amber-600 shrink-0 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />AI…</span>
@@ -149,9 +150,9 @@ const KhachTuVanPage = () => {
 
       {evalFor && <EvalModal app={evalFor} onClose={() => setEvalFor(null)} onSaved={() => { setEvalFor(null); loadData(); }} />}
       {consultFor && <ConsultModal app={consultFor} onClose={() => setConsultFor(null)} onSaved={() => { setConsultFor(null); loadData(); }} />}
-      {recFor && <AudioRecorder onClose={() => setRecFor(null)} onSaved={async (url, sec) => {
+      {recFor && <AudioRecorder onClose={() => setRecFor(null)} onSaved={async (urls, sec) => {
         const { data, error } = await supabase.from('consult_recordings')
-          .insert({ appointment_id: recFor.id, audio_url: url, duration_sec: sec, created_by: me.id, status: 'pending' }).select('id').single();
+          .insert({ appointment_id: recFor.id, audio_url: urls[0], segment_urls: urls, duration_sec: sec, created_by: me.id, status: 'pending' }).select('id').single();
         if (error) { toast.error(error.message); return; }
         setRecFor(null); toast.success('Đã lưu ghi âm — đang transcribe & chấm điểm AI…');
         loadData();

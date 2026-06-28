@@ -5,6 +5,7 @@ create table if not exists consult_recordings (
   id uuid default uuid_generate_v4() primary key,
   appointment_id uuid references customer_appointments(id) on delete cascade,
   audio_url text not null,
+  segment_urls jsonb default '[]'::jsonb,
   duration_sec int,
   transcript text,
   ai_score numeric,

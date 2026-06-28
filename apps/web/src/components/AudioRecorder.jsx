@@ -4,28 +4,31 @@ import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+const SEGMENT_MS = 10 * 60 * 1000; // tự cắt đoạn mỗi 10 phút (mỗi đoạn 1 file độc lập, dễ transcribe)
 
-// Popup ghi âm tư vấn — giao diện như recorder điện thoại (sóng âm + dB)
+// Popup ghi âm tư vấn — như recorder điện thoại (sóng âm + dB). Cuộc dài tự cắt đoạn 10'.
 export default function AudioRecorder({ onClose, onSaved }) {
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [db, setDb] = useState(-60);
-  const [blobUrl, setBlobUrl] = useState(null);
+  const [segs, setSegs] = useState([]);      // [{ url, blob }] sau khi dừng
   const [uploading, setUploading] = useState(false);
 
   const mediaRec = useRef(null);
   const chunks = useRef([]);
+  const segBlobs = useRef([]);
+  const rotating = useRef(false);
   const stream = useRef(null);
   const audioCtx = useRef(null);
   const analyser = useRef(null);
   const raf = useRef(null);
   const timer = useRef(null);
+  const segTimer = useRef(null);
   const canvasRef = useRef(null);
-  const blobRef = useRef(null);
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(raf.current);
-    clearInterval(timer.current);
+    clearInterval(timer.current); clearInterval(segTimer.current);
     if (stream.current) stream.current.getTracks().forEach(t => t.stop());
     if (audioCtx.current && audioCtx.current.state !== 'closed') audioCtx.current.close();
     stream.current = null; audioCtx.current = null; analyser.current = null;
@@ -39,12 +42,10 @@ export default function AudioRecorder({ onClose, onSaved }) {
     const N = an.frequencyBinCount;
     const data = new Uint8Array(N);
     an.getByteTimeDomainData(data);
-    // dB từ RMS
     let sum = 0;
     for (let i = 0; i < N; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
     const rms = Math.sqrt(sum / N);
     setDb(rms > 0 ? Math.max(-60, Math.round(20 * Math.log10(rms))) : -60);
-    // vẽ sóng dạng cột
     const W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
     const bars = 48; const bw = W / bars;
@@ -58,6 +59,23 @@ export default function AudioRecorder({ onClose, onSaved }) {
     raf.current = requestAnimationFrame(draw);
   }, []);
 
+  const startRecorder = () => {
+    chunks.current = [];
+    const mr = new MediaRecorder(stream.current);
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
+    mr.onstop = () => {
+      const blob = new Blob(chunks.current, { type: mr.mimeType || 'audio/webm' });
+      if (blob.size > 0) segBlobs.current.push(blob);
+      if (rotating.current) { rotating.current = false; startRecorder(); }
+      else {
+        setSegs(segBlobs.current.map(b => ({ url: URL.createObjectURL(b), blob: b })));
+        if (stream.current) stream.current.getTracks().forEach(t => t.stop());
+      }
+    };
+    mediaRec.current = mr;
+    mr.start();
+  };
+
   const start = async () => {
     try {
       const s = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -69,18 +87,11 @@ export default function AudioRecorder({ onClose, onSaved }) {
       analyser.current.fftSize = 512;
       src.connect(analyser.current);
 
-      chunks.current = [];
-      const mr = new MediaRecorder(s);
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
-      mr.onstop = () => {
-        const blob = new Blob(chunks.current, { type: mr.mimeType || 'audio/webm' });
-        setBlobUrl(URL.createObjectURL(blob));
-        blobRef.current = blob;
-      };
-      mediaRec.current = mr;
-      mr.start();
-      setRecording(true); setSeconds(0); setBlobUrl(null); blobRef.current = null;
+      segBlobs.current = []; setSegs([]); setSeconds(0);
+      startRecorder();
+      setRecording(true);
       timer.current = setInterval(() => setSeconds(x => x + 1), 1000);
+      segTimer.current = setInterval(() => { rotating.current = true; if (mediaRec.current?.state === 'recording') mediaRec.current.stop(); }, SEGMENT_MS);
       draw();
     } catch {
       toast.error('Không truy cập được micro. Hãy cấp quyền micro cho trình duyệt.');
@@ -88,23 +99,26 @@ export default function AudioRecorder({ onClose, onSaved }) {
   };
 
   const stop = () => {
+    clearInterval(segTimer.current); clearInterval(timer.current); cancelAnimationFrame(raf.current);
+    rotating.current = false;
     if (mediaRec.current && mediaRec.current.state !== 'inactive') mediaRec.current.stop();
-    cancelAnimationFrame(raf.current);
-    clearInterval(timer.current);
-    if (stream.current) stream.current.getTracks().forEach(t => t.stop());
     setRecording(false);
   };
 
-  const reset = () => { setBlobUrl(null); blobRef.current = null; setSeconds(0); };
+  const reset = () => { setSegs([]); segBlobs.current = []; setSeconds(0); };
 
   const save = async () => {
-    if (!blobRef.current) return;
+    if (segBlobs.current.length === 0) return;
     setUploading(true);
     try {
-      const ext = (blobRef.current.type.includes('mp4') ? 'm4a' : 'webm');
-      const file = new File([blobRef.current], `ghi-am-tu-van-${Date.now()}.${ext}`, { type: blobRef.current.type });
-      const url = await uploadToR2(file, 'consult-audio');
-      onSaved(url, seconds);
+      const urls = [];
+      for (let i = 0; i < segBlobs.current.length; i++) {
+        const b = segBlobs.current[i];
+        const ext = b.type.includes('mp4') ? 'm4a' : 'webm';
+        const file = new File([b], `tu-van-${Date.now()}-p${i + 1}.${ext}`, { type: b.type });
+        urls.push(await uploadToR2(file, 'consult-audio'));
+      }
+      onSaved(urls, seconds);
     } catch (err) { toast.error('Lỗi tải lên: ' + err.message); }
     setUploading(false);
   };
@@ -117,19 +131,16 @@ export default function AudioRecorder({ onClose, onSaved }) {
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
         </div>
         <div className="p-6 flex flex-col items-center">
-          {/* Đồng hồ */}
           <div className="text-4xl font-bold tabular-nums text-slate-800">{fmtTime(seconds)}</div>
-          <div className="text-xs text-slate-400 mt-1">{recording ? `${db} dB` : blobUrl ? 'Đã ghi xong' : 'Sẵn sàng ghi'}</div>
+          <div className="text-xs text-slate-400 mt-1">{recording ? `${db} dB` : segs.length ? `Đã ghi ${segs.length} đoạn` : 'Sẵn sàng ghi'}</div>
 
-          {/* Sóng âm */}
-          <div className="w-full h-24 my-5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-            {recording ? <canvas ref={canvasRef} width={320} height={88} className="w-full h-full" />
-              : blobUrl ? <audio src={blobUrl} controls className="w-[90%]" />
-                : <div className="text-slate-300 text-sm flex items-center gap-2"><Mic className="w-5 h-5" /> Bấm nút đỏ để ghi</div>}
+          <div className="w-full my-5 rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden">
+            {recording ? <canvas ref={canvasRef} width={320} height={88} className="w-full h-24" />
+              : segs.length ? <div className="p-2 space-y-1.5 max-h-40 overflow-y-auto">{segs.map((s, i) => (<div key={i} className="flex items-center gap-2"><span className="text-[10px] text-slate-400 w-12 shrink-0">Đoạn {i + 1}</span><audio src={s.url} controls className="h-7 flex-1 min-w-0" /></div>))}</div>
+                : <div className="h-24 flex items-center justify-center text-slate-300 text-sm gap-2"><Mic className="w-5 h-5" /> Bấm nút đỏ để ghi</div>}
           </div>
 
-          {/* Nút điều khiển */}
-          {!blobUrl ? (
+          {segs.length === 0 ? (
             <button onClick={recording ? stop : start}
               className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all ${recording ? 'bg-slate-800 scale-95' : 'bg-rose-500 hover:bg-rose-600'}`}>
               {recording ? <Square className="w-8 h-8 text-white" /> : <Mic className="w-9 h-9 text-white" />}
@@ -142,8 +153,8 @@ export default function AudioRecorder({ onClose, onSaved }) {
               </button>
             </div>
           )}
-          {recording && <p className="text-[11px] text-rose-500 mt-3 animate-pulse">● Đang ghi… bấm ô vuông để dừng</p>}
-          {!recording && !blobUrl && <p className="text-[11px] text-slate-400 mt-3">File lưu lên kho R2, đính kèm vào khách</p>}
+          {recording && <p className="text-[11px] text-rose-500 mt-3 animate-pulse">● Đang ghi… (tự cắt đoạn mỗi 10 phút) — bấm ô vuông để dừng</p>}
+          {!recording && !segs.length && <p className="text-[11px] text-slate-400 mt-3">Cuộc dài 30–90 phút được tự chia đoạn để transcribe nhanh & chính xác</p>}
         </div>
       </div>
     </div>
