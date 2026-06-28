@@ -13,7 +13,7 @@ const ST = {
   bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' },
   phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' },
 };
-const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
+const inp = 'w-full px-3.5 py-2.5 text-[15px] rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition';
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
@@ -324,35 +324,35 @@ const EvalModal = ({ app, onClose, onSaved }) => {
     if (error) { toast.error('Lỗi: ' + error.message); return; }
     toast.success('Đã lưu đánh giá'); onSaved();
   };
-  const STBtn = ({ k, label, on }) => <button onClick={() => setF({ ...f, status: k })} className={`flex-1 py-2 text-sm font-semibold rounded-full ${f.status === k ? on : 'text-slate-500 hover:bg-slate-50'}`}>{label}</button>;
+  const STBtn = ({ k, label, on }) => <button onClick={() => setF({ ...f, status: k })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-full transition ${f.status === k ? on : 'text-slate-500 hover:bg-white/60'}`}>{label}</button>;
   return (
     <Modal title="Đánh giá khách" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-2">Khách: <b>{app.customer_name}</b> · {app.phone}</p>
-      <div className="flex bg-slate-100 rounded-full p-1 mb-3">
+      <p className="text-sm text-slate-500 mb-3">Khách: <b className="text-slate-700">{app.customer_name}</b> · {app.phone}</p>
+      <div className="flex bg-slate-100 rounded-full p-1 mb-4">
         <STBtn k="bong" label="Bong" on="bg-orange-400 text-white shadow" />
-        <STBtn k="coc" label="Cọc" on="bg-teal-500 text-white shadow" />
-        <STBtn k="phau_thuat" label="Phẫu thuật" on="bg-teal-500 text-white shadow" />
+        <STBtn k="coc" label="Cọc" on="bg-cyan-500 text-white shadow" />
+        <STBtn k="phau_thuat" label="Phẫu thuật" on="bg-teal-600 text-white shadow" />
       </div>
-      <label className="block text-sm font-bold text-slate-700 mb-1">Loại phẫu thuật</label>
-      <div className="flex gap-2 mb-3">
-        {['Tiểu phẫu', 'Đại phẫu'].map(t => <button key={t} onClick={() => setF({ ...f, surgery_type: t })} className={`flex-1 py-2 text-sm font-semibold rounded-xl border ${f.surgery_type === t ? 'bg-purple-500 text-white border-purple-500' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{t}</button>)}
+      <label className="block text-sm font-bold text-slate-700 mb-1.5">Loại phẫu thuật</label>
+      <div className="flex gap-2 mb-4">
+        {['Tiểu phẫu', 'Đại phẫu'].map(t => <button key={t} onClick={() => setF({ ...f, surgery_type: t })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-xl border transition ${f.surgery_type === t ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{t}</button>)}
       </div>
       {f.status === 'phau_thuat' && (<>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Ngày mổ"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>
           <Field label="Doanh thu (VNĐ)"><input type="number" value={f.revenue} onChange={e => setF({ ...f, revenue: e.target.value })} className={inp} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Upsale (VNĐ)"><input type="number" value={f.upsale_revenue} onChange={e => setF({ ...f, upsale_revenue: e.target.value })} className={inp} /></Field>
           <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
         </div>
       </>)}
       {f.status === 'coc' && (<>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Ngày cọc"><input type="date" value={f.deposit_date} onChange={e => setF({ ...f, deposit_date: e.target.value })} className={inp} /></Field>
           <Field label="Số tiền cọc"><input type="number" value={f.deposit_amount} onChange={e => setF({ ...f, deposit_amount: e.target.value })} className={inp} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Ngày mổ dự kiến"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>
           <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
         </div>
@@ -397,7 +397,7 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
   );
 };
 
-const Field = ({ label, children }) => (<div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>);
+const Field = ({ label, children }) => (<div className="mb-3.5"><label className="block text-sm font-semibold text-slate-600 mb-1.5">{label}</label>{children}</div>);
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
     <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -407,7 +407,10 @@ const Modal = ({ title, onClose, children }) => (
   </div>
 );
 const ModalActions = ({ onClose, onSave, saving }) => (
-  <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button></div>
+  <div className="flex gap-2 mt-1 pt-2 border-t border-slate-50 sm:justify-end">
+    <button onClick={onClose} className="flex-1 sm:flex-none px-5 h-11 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-[15px]">Hủy</button>
+    <button onClick={onSave} disabled={saving} className="flex-1 sm:flex-none px-6 h-11 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-[15px] inline-flex items-center justify-center">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button>
+  </div>
 );
 
 const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk, onClose }) => {
