@@ -20,6 +20,16 @@ const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).
 const AV = ['bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-amber-500'];
 const avatarBg = (n) => { let h = 0; for (const c of (n || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
 const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-teal-600 border-teal-300 bg-teal-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Bôi đỏ/đậm các câu AI thấy chưa phù hợp trong văn bản
+const Highlight = ({ text, quotes }) => {
+  const qs = (quotes || []).filter(q => q && q.trim().length >= 3).sort((a, b) => b.length - a.length);
+  if (!qs.length) return text || '';
+  let re; try { re = new RegExp('(' + qs.map(escRe).join('|') + ')', 'gi'); } catch { return text || ''; }
+  return (text || '').split(re).map((p, i) => i % 2 === 1
+    ? <mark key={i} className="bg-rose-100 text-rose-700 font-bold rounded px-0.5">{p}</mark>
+    : <span key={i}>{p}</span>);
+};
 
 const KhachTuVanPage = () => {
   const { profile: me } = useAuth();
@@ -208,8 +218,32 @@ const KhachTuVanPage = () => {
           {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-teal-600 mb-1">Điểm mạnh</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.weaknesses || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-rose-600 mb-1">Điểm yếu</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.suggestions || []).length > 0 && <div className="mb-3"><div className="text-xs font-bold text-blue-600 mb-1">Gợi ý cải thiện</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
-          <div className="text-xs font-bold text-slate-500 mb-1">Văn bản (transcript)</div>
-          <div className="text-xs text-slate-600 bg-slate-50 rounded-xl p-3 whitespace-pre-wrap max-h-60 overflow-y-auto">{transcriptView.transcript || '—'}</div>
+          {(transcriptView.ai_analysis?.issues || []).length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-bold text-rose-600 mb-1">Câu/đoạn chưa phù hợp</div>
+              <ul className="space-y-1">
+                {transcriptView.ai_analysis.issues.map((it, i) => (
+                  <li key={i} className="text-xs bg-rose-50 border border-rose-100 rounded-lg p-2">
+                    <span className="text-rose-700 font-bold">“{it.quote}”</span>{it.time ? <span className="text-rose-400"> · {it.time}</span> : null}
+                    {it.reason && <div className="text-slate-500 mt-0.5">{it.reason}</div>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="text-xs font-bold text-slate-500 mb-1">Văn bản theo mốc thời gian</div>
+          {(() => { const quotes = (transcriptView.ai_analysis?.issues || []).map(x => x.quote); const tl = transcriptView.transcript_timeline || []; return (
+            <div className="bg-slate-50 rounded-xl p-3 max-h-72 overflow-y-auto space-y-2.5">
+              {tl.length > 0
+                ? tl.map((b, i) => (
+                  <div key={i}>
+                    <div className="text-[11px] font-bold text-teal-600">{fmtTime(b.from)} – {fmtTime(b.to)}</div>
+                    <div className="text-xs text-slate-600 mt-0.5"><Highlight text={b.text} quotes={quotes} /></div>
+                  </div>
+                ))
+                : <div className="text-xs text-slate-600 whitespace-pre-wrap"><Highlight text={transcriptView.transcript || '—'} quotes={quotes} /></div>}
+            </div>
+          ); })()}
         </Modal>
       )}
     </div>
