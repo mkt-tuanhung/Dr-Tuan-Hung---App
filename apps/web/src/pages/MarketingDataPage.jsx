@@ -12,7 +12,7 @@ const STATUS = {
   tiem_nang: { label: 'Tiềm năng', cls: 'bg-amber-100 text-amber-700' },
   da_hen_lich: { label: 'Đã hẹn lịch', cls: 'bg-blue-100 text-blue-700' },
   coc: { label: 'Cọc', cls: 'bg-violet-100 text-violet-700' },
-  da_lam_dv: { label: 'Đã làm dịch vụ', cls: 'bg-emerald-100 text-emerald-700' },
+  da_lam_dv: { label: 'Đã làm dịch vụ', cls: 'bg-teal-100 text-teal-700' },
   sai_gon: { label: 'Sài Gòn', cls: 'bg-cyan-100 text-cyan-700' },
   chot_fail: { label: 'Chốt Fail', cls: 'bg-orange-100 text-orange-700' },
   mat: { label: 'Mất', cls: 'bg-slate-200 text-slate-500' },
@@ -22,9 +22,9 @@ const phoneKey = (p) => { let d = (p || '').replace(/\D/g, ''); if (d.startsWith
 const APPT_STAGE = (a) => {
   if (!a) return null;
   if (a.post_op_status) return { label: 'Hậu phẫu / CSKH', cls: 'bg-teal-100 text-teal-700' };
-  return ({ scheduled: { label: 'Lịch hẹn', cls: 'bg-blue-100 text-blue-700' }, coc: { label: 'Cọc', cls: 'bg-violet-100 text-violet-700' }, bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' }, phau_thuat: { label: 'Phẫu thuật', cls: 'bg-emerald-100 text-emerald-700' }, cancelled: { label: 'Đã huỷ', cls: 'bg-slate-100 text-slate-400' } })[a.status] || { label: a.status, cls: 'bg-slate-100 text-slate-500' };
+  return ({ scheduled: { label: 'Lịch hẹn', cls: 'bg-blue-100 text-blue-700' }, coc: { label: 'Cọc', cls: 'bg-violet-100 text-violet-700' }, bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' }, phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' }, cancelled: { label: 'Đã huỷ', cls: 'bg-slate-100 text-slate-400' } })[a.status] || { label: a.status, cls: 'bg-slate-100 text-slate-500' };
 };
-const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none';
+const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
 
 const MarketingDataPage = () => {
   const { profile: me } = useAuth();
@@ -79,13 +79,13 @@ const MarketingDataPage = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Database className="w-6 h-6 text-emerald-600" /> Data khách hàng</h2>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Database className="w-6 h-6 text-teal-600" /> Data khách hàng</h2>
           <p className="text-slate-400 text-sm mt-0.5">Data Marketing → Lịch hẹn → Cọc/Bong → Phẫu → Hậu phẫu → CSKH (hợp nhất theo SĐT)</p>
         </div>
         {canWrite && (
           <div className="flex gap-2">
-            <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-emerald-200 text-emerald-700 font-semibold text-sm hover:bg-emerald-50"><Upload className="w-4 h-4" /> Import CSV</button>
-            <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700"><Plus className="w-4 h-4" /> Thêm khách</button>
+            <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>
+            <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
           </div>
         )}
       </div>
@@ -93,7 +93,7 @@ const MarketingDataPage = () => {
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
         </div>
         <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none">
           <option value="">Mọi trạng thái</option>
@@ -108,7 +108,7 @@ const MarketingDataPage = () => {
       <div className="text-xs text-slate-400">{visible.length} khách</div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           {/* Desktop */}
@@ -261,15 +261,15 @@ const ImportModal = ({ me, onClose, onDone }) => {
     <Modal title="Import Data khách (CSV)" onClose={onClose}>
       <p className="text-[12px] text-slate-500 mb-2">Cột nhận dạng tự động theo tiêu đề: <b>Tên</b>, <b>SĐT</b>, Mô tả, Trạng thái, Trao đổi gần nhất, Thông tin đã tiếp cận. Bắt buộc có cột <b>SĐT</b>. Trùng SĐT sẽ hợp nhất.</p>
       <div className="flex gap-2 mb-2 flex-wrap">
-        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50"><Upload className="w-4 h-4" /> Chọn file CSV</button>
+        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50"><Upload className="w-4 h-4" /> Chọn file CSV</button>
         <button type="button" onClick={downloadSample} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"><Download className="w-4 h-4" /> Tải file mẫu</button>
       </div>
       <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
       <textarea value={text} onChange={e => { setText(e.target.value); parse(e.target.value); }} rows={5} placeholder="Hoặc dán nội dung CSV vào đây (dòng đầu là tiêu đề)…" className={inp + ' font-mono text-xs'} />
-      {preview.length > 0 && <div className="mt-2 text-sm text-emerald-700 font-semibold">Nhận diện {preview.length} khách hợp lệ.</div>}
+      {preview.length > 0 && <div className="mt-2 text-sm text-teal-700 font-semibold">Nhận diện {preview.length} khách hợp lệ.</div>}
       <div className="flex justify-end gap-2 mt-4">
         <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-        <button onClick={doImport} disabled={saving || preview.length === 0} className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 text-sm">{saving ? 'Đang import…' : `Import ${preview.length || ''}`}</button>
+        <button onClick={doImport} disabled={saving || preview.length === 0} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang import…' : `Import ${preview.length || ''}`}</button>
       </div>
     </Modal>
   );
@@ -286,7 +286,7 @@ const Modal = ({ title, onClose, children }) => (
   </div>
 );
 const ModalActions = ({ onClose, onSave, saving }) => (
-  <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : 'Lưu'}</button></div>
+  <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : 'Lưu'}</button></div>
 );
 
 export default MarketingDataPage;

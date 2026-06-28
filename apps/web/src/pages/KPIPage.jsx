@@ -13,7 +13,7 @@ const ProgressRing = ({ value, size = 80 }) => {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (value / 100) * circ;
-  const color = value >= 100 ? '#10b981' : value >= 70 ? '#f59e0b' : '#ef4444';
+  const color = value >= 100 ? '#14b8a6' : value >= 70 ? '#f59e0b' : '#ef4444';
   return (
     <svg width={size} height={size} className="-rotate-90">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={6} />
@@ -26,7 +26,7 @@ const ProgressRing = ({ value, size = 80 }) => {
 
 const ProgressBar = ({ value }) => (
   <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
-    <div className={`h-1.5 rounded-full transition-all ${value >= 100 ? 'bg-emerald-500' : value >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`}
+    <div className={`h-1.5 rounded-full transition-all ${value >= 100 ? 'bg-teal-500' : value >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`}
       style={{ width: `${Math.min(value, 100)}%` }} />
   </div>
 );
@@ -83,7 +83,7 @@ const KPIPage = () => {
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : !kpi ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center shadow-sm">
@@ -94,7 +94,7 @@ const KPIPage = () => {
       ) : (
         <>
           {/* Overall progress */}
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white">
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white">
             <div className="flex items-center gap-5">
               <div className="relative shrink-0">
                 <ProgressRing value={overallPct} size={88} />
@@ -105,7 +105,7 @@ const KPIPage = () => {
                 </div>
               </div>
               <div className="flex-1">
-                <div className="text-emerald-100 text-xs font-medium">Hoàn thành KPI tổng</div>
+                <div className="text-teal-100 text-xs font-medium">Hoàn thành KPI tổng</div>
                 <div className="text-2xl font-bold mt-1">{MONTHS[month-1]} {year}</div>
                 <div className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
                   ${overallPct >= 100 ? 'bg-white/25 text-white' : overallPct >= 70 ? 'bg-yellow-400/30 text-yellow-100' : 'bg-red-400/30 text-red-100'}`}>
@@ -116,8 +116,8 @@ const KPIPage = () => {
             </div>
 
             {kpi.commission_amount > 0 && (
-              <div className="mt-4 pt-4 border-t border-emerald-400/40">
-                <div className="text-emerald-200 text-xs">Hoa hồng tháng này ({kpi.commission_rate}%)</div>
+              <div className="mt-4 pt-4 border-t border-teal-400/40">
+                <div className="text-teal-200 text-xs">Hoa hồng tháng này ({kpi.commission_rate}%)</div>
                 <div className="text-2xl font-bold mt-0.5">{fmtM(kpi.commission_amount)}</div>
               </div>
             )}
@@ -126,7 +126,7 @@ const KPIPage = () => {
           {/* Detail metrics */}
           <div className="grid grid-cols-1 gap-3">
             {[
-              { icon: TrendingUp, label: 'Doanh thu', actual: fmtM(kpi.actual_revenue), target: fmtM(kpi.target_revenue), pct: revPct, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { icon: TrendingUp, label: 'Doanh thu', actual: fmtM(kpi.actual_revenue), target: fmtM(kpi.target_revenue), pct: revPct, color: 'text-teal-600', bg: 'bg-teal-50' },
               { icon: Users, label: 'Khách hàng', actual: fmt(kpi.actual_customers), target: fmt(kpi.target_customers), pct: custPct, color: 'text-blue-600', bg: 'bg-blue-50' },
               { icon: Phone, label: 'Cuộc gọi', actual: fmt(kpi.actual_calls), target: fmt(kpi.target_calls), pct: callPct, color: 'text-violet-600', bg: 'bg-violet-50' },
             ].map(m => (
@@ -138,7 +138,7 @@ const KPIPage = () => {
                     </div>
                     <span className="text-sm font-medium text-slate-700">{m.label}</span>
                   </div>
-                  <span className={`text-sm font-bold ${m.pct >= 100 ? 'text-emerald-600' : m.pct >= 70 ? 'text-yellow-500' : 'text-red-400'}`}>
+                  <span className={`text-sm font-bold ${m.pct >= 100 ? 'text-teal-600' : m.pct >= 70 ? 'text-yellow-500' : 'text-red-400'}`}>
                     {m.pct}%
                   </span>
                 </div>
@@ -179,10 +179,10 @@ const KPIPage = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     {h.commission_amount > 0 && (
-                      <div className="text-xs font-medium text-emerald-600">{fmtM(h.commission_amount)}</div>
+                      <div className="text-xs font-medium text-teal-600">{fmtM(h.commission_amount)}</div>
                     )}
                     <div className={`text-xs font-bold px-2 py-1 rounded-full
-                      ${p >= 100 ? 'bg-emerald-100 text-emerald-700' : p >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
+                      ${p >= 100 ? 'bg-teal-100 text-teal-700' : p >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
                       {p}%
                     </div>
                   </div>

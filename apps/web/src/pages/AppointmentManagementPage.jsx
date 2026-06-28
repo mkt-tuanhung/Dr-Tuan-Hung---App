@@ -195,7 +195,7 @@ const AppointmentManagementPage = () => {
     const pd = [
       { name: 'Chờ tư vấn', value: st.total - st.pt - st.coc - st.bong, color: '#f59e0b' },
       { name: 'Cọc', value: st.coc, color: '#3b82f6' },
-      { name: 'Phẫu thuật', value: st.pt, color: '#10b981' },
+      { name: 'Phẫu thuật', value: st.pt, color: '#14b8a6' },
       { name: 'Bong', value: st.bong, color: '#ef4444' }
     ].filter(i => i.value > 0);
 
@@ -349,7 +349,7 @@ const AppointmentManagementPage = () => {
 
   const StatusBadge = ({ status }) => {
     switch(status) {
-      case 'phau_thuat': return <span className="px-3 py-1 bg-emerald-100 text-emerald-700 font-semibold rounded-full text-xs">Phẫu thuật</span>;
+      case 'phau_thuat': return <span className="px-3 py-1 bg-teal-100 text-teal-700 font-semibold rounded-full text-xs">Phẫu thuật</span>;
       case 'coc': return <span className="px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full text-xs">Đã cọc</span>;
       case 'bong': return <span className="px-3 py-1 bg-red-100 text-red-700 font-semibold rounded-full text-xs">Khách bong</span>;
       default: return <span className="px-3 py-1 bg-slate-100 text-slate-600 font-semibold rounded-full text-xs">Chờ tư vấn</span>;
@@ -408,7 +408,7 @@ const AppointmentManagementPage = () => {
               <div className="text-xs text-slate-500 font-medium uppercase mt-1">Tổng lịch hẹn</div>
             </div>
             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Stethoscope className="w-6 h-6 text-emerald-500 mb-2" />
+              <Stethoscope className="w-6 h-6 text-teal-500 mb-2" />
               <div className="text-2xl font-bold text-slate-800">{stats.pt}</div>
               <div className="text-xs text-slate-500 font-medium uppercase mt-1">Phẫu thuật</div>
             </div>
@@ -428,7 +428,7 @@ const AppointmentManagementPage = () => {
               <div className="text-xs text-slate-500 font-medium uppercase mt-1">Tổng bill dự kiến</div>
             </div>
             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Activity className="w-6 h-6 text-emerald-500 mb-2" />
+              <Activity className="w-6 h-6 text-teal-500 mb-2" />
               <div className="text-xl font-bold text-slate-800">{stats.total_deposit.toLocaleString('vi-VN')}đ</div>
               <div className="text-xs text-slate-500 font-medium uppercase mt-1">Tổng đã cọc</div>
             </div>
@@ -463,7 +463,7 @@ const AppointmentManagementPage = () => {
                     <RechartsTooltip />
                     <Legend />
                     <Line type="monotone" dataKey="Tổng lịch" stroke="#3b82f6" strokeWidth={3} />
-                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#10b981" strokeWidth={3} />
+                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#14b8a6" strokeWidth={3} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -568,7 +568,7 @@ const AppointmentManagementPage = () => {
                               </button>
                             )}
                             {(isAdmin || isNurse) && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors" title="Sửa lịch tái khám">
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-100 transition-colors" title="Sửa lịch tái khám">
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
@@ -622,7 +622,7 @@ const AppointmentManagementPage = () => {
                             <span className="text-teal-700">{app.service || 'Chưa chọn dịch vụ'}</span>
                           </div>
 
-                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 space-y-2 text-sm">
+                          <div className="bg-teal-50/50 border border-teal-100 rounded-xl p-3 space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-slate-500">Telesale:</span>
                               <span className="font-semibold text-blue-700">{app.telesale}</span>
@@ -631,14 +631,14 @@ const AppointmentManagementPage = () => {
                               <span className="text-slate-500">Sale Offline:</span>
                               <span className="font-semibold text-purple-700">{app.sale}</span>
                             </div>
-                            <div className="border-t border-emerald-100/60 my-1 pt-1" />
+                            <div className="border-t border-teal-100/60 my-1 pt-1" />
                             <div className="flex justify-between">
                               <span className="text-slate-500">Dự kiến:</span>
-                              <span className="font-bold text-emerald-700">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
+                              <span className="font-bold text-teal-700">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-slate-500">Đã cọc:</span>
-                              <span className="font-bold text-emerald-700">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
+                              <span className="font-bold text-teal-700">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
                             </div>
                           </div>
                           
@@ -666,16 +666,16 @@ const AppointmentManagementPage = () => {
                             </button>
                           )}
                           {app.status === 'scheduled' && !app.consult_received && ['admin', 'sale_offline', 'telesale'].includes(profile?.role) && (
-                            <button onClick={() => receiveConsult(app)} className="w-full py-2 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                            <button onClick={() => receiveConsult(app)} className="w-full py-2 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
                               <UserCheck className="w-4 h-4" /> Tiếp nhận tư vấn
                             </button>
                           )}
                           {app.consult_received && app.status === 'scheduled' && (
-                            <div className="w-full py-1.5 text-center text-xs font-semibold text-emerald-600 bg-emerald-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
+                            <div className="w-full py-1.5 text-center text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
                           )}
                           <div className="flex items-center gap-2 w-full">
                             {['admin', 'sale_offline'].includes(profile?.role) && (
-                              <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm py-2 rounded-xl hover:bg-emerald-100 transition-colors">
+                              <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm py-2 rounded-xl hover:bg-teal-100 transition-colors">
                                 <Edit className="w-4 h-4" /> Đánh giá
                               </button>
                             )}
@@ -991,7 +991,7 @@ const AppointmentManagementPage = () => {
                       ))}
                       {consultFiles.map((f, i) => (
                         <div key={'new' + i} className="relative w-16 h-16">
-                          <img src={URL.createObjectURL(f)} alt="" className="w-16 h-16 rounded-lg object-cover border border-emerald-300" />
+                          <img src={URL.createObjectURL(f)} alt="" className="w-16 h-16 rounded-lg object-cover border border-teal-300" />
                           <button type="button" onClick={() => setConsultFiles(fs => fs.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
                         </div>
                       ))}

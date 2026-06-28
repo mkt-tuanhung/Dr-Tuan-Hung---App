@@ -25,7 +25,7 @@ const SERVICE_GROUPS = ['Hàm mặt', 'Body', 'Tiểu phẫu'];
 const SOURCE_STATUS = {
   chua_dung: { label: 'Chưa dựng', cls: 'bg-slate-100 text-slate-600' },
   dang_dung: { label: 'Đang dựng', cls: 'bg-blue-100 text-blue-700' },
-  da_dung: { label: 'Đã dựng', cls: 'bg-emerald-100 text-emerald-700' },
+  da_dung: { label: 'Đã dựng', cls: 'bg-teal-100 text-teal-700' },
   loi: { label: 'Source lỗi', cls: 'bg-rose-100 text-rose-700' },
   can_bo_sung: { label: 'Cần bổ sung', cls: 'bg-amber-100 text-amber-700' },
 };
@@ -33,7 +33,7 @@ const SOURCE_STATUS = {
 const scoreCat = (score, win) => {
   const n = Number(score) || 0;
   if (win || n >= 10) return { label: 'WIN', cls: 'bg-amber-100 text-amber-700', warn: false };
-  if (n >= 8) return { label: 'Tốt', cls: 'bg-emerald-100 text-emerald-700', warn: false };
+  if (n >= 8) return { label: 'Tốt', cls: 'bg-teal-100 text-teal-700', warn: false };
   if (n >= 5) return { label: 'Trung bình', cls: 'bg-yellow-100 text-yellow-700', warn: false };
   if (n > 0) return { label: 'Tệ', cls: 'bg-rose-100 text-rose-700', warn: true };
   return { label: 'Chưa chấm', cls: 'bg-slate-100 text-slate-500', warn: false };
@@ -53,9 +53,9 @@ const STAGE = {
   submitted: { label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
   revision: { label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
   approved: { label: 'Đã duyệt', cls: 'bg-violet-100 text-violet-700' },
-  done: { label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-700' },
+  done: { label: 'Hoàn tất', cls: 'bg-teal-100 text-teal-700' },
 };
-const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-emerald-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
+const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-teal-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
 
 // ----- Xem trước video / ảnh từ link (Google Drive, YouTube, file trực tiếp) -----
 const driveId = (url) => {
@@ -135,15 +135,15 @@ const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày qu
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(o => !o)} className={`px-3 py-2 text-sm rounded-xl border bg-white outline-none inline-flex items-center gap-1.5 ${from && to ? 'border-emerald-400 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+      <button onClick={() => setOpen(o => !o)} className={`px-3 py-2 text-sm rounded-xl border bg-white outline-none inline-flex items-center gap-1.5 ${from && to ? 'border-teal-400 text-teal-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
         <CalendarDays className="w-4 h-4" /> {label}
       </button>
       {open && (
         <div className="absolute z-40 mt-1 right-0 w-[290px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3">
-          <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide mb-2">{headerLabel}</div>
+          <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wide mb-2">{headerLabel}</div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {[['week', 'Tuần này'], ['lastweek', 'Tuần trước'], ['month', 'Tháng này'], ['lastmonth', 'Tháng trước']].map(([k, l]) => (
-              <button key={k} onClick={() => preset(k)} className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700">{l}</button>
+              <button key={k} onClick={() => preset(k)} className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-700">{l}</button>
             ))}
           </div>
           <div className="flex items-center justify-between mb-1">
@@ -154,12 +154,12 @@ const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày qu
           <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-slate-400 mb-1">{VN_DOW.map(d => <div key={d}>{d}</div>)}</div>
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((d, i) => d === null ? <div key={i} /> : (
-              <button key={i} onClick={() => pickDay(d)} className={`h-8 text-xs rounded-lg ${isEnd(d) ? 'bg-emerald-600 text-white font-bold' : inRange(d) ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-100 text-slate-600'}`}>{d.getDate()}</button>
+              <button key={i} onClick={() => pickDay(d)} className={`h-8 text-xs rounded-lg ${isEnd(d) ? 'bg-teal-600 text-white font-bold' : inRange(d) ? 'bg-teal-100 text-teal-700' : 'hover:bg-slate-100 text-slate-600'}`}>{d.getDate()}</button>
             ))}
           </div>
           <div className="flex justify-between gap-2 mt-3">
             <button onClick={() => { setA(null); setB(null); onApply('', ''); setOpen(false); }} className="px-3 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50">Xoá lọc</button>
-            <button onClick={() => { onApply(ymd(a), ymd(b || a)); setOpen(false); }} disabled={!a} className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50">Lọc</button>
+            <button onClick={() => { onApply(ymd(a), ymd(b || a)); setOpen(false); }} disabled={!a} className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50">Lọc</button>
           </div>
         </div>
       )}
@@ -283,16 +283,16 @@ const ContentProductionPage = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Clapperboard className="w-6 h-6 text-emerald-600" /> Sản xuất Ads</h2>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Clapperboard className="w-6 h-6 text-teal-600" /> Sản xuất Ads</h2>
           <p className="text-slate-400 text-sm mt-0.5">Kho media (Media) → Editor dựng clip → Ads duyệt &amp; chấm Win</p>
         </div>
         {tab === 'kho' && canAddMedia && (
-          <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700">
+          <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
             <Plus className="w-4 h-4" /> Thêm media
           </button>
         )}
         {tab === 'video' && canEdit && (
-          <button onClick={() => setAddVideoOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700">
+          <button onClick={() => setAddVideoOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
             <Plus className="w-4 h-4" /> Thêm Video Ads
           </button>
         )}
@@ -327,33 +327,33 @@ const ContentProductionPage = () => {
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
         </div>
         {tab === 'kho' && (
           <>
-            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi trạng thái source</option>
               {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
-            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <DateRangeFilter from={khoFrom} to={khoTo} onApply={(f, t) => { setKhoFrom(f); setKhoTo(t); }} />
             {(khoStatus || khoService || khoFrom || khoTo) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden">
-              <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
-              <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
+              <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
             </div>
           </>
         )}
         {tab === 'video' && (
           <>
-            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi mức điểm</option>
               {Object.entries(SCORE_FILTERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
-            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
@@ -364,7 +364,7 @@ const ContentProductionPage = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : tab === 'kho' ? (
         visStores.length === 0 ? (
           <Empty icon={FolderOpen} title="Kho media trống"
@@ -435,7 +435,7 @@ const ContentProductionPage = () => {
 };
 
 const TabBtn = ({ active, onClick, icon: Icon, label }) => (
-  <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+  <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${active ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
     <Icon className="w-4 h-4" /> {label}
   </button>
 );
@@ -445,7 +445,7 @@ const Empty = ({ icon: Icon, title, desc, cta }) => (
     <Icon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
     <p className="text-slate-600 font-semibold">{title}</p>
     <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto leading-relaxed">{desc}</p>
-    {cta && <button onClick={cta.onClick} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700"><Plus className="w-4 h-4" /> {cta.label}</button>}
+    {cta && <button onClick={cta.onClick} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> {cta.label}</button>}
   </div>
 );
 
@@ -514,7 +514,7 @@ const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk,
       </div>
       <div className="px-4 py-3 bg-slate-50 border-t flex justify-end gap-2">
         <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-white text-sm">Hủy</button>
-        <button onClick={() => { onOk(); onClose(); }} className={`px-5 py-2 rounded-xl text-white font-semibold text-sm ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{okLabel}</button>
+        <button onClick={() => { onOk(); onClose(); }} className={`px-5 py-2 rounded-xl text-white font-semibold text-sm ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{okLabel}</button>
       </div>
     </div>
   </div>
@@ -529,7 +529,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
         <div className="font-bold text-slate-800 text-sm truncate flex items-center gap-2">
           <span className="truncate">{s.customer_name || 'Khách chưa đặt tên'}</span>
           {s.appointment_id
-            ? <span className="shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">LK</span>
+            ? <span className="shrink-0 text-[10px] font-semibold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">LK</span>
             : <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Chưa LK</span>}
         </div>
         <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
@@ -554,7 +554,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
 
       <div className="flex flex-wrap gap-1.5 lg:justify-end shrink-0">
         {(s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-semibold text-violet-600 px-2.5 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50"><PlayCircle className="w-3 h-3 inline mr-0.5" />Xem source</button>}
-        {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng video</button>}
+        {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng video</button>}
         {canEdit && <button onClick={onScore} className="text-xs font-semibold text-amber-600 px-2 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-50">Chấm/Góp ý</button>}
         {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
         {!s.appointment_id && owner && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline mr-0.5" />Kết nối</button>}
@@ -575,7 +575,7 @@ const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSour
           <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
         </div>
         {s.appointment_id
-          ? <span className="shrink-0 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">LK</span>
+          ? <span className="shrink-0 text-[10px] font-semibold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">LK</span>
           : <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Chưa LK</span>}
       </div>
       {(s.source_id || s.service || s.shoot_date) && (
@@ -594,7 +594,7 @@ const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSour
       {s.source_feedback && <div className="text-[11px] text-slate-500 italic mt-1 truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
       <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-50 pt-2">
         {(s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-semibold text-violet-600 px-2 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50"><PlayCircle className="w-3 h-3 inline mr-0.5" />Xem source</button>}
-        {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng</button>}
+        {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng</button>}
         {canEdit && <button onClick={onScore} className="text-xs font-semibold text-amber-600 px-2 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-50">Chấm/Góp ý</button>}
         {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
         {!s.appointment_id && owner && <button onClick={onLink} className="text-xs font-semibold text-blue-600 px-2 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50"><Link2 className="w-3 h-3 inline" /></button>}
@@ -647,14 +647,14 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 w-fit ${cat.cls}`}>
             {cat.warn && '⚠️'}{c.win ? '🏆' : ''} Điểm {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}
           </span>); })()}
-        {c.approved_to_run && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full w-fit inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Đã duyệt chạy Ads</span>}
+        {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full w-fit inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Đã duyệt chạy Ads</span>}
         {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
         {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
       </div>
       <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
         {(c.clip_links || []).length > 0 && <button onClick={onView} className="text-xs font-semibold text-violet-600 px-2 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50 inline-flex items-center gap-1"><Maximize2 className="w-3.5 h-3.5" /> Xem lớn</button>}
         {canAds && <button onClick={onReview} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700">Đánh giá</button>}
-        {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Duyệt chạy Ads</button>}
+        {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Duyệt chạy Ads</button>}
         {canAds && (
           <select value={c.ad_status || ''} onChange={e => onSetAd(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
             <option value="">Trạng thái…</option>
@@ -671,7 +671,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
 };
 
 // ---------- Modal: Thêm media (Media up nguồn) ----------
-const inpCls = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none';
+const inpCls = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
 const Field = ({ label, children }) => (
   <div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>
 );
@@ -741,13 +741,13 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   return (
     <Modal title="Thêm media khách hàng" onClose={onClose}>
       <div className="flex gap-2 mb-3">
-        <button onClick={() => setMode('existing')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'existing' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Tag khách đã có</button>
-        <button onClick={() => setMode('new')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>Khách chưa có (tạo mới)</button>
+        <button onClick={() => setMode('existing')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'existing' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>Tag khách đã có</button>
+        <button onClick={() => setMode('new')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'new' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>Khách chưa có (tạo mới)</button>
       </div>
 
       {mode === 'existing' ? (
         picked ? (
-          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 mb-3">
+          <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-xl px-3 py-2 mb-3">
             <span className="text-sm font-medium text-slate-700">{picked.customer_name} · {picked.phone}{picked.service ? ` · ${picked.service}` : ''}</span>
             <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
@@ -755,11 +755,11 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
           <div className="mb-3">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tag khách: tìm theo tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tag khách: tìm theo tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none" />
             </div>
             <div className="max-h-40 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
               {results.map(r => (
-                <button key={r.appointment_id} onClick={() => setPicked(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
+                <button key={r.appointment_id} onClick={() => setPicked(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50">
                   <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
                 </button>
               ))}
@@ -776,7 +776,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
               {SERVICE_GROUPS.map(g => {
                 const on = (service || '').split(',').map(x => x.trim()).includes(g);
                 return <button type="button" key={g} onClick={() => setService(prev => { const arr = (prev || '').split(',').map(x => x.trim()).filter(Boolean); return arr.includes(g) ? arr.filter(x => x !== g).join(', ') : [...arr, g].join(', '); })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{g}</button>;
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${on ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{g}</button>;
               })}
             </div>
           </Field>
@@ -788,7 +788,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
           <Field label="ID source">
             <div className="flex gap-2">
               <input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} />
-              <button type="button" onClick={fillId} disabled={!canSuggest} title={canSuggest ? 'Tự tạo ID source' : 'Nhập Tên khách + Ngày quay/chụp trước'} className="shrink-0 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-50">Gợi ý</button>
+              <button type="button" onClick={fillId} disabled={!canSuggest} title={canSuggest ? 'Tự tạo ID source' : 'Nhập Tên khách + Ngày quay/chụp trước'} className="shrink-0 px-3 rounded-xl bg-teal-50 text-teal-700 text-xs font-semibold border border-teal-200 hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-50">Gợi ý</button>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Quy định: <b>Tên khách</b> + <b>ngày quay/chụp</b> (ddmmyyyy) + <b>_STT</b>. VD: <span className="font-mono text-slate-500">Dung27062026_01</span></p>
           </Field>
@@ -881,11 +881,11 @@ const LinkCustomerModal = ({ store, onClose, onSaved }) => {
     <Modal title="Kết nối với Thông tin khách hàng" onClose={onClose}>
       <div className="relative mb-2">
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-        <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm tên/SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none" />
+        <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm tên/SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none" />
       </div>
       <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-xl divide-y">
         {results.map(r => (
-          <button key={r.appointment_id} onClick={() => link(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
+          <button key={r.appointment_id} onClick={() => link(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50">
             <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
           </button>
         ))}
@@ -938,10 +938,10 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
       {store?.source_links?.length > 0 && <div className="mb-3"><div className="text-xs text-slate-400 mb-1">Nguồn để dựng:</div><LinkList links={store.source_links} label="Nguồn" icon={Film} /></div>}
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Tiêu đề video</label>
-      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Review nâng mũi - KH Thanh Hà" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Review nâng mũi - KH Thanh Hà" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
 
       <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><Scissors className="w-3.5 h-3.5" /> Link clip đã dựng (mỗi dòng 1 link)</label>
-      <textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+      <textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
 
       <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><Image className="w-3.5 h-3.5" /> Ảnh thumbnail (tải trực tiếp)</label>
       <div className="flex flex-wrap gap-2 mb-3">
@@ -952,7 +952,7 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
           </div>
         ))}
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-          className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-400 hover:text-emerald-500 disabled:opacity-50">
+          className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-500 disabled:opacity-50">
           {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
           <span className="text-[10px] mt-0.5">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
         </button>
@@ -960,7 +960,7 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
       </div>
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
-      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
+      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-4" />
       <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel={editing ? 'Cập nhật & nộp lại' : 'Đẩy clip'} />
     </Modal>
   );
@@ -997,12 +997,12 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       </div>
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý cho editor</label>
-      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} placeholder="Nhận xét cho editor…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} placeholder="Nhận xét cho editor…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
 
       {/* Điểm video thành phẩm */}
       <label className="block text-sm font-semibold text-slate-700 mb-1">Điểm video thành phẩm (1–10)</label>
       <div className="flex items-center gap-2 mb-1">
-        <input value={score} onChange={e => { const v = Math.min(10, Number(e.target.value.replace(/[^\d]/g, '')) || 0); setScore(v ? String(v) : ''); if (v < 10 && win) setWin(false); if (v === 10) setWin(true); }} inputMode="numeric" placeholder="0–10" className="w-24 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none text-center font-bold" />
+        <input value={score} onChange={e => { const v = Math.min(10, Number(e.target.value.replace(/[^\d]/g, '')) || 0); setScore(v ? String(v) : ''); if (v < 10 && win) setWin(false); if (v === 10) setWin(true); }} inputMode="numeric" placeholder="0–10" className="w-24 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none text-center font-bold" />
         {(() => { const cat = scoreCat(score, win); return <span className={`text-xs font-bold px-2.5 py-1.5 rounded-lg ${cat.cls}`}>{cat.warn && '⚠️ '}{cat.label}</span>; })()}
         <span className="text-[11px] text-slate-400">10=Win · ≥8 Tốt · 5–7 TB · &lt;5 Tệ</span>
       </div>
@@ -1013,14 +1013,14 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       {win && (
         <>
           <label className="block text-sm font-semibold text-slate-700 mb-1">Tiền thưởng editor</label>
-          <input value={amount} onChange={e => setAmount(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="VD: 100000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-3" />
+          <input value={amount} onChange={e => setAmount(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="VD: 100000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
         </>
       )}
       <label className="block text-sm font-semibold text-slate-700 mb-1">Nhận xét kết quả</label>
-      <input value={note} onChange={e => setNote(e.target.value)} placeholder="VD: chuyển đổi tốt / cần đổi hook…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
+      <input value={note} onChange={e => setNote(e.target.value)} placeholder="VD: chuyển đổi tốt / cần đổi hook…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-4" />
       <div className="flex justify-end gap-2">
         <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa</button>
-        <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
+        <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
       </div>
     </Modal>
   );
@@ -1140,7 +1140,7 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
 
       <Field label="Kết nối Thông tin khách hàng (@ tên / SĐT)">
         {picked ? (
-          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+          <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-xl px-3 py-2">
             <span className="text-sm font-medium text-slate-700">@ {picked.customer_name} · {picked.phone}</span>
             <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
           </div>
@@ -1150,7 +1150,7 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
             {results.length > 0 && (
               <div className="max-h-36 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
                 {results.map(r => (
-                  <button key={r.appointment_id} onClick={() => { setPicked(r); setName(r.customer_name || ''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50">
+                  <button key={r.appointment_id} onClick={() => { setPicked(r); setName(r.customer_name || ''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50">
                     <span className="font-medium text-slate-700">{r.customer_name}</span> <span className="text-slate-400">· {r.phone}</span>
                   </button>
                 ))}
@@ -1178,7 +1178,7 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
             <button type="button" onClick={() => setThumbs(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center"><X className="w-3 h-3" /></button>
           </div>
         ))}
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-400 hover:text-emerald-500 disabled:opacity-50">
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-500 disabled:opacity-50">
           {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
           <span className="text-[10px] mt-0.5">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
         </button>
@@ -1206,7 +1206,7 @@ const Modal = ({ title, onClose, children }) => (
 const ModalActions = ({ onClose, onSave, saving, saveLabel = 'Lưu' }) => (
   <div className="flex justify-end gap-2">
     <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-    <button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : saveLabel}</button>
+    <button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : saveLabel}</button>
   </div>
 );
 

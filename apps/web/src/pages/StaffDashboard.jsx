@@ -109,7 +109,7 @@ const EditorOverview = ({ profile, setActiveTab }) => {
       <Card icon={Scissors} color="bg-blue-50 text-blue-600" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content')} />
       <Card icon={CheckCircle2} color="bg-violet-50 text-violet-600" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content')} />
       <Card icon={Target} color="bg-rose-50 text-rose-600" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content')} />
-      <Card icon={Wallet} color="bg-emerald-50 text-emerald-600" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
+      <Card icon={Wallet} color="bg-teal-50 text-teal-600" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
     </div>
   );
 };
@@ -177,7 +177,7 @@ const Overview = ({ profile, setActiveTab }) => {
   return (
     <div className="space-y-5">
       {/* Greeting banner */}
-      <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white">
+      <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0">
             {profile?.avatar_url ? (
@@ -187,27 +187,27 @@ const Overview = ({ profile, setActiveTab }) => {
             )}
           </div>
           <div>
-            <p className="text-emerald-100 text-sm">Xin chào 👋</p>
+            <p className="text-teal-100 text-sm">Xin chào 👋</p>
             <h2 className="text-xl font-bold">{profile?.full_name}</h2>
-            <p className="text-emerald-200 text-xs mt-0.5">
+            <p className="text-teal-200 text-xs mt-0.5">
               {ROLE_LABELS[profile?.role] || profile?.role}
               {profile?.position ? ` · ${profile.position}` : ''}
             </p>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-emerald-400/40 grid grid-cols-2 gap-4">
+        <div className="mt-4 pt-4 border-t border-teal-400/40 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-emerald-200 text-xs">Lương cơ bản</p>
+            <p className="text-teal-200 text-xs">Lương cơ bản</p>
             <div className="flex items-center gap-2 mt-0.5">
               <p className="text-white font-semibold tabular-nums">{showSalary ? fmt(profile?.base_salary) : '••••••••'}</p>
               <button onClick={() => setShowSalary(v => !v)} title={showSalary ? 'Ẩn lương' : 'Hiện lương'}
-                className="text-emerald-100 hover:text-white p-0.5">
+                className="text-teal-100 hover:text-white p-0.5">
                 {showSalary ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div>
-            <p className="text-emerald-200 text-xs">Trạng thái</p>
+            <p className="text-teal-200 text-xs">Trạng thái</p>
             <p className="text-white font-semibold mt-0.5">
               {profile?.employment_status === 'probation' ? 'Thử việc (85%)' : 'Chính thức'}
             </p>
@@ -220,8 +220,8 @@ const Overview = ({ profile, setActiveTab }) => {
         <EditorOverview profile={profile} setActiveTab={setActiveTab} />
       ) : profile?.role === 'accountant' ? (
         <div className="grid grid-cols-2 gap-4">
-          <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Banknote className="w-6 h-6" /></div>
+          <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-teal-300 hover:shadow-md transition-all group">
+            <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Banknote className="w-6 h-6" /></div>
             <p className="text-sm font-semibold text-slate-700 text-center">Doanh thu</p>
           </div>
           <div onClick={() => setActiveTab('cashflow')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group">
@@ -239,8 +239,8 @@ const Overview = ({ profile, setActiveTab }) => {
         </div>
       ) : (
       <div className="grid grid-cols-2 gap-4">
-        <div onClick={() => setActiveTab('attendance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+        <div onClick={() => setActiveTab('attendance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-teal-300 hover:shadow-md transition-all group">
+          <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
             <CalendarCheck className="w-6 h-6" />
           </div>
           <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Ngày công</p>
@@ -282,7 +282,7 @@ const Overview = ({ profile, setActiveTab }) => {
 
 const ComingSoon = ({ label }) => (
   <div className="flex flex-col items-center justify-center h-64 space-y-3">
-    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl">🚧</div>
+    <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-2xl">🚧</div>
     <div className="text-base font-semibold text-slate-700">{label}</div>
     <div className="text-sm text-slate-400">Đang được xây dựng</div>
   </div>
@@ -342,7 +342,7 @@ const StaffDashboard = () => {
             <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
               {kpiRoles.map(r => (
                 <button key={r} onClick={() => setKpiRoleSel(r)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${active === r ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${active === r ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
                   KPI {KPI_VIEWS[r].label}
                 </button>
               ))}
@@ -383,20 +383,20 @@ const StaffDashboard = () => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-60 z-30 flex flex-col bg-white border-r border-emerald-100
+        fixed top-0 left-0 h-full w-60 z-30 flex flex-col bg-white border-r border-teal-100
         transform transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:relative lg:translate-x-0
       `}>
         {/* Logo */}
-        <div className="p-4 border-b border-emerald-50 flex items-center justify-between">
+        <div className="p-4 border-b border-teal-50 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-md overflow-hidden p-1">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="font-bold text-slate-800 text-sm">Dr Tuấn Hùng</div>
-              <div className="text-xs text-emerald-500">Internal System</div>
+              <div className="text-xs text-teal-500">Internal System</div>
             </div>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 p-1">
@@ -415,8 +415,8 @@ const StaffDashboard = () => {
                 onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   active
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200'
-                    : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+                    ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200'
+                    : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -432,9 +432,9 @@ const StaffDashboard = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top bar desktop */}
-        <header className="hidden lg:flex items-center justify-between bg-white border-b border-emerald-100 px-6 py-3 sticky top-0 z-10">
+        <header className="hidden lg:flex items-center justify-between bg-white border-b border-teal-100 px-6 py-3 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
+            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
           
@@ -442,7 +442,7 @@ const StaffDashboard = () => {
             <NotificationBell />
             <ProfileMenu mobile={false}>
               <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                   ) : (
@@ -456,18 +456,18 @@ const StaffDashboard = () => {
         </header>
 
         {/* Top bar mobile */}
-        <header className="lg:hidden flex items-center justify-between bg-white border-b border-emerald-100 px-4 py-3 sticky top-0 z-10">
+        <header className="lg:hidden flex items-center justify-between bg-white border-b border-teal-100 px-4 py-3 sticky top-0 z-10">
           <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1">
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
+            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell />
             <ProfileMenu mobile={true}>
-              <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
+              <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                 ) : (
@@ -484,7 +484,7 @@ const StaffDashboard = () => {
       </div>
 
       {/* Bottom nav mobile */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-emerald-100 shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-teal-100 shadow-lg">
         <div className="flex items-stretch">
           {allowedMenu.slice(0, 4).map(item => {
             const Icon = item.icon;
@@ -495,11 +495,11 @@ const StaffDashboard = () => {
                 onClick={() => setActiveTab(item.id)}
                 className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-all relative"
               >
-                {active && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-emerald-500" />}
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${active ? 'bg-emerald-500 shadow-md shadow-emerald-200' : ''}`}>
+                {active && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-teal-500" />}
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${active ? 'bg-teal-500 shadow-md shadow-teal-200' : ''}`}>
                   <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
                 </div>
-                <span className={`text-[10px] font-medium leading-none ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-medium leading-none ${active ? 'text-teal-600' : 'text-slate-400'}`}>
                   {item.label}
                 </span>
               </button>

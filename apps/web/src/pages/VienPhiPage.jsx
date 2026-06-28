@@ -57,7 +57,7 @@ const VienPhiPage = ({ isNested = false }) => {
   const totalTransfer = monthData.filter(d => d.hospital_fee_method === 'transfer').reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
 
   const pieData = [
-    { name: 'Tiền mặt', value: totalCash, color: '#10b981' },
+    { name: 'Tiền mặt', value: totalCash, color: '#14b8a6' },
     { name: 'Chuyển khoản', value: totalTransfer, color: '#3b82f6' }
   ];
 
@@ -131,13 +131,13 @@ const VienPhiPage = ({ isNested = false }) => {
 
               <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-3">
                     <Banknote className="w-5 h-5" />
                   </div>
                   <h3 className="text-slate-500 text-sm font-semibold mb-1">Tiền mặt</h3>
                   <div className="text-2xl font-bold text-slate-800">{fmt(totalCash)}</div>
                 </div>
-                <div className="text-emerald-600 text-sm font-semibold mt-2">
+                <div className="text-teal-600 text-sm font-semibold mt-2">
                   {totalFee ? ((totalCash / totalFee) * 100).toFixed(1) : 0}%
                 </div>
               </div>
@@ -215,7 +215,7 @@ const VienPhiPage = ({ isNested = false }) => {
                   </div>
                   <div className="text-sm text-slate-600 mt-1">{app.service || 'Chưa rõ'}</div>
                   <div className="flex items-center gap-2 flex-wrap mt-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${app.hospital_fee_method === 'cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${app.hospital_fee_method === 'cash' ? 'bg-teal-50 text-teal-700 border-teal-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                       <Banknote className="w-3 h-3" /> {app.hospital_fee_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}
                     </span>
                     <span className="text-xs text-slate-400">{app.hospital_fee_date ? new Date(app.hospital_fee_date).toLocaleDateString('vi-VN') : '—'}</span>
@@ -254,7 +254,7 @@ const VienPhiPage = ({ isNested = false }) => {
                       </td>
                       <td className="px-6 py-4">
                         {app.hospital_fee_method === 'cash' ? (
-                          <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold border border-emerald-100">
+                          <span className="inline-flex items-center gap-1.5 bg-teal-50 text-teal-700 px-2.5 py-1 rounded-lg text-xs font-bold border border-teal-100">
                             <Banknote className="w-3.5 h-3.5" /> Tiền mặt
                           </span>
                         ) : (
@@ -315,7 +315,7 @@ const VienPhiPage = ({ isNested = false }) => {
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setEditForm(f => ({ ...f, method: 'transfer' }))} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${editForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
-                <button type="button" onClick={() => setEditForm(f => ({ ...f, method: 'cash' }))} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${editForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
+                <button type="button" onClick={() => setEditForm(f => ({ ...f, method: 'cash' }))} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${editForm.method === 'cash' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
               </div>
               <button type="button" onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-blue-400">
                 {uploading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : (editForm.proof ? <img src={editForm.proof} alt="" className="max-h-20 mx-auto" /> : 'Tải / đổi bill')}

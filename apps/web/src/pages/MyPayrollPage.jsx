@@ -19,7 +19,7 @@ const MANAGER_ROLES = ['admin', 'accountant', 'shareholder'];
 
 const StatCard = ({ icon: Icon, label, value, tone = 'slate', sign }) => {
   const tones = {
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    emerald: 'bg-teal-50 text-teal-700 border-teal-100',
     blue: 'bg-blue-50 text-blue-700 border-blue-100',
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
     violet: 'bg-violet-50 text-violet-700 border-violet-100',
@@ -140,9 +140,9 @@ const MyPayrollPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Wallet className="w-6 h-6 text-emerald-600" /> {isManager ? 'Bảng lương nhân sự' : 'Bảng lương của tôi'}</h2>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Wallet className="w-6 h-6 text-teal-600" /> {isManager ? 'Bảng lương nhân sự' : 'Bảng lương của tôi'}</h2>
           <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này · cập nhật tự động'}
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-500" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này · cập nhật tự động'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ const MyPayrollPage = () => {
       {isManager && (
         <div className="relative">
           <button onClick={() => setPickerOpen(o => !o)}
-            className="w-full sm:w-80 flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 text-sm">
+            className="w-full sm:w-80 flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-teal-300 text-sm">
             <span className="font-semibold text-slate-700 truncate">{tp?.full_name || 'Chọn nhân sự'}{tp?.employee_id ? ` · ${tp.employee_id}` : ''}</span>
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
           </button>
@@ -164,12 +164,12 @@ const MyPayrollPage = () => {
             <div className="absolute z-30 mt-1 w-full sm:w-80 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
               <div className="p-2 border-b">
                 <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên / mã NV..."
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-400 outline-none" />
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-teal-400 outline-none" />
               </div>
               <div className="max-h-72 overflow-y-auto">
                 {filteredStaff.map(s => (
                   <button key={s.id} onClick={() => { setTargetId(s.id); setPickerOpen(false); setSearch(''); }}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 flex items-center justify-between ${s.id === targetId ? 'bg-emerald-50' : ''}`}>
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-teal-50 flex items-center justify-between ${s.id === targetId ? 'bg-teal-50' : ''}`}>
                     <span className="font-medium text-slate-700">{s.full_name}</span>
                     <span className="text-xs text-slate-400">{ROLE_LABELS[s.role] || s.role}</span>
                   </button>
@@ -192,13 +192,13 @@ const MyPayrollPage = () => {
         </div>
         {detail && (
           detail.status === 'locked'
-            ? <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full"><Lock className="w-3 h-3" /> Đã chốt</span>
+            ? <span className="inline-flex items-center gap-1 text-xs font-semibold bg-teal-100 text-teal-700 px-3 py-1 rounded-full"><Lock className="w-3 h-3" /> Đã chốt</span>
             : <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Tạm tính · cập nhật theo thời gian thực</span>
         )}
       </div>
 
       {loading && !detail ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : !detail ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
           <Wallet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
@@ -207,10 +207,10 @@ const MyPayrollPage = () => {
       ) : (
         <>
           {/* Thực nhận nổi bật */}
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-sm">
-            <div className="text-emerald-50 text-sm font-medium flex items-center gap-1.5"><Wallet className="w-4 h-4" /> Thực nhận {MONTHS[month - 1]} {year}</div>
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-6 text-white shadow-sm">
+            <div className="text-teal-50 text-sm font-medium flex items-center gap-1.5"><Wallet className="w-4 h-4" /> Thực nhận {MONTHS[month - 1]} {year}</div>
             <div className="text-4xl font-bold mt-1 tabular-nums">{fmtM(detail.net_salary)}</div>
-            <div className="text-emerald-100 text-sm mt-1">Tổng thu nhập {fmtM(detail.gross_income)} · Khấu trừ {fmtM(detail.total_deductions)}</div>
+            <div className="text-teal-100 text-sm mt-1">Tổng thu nhập {fmtM(detail.gross_income)} · Khấu trừ {fmtM(detail.total_deductions)}</div>
           </div>
 
           {/* Chỉ số nổi bật */}
@@ -226,7 +226,7 @@ const MyPayrollPage = () => {
           {/* Bảng chi tiết */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Thu nhập</h3>
+              <h3 className="font-bold text-teal-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Thu nhập</h3>
               <table className="w-full text-sm">
                 <tbody>
                   {incomeRows.map(([label, val, extra], i) => (
@@ -237,7 +237,7 @@ const MyPayrollPage = () => {
                   ))}
                   <tr className="border-t-2 border-slate-100">
                     <td className="py-2 font-bold text-slate-700">Tổng thu nhập</td>
-                    <td className="py-2 text-right font-bold text-emerald-700 tabular-nums">{fmtM(detail.gross_income)}</td>
+                    <td className="py-2 text-right font-bold text-teal-700 tabular-nums">{fmtM(detail.gross_income)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -262,9 +262,9 @@ const MyPayrollPage = () => {
                 <span className="font-bold text-slate-700">Tổng khấu trừ</span>
                 <span className="font-bold text-rose-600 tabular-nums">{fmtM(detail.total_deductions)}</span>
               </div>
-              <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex justify-between items-center">
+              <div className="mt-3 bg-teal-50 border border-teal-100 rounded-xl p-3 flex justify-between items-center">
                 <span className="font-bold text-slate-700">THỰC NHẬN</span>
-                <span className="text-xl font-bold text-emerald-700 tabular-nums">{fmtM(detail.net_salary)}</span>
+                <span className="text-xl font-bold text-teal-700 tabular-nums">{fmtM(detail.net_salary)}</span>
               </div>
             </div>
           </div>
@@ -274,7 +274,7 @@ const MyPayrollPage = () => {
       {/* Biểu đồ theo tháng */}
       {chartData.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h3 className="font-bold text-emerald-700 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Thực nhận theo tháng ({year})</h3>
+          <h3 className="font-bold text-teal-700 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Thực nhận theo tháng ({year})</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
@@ -282,7 +282,7 @@ const MyPayrollPage = () => {
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v >= 1e6 ? (v / 1e6) + 'tr' : v} width={42} />
                 <Tooltip formatter={(v) => fmtM(v)} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                <Bar dataKey="Thực nhận" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                <Bar dataKey="Thực nhận" fill="#14b8a6" radius={[6, 6, 0, 0]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>

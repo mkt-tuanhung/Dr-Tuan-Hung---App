@@ -20,8 +20,8 @@ const DEPARTMENTS = [
 
 const ComingSoon = ({ label }) => (
   <div className="bg-white border border-slate-100 rounded-2xl shadow-sm py-16 flex flex-col items-center text-center">
-    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-3">
-      <Construction className="w-7 h-7 text-emerald-500" />
+    <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center mb-3">
+      <Construction className="w-7 h-7 text-teal-500" />
     </div>
     <div className="font-semibold text-slate-700">KPI {label}</div>
     <div className="text-sm text-slate-400 mt-1">Đang được xây dựng</div>
@@ -61,7 +61,7 @@ const KPIManagementPage = () => {
         {DEPARTMENTS.map(d => (
           <button key={d.id} onClick={() => setDept(d.id)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-              dept === d.id ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'
+              dept === d.id ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'
             }`}>
             {d.label}
           </button>

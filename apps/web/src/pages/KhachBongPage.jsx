@@ -206,7 +206,7 @@ const KhachBongPage = ({ isNested = false }) => {
               <button type="button" onClick={() => openRevert(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
                 <RotateCcw className="w-4 h-4" /> Quay lại lịch hẹn
               </button>
-              <button type="button" onClick={() => openSurgery(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+              <button type="button" onClick={() => openSurgery(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200">
                 <ArrowUpCircle className="w-4 h-4" /> Chốt phẫu thuật
               </button>
             </div>
@@ -354,25 +354,25 @@ const KhachBongPage = ({ isNested = false }) => {
       {showSurgeryModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSurgerySubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
-              <h3 className="font-bold text-emerald-800">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
+              <h3 className="font-bold text-teal-800">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
             </div>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
-                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
-                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({ ...surgeryForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="Nâng mũi..." />
+                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({ ...surgeryForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Nâng mũi..." />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Nhóm dịch vụ</label>
-                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({ ...surgeryForm, service_group: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({ ...surgeryForm, service_group: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                     <option value="Hàm mặt">Hàm mặt</option>
                     <option value="Body">Body</option>
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
@@ -380,7 +380,7 @@ const KhachBongPage = ({ isNested = false }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Nguồn khách</label>
-                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                     <option value="Ads">Ads</option>
                     <option value="CTV">CTV</option>
                     <option value="Người quen">Người quen</option>
@@ -389,7 +389,7 @@ const KhachBongPage = ({ isNested = false }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Tệp khách</label>
-                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({ ...surgeryForm, customer_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({ ...surgeryForm, customer_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                     <option value="Mới">Khách Mới</option>
                     <option value="Cũ">Khách Cũ</option>
                   </select>
@@ -398,16 +398,16 @@ const KhachBongPage = ({ isNested = false }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Doanh thu (VNĐ)</label>
-                  <input required type="number" value={surgeryForm.revenue} onChange={e => setSurgeryForm({ ...surgeryForm, revenue: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="0" />
+                  <input required type="number" value={surgeryForm.revenue} onChange={e => setSurgeryForm({ ...surgeryForm, revenue: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Upsale (VNĐ)</label>
-                  <input type="number" value={surgeryForm.upsale_revenue} onChange={e => setSurgeryForm({ ...surgeryForm, upsale_revenue: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" placeholder="0" />
+                  <input type="number" value={surgeryForm.upsale_revenue} onChange={e => setSurgeryForm({ ...surgeryForm, upsale_revenue: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
                 </div>
               </div>
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
             </div>
           </form>
         </div>

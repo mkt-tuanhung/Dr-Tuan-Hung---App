@@ -368,7 +368,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                                   <Edit className="w-3.5 h-3.5" /> Sửa ca
                                 </button>
                               )}
-                              <button onClick={() => handleGoToHauPhau(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition-colors border border-emerald-200">
+                              <button onClick={() => handleGoToHauPhau(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold rounded-xl transition-colors border border-teal-200">
                                 <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
                               </button>
                             </>
@@ -434,7 +434,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
             <div className="flex bg-white border-b shrink-0 px-6 pt-2">
               <button type="button" onClick={() => setForm({...form, activeTab: 'phu_mo'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'phu_mo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Phụ mổ</button>
               <button type="button" onClick={() => setForm({...form, activeTab: 'truc_dem'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'truc_dem' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Trực đêm</button>
-              <button type="button" onClick={() => setForm({...form, activeTab: 'hau_phau'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'hau_phau' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Chăm hậu phẫu</button>
+              <button type="button" onClick={() => setForm({...form, activeTab: 'hau_phau'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'hau_phau' ? 'border-teal-600 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Chăm hậu phẫu</button>
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
@@ -491,7 +491,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               {form.activeTab === 'hau_phau' && (
                 <div>
                   <label className="block text-sm font-semibold mb-2">Người chăm sóc hậu phẫu</label>
-                  <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                     <option value="">-- Trống --</option>
                     {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                   </select>
@@ -523,7 +523,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
-                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
+                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
               </div>
               <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-blue-400">
                 {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : (feeForm.proof ? <img src={feeForm.proof} className="max-h-20 mx-auto" /> : 'Tải bill lên')}

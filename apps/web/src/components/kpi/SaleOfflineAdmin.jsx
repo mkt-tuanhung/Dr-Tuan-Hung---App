@@ -11,7 +11,7 @@ import { computeSaleOffline, isRecheck } from '@/lib/kpiCalc';
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
-const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b']; // Cọc / Phẫu thuật / Bong
+const PIE_COLORS = ['#3b82f6', '#14b8a6', '#f59e0b']; // Cọc / Phẫu thuật / Bong
 
 const EMPTY = { staff_id: '', target_revenue: '', target_close_rate: '', note: '' };
 
@@ -98,7 +98,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
   });
 
   if (loading) {
-    return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
+    return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
   }
 
   // Dữ liệu biểu đồ
@@ -120,7 +120,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
       <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
         {[['assign', 'Giao KPI & Danh sách'], ['progress', 'Theo dõi Tiến độ']].map(([id, label]) => (
           <button key={id} onClick={() => setSubTab(id)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${subTab === id ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${subTab === id ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
             {label}
           </button>
         ))}
@@ -129,13 +129,13 @@ const SaleOfflineAdmin = ({ month, year }) => {
       {subTab === 'assign' && (
         <>
           {/* Form giao KPI */}
-          <div className="bg-white border border-emerald-100 rounded-2xl shadow-sm p-5">
-            <h3 className="font-bold text-emerald-700 mb-4">{form.staff_id ? 'Cập nhật' : 'Tạo mới'} KPI Sale Offline</h3>
+          <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5">
+            <h3 className="font-bold text-teal-700 mb-4">{form.staff_id ? 'Cập nhật' : 'Tạo mới'} KPI Sale Offline</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Nhân viên Sale Offline *</label>
                 <select value={form.staff_id} onChange={e => setForm(f => ({ ...f, staff_id: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400">
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400">
                   <option value="">Chọn nhân sự</option>
                   {staff.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.employee_id})</option>)}
                 </select>
@@ -150,25 +150,25 @@ const SaleOfflineAdmin = ({ month, year }) => {
                 <input inputMode="numeric" value={fmtInput(form.target_revenue)}
                   onChange={e => setForm(f => ({ ...f, target_revenue: e.target.value.replace(/\D/g, '') }))}
                   placeholder="VD: 300.000.000"
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">KPI tỷ lệ chốt mục tiêu (%) *</label>
                 <input type="number" step="0.1" value={form.target_close_rate}
                   onChange={e => setForm(f => ({ ...f, target_close_rate: e.target.value }))}
                   placeholder="VD: 60"
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Ghi chú</label>
                 <textarea rows={2} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
+                  className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400 resize-none" />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               {form.staff_id && <button onClick={() => setForm(EMPTY)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>}
               <button onClick={handleSave} disabled={saving}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
                 {saving ? 'Đang lưu...' : 'Lưu KPI Sale Offline'}
               </button>
             </div>
@@ -187,7 +187,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
                     <th className="text-center px-3 py-2.5 font-medium">Tổng hẹn</th>
                     <th className="text-center px-3 py-2.5 font-medium text-red-500">Bong</th>
                     <th className="text-center px-3 py-2.5 font-medium text-blue-500">Cọc</th>
-                    <th className="text-center px-3 py-2.5 font-medium text-emerald-600">Phẫu thuật</th>
+                    <th className="text-center px-3 py-2.5 font-medium text-teal-600">Phẫu thuật</th>
                     <th className="text-center px-3 py-2.5 font-medium">Tỷ lệ chốt</th>
                     <th className="text-right px-4 py-2.5 font-medium">Doanh thu</th>
                     <th className="text-right px-4 py-2.5 font-medium">Upsale</th>
@@ -205,14 +205,14 @@ const SaleOfflineAdmin = ({ month, year }) => {
                       <td className="text-center px-3 py-2.5 font-semibold">{r.total}</td>
                       <td className="text-center px-3 py-2.5 text-red-500">{r.cntBong}</td>
                       <td className="text-center px-3 py-2.5 text-blue-500">{r.cntCoc}</td>
-                      <td className="text-center px-3 py-2.5 text-emerald-600 font-semibold">{r.cntPT}</td>
+                      <td className="text-center px-3 py-2.5 text-teal-600 font-semibold">{r.cntPT}</td>
                       <td className="text-center px-3 py-2.5 font-semibold">{r.closeRate.toFixed(1)}%</td>
                       <td className="text-right px-4 py-2.5 text-violet-700 font-semibold">{fmtM(r.doanhThu)}</td>
                       <td className="text-right px-4 py-2.5 text-orange-600">{fmtM(r.upsale)}</td>
-                      <td className="text-right px-4 py-2.5 text-emerald-700 font-bold">{fmtM(r.tongHH)}</td>
+                      <td className="text-right px-4 py-2.5 text-teal-700 font-bold">{fmtM(r.tongHH)}</td>
                       <td className="text-center px-3 py-2.5">
                         <button onClick={() => editRow(r)}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.kpi ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600 hover:bg-teal-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>
                           {r.kpi ? 'Sửa' : 'Giao KPI'}
                         </button>
                       </td>
@@ -229,7 +229,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
         <>
           <div className="grid lg:grid-cols-2 gap-5">
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-4">Doanh thu theo Sale Offline</h3>
+              <h3 className="font-bold text-teal-700 mb-4">Doanh thu theo Sale Offline</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={revChart}>
@@ -245,7 +245,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
               </div>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-4">Tỷ lệ Cọc / Phẫu thuật / Bong</h3>
+              <h3 className="font-bold text-teal-700 mb-4">Tỷ lệ Cọc / Phẫu thuật / Bong</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -259,7 +259,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
               </div>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-4">Tỷ lệ chốt theo Sale Offline (%)</h3>
+              <h3 className="font-bold text-teal-700 mb-4">Tỷ lệ chốt theo Sale Offline (%)</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={rateChart}>
@@ -275,7 +275,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
               </div>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-4">Tổng hoa hồng (VNĐ)</h3>
+              <h3 className="font-bold text-teal-700 mb-4">Tổng hoa hồng (VNĐ)</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hhChart}>
@@ -283,7 +283,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v) => fmtM(v)} />
-                    <Bar dataKey="Hoa hồng" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Hoa hồng" fill="#14b8a6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -317,17 +317,17 @@ const SaleOfflineAdmin = ({ month, year }) => {
                     <tr key={r.staff.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}</td>
                       <td className="text-center px-3 py-2.5">{r.total}</td>
-                      <td className="text-center px-3 py-2.5 text-emerald-600 font-semibold">{r.cntPT}</td>
+                      <td className="text-center px-3 py-2.5 text-teal-600 font-semibold">{r.cntPT}</td>
                       <td className="text-center px-3 py-2.5">{r.closeRate.toFixed(1)}%</td>
                       <td className="text-center px-3 py-2.5 text-slate-400">{r.kpi?.target_close_rate ? r.kpi.target_close_rate + '%' : '—'}</td>
                       <td className="text-right px-4 py-2.5 text-violet-700">{fmtM(r.doanhThu)}</td>
                       <td className="text-right px-4 py-2.5 text-slate-400">{r.kpi?.target_revenue ? fmtM(r.kpi.target_revenue) : '—'}</td>
                       <td className="text-right px-4 py-2.5">{fmtM(r.hhDoanhThu)}</td>
                       <td className="text-right px-4 py-2.5">{fmtM(r.hhUpsale)}</td>
-                      <td className="text-right px-4 py-2.5 font-bold text-emerald-700">{fmtM(r.tongHH)}</td>
+                      <td className="text-right px-4 py-2.5 font-bold text-teal-700">{fmtM(r.tongHH)}</td>
                       <td className="text-center px-3 py-2.5">
                         {r.revProgress === null ? <span className="text-amber-500 text-xs">Chưa giao</span>
-                          : <span className={`text-xs font-semibold ${r.revProgress >= 100 ? 'text-emerald-600' : r.revProgress >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>{r.revProgress}%</span>}
+                          : <span className={`text-xs font-semibold ${r.revProgress >= 100 ? 'text-teal-600' : r.revProgress >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>{r.revProgress}%</span>}
                       </td>
                     </tr>
                   ))}

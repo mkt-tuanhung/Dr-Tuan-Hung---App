@@ -325,7 +325,7 @@ const PayrollPage = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Bảng lương</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-emerald-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
+          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-teal-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
@@ -337,7 +337,7 @@ const PayrollPage = () => {
       {/* Chart lương các tháng */}
       {history.length > 0 && (
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-          <h3 className="font-bold text-emerald-700 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Tổng lương các tháng</h3>
+          <h3 className="font-bold text-teal-700 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Tổng lương các tháng</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={history}>
@@ -345,7 +345,7 @@ const PayrollPage = () => {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v) => fmtM(v)} />
-                <Bar dataKey="Tổng lương" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Tổng lương" fill="#14b8a6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -354,17 +354,17 @@ const PayrollPage = () => {
 
       {/* Actions */}
       <div className="flex justify-end gap-2">
-        <button onClick={() => savePayroll(false)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 disabled:opacity-50">
+        <button onClick={() => savePayroll(false)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-teal-200 text-teal-600 text-sm font-semibold hover:bg-teal-50 disabled:opacity-50">
           <Save className="w-4 h-4" /> Lưu nháp
         </button>
-        <button onClick={() => savePayroll(true)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
+        <button onClick={() => savePayroll(true)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
           <Lock className="w-4 h-4" /> Chốt lương tháng
         </button>
       </div>
 
       {/* Bảng lương */}
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : (
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -393,23 +393,23 @@ const PayrollPage = () => {
                     <td className="text-center px-3 py-2.5">{r.workingDays}</td>
                     <td className="text-right px-4 py-2.5">{fmtM(r.luongCong)}</td>
                     <td className="text-right px-4 py-2.5 text-slate-500">{fmtM(r.phuCap)}</td>
-                    <td className="text-right px-4 py-2.5 text-emerald-700 font-semibold">{fmtM(r.commission)}</td>
-                    <td className="text-right px-4 py-2.5 text-emerald-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}</td>
+                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{fmtM(r.commission)}</td>
+                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
-                        className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-emerald-400 disabled:bg-slate-50" />
+                        className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-teal-400 disabled:bg-slate-50" />
                     </td>
-                    <td className="text-right px-4 py-2.5 text-emerald-700">{r.advance ? '+' + fmtM(r.advance) : '0đ'}</td>
+                    <td className="text-right px-4 py-2.5 text-teal-700">{r.advance ? '+' + fmtM(r.advance) : '0đ'}</td>
                     <td className="text-right px-4 py-2.5 text-rose-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
-                        className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-emerald-400 disabled:bg-slate-50" />
+                        className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-teal-400 disabled:bg-slate-50" />
                     </td>
                     <td className="text-right px-4 py-2.5 font-bold text-slate-900">{fmtM(r.net)}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1 justify-end">
                         <button onClick={() => { setSaModal({ staff: r.staff }); setSaForm({ amount: '', reason: '' }); }} title="Ứng lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600"><HandCoins className="w-4 h-4" /></button>
-                        <button onClick={() => printPayslip(r)} title="In phiếu lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"><Printer className="w-4 h-4" /></button>
+                        <button onClick={() => printPayslip(r)} title="In phiếu lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-teal-50 hover:text-teal-600"><Printer className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -432,7 +432,7 @@ const PayrollPage = () => {
                   <div className="text-xs text-slate-400">{sa.reason || 'Không nêu lý do'} · {new Date(sa.created_at).toLocaleDateString('vi-VN')}</div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => approveSA(sa.id)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Duyệt</button>
+                  <button onClick={() => approveSA(sa.id)} className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Duyệt</button>
                   <button onClick={() => { setRejectSA(sa); setRejectReason(''); }} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">Từ chối</button>
                 </div>
               </div>
@@ -495,18 +495,18 @@ const PayrollPage = () => {
       {codeReveal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
-              <h3 className="font-bold text-emerald-800 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Mã bảo mật phiếu lương</h3>
-              <button onClick={() => setCodeReveal(null)}><X className="w-5 h-5 text-emerald-400" /></button>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
+              <h3 className="font-bold text-teal-800 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Mã bảo mật phiếu lương</h3>
+              <button onClick={() => setCodeReveal(null)}><X className="w-5 h-5 text-teal-400" /></button>
             </div>
             <div className="p-6 text-center">
               <p className="text-sm text-slate-500 mb-1">Mã xem phiếu lương của</p>
               <p className="font-bold text-slate-800 mb-4">{codeReveal.name}</p>
-              <div className="bg-slate-50 border-2 border-dashed border-emerald-200 rounded-xl py-4 mb-2">
-                <span className="text-3xl font-bold tracking-[0.3em] text-emerald-700">{codeReveal.code}</span>
+              <div className="bg-slate-50 border-2 border-dashed border-teal-200 rounded-xl py-4 mb-2">
+                <span className="text-3xl font-bold tracking-[0.3em] text-teal-700">{codeReveal.code}</span>
               </div>
               <button onClick={() => { navigator.clipboard?.writeText(codeReveal.code); setCopied(true); toast.success('Đã copy mã'); }}
-                className="inline-flex items-center gap-1.5 text-sm text-emerald-600 font-semibold hover:text-emerald-700">
+                className="inline-flex items-center gap-1.5 text-sm text-teal-600 font-semibold hover:text-teal-700">
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? 'Đã copy' : 'Copy mã'}
               </button>
               <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-3 text-left text-xs text-amber-700 leading-relaxed">
@@ -515,7 +515,7 @@ const PayrollPage = () => {
               </div>
             </div>
             <div className="p-4 bg-slate-50 border-t flex justify-end">
-              <button onClick={() => setCodeReveal(null)} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700">Xong</button>
+              <button onClick={() => setCodeReveal(null)} className="px-6 py-2 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700">Xong</button>
             </div>
           </div>
         </div>

@@ -21,7 +21,7 @@ export default function HRManagementPage({ initialTab = 'staff' }) {
           <button
             onClick={() => setActiveTab('staff')}
             className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'staff' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+              activeTab === 'staff' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'
             }`}
           >
             <Users className="w-4 h-4" /> Danh sách nhân sự
@@ -29,7 +29,7 @@ export default function HRManagementPage({ initialTab = 'staff' }) {
           <button
             onClick={() => setActiveTab('attendance')}
             className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'attendance' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+              activeTab === 'attendance' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'
             }`}
           >
             <CalendarCheck className="w-4 h-4" /> Bảng chấm công
@@ -37,7 +37,7 @@ export default function HRManagementPage({ initialTab = 'staff' }) {
           <button
             onClick={() => setActiveTab('leave')}
             className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'leave' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+              activeTab === 'leave' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'
             }`}
           >
             <FileText className="w-4 h-4" /> Duyệt đơn

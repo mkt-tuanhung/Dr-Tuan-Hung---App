@@ -9,7 +9,7 @@ import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
 import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2 } from 'lucide-react';
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+const COLORS = ['#14b8a6', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
 // ===== Import doanh thu từ CSV =====
 // Thứ tự cột BẮT BUỘC (đúng theo header dưới):
@@ -337,7 +337,7 @@ const FinanceManagementPage = () => {
           <p className="text-slate-500 text-sm mt-1">Báo cáo dòng tiền, nguồn khách và biểu đồ lợi nhuận</p>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl">
-          <button onClick={() => setActiveTab('revenue')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'revenue' ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+          <button onClick={() => setActiveTab('revenue')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'revenue' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
             <Banknote className="w-4 h-4 inline-block mr-2" /> Doanh Thu
           </button>
           {canViewAds && (
@@ -365,9 +365,9 @@ const FinanceManagementPage = () => {
 
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 md:p-5 rounded-2xl border border-emerald-100">
-              <div className="text-emerald-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
-              <div className="text-lg md:text-2xl font-black text-emerald-800 mt-2 truncate" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+            <div className="bg-gradient-to-br from-teal-50 to-teal-100/50 p-4 md:p-5 rounded-2xl border border-teal-100">
+              <div className="text-teal-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
+              <div className="text-lg md:text-2xl font-black text-teal-800 mt-2 truncate" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
             </div>
             <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 md:p-5 rounded-2xl border border-purple-100">
               <div className="text-purple-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU UPSALE</div>
@@ -423,10 +423,10 @@ const FinanceManagementPage = () => {
                <h3 className="font-bold text-slate-800">Danh sách Giao dịch Doanh Thu</h3>
                {(profile?.role === 'admin' || profile?.role === 'marketing') && (
                  <div className="flex items-center gap-2">
-                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="px-4 py-2 bg-white border border-emerald-200 text-emerald-700 font-semibold rounded-xl text-sm shadow-sm hover:bg-emerald-50 transition-colors flex items-center gap-2">
+                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="px-4 py-2 bg-white border border-teal-200 text-teal-700 font-semibold rounded-xl text-sm shadow-sm hover:bg-teal-50 transition-colors flex items-center gap-2">
                      <Upload className="w-4 h-4" /> Import Excel/CSV
                    </button>
-                   <button onClick={openCreateRevenue} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-emerald-700 transition-colors">
+                   <button onClick={openCreateRevenue} className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-teal-700 transition-colors">
                      + Nhập trực tiếp
                    </button>
                  </div>
@@ -447,7 +447,7 @@ const FinanceManagementPage = () => {
                              <CalendarIcon className="w-3.5 h-3.5" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
                           </div>
                         </div>
-                        <div className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">
+                        <div className="text-xs font-semibold bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full">
                           {r.service_group || 'Chưa rõ'}
                         </div>
                       </div>
@@ -470,7 +470,7 @@ const FinanceManagementPage = () => {
                       <div className="bg-slate-50 rounded-xl p-3 space-y-1.5">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-slate-600 font-medium">Doanh thu tổng:</span>
-                          <span className="font-bold text-emerald-600 text-base">{fmt(r.revenue || 0)}</span>
+                          <span className="font-bold text-teal-600 text-base">{fmt(r.revenue || 0)}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-slate-600 font-medium">Upsale:</span>
@@ -480,7 +480,7 @@ const FinanceManagementPage = () => {
 
                       {(profile?.role === 'admin' || profile?.role === 'marketing') && (
                         <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                          <button onClick={() => openEditRevenue(r)} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition-colors">
+                          <button onClick={() => openEditRevenue(r)} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-50 text-teal-700 text-xs font-bold rounded-xl hover:bg-teal-100 transition-colors">
                             <Pencil className="w-3.5 h-3.5" /> Sửa
                           </button>
                           <button onClick={() => handleDeleteRevenue(r)} className="w-9 flex items-center justify-center py-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
@@ -526,8 +526,8 @@ const FinanceManagementPage = () => {
       {showImportModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-emerald-50 shrink-0">
-              <h3 className="font-bold text-emerald-800">Import doanh thu từ Excel / CSV</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
+              <h3 className="font-bold text-teal-800">Import doanh thu từ Excel / CSV</h3>
               <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
@@ -549,12 +549,12 @@ const FinanceManagementPage = () => {
                   <li><b>ma_sale</b> — mã NV sale offline, để trống nếu không có</li>
                   <li><b>ghi_chu</b></li>
                 </ol>
-                <button onClick={downloadTemplate} className="mt-1 inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline">
+                <button onClick={downloadTemplate} className="mt-1 inline-flex items-center gap-1.5 text-teal-700 font-semibold hover:underline">
                   <Download className="w-4 h-4" /> Tải file mẫu (.csv)
                 </button>
               </div>
 
-              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 text-emerald-700 font-semibold">
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-teal-300 rounded-xl cursor-pointer hover:bg-teal-50 text-teal-700 font-semibold">
                 <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
               </label>
@@ -562,7 +562,7 @@ const FinanceManagementPage = () => {
               {importPreview && (
                 <div className="space-y-3">
                   <div className="flex gap-3 text-sm">
-                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
+                    <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
                     {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
                   </div>
                   {importPreview.errors.length > 0 && (
@@ -593,7 +593,7 @@ const FinanceManagementPage = () => {
             <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
               <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
               <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length}
-                className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50">
+                className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl text-sm hover:bg-teal-700 disabled:opacity-50">
                 {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} dòng`}
               </button>
             </div>
@@ -615,26 +615,26 @@ const FinanceManagementPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Ngày <span className="text-red-500">*</span></label>
-                  <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" />
+                  <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Họ tên khách hàng <span className="text-red-500">*</span></label>
-                  <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" placeholder="Nhập tên..." />
+                  <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập tên..." />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
-                  <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" placeholder="Nhập SĐT..." />
+                  <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập SĐT..." />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ sử dụng <span className="text-red-500">*</span></label>
-                  <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none" placeholder="Ví dụ: Nâng mũi" />
+                  <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Ví dụ: Nâng mũi" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
-                  <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                  <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="Hàm mặt">Hàm mặt</option>
                     <option value="Body">Body</option>
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
@@ -642,7 +642,7 @@ const FinanceManagementPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
-                  <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                  <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="Ads">Ads</option>
                     <option value="CTV">CTV</option>
                     <option value="Người quen">Người quen</option>
@@ -651,7 +651,7 @@ const FinanceManagementPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách <span className="text-red-500">*</span></label>
-                  <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                  <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="Mới">Khách Mới</option>
                     <option value="Cũ">Khách Cũ</option>
                   </select>
@@ -661,18 +661,18 @@ const FinanceManagementPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu tổng (VNĐ) <span className="text-red-500">*</span></label>
-                  <input required type="number" value={createForm.revenue} onChange={e => setCreateForm({...createForm, revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none text-emerald-700 font-bold" placeholder="0" />
+                  <input required type="number" value={createForm.revenue} onChange={e => setCreateForm({...createForm, revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-700 font-bold" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu Upsale (VNĐ)</label>
-                  <input type="number" value={createForm.upsale_revenue} onChange={e => setCreateForm({...createForm, upsale_revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none text-purple-700 font-bold" placeholder="0" />
+                  <input type="number" value={createForm.upsale_revenue} onChange={e => setCreateForm({...createForm, upsale_revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-purple-700 font-bold" placeholder="0" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
-                  <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                  <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline' || s.role === 'admin').map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -681,7 +681,7 @@ const FinanceManagementPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
-                  <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                  <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin').map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -690,7 +690,7 @@ const FinanceManagementPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
-                  <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none bg-white">
+                  <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -701,11 +701,11 @@ const FinanceManagementPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ghi chú thêm</label>
-                <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none resize-none" placeholder="Nhập ghi chú..."></textarea>
+                <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none resize-none" placeholder="Nhập ghi chú..."></textarea>
               </div>
 
               <div className="pt-4 flex justify-end">
-                <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
+                <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">
                   {saving ? 'Đang lưu...' : (createForm.id ? 'Cập nhật' : 'Nhập Doanh Thu')}
                 </button>
               </div>

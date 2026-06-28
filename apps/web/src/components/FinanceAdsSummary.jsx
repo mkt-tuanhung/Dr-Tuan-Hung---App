@@ -20,7 +20,7 @@ const FinanceAdsSummary = ({ stats, month, onViewDetail }) => {
           </div>
           <div>
             <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Doanh thu Ads</div>
-            <div className="text-xl font-bold text-emerald-400">{fmt(stats.adsRevenue)}</div>
+            <div className="text-xl font-bold text-teal-400">{fmt(stats.adsRevenue)}</div>
           </div>
           <div>
             <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Chi phí / Lead</div>
@@ -28,7 +28,7 @@ const FinanceAdsSummary = ({ stats, month, onViewDetail }) => {
           </div>
           <div>
             <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Tỷ lệ chi phí / Doanh thu</div>
-            <div className={`text-xl font-bold ${ratio >= 100 ? 'text-red-400' : 'text-emerald-400'}`}>{ratio}%</div>
+            <div className={`text-xl font-bold ${ratio >= 100 ? 'text-red-400' : 'text-teal-400'}`}>{ratio}%</div>
           </div>
         </div>
       </div>

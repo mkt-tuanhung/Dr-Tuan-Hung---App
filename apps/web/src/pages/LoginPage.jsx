@@ -80,15 +80,15 @@ const LoginPage = ({ adminMode = false }) => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%)' }}>
 
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-200/40 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-200/40 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-200/30 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white/80 backdrop-blur-sm border border-emerald-100 shadow-xl shadow-emerald-100/50 rounded-3xl p-8 relative z-10">
+      <div className="w-full max-w-md bg-white/80 backdrop-blur-sm border border-teal-100 shadow-xl shadow-teal-100/50 rounded-3xl p-8 relative z-10">
         {/* Logo + heading */}
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="w-24 h-24 flex items-center justify-center mb-2">
             <img src="/logo.png" alt="Dr Tuan Hung Logo" className="w-full h-full object-contain rounded-xl shadow-lg" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-            <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl hidden items-center justify-center shadow-lg shadow-emerald-200">
+            <div className="w-full h-full bg-gradient-to-br from-teal-400 to-teal-500 rounded-2xl hidden items-center justify-center shadow-lg shadow-teal-200">
               <Stethoscope className="w-10 h-10 text-white" />
             </div>
           </div>
@@ -97,7 +97,7 @@ const LoginPage = ({ adminMode = false }) => {
               <ShieldAlert className="w-3.5 h-3.5" /> Cổng Quản trị
             </div>
           ) : (
-            <p className="text-xs text-emerald-600 mt-1 font-bold tracking-widest uppercase">Internal System</p>
+            <p className="text-xs text-teal-600 mt-1 font-bold tracking-widest uppercase">Internal System</p>
           )}
         </div>
 
@@ -118,11 +118,11 @@ const LoginPage = ({ adminMode = false }) => {
               <Loader2 className="w-4 h-4 animate-spin" /> Đang chờ Admin phê duyệt...
             </div>
 
-            <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4">
+            <div className="bg-teal-50/60 border border-teal-100 rounded-2xl p-4">
               <p className="text-xs text-slate-500 text-center mb-3">Cần gấp? Liên hệ Admin ngay:</p>
               <div className="grid grid-cols-2 gap-3">
-                <a href={`tel:${ADMIN_PHONE}`} className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 transition-colors">
-                  <Phone className="w-5 h-5 text-emerald-600" />
+                <a href={`tel:${ADMIN_PHONE}`} className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white border border-teal-200 hover:bg-teal-50 transition-colors">
+                  <Phone className="w-5 h-5 text-teal-600" />
                   <span className="text-xs font-semibold text-slate-700">Gọi điện</span>
                   <span className="text-[11px] text-slate-400">{ADMIN_PHONE}</span>
                 </a>
@@ -142,8 +142,8 @@ const LoginPage = ({ adminMode = false }) => {
           /* ----- Bước nhập mã 2FA ----- */
           <form onSubmit={handleVerifyMfa} className="space-y-4">
             <div className="flex flex-col items-center text-center mb-2">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-2">
-                <ShieldCheck className="w-6 h-6 text-emerald-500" />
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center mb-2">
+                <ShieldCheck className="w-6 h-6 text-teal-500" />
               </div>
               <h3 className="font-bold text-slate-800">Xác thực 2 lớp</h3>
               <p className="text-sm text-slate-500 mt-0.5">Nhập mã 6 số từ ứng dụng Authenticator</p>
@@ -152,12 +152,12 @@ const LoginPage = ({ adminMode = false }) => {
               type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
               value={mfaCode}
               onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-              className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 text-center text-2xl tracking-[0.4em] font-bold"
+              className="h-12 rounded-2xl border-teal-100 bg-teal-50/50 text-center text-2xl tracking-[0.4em] font-bold"
               placeholder="••••••" autoFocus
             />
             {errorMsg && <p className="text-sm text-red-500 font-medium text-center">{errorMsg}</p>}
             <Button type="submit" disabled={isSubmitting}
-              className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-200 border-0">
+              className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-teal-500 to-teal-500 hover:from-teal-600 hover:to-teal-600 shadow-md shadow-teal-200 border-0">
               {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
               Xác nhận
             </Button>
@@ -172,7 +172,7 @@ const LoginPage = ({ adminMode = false }) => {
               <label className="text-sm font-medium text-slate-600">ID nhân sự</label>
               <Input
                 type="text" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}
-                className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 focus:border-emerald-400 focus:ring-emerald-400"
+                className="h-12 rounded-2xl border-teal-100 bg-teal-50/50 focus:border-teal-400 focus:ring-teal-400"
                 placeholder="Nhập ID nhân sự" autoComplete="username" autoFocus
               />
             </div>
@@ -180,13 +180,13 @@ const LoginPage = ({ adminMode = false }) => {
               <label className="text-sm font-medium text-slate-600">Mật khẩu</label>
               <Input
                 type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="h-12 rounded-2xl border-emerald-100 bg-emerald-50/50 focus:border-emerald-400 focus:ring-emerald-400"
+                className="h-12 rounded-2xl border-teal-100 bg-teal-50/50 focus:border-teal-400 focus:ring-teal-400"
                 placeholder="Nhập mật khẩu" autoComplete="current-password"
               />
             </div>
             {errorMsg && <p className="text-sm text-red-500 font-medium text-center">{errorMsg}</p>}
             <Button type="submit" disabled={isSubmitting}
-              className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-200 border-0">
+              className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-teal-500 to-teal-500 hover:from-teal-600 hover:to-teal-600 shadow-md shadow-teal-200 border-0">
               {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
               {adminMode ? 'Đăng nhập Quản trị' : 'Đăng nhập'}
             </Button>

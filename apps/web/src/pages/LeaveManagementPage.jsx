@@ -14,7 +14,7 @@ const HALF_DAY = { morning: 'Buổi sáng', afternoon: 'Buổi chiều' };
 
 const LEAVE_STATUS = {
   pending:  { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700' },
-  approved: { label: 'Đã duyệt',  color: 'bg-emerald-100 text-emerald-700' },
+  approved: { label: 'Đã duyệt',  color: 'bg-teal-100 text-teal-700' },
   rejected: { label: 'Từ chối',   color: 'bg-red-100 text-red-700' },
 };
 
@@ -190,11 +190,11 @@ const LeaveManagementPage = () => {
       <div className="grid grid-cols-3 gap-3">
         {[
           { key: 'pending', label: 'Chờ duyệt', color: 'text-yellow-500' },
-          { key: 'approved', label: 'Đã duyệt', color: 'text-emerald-600' },
+          { key: 'approved', label: 'Đã duyệt', color: 'text-teal-600' },
           { key: 'rejected', label: 'Từ chối', color: 'text-red-400' },
         ].map(s => (
           <button key={s.key} onClick={() => setFilter(s.key)}
-            className={`bg-white rounded-2xl p-4 border shadow-sm text-center transition-all ${filter === s.key ? 'border-emerald-300 shadow-md' : 'border-slate-100'}`}>
+            className={`bg-white rounded-2xl p-4 border shadow-sm text-center transition-all ${filter === s.key ? 'border-teal-300 shadow-md' : 'border-slate-100'}`}>
             <div className={`text-2xl font-bold ${s.color}`}>{requests.filter(r => r.status === s.key).length}</div>
             <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
           </button>
@@ -204,9 +204,9 @@ const LeaveManagementPage = () => {
       {/* Filter + Search */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
           <input
-            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-emerald-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400"
+            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-teal-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400"
             placeholder="Tìm nhân sự..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -215,7 +215,7 @@ const LeaveManagementPage = () => {
         <div className="flex items-center gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
           {[{key:'all',label:'Tất cả'},{key:'pending',label:'Chờ duyệt'},{key:'approved',label:'Đã duyệt'},{key:'rejected',label:'Từ chối'}].map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${filter === f.key ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${filter === f.key ? 'bg-teal-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
               {f.label}
               {f.key === 'pending' && pendingCount > 0 && (
                 <span className="ml-1 bg-red-400 text-white text-[10px] rounded-full px-1">{pendingCount}</span>
@@ -228,7 +228,7 @@ const LeaveManagementPage = () => {
       {/* List */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400 text-sm shadow-sm">
@@ -241,11 +241,11 @@ const LeaveManagementPage = () => {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
                       {r.profiles?.avatar_url ? (
                         <img src={r.profiles.avatar_url} alt={r.profiles.full_name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-bold text-emerald-500">{r.profiles?.full_name?.charAt(0)}</span>
+                        <span className="text-sm font-bold text-teal-500">{r.profiles?.full_name?.charAt(0)}</span>
                       )}
                     </div>
                     <div>
@@ -291,7 +291,7 @@ const LeaveManagementPage = () => {
                     <X className="w-4 h-4" /> Từ chối
                   </button>
                   <button onClick={() => handleApprove(r.id)} disabled={saving === r.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-50">
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium text-teal-600 hover:bg-teal-50 transition-colors disabled:opacity-50">
                     <Check className="w-4 h-4" /> Duyệt
                   </button>
                 </div>

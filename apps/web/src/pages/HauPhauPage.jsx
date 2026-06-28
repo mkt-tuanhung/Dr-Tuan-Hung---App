@@ -25,7 +25,7 @@ const TABS = [
 const STATUS_STYLE = {
   'Đang theo dõi': 'bg-amber-100 text-amber-700 border-amber-200',
   'Tái khám': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Đã ổn định': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'Đã ổn định': 'bg-teal-100 text-teal-700 border-teal-200',
   'Có biến chứng': 'bg-red-100 text-red-700 border-red-200',
 };
 
@@ -381,7 +381,7 @@ const HauPhauPage = () => {
 
         {/* Nhật ký theo dõi (thread) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-emerald-600" /> Nhật ký theo dõi</h3>
+          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký theo dõi</h3>
           <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
             {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
           </div>
@@ -418,14 +418,14 @@ const HauPhauPage = () => {
           <div className="flex flex-wrap gap-2">
             {QUICK_NOTES.map(q => (
               <button key={q} type="button" onClick={() => addQuickNote(q)}
-                className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100 hover:bg-emerald-100">
+                className="px-3 py-1.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium border border-teal-100 hover:bg-teal-100">
                 + {q}
               </button>
             ))}
           </div>
-          <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
+          <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-emerald-100">
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-teal-100">
               {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
             </button>
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
@@ -443,7 +443,7 @@ const HauPhauPage = () => {
               </div>
               <div className="p-6">
                 <label className="block text-sm font-semibold mb-2">Chọn nhân sự Điều dưỡng</label>
-                <select value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                <select value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                   <option value="">-- Chọn Điều dưỡng --</option>
                   {nurses.filter(n => n.role === 'dieu_duong' && !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
                     <option key={n.id} value={n.id}>{n.full_name}</option>
@@ -475,11 +475,11 @@ const HauPhauPage = () => {
         </div>
         <div className="flex items-center gap-2">
           {canSeeAll && (
-            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">
+            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
               <Upload className="w-4 h-4" /> Import khách
             </button>
           )}
-          <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold">
+          <div className="bg-teal-100 text-teal-700 px-4 py-2 rounded-xl font-bold">
             {mainTabCustomers.length} Khách
           </div>
         </div>
@@ -488,11 +488,11 @@ const HauPhauPage = () => {
       {/* Main tabs: Hậu phẫu / CSKH */}
       <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-fit">
         <button onClick={() => { setMainTab('hau_phau'); setActiveTab('all'); }}
-          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'hau_phau' ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'hau_phau' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
           Hậu phẫu (&lt;1 tháng) · {hauPhauCount}
         </button>
         <button onClick={() => { setMainTab('cskh'); setActiveTab('all'); }}
-          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'cskh' ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
+          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'cskh' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
           CSKH (≥1 tháng) · {cskhCount}
         </button>
       </div>
@@ -514,13 +514,13 @@ const HauPhauPage = () => {
             placeholder="Tìm tên KH hoặc số điện thoại..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+            className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : filteredCustomers.length === 0 ? (
          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
             Không có khách hàng hậu phẫu nào trong mục này
@@ -530,9 +530,9 @@ const HauPhauPage = () => {
           {Object.entries(groupedCustomers).map(([date, apps]) => (
             <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                <Calendar className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-emerald-800 text-lg">Mổ ngày: {date}</h3>
-                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
+                <Calendar className="w-5 h-5 text-teal-600" />
+                <h3 className="font-bold text-teal-800 text-lg">Mổ ngày: {date}</h3>
+                <span className="px-2.5 py-0.5 bg-teal-100 text-teal-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -541,7 +541,7 @@ const HauPhauPage = () => {
                   const noteCount = app.post_op_notes ? app.post_op_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                   return (
                   <button key={app.id} type="button" onClick={() => openCare(app)}
-                    className="text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-emerald-400 hover:shadow-md transition-all">
+                    className="text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-teal-400 hover:shadow-md transition-all">
                     {/* Header */}
                     <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
                       <div className="min-w-0">
@@ -565,7 +565,7 @@ const HauPhauPage = () => {
 
                     <div className="mt-auto flex items-center justify-between pt-1 text-sm">
                       <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {noteCount} mốc ghi chú</span>
-                      <span className="text-emerald-600 font-semibold">Mở nhật ký →</span>
+                      <span className="text-teal-600 font-semibold">Mở nhật ký →</span>
                     </div>
                   </button>
                   );
@@ -590,7 +590,7 @@ const HauPhauPage = () => {
             </div>
             <div className="p-6">
               <label className="block text-sm font-semibold mb-2">Chọn nhân sự Điều dưỡng</label>
-              <select required value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+              <select required value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                 <option value="">-- Chọn Điều dưỡng --</option>
                 {nurses.filter(n => n.role === 'dieu_duong' && !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
                   <option key={n.id} value={n.id}>{n.full_name}</option>
@@ -620,8 +620,8 @@ const HauPhauPage = () => {
       {showImportModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-emerald-50 shrink-0">
-              <h3 className="font-bold text-emerald-800">Import khách hàng chăm sóc</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
+              <h3 className="font-bold text-teal-800">Import khách hàng chăm sóc</h3>
               <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
@@ -635,12 +635,12 @@ const HauPhauPage = () => {
                   <li><b>ma_dieu_duong</b> — mã NV điều dưỡng phụ trách (vd NV010) <b>bắt buộc</b></li>
                   <li><b>ghi_chu</b> — ghi chú đầu tiên (tùy chọn)</li>
                 </ol>
-                <button onClick={() => downloadCsv('mau_import_khach_cham_soc.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline">
+                <button onClick={() => downloadCsv('mau_import_khach_cham_soc.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-teal-700 font-semibold hover:underline">
                   <Download className="w-4 h-4" /> Tải file mẫu (.csv)
                 </button>
               </div>
 
-              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 text-emerald-700 font-semibold">
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-teal-300 rounded-xl cursor-pointer hover:bg-teal-50 text-teal-700 font-semibold">
                 <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
               </label>
@@ -648,7 +648,7 @@ const HauPhauPage = () => {
               {importPreview && (
                 <div className="space-y-3">
                   <div className="flex gap-3 text-sm">
-                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
+                    <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
                     {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
                   </div>
                   {importPreview.errors.length > 0 && (
@@ -675,7 +675,7 @@ const HauPhauPage = () => {
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
               <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
-              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50">
+              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl text-sm hover:bg-teal-700 disabled:opacity-50">
                 {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} khách`}
               </button>
             </div>

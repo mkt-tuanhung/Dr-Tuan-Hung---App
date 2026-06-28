@@ -5,7 +5,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, User
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 
 const STATUS_CONFIG = {
-  present:  { label: 'Có mặt',    color: 'bg-emerald-100 text-emerald-700' },
+  present:  { label: 'Có mặt',    color: 'bg-teal-100 text-teal-700' },
   late:     { label: 'Đi trễ',    color: 'bg-yellow-100 text-yellow-700' },
   absent:   { label: 'Vắng mặt', color: 'bg-red-100 text-red-700' },
   half_day: { label: 'Nửa ngày', color: 'bg-blue-100 text-blue-700' },
@@ -238,13 +238,13 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
           <div className="flex items-center gap-6 border-b border-slate-200">
             <button
               onClick={() => setActiveTab('attendance')}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'attendance' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'attendance' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
               Bảng chấm công
             </button>
             <button
               onClick={() => setActiveTab('leave')}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'leave' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'leave' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
               Duyệt đơn xin phép
             </button>
@@ -280,8 +280,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
           {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center mb-2">
-            <Users className="w-4 h-4 text-emerald-600" />
+          <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center mb-2">
+            <Users className="w-4 h-4 text-teal-600" />
           </div>
           <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
           <div className="text-xs text-slate-400 mt-0.5">Tổng nhân sự</div>
@@ -298,9 +298,9 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       {/* Search & Bulk Toggle */}
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative w-full max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
           <input
-            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-emerald-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-teal-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
             placeholder="Tìm nhân sự..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -311,7 +311,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             setIsMultiSelect(!isMultiSelect);
             if (isMultiSelect) setSelectedCells(new Set());
           }}
-          className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border ${isMultiSelect ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+          className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border ${isMultiSelect ? 'bg-teal-600 text-white border-teal-600 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
         >
           {isMultiSelect ? 'Hủy chọn nhiều' : 'Tích chọn nhiều ô'}
         </button>
@@ -329,21 +329,21 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       {/* Desktop table */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
         <>
-          <div className="hidden lg:block bg-white border border-emerald-100 rounded-2xl overflow-auto shadow-sm">
+          <div className="hidden lg:block bg-white border border-teal-100 rounded-2xl overflow-auto shadow-sm">
             <table className="w-full text-xs">
-              <thead className="bg-emerald-50/50 text-slate-500 border-b border-emerald-100">
+              <thead className="bg-teal-50/50 text-slate-500 border-b border-teal-100">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium sticky left-0 bg-emerald-50/50 min-w-[160px]">Nhân sự</th>
+                  <th className="text-left px-4 py-3 font-medium sticky left-0 bg-teal-50/50 min-w-[160px]">Nhân sự</th>
                   {days.map(d => {
                     const date = new Date(year, month-1, d);
                     const isToday = date.toDateString() === today.toDateString();
                     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                     return (
-                      <th key={d} className={`px-2 py-3 font-medium text-center min-w-[36px] ${isToday ? 'text-emerald-600' : ''} ${isWeekend ? 'text-slate-300' : ''}`}>
+                      <th key={d} className={`px-2 py-3 font-medium text-center min-w-[36px] ${isToday ? 'text-teal-600' : ''} ${isWeekend ? 'text-slate-300' : ''}`}>
                         <div>{d}</div>
                         <div className="text-[9px] font-normal">{DAYS[date.getDay()]}</div>
                       </th>
@@ -351,16 +351,16 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   })}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-emerald-50">
+              <tbody className="divide-y divide-teal-50">
                 {filtered.map(s => (
-                  <tr key={s.id} className="hover:bg-emerald-50/30 transition-colors">
+                  <tr key={s.id} className="hover:bg-teal-50/30 transition-colors">
                     <td className="px-4 py-2.5 sticky left-0 bg-white">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
                           {s.avatar_url ? (
                             <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-[10px] font-bold text-emerald-500">{s.full_name?.charAt(0)}</span>
+                            <span className="text-[10px] font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
                           )}
                         </div>
                         <div>
@@ -377,7 +377,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       const cellKey = `${s.id}_${d}`;
                       const isSelected = selectedCells.has(cellKey);
                       return (
-                        <td key={d} className={`px-1 py-2 text-center relative ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-emerald-50/40' : ''} ${isSelected ? 'ring-2 ring-inset ring-emerald-500 bg-emerald-100/50' : ''}`}>
+                        <td key={d} className={`px-1 py-2 text-center relative ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-teal-50/40' : ''} ${isSelected ? 'ring-2 ring-inset ring-teal-500 bg-teal-100/50' : ''}`}>
                           <button
                             onClick={() => handleCellClick(s.id, d)}
                             className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all hover:scale-110 relative"
@@ -385,7 +385,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                           >
                             {record ? (
                               <>
-                                {record.status === 'present' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> :
+                                {record.status === 'present' ? <Check className="w-3.5 h-3.5 text-teal-500" /> :
                                 record.status === 'absent' ? <X className="w-3.5 h-3.5 text-red-400" /> :
                                 record.status === 'late' ? <Clock className="w-3.5 h-3.5 text-yellow-500" /> :
                                 <span className="text-[9px] font-bold text-purple-500">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
@@ -413,14 +413,14 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
               const todayRecord = attendance.find(a => a.staff_id === s.id && a.date === todayStr);
               const monthCount = attendance.filter(a => a.staff_id === s.id && a.status === 'present').length;
               return (
-                <div key={s.id} className="bg-white border border-emerald-100 rounded-2xl p-4 shadow-sm">
+                <div key={s.id} className="bg-white border border-teal-100 rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center">
                         {s.avatar_url ? (
                           <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-sm font-bold text-emerald-500">{s.full_name?.charAt(0)}</span>
+                          <span className="text-sm font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
                         )}
                       </div>
                       <div>
@@ -440,7 +440,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                     <span className="text-xs text-slate-400">Có mặt tháng này: <span className="font-semibold text-slate-700">{monthCount} ngày</span></span>
                     <button
                       onClick={() => openEdit(s.id, today.getDate())}
-                      className="text-xs text-emerald-600 font-medium hover:text-emerald-700"
+                      className="text-xs text-teal-600 font-medium hover:text-teal-700"
                     >
                       Chấm hôm nay →
                     </button>
@@ -457,7 +457,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur text-white px-6 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center gap-6 z-[60] animate-in slide-in-from-bottom-8">
           <div className="font-semibold text-sm">Đã chọn {selectedCells.size} ô</div>
           <div className="flex items-center gap-2 border-l border-slate-700 pl-6">
-            <button disabled={saving} onClick={() => handleBulkAction('present')} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-sm font-bold transition-colors">Có mặt</button>
+            <button disabled={saving} onClick={() => handleBulkAction('present')} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-white rounded-xl text-sm font-bold transition-colors">Có mặt</button>
             <button disabled={saving} onClick={() => handleBulkAction('half_day')} className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-sm font-bold transition-colors">Nửa ngày</button>
             <button disabled={saving} onClick={() => handleBulkAction('late')} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl text-sm font-bold transition-colors">Đi trễ</button>
             <button disabled={saving} onClick={() => handleBulkAction('absent')} className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-xl text-sm font-bold transition-colors">Vắng mặt</button>
@@ -491,8 +491,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       onClick={() => setEditModal(m => ({ ...m, status: k }))}
                       className={`py-2 rounded-xl text-xs font-medium border transition-all ${
                         editModal.status === k
-                          ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
-                          : 'border-slate-100 text-slate-500 hover:border-emerald-200'
+                          ? 'border-teal-400 bg-teal-50 text-teal-700'
+                          : 'border-slate-100 text-slate-500 hover:border-teal-200'
                       }`}
                     >
                       {v.label}
@@ -508,7 +508,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                     type="time"
                     value={editModal.check_in}
                     onChange={e => setEditModal(m => ({ ...m, check_in: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 focus:outline-none focus:border-emerald-400"
+                    className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400"
                   />
                 </div>
                 <div>
@@ -517,7 +517,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                     type="time"
                     value={editModal.check_out}
                     onChange={e => setEditModal(m => ({ ...m, check_out: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 focus:outline-none focus:border-emerald-400"
+                    className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400"
                   />
                 </div>
               </div>
@@ -528,7 +528,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   value={editModal.note}
                   onChange={e => setEditModal(m => ({ ...m, note: e.target.value }))}
                   rows={2}
-                  className="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 focus:outline-none focus:border-emerald-400 resize-none"
+                  className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400 resize-none"
                   placeholder="Ghi chú thêm..."
                 />
               </div>
@@ -538,7 +538,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   <div className="flex items-center justify-between">
                     <span className="font-semibold flex items-center gap-1.5">Vị trí GPS:</span>
                     {editModal.location_status === 'in_office' ? (
-                      <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">Hợp lệ</span>
+                      <span className="text-teal-700 font-bold bg-teal-100 px-2 py-0.5 rounded border border-teal-200">Hợp lệ</span>
                     ) : editModal.location_status === 'outside' ? (
                       <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded border border-red-200">Ngoài VP</span>
                     ) : (
@@ -560,7 +560,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                         <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
                       )}
                       {editModal.ip_address && OFFICE_IPS.includes(editModal.ip_address) && (
-                        <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded text-[10px] border border-emerald-200">Hợp lệ</span>
+                        <span className="text-teal-700 font-bold bg-teal-100 px-2 py-0.5 rounded text-[10px] border border-teal-200">Hợp lệ</span>
                       )}
                     </div>
                   </div>
@@ -578,7 +578,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold disabled:opacity-50"
               >
                 {saving ? 'Đang lưu...' : 'Lưu'}
               </button>
@@ -593,7 +593,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         <div className="space-y-4">
           {violations.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
-              <Check className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
+              <Check className="w-12 h-12 text-teal-300 mx-auto mb-3" />
               <p className="text-slate-500 font-medium">Không có cảnh báo vi phạm nào trong tháng này.</p>
             </div>
           ) : (
@@ -632,7 +632,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                         {v.location_status === 'outside' ? (
                           <span className="text-red-700 font-medium">Ngoài văn phòng</span>
                         ) : (
-                          <span className="text-emerald-700 font-medium">Hợp lệ</span>
+                          <span className="text-teal-700 font-medium">Hợp lệ</span>
                         )}
                       </div>
                       {v.latitude && v.longitude && (
@@ -669,7 +669,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
               {violations.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
-                  <Check className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
+                  <Check className="w-12 h-12 text-teal-300 mx-auto mb-3" />
                   <p className="text-slate-500 font-medium">Không có cảnh báo vi phạm nào trong tháng này.</p>
                 </div>
               ) : (
@@ -711,7 +711,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                             ) : v.location_status === 'unknown' ? (
                               <span className="text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded border border-orange-100 text-[10px]">Chặn định vị</span>
                             ) : (
-                              <span className="text-emerald-700 font-medium">Hợp lệ</span>
+                              <span className="text-teal-700 font-medium">Hợp lệ</span>
                             )}
                           </div>
                           {v.latitude && v.longitude && (
@@ -734,7 +734,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                           <button 
                             onClick={() => handleClearAnomaly(v)} 
                             disabled={saving}
-                            className="py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                            className="py-2.5 bg-teal-50 border border-teal-200 rounded-xl text-sm font-bold text-teal-700 hover:bg-teal-100 transition-colors disabled:opacity-50"
                           >
                             Bỏ qua sai phạm
                           </button>

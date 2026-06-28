@@ -246,16 +246,16 @@ const StaffManagementPage = ({ isNested = false }) => {
         )}
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-emerald-200 hover:from-emerald-600 hover:to-teal-600 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-teal-200 hover:from-teal-600 hover:to-teal-600 transition-all"
         >
           <Plus className="w-4 h-4" /> Thêm nhân sự
         </button>
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
         <input
-          className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-emerald-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-teal-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
           placeholder="Tìm theo tên, ID, SĐT..."
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -264,14 +264,14 @@ const StaffManagementPage = ({ isNested = false }) => {
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-white border border-emerald-100 rounded-2xl overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-white border border-teal-100 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-emerald-50/50 text-slate-500 border-b border-emerald-100">
+              <thead className="bg-teal-50/50 text-slate-500 border-b border-teal-100">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Nhân sự</th>
                   <th className="text-left px-4 py-3 font-medium">Vị trí</th>
@@ -282,16 +282,16 @@ const StaffManagementPage = ({ isNested = false }) => {
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-emerald-50">
+              <tbody className="divide-y divide-teal-50">
                 {filtered.map(s => (
-                  <tr key={s.id} className={`hover:bg-emerald-50/40 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
+                  <tr key={s.id} className={`hover:bg-teal-50/40 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
                           {s.avatar_url ? (
                             <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-xs font-bold text-emerald-500">{s.full_name?.charAt(0)}</span>
+                            <span className="text-xs font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
                           )}
                         </div>
                         <div>
@@ -313,18 +313,18 @@ const StaffManagementPage = ({ isNested = false }) => {
                       {s.employment_status === 'probation' ? (
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600">Thử việc</span>
-                          <button onClick={() => handleEndProbation(s)} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+                          <button onClick={() => handleEndProbation(s)} className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
                             <UserCheck className="w-3 h-3" /> Kết thúc TV
                           </button>
                         </div>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Chính thức</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">Chính thức</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-400">{s.phone || '—'}</td>
                     <td className="px-4 py-3">
                       {s.bank_name && s.bank_account ? (
-                        <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors text-xs font-medium">
+                        <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-teal-50 text-teal-600 rounded-lg hover:bg-teal-100 transition-colors text-xs font-medium">
                           <QrCode className="w-3.5 h-3.5" /> VietQR
                         </button>
                       ) : (
@@ -336,7 +336,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                         <button onClick={() => handleImpersonate(s)} title="Đăng nhập với tư cách" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                           <LogIn className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => openEdit(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
+                        <button onClick={() => openEdit(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-amber-50 hover:text-amber-500 transition-colors">
@@ -362,14 +362,14 @@ const StaffManagementPage = ({ isNested = false }) => {
               <div className="text-center py-10 text-slate-400">Không tìm thấy nhân sự</div>
             )}
             {filtered.map(s => (
-              <div key={s.id} className={`bg-white border border-emerald-100 rounded-2xl p-4 space-y-3 shadow-sm ${!s.is_active ? 'opacity-50' : ''}`}>
+              <div key={s.id} className={`bg-white border border-teal-100 rounded-2xl p-4 space-y-3 shadow-sm ${!s.is_active ? 'opacity-50' : ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
                       {s.avatar_url ? (
                         <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-bold text-emerald-500">{s.full_name?.charAt(0)}</span>
+                        <span className="text-sm font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
                       )}
                     </div>
                     <div>
@@ -389,22 +389,22 @@ const StaffManagementPage = ({ isNested = false }) => {
                   {s.employment_status === 'probation' ? (
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600">Thử việc (85%)</span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Chính thức</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">Chính thức</span>
                   )}
                 </div>
                 {s.bank_name && s.bank_account && (
-                  <div className="flex items-center justify-between text-sm py-2 border-t border-emerald-50">
+                  <div className="flex items-center justify-between text-sm py-2 border-t border-teal-50">
                     <div className="text-xs text-slate-500">
                       Ngân hàng: <span className="font-semibold text-slate-700">{s.bank_name}</span> - {s.bank_account}
                     </div>
-                    <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors text-xs font-bold">
+                    <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-teal-50 text-teal-600 rounded-lg hover:bg-teal-100 transition-colors text-xs font-bold">
                       <QrCode className="w-4 h-4" /> QR Nhận lương
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-2 pt-1 border-t border-emerald-50">
+                <div className="flex items-center gap-2 pt-1 border-t border-teal-50">
                   {s.employment_status === 'probation' && (
-                    <button onClick={() => handleEndProbation(s)} className="flex-1 h-8 text-xs font-medium rounded-xl border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1">
+                    <button onClick={() => handleEndProbation(s)} className="flex-1 h-8 text-xs font-medium rounded-xl border border-teal-200 text-teal-600 hover:bg-teal-50 flex items-center justify-center gap-1">
                       <UserCheck className="w-3 h-3" /> Kết thúc thử việc
                     </button>
                   )}
@@ -429,9 +429,9 @@ const StaffManagementPage = ({ isNested = false }) => {
 
       {/* QR Code Dialog */}
       <Dialog open={!!viewQR} onOpenChange={(open) => !open && setViewQR(null)}>
-        <DialogContent className="max-w-xs rounded-3xl border-emerald-100 p-6 flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
-            <QrCode className="w-6 h-6 text-emerald-500" />
+        <DialogContent className="max-w-xs rounded-3xl border-teal-100 p-6 flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center mb-2">
+            <QrCode className="w-6 h-6 text-teal-500" />
           </div>
           <DialogTitle className="text-lg font-bold text-slate-800">QR Nhận tiền</DialogTitle>
           <p className="text-sm text-slate-500 mb-4">{viewQR?.full_name}</p>
@@ -445,9 +445,9 @@ const StaffManagementPage = ({ isNested = false }) => {
             />
           </div>
           
-          <div className="w-full bg-emerald-50 rounded-xl p-3 text-left">
-            <div className="text-xs text-emerald-600 mb-1">Ngân hàng: <span className="font-bold">{viewQR?.bank_name}</span></div>
-            <div className="text-xs text-emerald-600">Số TK: <span className="font-bold">{viewQR?.bank_account}</span></div>
+          <div className="w-full bg-teal-50 rounded-xl p-3 text-left">
+            <div className="text-xs text-teal-600 mb-1">Ngân hàng: <span className="font-bold">{viewQR?.bank_name}</span></div>
+            <div className="text-xs text-teal-600">Số TK: <span className="font-bold">{viewQR?.bank_account}</span></div>
           </div>
           
           <Button onClick={() => setViewQR(null)} className="w-full mt-4 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
@@ -457,7 +457,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       </Dialog>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-emerald-100">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-teal-100">
           <DialogHeader>
             <DialogTitle className="text-slate-800">{editTarget ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}</DialogTitle>
           </DialogHeader>
@@ -466,16 +466,16 @@ const StaffManagementPage = ({ isNested = false }) => {
             {/* Avatar upload */}
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-teal-50 border-2 border-teal-200 flex items-center justify-center">
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-emerald-400">
+                    <span className="text-2xl font-bold text-teal-400">
                       {form.full_name?.charAt(0)?.toUpperCase() || '?'}
                     </span>
                   )}
                 </div>
-                <label className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center cursor-pointer hover:bg-emerald-600 transition-colors">
+                <label className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center cursor-pointer hover:bg-teal-600 transition-colors">
                   <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
@@ -500,7 +500,7 @@ const StaffManagementPage = ({ isNested = false }) => {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">ID nhân sự *</label>
                 <input
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   placeholder="VD: NV001"
                   value={form.employee_id}
                   onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))}
@@ -513,7 +513,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                 <input
                   type="password"
                   autoComplete="new-password"
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   placeholder={editTarget ? 'Bỏ trống nếu không đổi' : 'Nhập mật khẩu'}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
@@ -524,7 +524,7 @@ const StaffManagementPage = ({ isNested = false }) => {
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Họ và tên *</label>
               <input
-                className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                 placeholder="Nhập họ và tên"
                 value={form.full_name}
                 onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
@@ -535,7 +535,7 @@ const StaffManagementPage = ({ isNested = false }) => {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">Vị trí chuyên môn *</label>
                 <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-                  <SelectTrigger className="rounded-xl border-emerald-100 bg-emerald-50/30"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-teal-100 bg-teal-50/30"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ROLES.map(r => (
                       <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -546,7 +546,7 @@ const StaffManagementPage = ({ isNested = false }) => {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">Chức vụ</label>
                 <Select value={form.position} onValueChange={v => setForm(f => ({ ...f, position: v }))}>
-                  <SelectTrigger className="rounded-xl border-emerald-100 bg-emerald-50/30"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-teal-100 bg-teal-50/30"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Trưởng bộ phận">Trưởng bộ phận</SelectItem>
                     <SelectItem value="Giám đốc">Giám đốc</SelectItem>
@@ -560,7 +560,7 @@ const StaffManagementPage = ({ isNested = false }) => {
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Vị trí kiêm nhiệm 2 <span className="text-slate-400 font-normal">(nếu làm 2 vị trí — cộng dồn quyền & lương)</span></label>
               <Select value={form.role_2 || 'none'} onValueChange={v => setForm(f => ({ ...f, role_2: v === 'none' ? '' : v }))}>
-                <SelectTrigger className="rounded-xl border-emerald-100 bg-emerald-50/30"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="rounded-xl border-teal-100 bg-teal-50/30"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— Không có —</SelectItem>
                   {ROLES.filter(r => r.value !== form.role).map(r => (
@@ -576,7 +576,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   placeholder="VD: 10.000.000"
                   value={fmtInput(form.base_salary)}
                   onChange={e => setForm(f => ({ ...f, base_salary: e.target.value.replace(/\D/g, '') }))}
@@ -587,7 +587,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   placeholder="VD: 500.000"
                   value={fmtInput(form.allowance)}
                   onChange={e => setForm(f => ({ ...f, allowance: e.target.value.replace(/\D/g, '') }))}
@@ -598,7 +598,7 @@ const StaffManagementPage = ({ isNested = false }) => {
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Số điện thoại</label>
               <input
-                className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                 placeholder="VD: 0901234567"
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
@@ -613,8 +613,8 @@ const StaffManagementPage = ({ isNested = false }) => {
                   onClick={() => setForm(f => ({ ...f, employment_status: 'official' }))}
                   className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                     form.employment_status === 'official'
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-md shadow-emerald-200'
-                      : 'border-emerald-100 text-slate-500 hover:border-emerald-300'
+                      ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white border-transparent shadow-md shadow-teal-200'
+                      : 'border-teal-100 text-slate-500 hover:border-teal-300'
                   }`}
                 >
                   Chính thức (100%)
@@ -625,7 +625,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                   className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                     form.employment_status === 'probation'
                       ? 'bg-orange-500 text-white border-transparent shadow-md shadow-orange-200'
-                      : 'border-emerald-100 text-slate-500 hover:border-orange-300'
+                      : 'border-teal-100 text-slate-500 hover:border-orange-300'
                   }`}
                 >
                   Thử việc (85%)
@@ -638,7 +638,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                 <label className="text-sm font-medium text-slate-700">Ngày bắt đầu thử việc</label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm text-slate-700 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   value={form.probation_started_at}
                   onChange={e => setForm(f => ({ ...f, probation_started_at: e.target.value }))}
                 />
@@ -649,7 +649,7 @@ const StaffManagementPage = ({ isNested = false }) => {
           <DialogFooter>
             <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
             <button onClick={handleSave} disabled={saving}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-emerald-200 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50">
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-teal-200 hover:from-teal-600 hover:to-teal-600 disabled:opacity-50">
               {saving ? 'Đang lưu...' : (editTarget ? 'Cập nhật' : 'Tạo nhân sự')}
             </button>
           </DialogFooter>

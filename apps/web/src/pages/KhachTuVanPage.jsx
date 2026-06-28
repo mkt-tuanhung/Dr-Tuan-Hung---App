@@ -9,17 +9,17 @@ import AudioRecorder from '@/components/AudioRecorder.jsx';
 
 const ST = {
   scheduled: { label: 'Đã tiếp nhận', cls: 'bg-amber-100 text-amber-700' },
-  coc: { label: 'Cọc', cls: 'bg-teal-100 text-teal-700' },
+  coc: { label: 'Cọc', cls: 'bg-cyan-100 text-cyan-700' },
   bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' },
-  phau_thuat: { label: 'Phẫu thuật', cls: 'bg-emerald-100 text-emerald-700' },
+  phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' },
 };
-const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none';
+const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
-const AV = ['bg-emerald-500', 'bg-teal-500', 'bg-sky-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-amber-500'];
+const AV = ['bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-amber-500'];
 const avatarBg = (n) => { let h = 0; for (const c of (n || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
-const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-emerald-600 border-emerald-300 bg-emerald-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
+const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-teal-600 border-teal-300 bg-teal-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
 
 const KhachTuVanPage = () => {
   const { profile: me } = useAuth();
@@ -70,19 +70,19 @@ const KhachTuVanPage = () => {
     a[id] = a[id] || { id, name: r.by?.full_name || 'Sale', n: 0, sum: 0 };
     a[id].n++; a[id].sum += Number(r.ai_score || 0); return a;
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
-  const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-emerald-100 text-emerald-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+  const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-teal-100 text-teal-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20"><UserCheck className="w-6 h-6 text-white" /></div>
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20"><UserCheck className="w-6 h-6 text-white" /></div>
           <div>
             <h2 className="text-2xl font-bold text-slate-800 leading-tight">Khách tư vấn</h2>
             <p className="text-slate-400 text-sm">Tiếp nhận tư vấn trực tiếp · hồ sơ, ghi âm, đánh giá</p>
           </div>
         </div>
-        {!loading && <span className="text-sm font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full">{visible.length} khách</span>}
+        {!loading && <span className="text-sm font-semibold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full">{visible.length} khách</span>}
       </div>
 
       {lb.length > 0 && (
@@ -102,12 +102,12 @@ const KhachTuVanPage = () => {
 
       <div className="relative">
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl border border-slate-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none bg-white shadow-sm transition" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl border border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none bg-white shadow-sm transition" />
         {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X className="w-4 h-4" /></button>}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : visible.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-400">Chưa có khách tư vấn. Vào Lịch hẹn bấm “Tiếp nhận tư vấn”.</div>
       ) : (
@@ -115,7 +115,7 @@ const KhachTuVanPage = () => {
           {visible.map(r => {
             const rs = recsOf(r.id);
             return (
-            <div key={r.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all p-4 flex flex-col">
+            <div key={r.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-teal-100 transition-all p-4 flex flex-col">
               <div className="flex items-start gap-3">
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${avatarBg(r.customer_name)} text-white flex items-center justify-center font-bold text-sm shadow-sm`}>{initials(r.customer_name)}</div>
                 <div className="min-w-0 flex-1">
@@ -160,7 +160,7 @@ const KhachTuVanPage = () => {
                       </div>
                       {rec.ai_analysis?.summary && <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">🤖 {rec.ai_analysis.summary}</div>}
                       <div className="flex gap-3 mt-1.5">
-                        {rec.transcript && <button onClick={() => setTranscriptView(rec)} className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Xem chi tiết →</button>}
+                        {rec.transcript && <button onClick={() => setTranscriptView(rec)} className="text-[11px] font-bold text-teal-600 hover:text-teal-700">Xem chi tiết →</button>}
                         {rec.status !== 'processing' && <button onClick={() => reanalyze(rec.id)} className="text-[11px] font-semibold text-slate-400 hover:text-slate-600">Phân tích lại</button>}
                       </div>
                     </div>
@@ -172,7 +172,7 @@ const KhachTuVanPage = () => {
                 <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
                   <button onClick={() => setConsultFor(r)} className="h-10 text-xs font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" />Hồ sơ tư vấn</button>
                   <button onClick={() => setRecFor(r)} className="h-10 text-xs font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" />Ghi âm</button>
-                  <button onClick={() => setEvalFor(r)} className="col-span-2 h-10 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-sm shadow-emerald-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
+                  <button onClick={() => setEvalFor(r)} className="col-span-2 h-10 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-sm shadow-teal-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
                 </div>
               )}
             </div>
@@ -205,7 +205,7 @@ const KhachTuVanPage = () => {
               ))}
             </div>
           )}
-          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-emerald-600 mb-1">Điểm mạnh</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-teal-600 mb-1">Điểm mạnh</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.weaknesses || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-rose-600 mb-1">Điểm yếu</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.suggestions || []).length > 0 && <div className="mb-3"><div className="text-xs font-bold text-blue-600 mb-1">Gợi ý cải thiện</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           <div className="text-xs font-bold text-slate-500 mb-1">Văn bản (transcript)</div>
@@ -245,7 +245,7 @@ const EvalModal = ({ app, onClose, onSaved }) => {
       <div className="flex bg-slate-100 rounded-full p-1 mb-3">
         <STBtn k="bong" label="Bong" on="bg-orange-400 text-white shadow" />
         <STBtn k="coc" label="Cọc" on="bg-teal-500 text-white shadow" />
-        <STBtn k="phau_thuat" label="Phẫu thuật" on="bg-emerald-500 text-white shadow" />
+        <STBtn k="phau_thuat" label="Phẫu thuật" on="bg-teal-500 text-white shadow" />
       </div>
       <label className="block text-sm font-bold text-slate-700 mb-1">Loại phẫu thuật</label>
       <div className="flex gap-2 mb-3">
@@ -302,8 +302,8 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
       <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh hồ sơ</label>
       <div className="flex flex-wrap gap-2 mb-4">
         {existing.map((u, i) => <img key={i} src={u} alt="" className="h-16 w-16 object-cover rounded-lg border" />)}
-        {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} alt="" className="h-16 w-16 object-cover rounded-lg border border-emerald-300" />)}
-        <button type="button" onClick={() => fileRef.current?.click()} className="h-16 w-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-emerald-400"><ImagePlus className="w-5 h-5" /></button>
+        {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} alt="" className="h-16 w-16 object-cover rounded-lg border border-teal-300" />)}
+        <button type="button" onClick={() => fileRef.current?.click()} className="h-16 w-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-teal-400"><ImagePlus className="w-5 h-5" /></button>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { setFiles(p => [...p, ...e.target.files]); e.target.value = ''; }} />
       </div>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
@@ -321,7 +321,7 @@ const Modal = ({ title, onClose, children }) => (
   </div>
 );
 const ModalActions = ({ onClose, onSave, saving }) => (
-  <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 text-sm">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button></div>
+  <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button></div>
 );
 
 export default KhachTuVanPage;

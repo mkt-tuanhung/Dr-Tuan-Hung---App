@@ -9,7 +9,7 @@ const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 
-const ACCENTS = { orange: 'bg-orange-50 text-orange-600', blue: 'bg-blue-50 text-blue-600', violet: 'bg-violet-50 text-violet-600', emerald: 'bg-emerald-50 text-emerald-600', pink: 'bg-pink-50 text-pink-600' };
+const ACCENTS = { orange: 'bg-orange-50 text-orange-600', blue: 'bg-blue-50 text-blue-600', violet: 'bg-violet-50 text-violet-600', emerald: 'bg-teal-50 text-teal-600', pink: 'bg-pink-50 text-pink-600' };
 const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
   <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
     <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
@@ -23,7 +23,7 @@ const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
 const roleBadgeClass = (role) =>
   role === 'Trực đêm' ? 'bg-violet-100 text-violet-700'
   : role === 'Hậu phẫu' ? 'bg-pink-100 text-pink-700'
-  : role.startsWith('Phụ mổ') ? 'bg-emerald-100 text-emerald-700'
+  : role.startsWith('Phụ mổ') ? 'bg-teal-100 text-teal-700'
   : 'bg-slate-100 text-slate-600';
 
 const ROLE_OF = (s, id, major) => {
@@ -74,7 +74,7 @@ const DieuDuongStaffKPI = () => {
     s.truc_dem_id === id || s.truc_dem_id_2 === id || s.phu_mo_1_id === id || s.phu_mo_2_id === id || s.phu_mo_3_id === id ||
     s.hau_phau_id === id || (s.additional_hau_phau_ids || []).includes(id));
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   return (
     <div className="space-y-6">
@@ -92,7 +92,7 @@ const DieuDuongStaffKPI = () => {
 
       {/* KPI được giao */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-emerald-700 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3></div>
+        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-teal-700 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3></div>
         <div className="p-5 grid sm:grid-cols-2 gap-3 text-sm">
           <div className="bg-slate-50 rounded-xl p-3">
             <div className="text-slate-400 text-xs">Tỉ lệ hài lòng mục tiêu</div>
@@ -156,7 +156,7 @@ const DieuDuongStaffKPI = () => {
                         <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
                         <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
                         <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(role)}`}>{role}</span></td>
-                        <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">{bonus ? fmtM(bonus) : '—'}</td>
+                        <td className="px-4 py-2.5 text-right font-semibold text-teal-700">{bonus ? fmtM(bonus) : '—'}</td>
                       </tr>
                     );
                   })}
@@ -177,7 +177,7 @@ const DieuDuongStaffKPI = () => {
                       </div>
                       <div className="text-right shrink-0">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(role)}`}>{role}</span>
-                        <div className="text-sm font-bold text-emerald-700 mt-1">{bonus ? fmtM(bonus) : '—'}</div>
+                        <div className="text-sm font-bold text-teal-700 mt-1">{bonus ? fmtM(bonus) : '—'}</div>
                       </div>
                     </div>
                   </div>

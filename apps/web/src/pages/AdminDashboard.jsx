@@ -128,7 +128,7 @@ const Overview = ({ profile, setActiveTab }) => {
   };
 
   const cards = [
-    { label: 'Nhân sự', value: stats.totalStaff, icon: Users, tab: 'hr', color: '#10b981' },
+    { label: 'Nhân sự', value: stats.totalStaff, icon: Users, tab: 'hr', color: '#14b8a6' },
     { label: 'Có mặt', value: stats.presentToday, icon: UserCheck, tab: 'hr', color: '#3b82f6' },
     { label: 'Chờ duyệt', value: stats.pendingExpenses, icon: AlertCircle, tab: 'advances', color: '#f59e0b' },
     { label: 'Doanh thu', value: fmt(stats.monthRevenue), icon: TrendingUp, tab: 'finance', color: '#8b5cf6' },
@@ -136,21 +136,21 @@ const Overview = ({ profile, setActiveTab }) => {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-3 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+      <div className="w-8 h-8 border-3 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
     </div>
   );
 
   return (
     <div className="space-y-5">
       {/* Greeting */}
-      <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg shadow-emerald-200">
-        <p className="text-emerald-100 text-sm">Xin chào 👋</p>
+      <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg shadow-teal-200">
+        <p className="text-teal-100 text-sm">Xin chào 👋</p>
         <h2 className="text-xl font-bold mt-0.5">{profile?.full_name || 'Admin'}</h2>
-        <p className="text-emerald-200 text-xs mt-1">
+        <p className="text-teal-200 text-xs mt-1">
           {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
         <div className="mt-4 flex items-center gap-2 bg-white/15 rounded-2xl px-4 py-2.5 w-fit">
-          <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-teal-300 animate-pulse" />
           <span className="text-sm font-medium">Hệ thống đang hoạt động</span>
         </div>
       </div>
@@ -180,7 +180,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <h3 className="font-semibold text-slate-800">Doanh thu</h3>
             <p className="text-xs text-slate-400">6 tháng gần nhất</p>
           </div>
-          <button className="text-xs text-emerald-600 font-medium flex items-center gap-1" onClick={() => setActiveTab('finance')}>
+          <button className="text-xs text-teal-600 font-medium flex items-center gap-1" onClick={() => setActiveTab('finance')}>
             Xem thêm <ChevronRight className="w-3 h-3" />
           </button>
         </div>
@@ -188,8 +188,8 @@ const Overview = ({ profile, setActiveTab }) => {
           <BarChart data={MOCK_REVENUE} barSize={28}>
             <defs>
               <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" />
-                <stop offset="100%" stopColor="#059669" />
+                <stop offset="0%" stopColor="#14b8a6" />
+                <stop offset="100%" stopColor="#0d9488" />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="#f1f5f9" />
@@ -215,8 +215,8 @@ const Overview = ({ profile, setActiveTab }) => {
           ].map(item => (
             <button key={item.tab} onClick={() => setActiveTab(item.tab)}
               className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 active:bg-slate-100 transition-colors text-left">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                <item.icon className="w-4 h-4 text-emerald-600" />
+              <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                <item.icon className="w-4 h-4 text-teal-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-slate-700">{item.label}</div>
@@ -233,7 +233,7 @@ const Overview = ({ profile, setActiveTab }) => {
 
 const ComingSoon = ({ label }) => (
   <div className="flex flex-col items-center justify-center h-64 space-y-3">
-    <div className="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center text-2xl">🚧</div>
+    <div className="w-16 h-16 rounded-3xl bg-teal-50 flex items-center justify-center text-2xl">🚧</div>
     <div className="text-base font-semibold text-slate-700">{label}</div>
     <div className="text-sm text-slate-400">Module đang được xây dựng</div>
   </div>
@@ -318,12 +318,12 @@ const AdminDashboard = () => {
       {/* Sidebar desktop */}
       <aside className={`
         fixed top-0 left-0 h-full w-64 z-30 flex flex-col
-        bg-white border-r border-emerald-100 shadow-xl
+        bg-white border-r border-teal-100 shadow-xl
         transform transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:relative lg:translate-x-0
       `}>
-        <div className="p-5 border-b border-emerald-50">
+        <div className="p-5 border-b border-teal-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-md overflow-hidden p-1">
@@ -331,7 +331,7 @@ const AdminDashboard = () => {
               </div>
               <div>
                 <div className="font-bold text-slate-800 text-sm">Dr Tuấn Hùng</div>
-                <div className="text-xs text-emerald-500">Internal System</div>
+                <div className="text-xs text-teal-500">Internal System</div>
               </div>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600 p-1">
@@ -362,8 +362,8 @@ const AdminDashboard = () => {
                       className={`
                         w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
                         ${active
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200'
-                          : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+                          ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200'
+                          : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
                         }
                       `}
                     >
@@ -391,9 +391,9 @@ const AdminDashboard = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top bar - chỉ desktop */}
-        <header className="hidden lg:flex items-center justify-between bg-white border-b border-emerald-100 px-6 py-3 sticky top-0 z-10">
+        <header className="hidden lg:flex items-center justify-between bg-white border-b border-teal-100 px-6 py-3 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
+            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
           
@@ -401,7 +401,7 @@ const AdminDashboard = () => {
             <NotificationBell />
             <ProfileMenu mobile={false}>
               <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                   {profile?.full_name?.charAt(0) || 'A'}
                 </div>
                 <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
@@ -411,18 +411,18 @@ const AdminDashboard = () => {
         </header>
 
         {/* Mobile top bar */}
-        <header className="lg:hidden flex items-center justify-between bg-white border-b border-emerald-100 px-4 py-3 sticky top-0 z-10">
+        <header className="lg:hidden flex items-center justify-between bg-white border-b border-teal-100 px-4 py-3 sticky top-0 z-10">
           <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1">
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-emerald-600" />}
+            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
             <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell />
             <ProfileMenu mobile={true}>
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
                 {profile?.full_name?.charAt(0) || 'A'}
               </div>
             </ProfileMenu>
@@ -435,7 +435,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Bottom nav mobile */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-emerald-100 shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-teal-100 shadow-lg">
         <div className="flex items-stretch safe-pb">
           {MENU.filter(m => BOTTOM_NAV.includes(m.id)).map(item => {
             const Icon = item.icon;
@@ -447,11 +447,11 @@ const AdminDashboard = () => {
                 className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-all relative"
               >
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                  active ? 'bg-emerald-500 shadow-md shadow-emerald-200' : ''
+                  active ? 'bg-teal-500 shadow-md shadow-teal-200' : ''
                 }`}>
                   <Icon className={`w-4 h-4 transition-colors ${active ? 'text-white' : 'text-slate-400'}`} />
                 </div>
-                <span className={`text-[10px] font-medium leading-none transition-colors ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-medium leading-none transition-colors ${active ? 'text-teal-600' : 'text-slate-400'}`}>
                   {item.shortLabel}
                 </span>
               </button>

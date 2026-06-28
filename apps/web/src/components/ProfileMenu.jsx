@@ -168,9 +168,9 @@ export default function ProfileMenu({ children, mobile = false }) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
           <div className="absolute z-50 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden w-64 top-full mt-2 right-0">
-            <div className="p-4 border-b bg-emerald-50/50">
+            <div className="p-4 border-b bg-teal-50/50">
               <div className="font-bold text-slate-800 truncate">{profile?.full_name}</div>
-              <div className="text-xs text-emerald-600 mt-0.5">{profile?.position || profile?.role} · {profile?.employee_id}</div>
+              <div className="text-xs text-teal-600 mt-0.5">{profile?.position || profile?.role} · {profile?.employee_id}</div>
             </div>
 
             <div className="p-2 space-y-1">
@@ -203,7 +203,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                   <Send className="w-4 h-4 text-sky-500" />
                   <span>{profile?.telegram_chat_id ? 'Telegram đã liên kết' : 'Nhận thông báo Telegram'}</span>
                 </div>
-                {profile?.telegram_chat_id && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                {profile?.telegram_chat_id && <CheckCircle2 className="w-4 h-4 text-teal-500" />}
               </button>
 
               <div className="h-px bg-slate-100 my-1" />
@@ -221,13 +221,13 @@ export default function ProfileMenu({ children, mobile = false }) {
         <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
             <div className="flex bg-slate-50 border-b">
-              <button onClick={() => setActiveTab('profile')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'profile' ? 'border-emerald-500 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('profile')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Thông tin cá nhân
               </button>
-              <button onClick={() => setActiveTab('password')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'password' ? 'border-emerald-500 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('password')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'password' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Đổi mật khẩu
               </button>
-              <button onClick={() => setActiveTab('2fa')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === '2fa' ? 'border-emerald-500 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('2fa')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === '2fa' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Bảo mật
               </button>
               <button onClick={() => setModalOpen(false)} className="px-4 text-slate-400 hover:text-slate-600"><X className="w-5 h-5"/></button>
@@ -247,7 +247,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                         type="text" 
                         autoFocus
                         placeholder="Tìm theo tên ngân hàng hoặc mã (VD: MB, VCB)..." 
-                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-sm"
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none text-sm"
                         value={bankSearch}
                         onChange={e => setBankSearch(e.target.value)}
                       />
@@ -292,16 +292,16 @@ export default function ProfileMenu({ children, mobile = false }) {
 
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Họ và tên</label>
-                      <input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" required />
+                      <input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" required />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Số điện thoại</label>
-                      <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                      <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Ngân hàng</label>
-                        <button type="button" onClick={() => setSelectingBank(true)} className="w-full text-left border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 hover:bg-white transition-colors min-h-[46px] truncate">
+                        <button type="button" onClick={() => setSelectingBank(true)} className="w-full text-left border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 hover:bg-white transition-colors min-h-[46px] truncate">
                           {form.bank_name ? (
                             <span className="text-slate-700">{form.bank_name}</span>
                           ) : (
@@ -311,19 +311,19 @@ export default function ProfileMenu({ children, mobile = false }) {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Số tài khoản</label>
-                        <input type="text" value={form.bank_account} onChange={e => setForm({...form, bank_account: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" />
+                        <input type="text" value={form.bank_account} onChange={e => setForm({...form, bank_account: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" />
                       </div>
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3 border-t">
                       <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
-                      <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
+                      <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
                     </div>
                   </form>
                 ) : (
                   <div className="space-y-6">
                     <div className="flex flex-col items-center">
-                      <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-emerald-100 mb-3 shadow-sm">
+                      <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-teal-100 mb-3 shadow-sm">
                         {profile?.avatar_url ? (
                           <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
@@ -333,7 +333,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                         )}
                       </div>
                       <h3 className="text-xl font-bold text-slate-800">{profile?.full_name}</h3>
-                      <p className="text-sm font-medium text-emerald-600">{profile?.position || profile?.role}</p>
+                      <p className="text-sm font-medium text-teal-600">{profile?.position || profile?.role}</p>
                     </div>
 
                     <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-4">
@@ -355,8 +355,8 @@ export default function ProfileMenu({ children, mobile = false }) {
                     </div>
 
                     {profile?.bank_name && profile?.bank_account && (
-                      <div className="flex flex-col items-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                        <p className="text-sm font-bold text-emerald-800 mb-3">Mã QR Nhận lương</p>
+                      <div className="flex flex-col items-center p-4 bg-teal-50 rounded-2xl border border-teal-100">
+                        <p className="text-sm font-bold text-teal-800 mb-3">Mã QR Nhận lương</p>
                         <div className="bg-white p-2 rounded-xl shadow-sm">
                           <img 
                             src={`https://img.vietqr.io/image/${profile.bank_name.replace(/\s+/g, '').toLowerCase()}-${profile.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(profile.full_name)}`}
@@ -382,15 +382,15 @@ export default function ProfileMenu({ children, mobile = false }) {
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Mật khẩu mới</label>
-                    <input type="password" minLength="6" value={pwdForm.newPassword} onChange={e => setPwdForm({...pwdForm, newPassword: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" required />
+                    <input type="password" minLength="6" value={pwdForm.newPassword} onChange={e => setPwdForm({...pwdForm, newPassword: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" required />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Xác nhận mật khẩu</label>
-                    <input type="password" minLength="6" value={pwdForm.confirmPassword} onChange={e => setPwdForm({...pwdForm, confirmPassword: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-slate-50 focus:bg-white transition-colors" required />
+                    <input type="password" minLength="6" value={pwdForm.confirmPassword} onChange={e => setPwdForm({...pwdForm, confirmPassword: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" required />
                   </div>
                   <div className="pt-4 flex justify-end gap-3 border-t">
                     <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
-                    <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Cập nhật mật khẩu</button>
+                    <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Cập nhật mật khẩu</button>
                   </div>
                 </form>
               )}

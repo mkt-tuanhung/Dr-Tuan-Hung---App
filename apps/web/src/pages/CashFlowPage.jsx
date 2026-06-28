@@ -181,10 +181,10 @@ export default function CashFlowPage() {
               <td className="px-6 py-4 font-semibold text-slate-700">{new Date(d.date).toLocaleDateString('vi-VN')}</td>
               <td className="px-6 py-4">
                 {d.flow_type === 'in' 
-                  ? <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowDownLeft className="w-3 h-3" /> Thu tiền</span>
+                  ? <span className="inline-flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowDownLeft className="w-3 h-3" /> Thu tiền</span>
                   : <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowUpRight className="w-3 h-3" /> Chi tiền</span>}
               </td>
-              <td className={`px-6 py-4 font-bold text-base ${d.flow_type === 'in' ? 'text-emerald-600' : 'text-red-600'}`}>
+              <td className={`px-6 py-4 font-bold text-base ${d.flow_type === 'in' ? 'text-teal-600' : 'text-red-600'}`}>
                 {d.flow_type === 'in' ? '+' : '-'}{fmt(d.amount)}
               </td>
               <td className="px-6 py-4 font-medium text-slate-600">
@@ -248,8 +248,8 @@ export default function CashFlowPage() {
           </div>
           
           <div onClick={() => window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'hospital_fee_inventory' }))} 
-               className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
-            <div className="flex items-center justify-between text-emerald-600 font-semibold text-sm mb-2">
+               className="bg-white rounded-2xl p-4 border border-teal-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between text-teal-600 font-semibold text-sm mb-2">
               <span className="flex items-center gap-2"><Banknote className="w-4 h-4"/> Tổng Viện phí</span>
               <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
@@ -287,10 +287,10 @@ export default function CashFlowPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-emerald-200 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10"><ArrowDownLeft className="w-16 h-16 text-emerald-600" /></div>
-          <div className="text-emerald-600 text-sm font-bold flex items-center gap-2 mb-2">Tổng Nhận (Thu)</div>
-          <div className="text-3xl font-black text-emerald-700">{fmt(totalIn)}</div>
+        <div className="bg-white p-6 rounded-2xl border border-teal-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><ArrowDownLeft className="w-16 h-16 text-teal-600" /></div>
+          <div className="text-teal-600 text-sm font-bold flex items-center gap-2 mb-2">Tổng Nhận (Thu)</div>
+          <div className="text-3xl font-black text-teal-700">{fmt(totalIn)}</div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-red-200 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10"><ArrowUpRight className="w-16 h-16 text-red-600" /></div>
@@ -350,7 +350,7 @@ export default function CashFlowPage() {
                     <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#f1f5f9' }} />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar name="Thu tiền (+)" dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar name="Thu tiền (+)" dataKey="income" fill="#14b8a6" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     <Bar name="Chi tiền (-)" dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -394,7 +394,7 @@ export default function CashFlowPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền (VNĐ) *</label>
-                  <input required type="text" value={form.amount} onChange={e => setForm({...form, amount: formatCurrencyInput(e.target.value)})} className={`w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500 font-bold text-lg ${form.flow_type === 'in' ? 'text-emerald-600' : 'text-red-600'}`} placeholder="0" />
+                  <input required type="text" value={form.amount} onChange={e => setForm({...form, amount: formatCurrencyInput(e.target.value)})} className={`w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500 font-bold text-lg ${form.flow_type === 'in' ? 'text-teal-600' : 'text-red-600'}`} placeholder="0" />
                 </div>
               </div>
 

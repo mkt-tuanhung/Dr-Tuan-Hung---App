@@ -16,7 +16,7 @@ const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const todayStr = () => new Date().toISOString().split('T')[0];
 
 const ACCENTS = {
-  emerald: 'bg-emerald-50 text-emerald-600', blue: 'bg-blue-50 text-blue-600',
+  emerald: 'bg-teal-50 text-teal-600', blue: 'bg-blue-50 text-blue-600',
   violet: 'bg-violet-50 text-violet-600', orange: 'bg-orange-50 text-orange-600',
 };
 const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
@@ -153,7 +153,7 @@ const TrucPageStaffKPI = () => {
     toast.success('Đã xoá'); loadData();
   };
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   return (
     <div className="space-y-6">
@@ -174,7 +174,7 @@ const TrucPageStaffKPI = () => {
       <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
         {[['overview', 'Tổng quan KPI'], ['report', 'Báo cáo số']].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === id ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === id ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
         ))}
       </div>
 
@@ -183,7 +183,7 @@ const TrucPageStaffKPI = () => {
           {/* Chỉ tiêu được giao */}
           <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-50">
-              <h3 className="font-bold text-emerald-700 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3>
+              <h3 className="font-bold text-teal-700 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3>
             </div>
             <div className="p-5">
               {!kpi || (!kpi.target_phones && !kpi.target_close_rate) ? (
@@ -195,9 +195,9 @@ const TrucPageStaffKPI = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="bg-slate-50 rounded-2xl p-4">
                     <div className="flex items-center justify-between text-sm"><span className="text-slate-500">SĐT xin được</span><span className="font-bold">{phoneProgress}%</span></div>
-                    <div className="text-lg font-black text-emerald-700 mt-1">{fmt(phones)}</div>
+                    <div className="text-lg font-black text-teal-700 mt-1">{fmt(phones)}</div>
                     <div className="text-xs text-slate-400">Mục tiêu: {fmt(kpi.target_phones)}</div>
-                    <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2"><div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${phoneProgress}%` }} /></div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2"><div className="h-1.5 rounded-full bg-teal-500" style={{ width: `${phoneProgress}%` }} /></div>
                   </div>
                   <div className="bg-slate-50 rounded-2xl p-4">
                     <div className="flex items-center justify-between text-sm"><span className="text-slate-500">Tỉ lệ xin số</span><span className="font-bold">{rateProgress}%</span></div>
@@ -227,10 +227,10 @@ const TrucPageStaffKPI = () => {
       {tab === 'report' && (
         <>
           {/* Form báo cáo ngày */}
-          <div className="bg-white border border-emerald-100 rounded-2xl shadow-sm p-5">
+          <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-emerald-700 flex items-center gap-2"><Plus className="w-4 h-4" /> Báo cáo số điện thoại trong ngày</h3>
-              <button onClick={() => { setImportPreview(null); setShowImport(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">
+              <h3 className="font-bold text-teal-700 flex items-center gap-2"><Plus className="w-4 h-4" /> Báo cáo số điện thoại trong ngày</h3>
+              <button onClick={() => { setImportPreview(null); setShowImport(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
                 <Upload className="w-4 h-4" /> Import nhiều ngày
               </button>
             </div>
@@ -238,32 +238,32 @@ const TrucPageStaffKPI = () => {
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Ngày</label>
                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Tổng SĐT xin được</label>
                 <input type="number" min="0" value={form.total_phones} onChange={e => setForm(f => ({ ...f, total_phones: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">SĐT quan tâm (tính HH)</label>
                 <input type="number" min="0" value={form.total_interested_phones} onChange={e => setForm(f => ({ ...f, total_interested_phones: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Tổng tin nhắn tiếp nhận</label>
                 <input type="number" min="0" value={form.total_messages} onChange={e => setForm(f => ({ ...f, total_messages: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Tin nhắn spam</label>
                 <input type="number" min="0" value={form.total_spam_messages} onChange={e => setForm(f => ({ ...f, total_spam_messages: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Telesale tiếp nhận số</label>
                 <select value={form.telesale_id} onChange={e => setForm(f => ({ ...f, telesale_id: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400">
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400">
                   <option value="">— Chọn telesale —</option>
                   {telesales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
@@ -271,7 +271,7 @@ const TrucPageStaffKPI = () => {
             </div>
             <div className="flex justify-end mt-4">
               <button onClick={saveReport} disabled={saving}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
                 {saving ? 'Đang lưu...' : 'Lưu báo cáo'}
               </button>
             </div>
@@ -300,14 +300,14 @@ const TrucPageStaffKPI = () => {
                   ) : reports.map(r => (
                     <tr key={r.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-2.5 text-slate-700">{r.date}</td>
-                      <td className="text-center px-3 py-2.5 font-semibold text-emerald-700">{fmt(r.total_phones)}</td>
+                      <td className="text-center px-3 py-2.5 font-semibold text-teal-700">{fmt(r.total_phones)}</td>
                       <td className="text-center px-3 py-2.5 text-violet-600">{fmt(r.total_interested_phones)}</td>
                       <td className="text-center px-3 py-2.5">{fmt(r.total_messages)}</td>
                       <td className="text-center px-3 py-2.5 text-slate-400">{fmt(r.total_spam_messages)}</td>
                       <td className="px-4 py-2.5 text-slate-600">{r.telesale?.full_name || '—'}</td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => editReport(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Sửa"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => editReport(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-teal-50 hover:text-teal-600" title="Sửa"><Pencil className="w-4 h-4" /></button>
                           <button onClick={() => deleteReport(r.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
@@ -324,8 +324,8 @@ const TrucPageStaffKPI = () => {
       {showImport && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-emerald-50 shrink-0">
-              <h3 className="font-bold text-emerald-800">Import báo cáo số điện thoại</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
+              <h3 className="font-bold text-teal-800">Import báo cáo số điện thoại</h3>
               <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
@@ -339,12 +339,12 @@ const TrucPageStaffKPI = () => {
                   <li><b>so_tin_spam</b> — tin nhắn spam</li>
                 </ol>
                 <div className="text-xs text-slate-400">Trùng ngày sẽ được cập nhật đè (không tạo trùng).</div>
-                <button onClick={() => downloadCsv('mau_bao_cao_so.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline">
+                <button onClick={() => downloadCsv('mau_bao_cao_so.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-teal-700 font-semibold hover:underline">
                   <Download className="w-4 h-4" /> Tải file mẫu (.csv)
                 </button>
               </div>
 
-              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 text-emerald-700 font-semibold">
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-teal-300 rounded-xl cursor-pointer hover:bg-teal-50 text-teal-700 font-semibold">
                 <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
               </label>
@@ -352,7 +352,7 @@ const TrucPageStaffKPI = () => {
               {importPreview && (
                 <div className="space-y-3">
                   <div className="flex gap-3 text-sm">
-                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">{importPreview.valid.length} ngày hợp lệ</span>
+                    <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-700 font-semibold">{importPreview.valid.length} ngày hợp lệ</span>
                     {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
                   </div>
                   {importPreview.errors.length > 0 && (
@@ -379,7 +379,7 @@ const TrucPageStaffKPI = () => {
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
               <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
-              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50">
+              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl text-sm hover:bg-teal-700 disabled:opacity-50">
                 {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} ngày`}
               </button>
             </div>

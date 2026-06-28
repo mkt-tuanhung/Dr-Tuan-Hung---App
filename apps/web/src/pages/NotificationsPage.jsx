@@ -4,8 +4,8 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Bell, Check, MessageCircle, Wallet, UserPlus, Heart, Loader2 } from 'lucide-react';
 
 const ICON_OF = {
-  expense_approved: { Icon: Wallet, cls: 'bg-emerald-100 text-emerald-600' },
-  expense_paid: { Icon: Wallet, cls: 'bg-emerald-100 text-emerald-600' },
+  expense_approved: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
+  expense_paid: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
   community_post: { Icon: MessageCircle, cls: 'bg-blue-100 text-blue-600' },
   community_comment: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
   community_reply: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
@@ -55,7 +55,7 @@ export default function NotificationsPage() {
           <p className="text-sm text-slate-400">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
         </div>
         {unread > 0 && (
-          <button onClick={markAllRead} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">
+          <button onClick={markAllRead} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
             <Check className="w-4 h-4" /> Đánh dấu đã đọc hết
           </button>
         )}
@@ -63,7 +63,7 @@ export default function NotificationsPage() {
 
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-emerald-500" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div>
         ) : items.length === 0 ? (
           <div className="py-16 text-center text-slate-400">
             <Bell className="w-10 h-10 mx-auto mb-3 text-slate-200" />
@@ -76,7 +76,7 @@ export default function NotificationsPage() {
               const { Icon } = conf;
               return (
                 <button key={n.id} onClick={() => openItem(n)}
-                  className={`w-full text-left flex gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors ${n.is_read ? '' : 'bg-emerald-50/40'}`}>
+                  className={`w-full text-left flex gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors ${n.is_read ? '' : 'bg-teal-50/40'}`}>
                   {n.actor?.avatar_url ? (
                     <div className="relative shrink-0">
                       <img src={n.actor.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover" />
@@ -90,7 +90,7 @@ export default function NotificationsPage() {
                     {n.body && <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}
                     <div className="text-[11px] text-slate-400 mt-1">{fullTime(n.created_at)}</div>
                   </div>
-                  {!n.is_read && <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />}
+                  {!n.is_read && <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0 mt-1.5" />}
                 </button>
               );
             })}

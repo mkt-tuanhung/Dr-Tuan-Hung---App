@@ -57,7 +57,7 @@ export default function MentionInput({ value, onChange, onEnter, placeholder, st
         <div className="absolute bottom-full mb-1 left-0 w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
           {drop.items.map((it, i) => (
             <button type="button" key={it.type + it.id} onMouseDown={(e) => { e.preventDefault(); pick(it); }}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between ${i === active ? 'bg-emerald-50' : ''} hover:bg-emerald-50`}>
+              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between ${i === active ? 'bg-teal-50' : ''} hover:bg-teal-50`}>
               <span className="font-medium text-slate-700">{it.type === 'cust' ? '👤 ' : '@'}{it.name}</span>
               <span className="text-xs text-slate-400">{it.type === 'cust' ? '📞 ' + it.sub : it.sub}</span>
             </button>

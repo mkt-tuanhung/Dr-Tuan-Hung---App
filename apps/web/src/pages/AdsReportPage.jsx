@@ -243,7 +243,7 @@ const AdsReportPage = () => {
           <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-end">
             <div>
               <p className="text-slate-500 text-[10px] uppercase">Tiền còn</p>
-              <p className={`text-sm font-bold ${stats.remaining < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              <p className={`text-sm font-bold ${stats.remaining < 0 ? 'text-red-500' : 'text-teal-500'}`}>
                 {fmt(stats.remaining)}đ
               </p>
             </div>
@@ -259,7 +259,7 @@ const AdsReportPage = () => {
         {/* Giá 1 số */}
         <div className="col-span-2 md:col-span-2 lg:col-span-1 bg-slate-800 rounded-2xl border border-slate-700 p-4 flex flex-col justify-center items-center text-center text-white">
           <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Giá 1 số</p>
-          <div className="text-lg font-bold text-emerald-400">{fmt(stats.cpa)}đ</div>
+          <div className="text-lg font-bold text-teal-400">{fmt(stats.cpa)}đ</div>
         </div>
 
         {/* TB số */}
@@ -317,9 +317,9 @@ const AdsReportPage = () => {
                   <div className="text-[10px] text-blue-400 uppercase">Số SĐT</div>
                   <div className="font-bold text-blue-600 text-sm">{fmt(item.leads)}</div>
                 </div>
-                <div className="bg-emerald-50 rounded-lg py-2">
-                  <div className="text-[10px] text-emerald-400 uppercase">CP/số</div>
-                  <div className="font-bold text-emerald-600 text-sm">{item.leads > 0 ? fmt(Math.round(item.amount_spent / item.leads)) : 0}đ</div>
+                <div className="bg-teal-50 rounded-lg py-2">
+                  <div className="text-[10px] text-teal-400 uppercase">CP/số</div>
+                  <div className="font-bold text-teal-600 text-sm">{item.leads > 0 ? fmt(Math.round(item.amount_spent / item.leads)) : 0}đ</div>
                 </div>
               </div>
               {item.impressions ? <div className="text-xs text-slate-400 mt-2">Ghi chú: {item.impressions}</div> : null}
@@ -350,7 +350,7 @@ const AdsReportPage = () => {
                     <td className="px-4 py-3 font-medium text-slate-600">{fmt(item.amount_spent)} đ</td>
                     <td className="px-4 py-3 text-slate-500">{item.impressions || '-'}</td>
                     <td className="px-4 py-3 text-center font-bold text-blue-600">{fmt(item.leads)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-emerald-600">
+                    <td className="px-4 py-3 text-right font-medium text-teal-600">
                       {item.leads > 0 ? fmt(Math.round(item.amount_spent / item.leads)) : 0} đ
                     </td>
                     <td className="px-4 py-3 text-center">

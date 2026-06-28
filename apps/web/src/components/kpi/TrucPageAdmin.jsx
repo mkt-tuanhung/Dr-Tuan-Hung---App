@@ -68,7 +68,7 @@ const TrucPageAdmin = ({ month, year }) => {
     target_close_rate: String(r.kpi?.target_close_rate || ''), note: r.kpi?.notes || '',
   });
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   const phoneChart = rows.map(r => ({ name: r.staff.full_name, 'Thực tế': r.phones, 'KPI': r.kpi?.target_phones || 0 }));
   const hhChart = rows.map(r => ({ name: r.staff.full_name, 'Hoa hồng': r.hh }));
@@ -77,19 +77,19 @@ const TrucPageAdmin = ({ month, year }) => {
     <div className="space-y-5">
       <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
         {[['assign', 'Giao KPI & Danh sách'], ['progress', 'Theo dõi Tiến độ']].map(([id, label]) => (
-          <button key={id} onClick={() => setSubTab(id)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${subTab === id ? 'bg-white text-emerald-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+          <button key={id} onClick={() => setSubTab(id)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${subTab === id ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
         ))}
       </div>
 
       {subTab === 'assign' && (
         <>
-          <div className="bg-white border border-emerald-100 rounded-2xl shadow-sm p-5">
-            <h3 className="font-bold text-emerald-700 mb-4">{form.staff_id ? 'Cập nhật' : 'Tạo mới'} KPI Trực page</h3>
+          <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5">
+            <h3 className="font-bold text-teal-700 mb-4">{form.staff_id ? 'Cập nhật' : 'Tạo mới'} KPI Trực page</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Nhân viên Trực page *</label>
                 <select value={form.staff_id} onChange={e => setForm(f => ({ ...f, staff_id: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400">
+                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400">
                   <option value="">Chọn nhân sự</option>
                   {staff.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.employee_id})</option>)}
                 </select>
@@ -101,22 +101,22 @@ const TrucPageAdmin = ({ month, year }) => {
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Tổng SĐT xin được (mục tiêu) *</label>
                 <input type="number" min="0" value={form.target_phones} onChange={e => setForm(f => ({ ...f, target_phones: e.target.value }))}
-                  placeholder="VD: 300" className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  placeholder="VD: 300" className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Tỉ lệ xin số mục tiêu (%) *</label>
                 <input type="number" step="0.1" value={form.target_close_rate} onChange={e => setForm(f => ({ ...f, target_close_rate: e.target.value }))}
-                  placeholder="VD: 30" className="w-full px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400" />
+                  placeholder="VD: 30" className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Ghi chú</label>
                 <textarea rows={2} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
+                  className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400 resize-none" />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               {form.staff_id && <button onClick={() => setForm(EMPTY)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>}
-              <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">{saving ? 'Đang lưu...' : 'Lưu KPI Trực page'}</button>
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">{saving ? 'Đang lưu...' : 'Lưu KPI Trực page'}</button>
             </div>
           </div>
 
@@ -141,13 +141,13 @@ const TrucPageAdmin = ({ month, year }) => {
                   ) : rows.map(r => (
                     <tr key={r.staff.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}<div className="text-[11px] text-slate-400">{r.staff.employee_id}</div></td>
-                      <td className="text-center px-3 py-2.5 font-semibold text-emerald-700">{fmt(r.phones)}</td>
+                      <td className="text-center px-3 py-2.5 font-semibold text-teal-700">{fmt(r.phones)}</td>
                       <td className="text-center px-3 py-2.5 text-violet-600">{fmt(r.interested)}</td>
                       <td className="text-center px-3 py-2.5">{fmt(r.messages)}</td>
                       <td className="text-center px-3 py-2.5 font-semibold">{r.rate.toFixed(1)}%</td>
-                      <td className="text-right px-4 py-2.5 text-emerald-700 font-bold">{fmtM(r.hh)}</td>
+                      <td className="text-right px-4 py-2.5 text-teal-700 font-bold">{fmtM(r.hh)}</td>
                       <td className="text-center px-3 py-2.5">
-                        <button onClick={() => editRow(r)} className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.kpi ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>{r.kpi ? 'Sửa' : 'Giao KPI'}</button>
+                        <button onClick={() => editRow(r)} className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600 hover:bg-teal-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>{r.kpi ? 'Sửa' : 'Giao KPI'}</button>
                       </td>
                     </tr>
                   ))}
@@ -162,7 +162,7 @@ const TrucPageAdmin = ({ month, year }) => {
         <>
           <div className="grid lg:grid-cols-2 gap-5">
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-4">SĐT xin được theo nhân sự</h3>
+              <h3 className="font-bold text-teal-700 mb-4">SĐT xin được theo nhân sự</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={phoneChart}>
@@ -177,7 +177,7 @@ const TrucPageAdmin = ({ month, year }) => {
               </div>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold text-emerald-700 mb-4">Tổng hoa hồng (VNĐ)</h3>
+              <h3 className="font-bold text-teal-700 mb-4">Tổng hoa hồng (VNĐ)</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hhChart}>
@@ -212,15 +212,15 @@ const TrucPageAdmin = ({ month, year }) => {
                   {rows.map(r => (
                     <tr key={r.staff.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}</td>
-                      <td className="text-center px-3 py-2.5 text-emerald-700 font-semibold">{fmt(r.phones)}</td>
+                      <td className="text-center px-3 py-2.5 text-teal-700 font-semibold">{fmt(r.phones)}</td>
                       <td className="text-center px-3 py-2.5 text-slate-400">{r.kpi?.target_phones ? fmt(r.kpi.target_phones) : '—'}</td>
                       <td className="text-center px-3 py-2.5 text-violet-600">{fmt(r.interested)}</td>
                       <td className="text-center px-3 py-2.5">{r.rate.toFixed(1)}%</td>
                       <td className="text-center px-3 py-2.5 text-slate-400">{r.kpi?.target_close_rate ? r.kpi.target_close_rate + '%' : '—'}</td>
-                      <td className="text-right px-4 py-2.5 font-bold text-emerald-700">{fmtM(r.hh)}</td>
+                      <td className="text-right px-4 py-2.5 font-bold text-teal-700">{fmtM(r.hh)}</td>
                       <td className="text-center px-3 py-2.5">
                         {r.phoneProgress === null ? <span className="text-amber-500 text-xs">Chưa giao</span>
-                          : <span className={`text-xs font-semibold ${r.phoneProgress >= 100 ? 'text-emerald-600' : r.phoneProgress >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>{r.phoneProgress}%</span>}
+                          : <span className={`text-xs font-semibold ${r.phoneProgress >= 100 ? 'text-teal-600' : r.phoneProgress >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>{r.phoneProgress}%</span>}
                       </td>
                     </tr>
                   ))}

@@ -10,9 +10,9 @@ const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 
 const STATUS_LABEL = { phau_thuat: 'Phẫu thuật', coc: 'Cọc', bong: 'Bong', scheduled: 'Đã hẹn', cancelled: 'Huỷ' };
-const STATUS_COLOR = { phau_thuat: 'bg-emerald-100 text-emerald-700', coc: 'bg-blue-100 text-blue-700', bong: 'bg-red-100 text-red-600', scheduled: 'bg-slate-100 text-slate-600', cancelled: 'bg-slate-100 text-slate-400' };
+const STATUS_COLOR = { phau_thuat: 'bg-teal-100 text-teal-700', coc: 'bg-blue-100 text-blue-700', bong: 'bg-red-100 text-red-600', scheduled: 'bg-slate-100 text-slate-600', cancelled: 'bg-slate-100 text-slate-400' };
 
-const ACCENTS = { emerald: 'bg-emerald-50 text-emerald-600', blue: 'bg-blue-50 text-blue-600', violet: 'bg-violet-50 text-violet-600', orange: 'bg-orange-50 text-orange-600', red: 'bg-red-50 text-red-500' };
+const ACCENTS = { emerald: 'bg-teal-50 text-teal-600', blue: 'bg-blue-50 text-blue-600', violet: 'bg-violet-50 text-violet-600', orange: 'bg-orange-50 text-orange-600', red: 'bg-red-50 text-red-500' };
 const Card = ({ icon: Icon, label, value, accent = 'emerald' }) => (
   <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
     <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
@@ -73,7 +73,7 @@ const TelesaleStaffKPI = () => {
   const revProgress = revTarget > 0 ? Math.min(Math.round(r.doanhThu / revTarget * 100), 100) : 0;
   const hasKpi = kpi && (apptTarget || revTarget || kpi.target_close_rate);
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   return (
     <div className="space-y-6">
@@ -91,7 +91,7 @@ const TelesaleStaffKPI = () => {
 
       {/* KPI tháng được giao (cảnh báo nếu chưa có) */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-emerald-700">KPI tháng được giao</h3></div>
+        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-teal-700">KPI tháng được giao</h3></div>
         <div className="p-5">
           {!hasKpi ? (
             <div className="bg-amber-50 border border-amber-100 rounded-2xl py-8 flex flex-col items-center text-center">
@@ -125,10 +125,10 @@ const TelesaleStaffKPI = () => {
 
       {/* Tiến độ hoàn thành KPI */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5 space-y-5">
-        <h3 className="font-bold text-emerald-700">Tiến độ hoàn thành KPI</h3>
+        <h3 className="font-bold text-teal-700">Tiến độ hoàn thành KPI</h3>
         <div>
           <div className="flex items-center justify-between mb-1"><span className="font-semibold text-slate-700 text-sm">Tiến độ KPI lịch hẹn</span><span className="font-bold text-slate-800">{apptProgress}%</span></div>
-          <div className="w-full bg-slate-100 rounded-full h-2"><div className="h-2 rounded-full bg-emerald-500" style={{ width: `${apptProgress}%` }} /></div>
+          <div className="w-full bg-slate-100 rounded-full h-2"><div className="h-2 rounded-full bg-teal-500" style={{ width: `${apptProgress}%` }} /></div>
           <div className="flex justify-between text-xs text-slate-400 mt-1"><span>Đạt: <b className="text-slate-600">{fmt(r.tongLichHen)}</b></span><span>Mục tiêu: <b className="text-slate-600">{fmt(apptTarget)}</b></span></div>
         </div>
         <div>
@@ -147,7 +147,7 @@ const TelesaleStaffKPI = () => {
 
       {/* Lịch hẹn của tôi */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-emerald-500" /> Lịch hẹn của tôi</h3></div>
+        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-teal-500" /> Lịch hẹn của tôi</h3></div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
@@ -187,7 +187,7 @@ const TelesaleStaffKPI = () => {
                     <td className="px-4 py-2.5 text-slate-600">{a.surgery_date}</td>
                     <td className="px-4 py-2.5 font-medium text-slate-800">{a.customer_name}</td>
                     <td className="px-4 py-2.5 text-slate-500">{a.service || '—'}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">{fmtM(a.revenue)}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-teal-700">{fmtM(a.revenue)}</td>
                   </tr>
                 ))}
             </tbody>

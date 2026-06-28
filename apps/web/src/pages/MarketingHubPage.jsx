@@ -4,7 +4,7 @@ import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
 
 const TabBtn = ({ active, onClick, icon: Icon, label }) => (
-  <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+  <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${active ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
     <Icon className="w-4 h-4" /> {label}
   </button>
 );

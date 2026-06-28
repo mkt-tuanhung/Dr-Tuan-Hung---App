@@ -26,7 +26,7 @@ const FinanceRevenueSummary = ({ stats, month, onViewDetail }) => {
           </div>
           <div>
             <div className="text-blue-200/70 text-xs uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Khách PT / Khách Cọc</div>
-            <div className="text-xl font-bold text-emerald-300">{stats.totalCustomers} <span className="text-sm font-medium text-blue-200/70">/ {stats.totalCocCustomers || 0} Khách</span></div>
+            <div className="text-xl font-bold text-teal-300">{stats.totalCustomers} <span className="text-sm font-medium text-blue-200/70">/ {stats.totalCocCustomers || 0} Khách</span></div>
           </div>
         </div>
       </div>

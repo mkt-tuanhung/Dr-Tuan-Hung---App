@@ -158,8 +158,8 @@ export default function InventoryManagementPage({ isNested = false }) {
           <div className="text-red-600 font-bold text-sm mb-2 flex items-center gap-2"><ArrowUpRight className="w-4 h-4"/> Vật tư sắp hết (Dưới mức tối thiểu)</div>
           <div className="text-3xl font-black text-red-600">{items.filter(i => i.current_stock <= i.min_stock).length}</div>
         </div>
-        <div className="bg-emerald-600 p-6 rounded-2xl shadow-md flex flex-col text-white">
-          <div className="text-emerald-100 font-bold text-sm mb-2 flex items-center gap-2"><ArrowDownLeft className="w-4 h-4"/> Giao dịch nhập xuất (Gần đây)</div>
+        <div className="bg-teal-600 p-6 rounded-2xl shadow-md flex flex-col text-white">
+          <div className="text-teal-100 font-bold text-sm mb-2 flex items-center gap-2"><ArrowDownLeft className="w-4 h-4"/> Giao dịch nhập xuất (Gần đây)</div>
           <div className="text-3xl font-black">{transactions.length}</div>
         </div>
       </div>
@@ -218,13 +218,13 @@ export default function InventoryManagementPage({ isNested = false }) {
                     <div className="text-xs text-slate-400 mt-0.5">{item.unit} · Tối thiểu {item.min_stock}{item.notes ? ' · ' + item.notes : ''}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg font-bold text-sm ${item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg font-bold text-sm ${item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'}`}>
                       {item.current_stock}{item.current_stock <= item.min_stock ? ' ⚠️' : ''}
                     </span>
                     {canWrite && (
                       <>
                         <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Cập nhật</button>
-                        <button onClick={() => openStock(item)} title="Sửa tồn kho" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50">Sửa</button>
+                        <button onClick={() => openStock(item)} title="Sửa tồn kho" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-teal-600 border border-teal-200 hover:bg-teal-50">Sửa</button>
                         <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </>
                     )}
@@ -257,7 +257,7 @@ export default function InventoryManagementPage({ isNested = false }) {
                       <td className="px-6 py-4 text-center text-slate-600 font-medium">{item.unit}</td>
                       <td className="px-6 py-4 text-right">
                         <span className={`inline-flex items-center justify-center px-3 py-1 rounded-lg font-bold ${
-                          item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                          item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'
                         }`}>
                           {item.current_stock}{item.current_stock <= item.min_stock ? ' ⚠️' : ''}
                         </span>
@@ -268,7 +268,7 @@ export default function InventoryManagementPage({ isNested = false }) {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Cập nhật</button>
-                            <button onClick={() => openStock(item)} title="Sửa số lượng tồn kho" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50">Sửa</button>
+                            <button onClick={() => openStock(item)} title="Sửa số lượng tồn kho" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-teal-600 border border-teal-200 hover:bg-teal-50">Sửa</button>
                             <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
@@ -306,12 +306,12 @@ export default function InventoryManagementPage({ isNested = false }) {
                       <td className="px-6 py-4 font-bold text-slate-800">{t.inventory_items?.name}</td>
                       <td className="px-6 py-4">
                         {t.type === 'import' ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowDownLeft className="w-3 h-3"/> Nhập kho</span>
+                          <span className="inline-flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowDownLeft className="w-3 h-3"/> Nhập kho</span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowUpRight className="w-3 h-3"/> Xuất tiêu hao</span>
                         )}
                       </td>
-                      <td className={`px-6 py-4 font-bold text-right text-base ${t.type === 'import' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <td className={`px-6 py-4 font-bold text-right text-base ${t.type === 'import' ? 'text-teal-600' : 'text-red-600'}`}>
                         {t.type === 'import' ? '+' : '-'}{t.quantity} <span className="text-xs font-normal ml-1">{t.inventory_items?.unit}</span>
                       </td>
                       <td className="px-6 py-4 font-medium text-slate-700">{t.profiles?.full_name || 'Hệ thống'}</td>
@@ -417,14 +417,14 @@ export default function InventoryManagementPage({ isNested = false }) {
       {showImportModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleImportSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
-              <h3 className="font-bold text-emerald-800 text-lg">Phiếu Nhập Kho</h3>
-              <button type="button" onClick={() => setShowImportModal(false)}><X className="w-5 h-5 text-emerald-400 hover:text-emerald-600" /></button>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
+              <h3 className="font-bold text-teal-800 text-lg">Phiếu Nhập Kho</h3>
+              <button type="button" onClick={() => setShowImportModal(false)}><X className="w-5 h-5 text-teal-400 hover:text-teal-600" /></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-2 text-slate-700">Chọn vật tư *</label>
-                <select required value={importForm.item_id} onChange={e => setImportForm({...importForm, item_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 font-semibold text-slate-700">
+                <select required value={importForm.item_id} onChange={e => setImportForm({...importForm, item_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-semibold text-slate-700">
                   <option value="">-- Chọn vật tư cần nhập --</option>
                   {items.map(i => <option key={i.id} value={i.id}>{i.name} (Tồn: {i.current_stock})</option>)}
                 </select>
@@ -432,21 +432,21 @@ export default function InventoryManagementPage({ isNested = false }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2 text-slate-700">Số lượng nhập *</label>
-                  <input required type="number" min="1" value={importForm.quantity} onChange={e => setImportForm({...importForm, quantity: Number(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 font-bold text-lg text-emerald-600" placeholder="0" />
+                  <input required type="number" min="1" value={importForm.quantity} onChange={e => setImportForm({...importForm, quantity: Number(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-lg text-teal-600" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2 text-slate-700">Ngày nhập</label>
-                  <input required type="date" value={importForm.date} onChange={e => setImportForm({...importForm, date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500" />
+                  <input required type="date" value={importForm.date} onChange={e => setImportForm({...importForm, date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2 text-slate-700">Ghi chú / Nguồn nhập</label>
-                <textarea value={importForm.notes} onChange={e => setImportForm({...importForm, notes: e.target.value})} className="w-full border p-3 rounded-xl outline-none focus:border-emerald-500 h-20 resize-none" placeholder="Nhập từ nhà cung cấp nào..." />
+                <textarea value={importForm.notes} onChange={e => setImportForm({...importForm, notes: e.target.value})} className="w-full border p-3 rounded-xl outline-none focus:border-teal-500 h-20 resize-none" placeholder="Nhập từ nhà cung cấp nào..." />
               </div>
             </div>
             <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
               <button type="button" onClick={() => setShowImportModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Hoàn tất Nhập</button>
+              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Hoàn tất Nhập</button>
             </div>
           </form>
         </div>
@@ -455,20 +455,20 @@ export default function InventoryManagementPage({ isNested = false }) {
       {stockModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setStockModal(null)}>
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
-              <h3 className="font-bold text-emerald-800 text-lg">Sửa tồn kho</h3>
-              <button type="button" onClick={() => setStockModal(null)}><X className="w-5 h-5 text-emerald-400 hover:text-emerald-600" /></button>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
+              <h3 className="font-bold text-teal-800 text-lg">Sửa tồn kho</h3>
+              <button type="button" onClick={() => setStockModal(null)}><X className="w-5 h-5 text-teal-400 hover:text-teal-600" /></button>
             </div>
             <div className="p-6">
               <p className="text-sm text-slate-500 mb-3"><b className="text-slate-800">{stockModal.name}</b> · đơn vị {stockModal.unit}</p>
               <label className="block text-sm font-semibold mb-2 text-slate-700">Số lượng tồn kho hiện tại</label>
               <input type="number" autoFocus value={stockValue} onChange={e => setStockValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveStock(); }}
-                className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 font-bold text-lg text-emerald-600 text-center" placeholder="0" />
+                className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-lg text-teal-600 text-center" placeholder="0" />
               <p className="text-[11px] text-slate-400 mt-2">Chỉnh số tồn thực tế (kiểm kê). Nhập/xuất sau đó vẫn cộng/trừ bình thường.</p>
             </div>
             <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
               <button type="button" onClick={() => setStockModal(null)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
-              <button type="button" onClick={saveStock} disabled={saving} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md disabled:opacity-50">Lưu</button>
+              <button type="button" onClick={saveStock} disabled={saving} className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md disabled:opacity-50">Lưu</button>
             </div>
           </div>
         </div>

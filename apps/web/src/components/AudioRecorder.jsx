@@ -69,7 +69,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
       const idx = Math.floor(b / bars * N);
       const amp = Math.abs(data[idx] - 128) / 128;
       const h = Math.max(3, amp * H * 0.95);
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = '#14b8a6';
       ctx.fillRect(b * bw + bw * 0.2, (H - h) / 2, bw * 0.6, h);
     }
     raf.current = requestAnimationFrame(draw);
@@ -145,7 +145,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
     <div className="fixed inset-0 bg-slate-900/60 z-[55] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-3xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-3.5 border-b flex justify-between items-center">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Mic className="w-5 h-5 text-emerald-600" /> Ghi âm tư vấn</h3>
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Mic className="w-5 h-5 text-teal-600" /> Ghi âm tư vấn</h3>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
         </div>
         <div className="p-6 flex flex-col items-center">
@@ -166,7 +166,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
           ) : (
             <div className="flex items-center gap-3">
               <button onClick={reset} className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"><Trash2 className="w-5 h-5" /></button>
-              <button onClick={save} disabled={uploading} className="px-6 h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2">
+              <button onClick={save} disabled={uploading} className="px-6 h-12 rounded-full bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 flex items-center gap-2">
                 {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} {uploading ? 'Đang lưu…' : 'Lưu ghi âm'}
               </button>
             </div>

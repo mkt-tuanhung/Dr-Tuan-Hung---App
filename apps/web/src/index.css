@@ -181,7 +181,7 @@
   }
   
   .mini-card-checkin {
-    @apply bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400;
+    @apply bg-teal-50 border-teal-100 dark:bg-teal-950/20 dark:border-teal-900 text-teal-600 dark:text-teal-400;
   }
   
   .mini-card-late {
@@ -257,14 +257,14 @@ body.pink-mode .bg-white\/80 {
 
 /* Primary Accents (Buttons, badges) */
 body.pink-mode .bg-teal-400, body.pink-mode .bg-teal-500, body.pink-mode .bg-teal-600, body.pink-mode .bg-teal-700,
-body.pink-mode .bg-emerald-400, body.pink-mode .bg-emerald-500, body.pink-mode .bg-emerald-600, body.pink-mode .bg-emerald-700,
+body.pink-mode .bg-teal-400, body.pink-mode .bg-teal-500, body.pink-mode .bg-teal-600, body.pink-mode .bg-teal-700,
 body.pink-mode .bg-purple-500, body.pink-mode .bg-purple-600, 
 body.pink-mode .bg-blue-500, body.pink-mode .bg-blue-600,
 body.pink-mode .bg-indigo-500, body.pink-mode .bg-indigo-600, 
 body.pink-mode .bg-orange-500, body.pink-mode .bg-slate-800, body.pink-mode .bg-slate-900,
 body.pink-mode .bg-rose-500,
-body.pink-mode .from-emerald-500, body.pink-mode .to-teal-600,
-body.pink-mode .from-teal-500, body.pink-mode .to-emerald-600 {
+body.pink-mode .from-teal-500, body.pink-mode .to-teal-600,
+body.pink-mode .from-teal-500, body.pink-mode .to-teal-600 {
   background: linear-gradient(135deg, #ff7b89 0%, #ffa384 100%) !important;
   color: white !important;
   border: none !important;
@@ -272,32 +272,32 @@ body.pink-mode .from-teal-500, body.pink-mode .to-emerald-600 {
 }
 
 /* Light Backgrounds */
-body.pink-mode [class*="bg-teal-50"], body.pink-mode [class*="bg-emerald-50"],
-body.pink-mode [class*="bg-teal-100"], body.pink-mode [class*="bg-emerald-100"] {
+body.pink-mode [class*="bg-teal-50"], body.pink-mode [class*="bg-teal-50"],
+body.pink-mode [class*="bg-teal-100"], body.pink-mode [class*="bg-teal-100"] {
   background-color: #fff0f2 !important; /* Soft light pink */
 }
 
 /* Light Text inside Gradients */
-body.pink-mode [class*="text-emerald-100"], body.pink-mode [class*="text-emerald-200"],
+body.pink-mode [class*="text-teal-100"], body.pink-mode [class*="text-teal-200"],
 body.pink-mode [class*="text-teal-100"], body.pink-mode [class*="text-teal-200"] {
   color: #fff1f2 !important; /* Rose 50 */
 }
 
 /* Force headings inside pink gradient to be white */
-body.pink-mode [class*="from-emerald-500"] h1,
-body.pink-mode [class*="from-emerald-500"] h2,
-body.pink-mode [class*="from-emerald-500"] h3,
-body.pink-mode [class*="from-emerald-500"] h4,
-body.pink-mode [class*="from-emerald-500"] h5,
-body.pink-mode [class*="from-emerald-500"] h6 {
+body.pink-mode [class*="from-teal-500"] h1,
+body.pink-mode [class*="from-teal-500"] h2,
+body.pink-mode [class*="from-teal-500"] h3,
+body.pink-mode [class*="from-teal-500"] h4,
+body.pink-mode [class*="from-teal-500"] h5,
+body.pink-mode [class*="from-teal-500"] h6 {
   color: white !important;
 }
 
-body.pink-mode .text-teal-500, body.pink-mode .text-emerald-500,
-body.pink-mode .text-teal-600, body.pink-mode .text-emerald-600, 
+body.pink-mode .text-teal-500, body.pink-mode .text-teal-500,
+body.pink-mode .text-teal-600, body.pink-mode .text-teal-600, 
 body.pink-mode .text-purple-500, body.pink-mode .text-purple-600, 
 body.pink-mode .text-blue-500, body.pink-mode .text-blue-600,
-body.pink-mode .text-teal-700, body.pink-mode .text-emerald-700, 
+body.pink-mode .text-teal-700, body.pink-mode .text-teal-700, 
 body.pink-mode .text-purple-700, body.pink-mode .text-blue-700 {
   color: #ff7b89 !important;
 }
@@ -317,8 +317,8 @@ body.pink-mode [class*="ring-teal"], body.pink-mode [class*="ring-emerald"] {
 
 /* Multi-Tone Pink Charts */
 /* Emerald / Phẫu thuật -> Dark Pink */
-body.pink-mode [fill="#10b981"] { fill: #ff477e !important; }
-body.pink-mode [stroke="#10b981"] { stroke: #ff477e !important; }
+body.pink-mode [fill="#14b8a6"] { fill: #ff477e !important; }
+body.pink-mode [stroke="#14b8a6"] { stroke: #ff477e !important; }
 
 /* Amber / Chờ tư vấn -> Medium Pink */
 body.pink-mode [fill="#f59e0b"] { fill: #ff8fa3 !important; }

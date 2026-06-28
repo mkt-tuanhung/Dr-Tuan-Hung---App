@@ -46,13 +46,13 @@ const PayslipViewPage = () => {
     return (
       <div className="min-h-screen bg-slate-50 py-8 px-4">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-5">
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-5">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-lg font-bold">PHIẾU LƯƠNG</h1>
-                <p className="text-emerald-100 text-sm">Tháng {data.m}</p>
+                <p className="text-teal-100 text-sm">Tháng {data.m}</p>
               </div>
-              <ShieldCheck className="w-6 h-6 text-emerald-100" />
+              <ShieldCheck className="w-6 h-6 text-teal-100" />
             </div>
           </div>
           <div className="p-5">
@@ -71,9 +71,9 @@ const PayslipViewPage = () => {
                 ))}
               </tbody>
             </table>
-            <div className="mt-4 bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between">
+            <div className="mt-4 bg-teal-50 border border-teal-100 rounded-xl p-4 flex items-center justify-between">
               <span className="font-bold text-slate-700">THỰC NHẬN</span>
-              <span className="text-2xl font-bold text-emerald-700 tabular-nums">{data.net}</span>
+              <span className="text-2xl font-bold text-teal-700 tabular-nums">{data.net}</span>
             </div>
             <p className="text-xs text-slate-400 text-center mt-4">Nội dung được mã hoá đầu cuối · PK Dr Tuấn Hùng</p>
           </div>
@@ -85,7 +85,7 @@ const PayslipViewPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full">
-        <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+        <div className="w-14 h-14 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-7 h-7" />
         </div>
         <h1 className="text-lg font-bold text-slate-800 text-center">Phiếu lương bảo mật</h1>
@@ -99,13 +99,13 @@ const PayslipViewPage = () => {
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Mã bảo mật (VD: K7M2QP4N)"
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-400 outline-none text-center tracking-[0.3em] text-lg uppercase"
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-400 outline-none text-center tracking-[0.3em] text-lg uppercase"
         />
         {error && <p className="text-sm text-rose-500 text-center mt-3 flex items-center justify-center gap-1"><AlertCircle className="w-4 h-4" /> {error}</p>}
         <button
           type="submit"
           disabled={loading || !code.trim()}
-          className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white font-semibold shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xem phiếu lương'}
         </button>

@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 import { Bell, Check, MessageCircle, Wallet, UserPlus, Heart } from 'lucide-react';
 
 const ICON_OF = {
-  expense_approved: { Icon: Wallet, cls: 'bg-emerald-100 text-emerald-600' },
-  expense_paid: { Icon: Wallet, cls: 'bg-emerald-100 text-emerald-600' },
+  expense_approved: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
+  expense_paid: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
   community_post: { Icon: MessageCircle, cls: 'bg-blue-100 text-blue-600' },
   community_comment: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
   community_reply: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
@@ -124,7 +124,7 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-bold text-slate-800">Thông báo</h3>
             {unread > 0 && (
-              <button onClick={markAllRead} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+              <button onClick={markAllRead} className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> Đánh dấu đã đọc
               </button>
             )}
@@ -134,14 +134,14 @@ export default function NotificationBell() {
               <div className="py-12 text-center text-slate-400 text-sm">Chưa có thông báo nào</div>
             ) : items.map(n => (
               <button key={n.id} onClick={() => openItem(n)}
-                className={`w-full text-left flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${n.is_read ? '' : 'bg-emerald-50/40'}`}>
+                className={`w-full text-left flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${n.is_read ? '' : 'bg-teal-50/40'}`}>
                 <Avatar n={n} />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm text-slate-800 leading-snug">{n.title}</div>
                   {n.body && <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}
-                  <div className="text-[11px] text-emerald-600 font-medium mt-1">{timeAgo(n.created_at)}</div>
+                  <div className="text-[11px] text-teal-600 font-medium mt-1">{timeAgo(n.created_at)}</div>
                 </div>
-                {!n.is_read && <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />}
+                {!n.is_read && <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0 mt-1.5" />}
               </button>
             ))}
           </div>

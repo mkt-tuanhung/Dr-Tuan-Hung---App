@@ -48,7 +48,7 @@ export default function MediaCustomerButton({ appointment, me, canAdd = true }) 
     <>
       {hasMedia ? (
         <button type="button" onClick={() => setViewOpen(true)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200">
           <Clapperboard className="w-4 h-4" /> Đã có media
         </button>
       ) : canAdd ? (
@@ -62,10 +62,10 @@ export default function MediaCustomerButton({ appointment, me, canAdd = true }) 
         <Modal title="Thêm vào kho media" onClose={() => setAddOpen(false)}>
           <p className="text-sm text-slate-500 mb-3">Khách: <b>{appointment.customer_name}</b> · {appointment.phone}</p>
           <label className="block text-sm font-semibold text-slate-700 mb-1">Link nguồn Google Drive (mỗi dòng 1 link · có thể để trống, Media bổ sung sau)</label>
-          <textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none mb-4" />
+          <textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-4" />
           <div className="flex justify-end gap-2">
             <button onClick={() => setAddOpen(false)} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-            <button onClick={add} disabled={saving} className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : 'Gắn media'}</button>
+            <button onClick={add} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : 'Gắn media'}</button>
           </div>
         </Modal>
       )}

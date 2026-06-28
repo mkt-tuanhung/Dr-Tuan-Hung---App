@@ -15,7 +15,7 @@ const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 
 const STATUS_LABEL = { phau_thuat: 'Phẫu thuật', coc: 'Cọc', bong: 'Bong', scheduled: 'Đã hẹn', cancelled: 'Huỷ' };
 const STATUS_COLOR = {
-  phau_thuat: 'bg-emerald-100 text-emerald-700',
+  phau_thuat: 'bg-teal-100 text-teal-700',
   coc: 'bg-blue-100 text-blue-700',
   bong: 'bg-red-100 text-red-600',
   scheduled: 'bg-slate-100 text-slate-600',
@@ -24,7 +24,7 @@ const STATUS_COLOR = {
 
 // Map class tĩnh (Tailwind không hỗ trợ class động dạng template literal)
 const ACCENTS = {
-  emerald: { chip: 'bg-emerald-50 text-emerald-600', value: 'text-emerald-700' },
+  emerald: { chip: 'bg-teal-50 text-teal-600', value: 'text-teal-700' },
   blue:    { chip: 'bg-blue-50 text-blue-600',       value: 'text-blue-700' },
   violet:  { chip: 'bg-violet-50 text-violet-600',   value: 'text-violet-700' },
   orange:  { chip: 'bg-orange-50 text-orange-600',   value: 'text-orange-700' },
@@ -102,7 +102,7 @@ const SaleOfflineStaffKPI = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40">
-        <div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+        <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -129,7 +129,7 @@ const SaleOfflineStaffKPI = () => {
       {/* Chỉ tiêu KPI được giao */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-50">
-          <h3 className="font-bold text-emerald-700 flex items-center gap-2"><Target className="w-4 h-4" /> Chỉ tiêu KPI được giao</h3>
+          <h3 className="font-bold text-teal-700 flex items-center gap-2"><Target className="w-4 h-4" /> Chỉ tiêu KPI được giao</h3>
           <p className="text-xs text-slate-400 mt-0.5">Mục tiêu thực hiện trong tháng {year}-{String(month).padStart(2, '0')}</p>
         </div>
         <div className="p-5">
@@ -148,10 +148,10 @@ const SaleOfflineStaffKPI = () => {
                   <span className="text-slate-500">KPI Doanh thu</span>
                   <span className="font-bold text-slate-800">{revProgress}%</span>
                 </div>
-                <div className="text-lg font-black text-emerald-700 mt-1">{fmtM(doanhThu)}</div>
+                <div className="text-lg font-black text-teal-700 mt-1">{fmtM(doanhThu)}</div>
                 <div className="text-xs text-slate-400">Mục tiêu: {fmtM(kpi.target_revenue)}</div>
                 <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
-                  <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${revProgress}%` }} />
+                  <div className="h-1.5 rounded-full bg-teal-500" style={{ width: `${revProgress}%` }} />
                 </div>
               </div>
               <div className="bg-slate-50 rounded-2xl p-4">
@@ -200,7 +200,7 @@ const SaleOfflineStaffKPI = () => {
       {/* Lịch hẹn khách hàng của tôi */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-50">
-          <h3 className="font-bold text-slate-700 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-emerald-500" /> Lịch hẹn khách hàng của tôi</h3>
+          <h3 className="font-bold text-slate-700 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-teal-500" /> Lịch hẹn khách hàng của tôi</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -258,7 +258,7 @@ const SaleOfflineStaffKPI = () => {
                   <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
                   <td className="px-4 py-2.5 text-slate-600">{a.surgery_date || a.appointment_date}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-800">{a.customer_name}</td>
-                  <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">{fmtM(a.revenue)}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-teal-700">{fmtM(a.revenue)}</td>
                   <td className="px-4 py-2.5 text-right text-orange-600">{fmtM(a.upsale_revenue)}</td>
                 </tr>
               ))}

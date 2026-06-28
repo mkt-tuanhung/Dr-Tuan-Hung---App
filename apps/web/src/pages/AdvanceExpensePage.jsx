@@ -20,7 +20,7 @@ const CATEGORIES = {
   'Khac': 'Khác'
 };
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
+const COLORS = ['#14b8a6', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 export default function AdvanceExpensePage() {
   const { profile } = useAuth();
@@ -229,7 +229,7 @@ export default function AdvanceExpensePage() {
   const renderStatus = (d) => {
     if (d.status === 'pending') return <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-lg text-xs font-bold"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
     if (d.status === 'approved') return <span className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3 h-3" /> Đã duyệt</span>;
-    if (d.status === 'paid') return <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3 h-3" /> Đã hoàn ứng</span>;
+    if (d.status === 'paid') return <span className="inline-flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3 h-3" /> Đã hoàn ứng</span>;
     if (d.status === 'rejected') return <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-lg text-xs font-bold"><XCircle className="w-3 h-3" /> Từ chối</span>;
     return null;
   };
@@ -247,7 +247,7 @@ export default function AdvanceExpensePage() {
             <RefreshCw className="w-4 h-4" /> Làm mới
           </button>
           {isAdminOrAccountant && (
-            <button onClick={openRepayFast} className="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
+            <button onClick={openRepayFast} className="px-4 py-2 bg-teal-50 text-teal-600 border border-teal-200 hover:bg-teal-100 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
               <ArrowDownLeft className="w-4 h-4" /> Ghi nhận hoàn ứng
             </button>
           )}
@@ -263,9 +263,9 @@ export default function AdvanceExpensePage() {
           <div className="text-amber-600 text-sm font-bold flex items-center gap-2 mb-2"><ArrowDownLeft className="w-4 h-4" /> {isAdminOrAccountant ? 'Tổng đã chi' : 'Tổng đã chi của tôi'}</div>
           <div className="text-2xl font-black text-amber-700">{fmt(totalSpent)}</div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
-          <div className="text-emerald-600 text-sm font-bold flex items-center gap-2 mb-2"><ArrowDownLeft className="w-4 h-4" /> {isAdminOrAccountant ? 'Tổng đã hoàn ứng' : 'Đã được hoàn ứng'}</div>
-          <div className="text-2xl font-black text-emerald-700">{fmt(totalRepaid)}</div>
+        <div className="bg-white p-5 rounded-2xl border border-teal-200 shadow-sm">
+          <div className="text-teal-600 text-sm font-bold flex items-center gap-2 mb-2"><ArrowDownLeft className="w-4 h-4" /> {isAdminOrAccountant ? 'Tổng đã hoàn ứng' : 'Đã được hoàn ứng'}</div>
+          <div className="text-2xl font-black text-teal-700">{fmt(totalRepaid)}</div>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-red-200 shadow-sm">
           <div className="text-red-600 text-sm font-bold flex items-center gap-2 mb-2"><Wallet className="w-4 h-4" /> Còn thiếu</div>
@@ -351,7 +351,7 @@ export default function AdvanceExpensePage() {
                   </div>
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
                     {d.proof_image_urls?.[0] && <button onClick={() => setViewImage(d.proof_image_urls[0])} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg" title="Bill chi"><ImageIcon className="w-4 h-4" /></button>}
-                    {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
+                    {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-teal-50 text-teal-600 rounded-lg" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
                     {isAdminOrAccountant && d.status === 'pending' && (
                       <>
                         <button onClick={() => handleApprove(d.id)} className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold text-xs">Duyệt</button>
@@ -396,7 +396,7 @@ export default function AdvanceExpensePage() {
                       <td className="px-6 py-4">
                         {renderStatus(d)}
                         {d.status === 'rejected' && <div className="text-xs text-red-500 mt-1 italic">"{d.reject_reason}"</div>}
-                        {d.status === 'paid' && <div className="text-xs text-emerald-500 mt-1">Đã ck {new Date(d.advance_repaid_at).toLocaleDateString('vi-VN')}</div>}
+                        {d.status === 'paid' && <div className="text-xs text-teal-500 mt-1">Đã ck {new Date(d.advance_repaid_at).toLocaleDateString('vi-VN')}</div>}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
@@ -406,7 +406,7 @@ export default function AdvanceExpensePage() {
                             </button>
                           )}
                           {d.advance_repaid_proof && (
-                            <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors" title="Xem bill hoàn">
+                            <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg transition-colors" title="Xem bill hoàn">
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
@@ -458,7 +458,7 @@ export default function AdvanceExpensePage() {
                     </div>
                     <div className="grid grid-cols-3 gap-2 mt-3 text-center">
                       <div className="bg-amber-50 rounded-lg py-2"><div className="text-[10px] text-amber-500 uppercase">Đã chi</div><div className="font-bold text-amber-600 text-sm">{fmt(s.total)}</div></div>
-                      <div className="bg-emerald-50 rounded-lg py-2"><div className="text-[10px] text-emerald-500 uppercase">Đã hoàn</div><div className="font-bold text-emerald-600 text-sm">{fmt(s.repaid)}</div></div>
+                      <div className="bg-teal-50 rounded-lg py-2"><div className="text-[10px] text-teal-500 uppercase">Đã hoàn</div><div className="font-bold text-teal-600 text-sm">{fmt(s.repaid)}</div></div>
                       <div className="bg-red-50 rounded-lg py-2"><div className="text-[10px] text-red-500 uppercase">Còn nợ</div><div className="font-bold text-red-600 text-sm">{fmt(s.total - s.repaid)}</div></div>
                     </div>
                   </div>
@@ -483,7 +483,7 @@ export default function AdvanceExpensePage() {
                         <td className="p-3 border font-semibold text-slate-800">{s.name}</td>
                         <td className="p-3 border text-center">{s.count}</td>
                         <td className="p-3 border font-bold text-amber-600">{fmt(s.total)}</td>
-                        <td className="p-3 border font-bold text-emerald-600">{fmt(s.repaid)}</td>
+                        <td className="p-3 border font-bold text-teal-600">{fmt(s.repaid)}</td>
                         <td className="p-3 border font-bold text-red-600">{fmt(s.total - s.repaid)}</td>
                       </tr>
                     ))}
@@ -664,15 +664,15 @@ export default function AdvanceExpensePage() {
       {showRepayModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-[60] flex items-center justify-center p-4">
           <form onSubmit={handleRepaySubmit} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-emerald-50">
-              <h3 className="font-bold text-emerald-800">Ghi nhận hoàn ứng (Thanh toán)</h3>
-              <button type="button" onClick={() => setShowRepayModal(false)}><X className="w-5 h-5 text-emerald-400" /></button>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
+              <h3 className="font-bold text-teal-800">Ghi nhận hoàn ứng (Thanh toán)</h3>
+              <button type="button" onClick={() => setShowRepayModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
               <div>
                 <label className="block text-sm font-semibold mb-2">Chọn phiếu tạm ứng cần hoàn *</label>
                 <select 
-                  className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500 bg-white text-slate-700 font-semibold"
+                  className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-white text-slate-700 font-semibold"
                   value={selectedExpense?.id || ''}
                   onChange={(e) => {
                     const exp = data.find(d => d.id === e.target.value);
@@ -696,7 +696,7 @@ export default function AdvanceExpensePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Số tiền hoàn (VNĐ) *</label>
-                  <input required type="text" value={repayForm.amount} onChange={e => setRepayForm({...repayForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none font-bold text-emerald-600" />
+                  <input required type="text" value={repayForm.amount} onChange={e => setRepayForm({...repayForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none font-bold text-teal-600" />
                 </div>
               </div>
               <div>
@@ -712,15 +712,15 @@ export default function AdvanceExpensePage() {
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Chứng từ (UNC, Phiếu chi...)</label>
-                <div onClick={() => !uploadingImage && repayFileInputRef.current?.click()} className="border border-dashed border-emerald-300 rounded-xl p-6 text-center cursor-pointer bg-emerald-50/50 hover:bg-emerald-50 transition-colors">
+                <div onClick={() => !uploadingImage && repayFileInputRef.current?.click()} className="border border-dashed border-teal-300 rounded-xl p-6 text-center cursor-pointer bg-teal-50/50 hover:bg-teal-50 transition-colors">
                   <input type="file" accept="image/*" className="hidden" ref={repayFileInputRef} onChange={(e) => handleImageUpload(e, url => setRepayForm({...repayForm, proof: url}))} />
-                  {uploadingImage ? <span className="text-emerald-600 font-semibold text-sm">Đang tải...</span> : repayForm.proof ? <span className="text-emerald-700 font-semibold text-sm flex items-center justify-center gap-1"><CheckCircle className="w-4 h-4"/> Đã tải</span> : <span className="text-emerald-600 font-semibold text-sm flex items-center justify-center gap-1"><UploadCloud className="w-4 h-4"/> Click để tải lên</span>}
+                  {uploadingImage ? <span className="text-teal-600 font-semibold text-sm">Đang tải...</span> : repayForm.proof ? <span className="text-teal-700 font-semibold text-sm flex items-center justify-center gap-1"><CheckCircle className="w-4 h-4"/> Đã tải</span> : <span className="text-teal-600 font-semibold text-sm flex items-center justify-center gap-1"><UploadCloud className="w-4 h-4"/> Click để tải lên</span>}
                 </div>
               </div>
             </div>
             <div className="p-4 bg-slate-50 border-t flex justify-end gap-3 shrink-0">
               <button type="button" onClick={() => setShowRepayModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold">Hủy</button>
-              <button type="submit" disabled={saving || uploadingImage} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl">Xác nhận hoàn ứng</button>
+              <button type="submit" disabled={saving || uploadingImage} className="px-6 py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-xl">Xác nhận hoàn ứng</button>
             </div>
           </form>
         </div>
