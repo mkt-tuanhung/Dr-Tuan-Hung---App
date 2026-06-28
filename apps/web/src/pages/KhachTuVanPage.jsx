@@ -21,27 +21,51 @@ const KhachTuVanPage = () => {
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const canWrite = roles.includes('sale_offline') || roles.includes('admin');
   const [rows, setRows] = useState([]);
+  const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
   const [search, setSearch] = useState('');
   const [evalFor, setEvalFor] = useState(null);
   const [consultFor, setConsultFor] = useState(null);
   const [recFor, setRecFor] = useState(null);
+  const [transcriptView, setTranscriptView] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     const { data } = await supabase.from('customer_appointments')
-      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls, consult_audio_urls')
+      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls')
       .or('status.in.(coc,bong,phau_thuat),consult_received.eq.true')
       .order('updated_at', { ascending: false }).limit(500);
     setRows(data || []);
+    const { data: recData } = await supabase.from('consult_recordings')
+      .select('*, by:profiles!created_by(full_name)').order('created_at', { ascending: false }).limit(1000);
+    setRecs(recData || []);
     didLoad.current = true; setLoading(false);
   }, []);
+
+  const reanalyze = async (id) => {
+    setRecs(p => p.map(r => r.id === id ? { ...r, status: 'processing' } : r));
+    await supabase.functions.invoke('analyze-consult', { body: { recording_id: id } });
+    loadData();
+  };
+  const delRec = async (id) => {
+    setRecs(p => p.filter(r => r.id !== id));
+    await supabase.from('consult_recordings').delete().eq('id', id);
+  };
   useEffect(() => { loadData(); }, [loadData]);
-  useRealtimeReload('customer_appointments', loadData);
+  useRealtimeReload('customer_appointments,consult_recordings', loadData);
 
   const q = search.trim().toLowerCase();
   const visible = rows.filter(r => !q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q));
+  const recsOf = (apptId) => recs.filter(r => r.appointment_id === apptId);
+
+  // Bảng xếp hạng chất lượng tư vấn (điểm AI TB theo sale)
+  const lb = Object.values(recs.filter(r => r.ai_score != null).reduce((a, r) => {
+    const id = r.created_by || 'x';
+    a[id] = a[id] || { id, name: r.by?.full_name || 'Sale', n: 0, sum: 0 };
+    a[id].n++; a[id].sum += Number(r.ai_score || 0); return a;
+  }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
+  const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-emerald-100 text-emerald-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
 
   return (
     <div className="space-y-4">
@@ -49,6 +73,20 @@ const KhachTuVanPage = () => {
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><UserCheck className="w-6 h-6 text-emerald-600" /> Khách tư vấn</h2>
         <p className="text-slate-400 text-sm mt-0.5">Khách đã tiếp nhận tư vấn trực tiếp · thêm hồ sơ, ghi âm, đánh giá</p>
       </div>
+
+      {lb.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <h3 className="font-bold text-amber-600 mb-2 flex items-center gap-2 text-sm">🏆 Xếp hạng chất lượng tư vấn (AI)</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {lb.map((e, i) => (
+              <div key={e.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 gap-2">
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700 min-w-0"><span className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span><span className="truncate">{e.name}</span></span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreCls(e.avg)}`}>TB {e.avg.toFixed(1)}/10 · {e.n}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="relative">
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -73,15 +111,26 @@ const KhachTuVanPage = () => {
               {r.consult_note && <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">📝 {r.consult_note}</div>}
               <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
                 {(r.consult_image_urls || []).length > 0 && <span className="bg-slate-50 px-2 py-0.5 rounded-full">🖼 {(r.consult_image_urls || []).length} ảnh</span>}
-                {(r.consult_audio_urls || []).length > 0 && <span className="bg-slate-50 px-2 py-0.5 rounded-full">🎙 {(r.consult_audio_urls || []).length} ghi âm</span>}
+                {recsOf(r.id).length > 0 && <span className="bg-slate-50 px-2 py-0.5 rounded-full">🎙 {recsOf(r.id).length} ghi âm</span>}
               </div>
-              {(r.consult_audio_urls || []).length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {(r.consult_audio_urls || []).map((a, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg p-1.5">
-                      <Play className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <audio src={typeof a === 'string' ? a : a.url} controls className="h-7 flex-1 min-w-0" />
-                      {a.sec ? <span className="text-[10px] text-slate-400 shrink-0">{fmtTime(a.sec)}</span> : null}
+              {recsOf(r.id).length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {recsOf(r.id).map(rec => (
+                    <div key={rec.id} className="bg-slate-50 rounded-xl p-2">
+                      <div className="flex items-center gap-2">
+                        <audio src={rec.audio_url} controls className="h-7 flex-1 min-w-0" />
+                        {rec.ai_score != null
+                          ? <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${scoreCls(rec.ai_score)}`}>{rec.ai_score}/10</span>
+                          : rec.status === 'processing' ? <span className="text-[10px] text-amber-600 shrink-0 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />AI…</span>
+                            : rec.status === 'error' ? <span className="text-[10px] text-rose-500 shrink-0">Lỗi AI</span>
+                              : <span className="text-[10px] text-slate-400 shrink-0">Chưa chấm</span>}
+                        {(rec.created_by === me?.id || roles.includes('admin')) && <button onClick={() => delRec(rec.id)} className="text-rose-300 hover:text-rose-500 shrink-0"><X className="w-3.5 h-3.5" /></button>}
+                      </div>
+                      {rec.ai_analysis?.summary && <div className="text-[11px] text-slate-500 mt-1 line-clamp-2">🤖 {rec.ai_analysis.summary}</div>}
+                      <div className="flex gap-2 mt-1">
+                        {rec.transcript && <button onClick={() => setTranscriptView(rec)} className="text-[11px] font-semibold text-emerald-600 hover:underline">Xem chi tiết</button>}
+                        {rec.status !== 'processing' && <button onClick={() => reanalyze(rec.id)} className="text-[11px] font-semibold text-slate-500 hover:underline">Phân tích lại</button>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -101,11 +150,35 @@ const KhachTuVanPage = () => {
       {evalFor && <EvalModal app={evalFor} onClose={() => setEvalFor(null)} onSaved={() => { setEvalFor(null); loadData(); }} />}
       {consultFor && <ConsultModal app={consultFor} onClose={() => setConsultFor(null)} onSaved={() => { setConsultFor(null); loadData(); }} />}
       {recFor && <AudioRecorder onClose={() => setRecFor(null)} onSaved={async (url, sec) => {
-        const arr = [...(recFor.consult_audio_urls || []), { url, sec, at: new Date().toISOString() }];
-        const { error } = await supabase.from('customer_appointments').update({ consult_audio_urls: arr }).eq('id', recFor.id);
+        const { data, error } = await supabase.from('consult_recordings')
+          .insert({ appointment_id: recFor.id, audio_url: url, duration_sec: sec, created_by: me.id, status: 'pending' }).select('id').single();
         if (error) { toast.error(error.message); return; }
-        toast.success('Đã lưu ghi âm'); setRecFor(null); loadData();
+        setRecFor(null); toast.success('Đã lưu ghi âm — đang transcribe & chấm điểm AI…');
+        loadData();
+        supabase.functions.invoke('analyze-consult', { body: { recording_id: data.id } }).then(() => loadData());
       }} />}
+      {transcriptView && (
+        <Modal title="Văn bản & đánh giá tư vấn" onClose={() => setTranscriptView(null)}>
+          {transcriptView.ai_score != null && (
+            <div className="mb-3 flex items-center gap-2">
+              <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreCls(transcriptView.ai_score)}`}>{transcriptView.ai_score}/10 · {transcriptView.ai_analysis?.level || ''}</span>
+            </div>
+          )}
+          {transcriptView.ai_analysis?.summary && <p className="text-sm text-slate-600 mb-3">🤖 {transcriptView.ai_analysis.summary}</p>}
+          {transcriptView.ai_analysis?.criteria && (
+            <div className="grid grid-cols-2 gap-1.5 mb-3 text-xs">
+              {Object.entries({ thien_cam: 'Thiện cảm', khai_thac_nhu_cau: 'Khai thác nhu cầu', tu_van_chuyen_mon: 'Chuyên môn', xu_ly_tu_choi: 'Xử lý từ chối', chot: 'Chốt', thai_do: 'Thái độ' }).map(([k, l]) => (
+                <div key={k} className="flex justify-between bg-slate-50 rounded-lg px-2 py-1"><span className="text-slate-500">{l}</span><b className="text-slate-700">{transcriptView.ai_analysis.criteria[k] ?? '—'}/10</b></div>
+              ))}
+            </div>
+          )}
+          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-emerald-600 mb-1">Điểm mạnh</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.weaknesses || []).length > 0 && <div className="mb-2"><div className="text-xs font-bold text-rose-600 mb-1">Điểm yếu</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.suggestions || []).length > 0 && <div className="mb-3"><div className="text-xs font-bold text-blue-600 mb-1">Gợi ý cải thiện</div><ul className="text-xs text-slate-600 list-disc pl-4 space-y-0.5">{transcriptView.ai_analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          <div className="text-xs font-bold text-slate-500 mb-1">Văn bản (transcript)</div>
+          <div className="text-xs text-slate-600 bg-slate-50 rounded-xl p-3 whitespace-pre-wrap max-h-60 overflow-y-auto">{transcriptView.transcript || '—'}</div>
+        </Modal>
+      )}
     </div>
   );
 };
