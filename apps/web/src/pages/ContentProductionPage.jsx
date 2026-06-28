@@ -95,7 +95,7 @@ const downloadFile = async (url, name) => {
 const ymd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
 const parseYmd = (s) => { if (!s) return null; const [y, m, dd] = s.split('-').map(Number); return new Date(y, m - 1, dd); };
 const VN_DOW = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-const DateRangeFilter = ({ from, to, onApply }) => {
+const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày quay/chụp' }) => {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => parseYmd(from) || new Date());
   const [a, setA] = useState(parseYmd(from));
@@ -140,7 +140,7 @@ const DateRangeFilter = ({ from, to, onApply }) => {
       </button>
       {open && (
         <div className="absolute z-40 mt-1 right-0 w-[290px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3">
-          <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide mb-2">Lọc theo ngày quay/chụp</div>
+          <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide mb-2">{headerLabel}</div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {[['week', 'Tuần này'], ['lastweek', 'Tuần trước'], ['month', 'Tháng này'], ['lastmonth', 'Tháng trước']].map(([k, l]) => (
               <button key={k} onClick={() => preset(k)} className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700">{l}</button>
@@ -192,6 +192,9 @@ const ContentProductionPage = () => {
   const [khoTo, setKhoTo] = useState('');           // lọc ngày quay đến
   const [khoView, setKhoView] = useState('list');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
+  const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
+  const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
+  const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [addOpen, setAddOpen] = useState(false);
   const [addVideoOpen, setAddVideoOpen] = useState(false);
   const [editSource, setEditSource] = useState(null);
@@ -267,6 +270,11 @@ const ContentProductionPage = () => {
     const st = storeOf(c.media_customer_id);
     if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
     if (!matchScoreFilter(c, videoScore)) return false;
+    if (videoService && !((st?.service || '').includes(videoService))) return false;
+    const day = (c.submitted_at || c.created_at || '').slice(0, 10);
+    if (videoFrom && day < videoFrom) return false;
+    if (videoTo && day > videoTo) return false;
+    if (videoFrom || videoTo) return true; // đã lọc ngày -> không giới hạn tháng
     const d = new Date(c.submitted_at || c.created_at);
     return c.stage !== 'done' || (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
   });
@@ -340,10 +348,18 @@ const ContentProductionPage = () => {
           </>
         )}
         {tab === 'video' && (
-          <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
-            <option value="">Mọi mức điểm</option>
-            {Object.entries(SCORE_FILTERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
+          <>
+            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+              <option value="">Mọi mức điểm</option>
+              {Object.entries(SCORE_FILTERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-emerald-400 outline-none bg-white">
+              <option value="">Mọi dịch vụ</option>
+              {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
+            </select>
+            <DateRangeFilter from={videoFrom} to={videoTo} headerLabel="Lọc theo ngày dựng" onApply={(f, t) => { setVideoFrom(f); setVideoTo(t); }} />
+            {(videoScore || videoService || videoFrom || videoTo) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+          </>
         )}
       </div>
 
