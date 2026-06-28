@@ -158,7 +158,7 @@ const KhachTuVanPage = () => {
                           <audio src={rec.audio_url} controls className="h-7 w-full mt-1" />
                         </div>
                       </div>
-                      {rec.ai_analysis?.summary && <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">🤖 {rec.ai_analysis.summary}</div>}
+                      {rec.ai_analysis?.summary && <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">{rec.ai_analysis.summary}</div>}
                       <div className="flex gap-3 mt-1.5">
                         {rec.transcript && <button onClick={() => setTranscriptView(rec)} className="text-[11px] font-bold text-teal-600 hover:text-teal-700">Xem chi tiết →</button>}
                         {rec.status !== 'processing' && <button onClick={() => reanalyze(rec.id)} className="text-[11px] font-semibold text-slate-400 hover:text-slate-600">Phân tích lại</button>}
@@ -197,7 +197,7 @@ const KhachTuVanPage = () => {
               <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreCls(transcriptView.ai_score)}`}>{transcriptView.ai_score}/10 · {transcriptView.ai_analysis?.level || ''}</span>
             </div>
           )}
-          {transcriptView.ai_analysis?.summary && <p className="text-sm text-slate-600 mb-3">🤖 {transcriptView.ai_analysis.summary}</p>}
+          {transcriptView.ai_analysis?.summary && <p className="text-sm text-slate-600 mb-3">{transcriptView.ai_analysis.summary}</p>}
           {transcriptView.ai_analysis?.criteria && (
             <div className="grid grid-cols-2 gap-1.5 mb-3 text-xs">
               {Object.entries({ thien_cam: 'Thiện cảm', khai_thac_nhu_cau: 'Khai thác nhu cầu', tu_van_chuyen_mon: 'Chuyên môn', xu_ly_tu_choi: 'Xử lý từ chối', chot: 'Chốt', thai_do: 'Thái độ' }).map(([k, l]) => (
