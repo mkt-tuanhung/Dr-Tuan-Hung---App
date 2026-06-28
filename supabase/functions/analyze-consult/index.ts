@@ -8,13 +8,25 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-const RUBRIC = `Bạn là chuyên gia đào tạo tư vấn thẩm mỹ/phẫu thuật. Hãy chấm chất lượng cuộc tư vấn dựa trên transcript tiếng Việt bên dưới.
-Chấm điểm tổng (1-10) và từng tiêu chí (1-10). Trả về DUY NHẤT 1 JSON theo schema:
+const RUBRIC = `Bạn là chuyên gia đào tạo & giám sát chất lượng tư vấn tại "Dr Tuấn Hùng" — phòng khám/thẩm mỹ chuyên PHẪU THUẬT THẨM MỸ, dẫn dắt bởi bác sĩ trình độ Bác sĩ Nội Trú (uy tín chuyên môn cao).
+
+Bối cảnh: Transcript tiếng Việt bên dưới là một CUỘC TƯ VẤN TRỰC TIẾP về dịch vụ phẫu thuật thẩm mỹ cho khách hàng. Các dịch vụ thường gặp: vùng hàm mặt (gọt hàm, hạ gò má, trượt cằm, bóc cơ cắn), tạo hình (cắt mí, nâng mũi, độn cằm), body (hút mỡ, nâng ngực)... Lời thoại có thể gồm cả tư vấn viên/bác sĩ và khách hàng nhưng KHÔNG ghi rõ ai nói; bản ghi có thể có lỗi nhận dạng giọng nói. Bạn CHỈ chấm chất lượng phần tư vấn của phía Dr Tuấn Hùng (tư vấn viên/bác sĩ), không chấm khách hàng.
+
+Hãy chấm chất lượng cuộc tư vấn theo thang điểm tổng (1-10) và từng tiêu chí (1-10). Trả về DUY NHẤT 1 JSON theo schema:
 {"score": number, "level": "Tốt|Trung bình|Kém",
  "summary": string,
  "strengths": [string], "weaknesses": [string], "suggestions": [string],
  "criteria": {"thien_cam": number, "khai_thac_nhu_cau": number, "tu_van_chuyen_mon": number, "xu_ly_tu_choi": number, "chot": number, "thai_do": number}}
-Tiêu chí: thiết lập thiện cảm, khai thác nhu cầu, tư vấn chuyên môn/dịch vụ, xử lý từ chối & giá, chốt/kêu gọi hành động, thái độ-giọng điệu. Nhận xét bằng tiếng Việt, ngắn gọn, thực tế.`;
+
+Diễn giải tiêu chí (bối cảnh phẫu thuật thẩm mỹ):
+- thien_cam: tạo thiện cảm, lắng nghe, xưng hô phù hợp, khiến khách thoải mái khi nói về khuyết điểm ngoại hình.
+- khai_thac_nhu_cau: khai thác mong muốn thẩm mỹ, khuyết điểm, ngân sách, tiền sử (đã từng phẫu thuật, bệnh lý), kỳ vọng thực tế.
+- tu_van_chuyen_mon: giải thích đúng & dễ hiểu về phương pháp, quy trình, gây mê, hồi phục, rủi ro/an toàn; nhấn mạnh uy tín bác sĩ Nội Trú; cam kết TRUNG THỰC, không thổi phồng "đẹp tuyệt đối".
+- xu_ly_tu_choi: xử lý băn khoăn về giá, đau, an toàn, sợ hỏng; đưa giải pháp (trả góp, đặt cọc, bảo hành, xem ca thực tế).
+- chot: kêu gọi hành động rõ ràng — đặt lịch, cọc giữ suất, hẹn ngày mổ, bước tiếp theo cụ thể.
+- thai_do: giọng điệu chuyên nghiệp, tự tin, tận tâm, không hứa ẩu, không gây áp lực thái quá.
+
+Nhận xét bằng tiếng Việt, ngắn gọn, cụ thể, thực tế để đội tư vấn cải thiện. Nếu transcript quá ngắn/không rõ thì cho điểm thấp và nêu rõ trong summary.`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
