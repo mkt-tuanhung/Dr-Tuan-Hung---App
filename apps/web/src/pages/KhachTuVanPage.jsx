@@ -13,7 +13,7 @@ const ST = {
   bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' },
   phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' },
 };
-const inp = 'w-full px-3.5 py-2.5 text-[15px] rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition';
+const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition';
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
@@ -338,21 +338,21 @@ const EvalModal = ({ app, onClose, onSaved }) => {
         {['Tiểu phẫu', 'Đại phẫu'].map(t => <button key={t} onClick={() => setF({ ...f, surgery_type: t })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-xl border transition ${f.surgery_type === t ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{t}</button>)}
       </div>
       {f.status === 'phau_thuat' && (<>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Ngày mổ"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>
           <Field label="Doanh thu (VNĐ)"><input type="number" value={f.revenue} onChange={e => setF({ ...f, revenue: e.target.value })} className={inp} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Upsale (VNĐ)"><input type="number" value={f.upsale_revenue} onChange={e => setF({ ...f, upsale_revenue: e.target.value })} className={inp} /></Field>
           <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
         </div>
       </>)}
       {f.status === 'coc' && (<>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Ngày cọc"><input type="date" value={f.deposit_date} onChange={e => setF({ ...f, deposit_date: e.target.value })} className={inp} /></Field>
           <Field label="Số tiền cọc"><input type="number" value={f.deposit_amount} onChange={e => setF({ ...f, deposit_amount: e.target.value })} className={inp} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Ngày mổ dự kiến"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>
           <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
         </div>
