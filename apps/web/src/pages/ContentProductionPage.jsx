@@ -200,6 +200,7 @@ const ContentProductionPage = () => {
   const [editClip, setEditClip] = useState(null);   // clip editor đang sửa
   const [reviewFor, setReviewFor] = useState(null);
   const [videoFor, setVideoFor] = useState(null);   // clip đang xem video
+  const [sourceFor, setSourceFor] = useState(null); // store đang xem source
   const [scoreFor, setScoreFor] = useState(null);   // store đang chấm điểm/góp ý source
   const [clipsModal, setClipsModal] = useState(null); // { store, clips } xem video đã dựng từ source
   const [confirmState, setConfirmState] = useState(null); // hộp thoại xác nhận
@@ -357,7 +358,7 @@ const ContentProductionPage = () => {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
               <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
-                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })}
+                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
@@ -365,7 +366,7 @@ const ContentProductionPage = () => {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
             {visStores.map(s => (
               <StoreRow key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
-                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })}
+                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
@@ -394,6 +395,7 @@ const ContentProductionPage = () => {
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
       {videoFor && <VideoModal clip={videoFor} onClose={() => setVideoFor(null)} />}
+      {sourceFor && <VideoModal clip={{ clip_links: sourceFor.source_links }} title={`Xem source — ${sourceFor.customer_name || ''}`} onClose={() => setSourceFor(null)} />}
       {confirmState && <ConfirmDialog {...confirmState} onClose={() => setConfirmState(null)} />}
       <ImageLightbox />
       {clipsModal && (
@@ -503,7 +505,7 @@ const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk,
 );
 
 // ---------- Hàng Kho media (danh sách) ----------
-const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
     <div className="p-3 hover:bg-slate-50/60 flex flex-col lg:flex-row lg:items-center gap-3">
@@ -535,6 +537,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSourc
       </div>
 
       <div className="flex flex-wrap gap-1.5 lg:justify-end shrink-0">
+        {(s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-semibold text-violet-600 px-2.5 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50"><PlayCircle className="w-3 h-3 inline mr-0.5" />Xem source</button>}
         {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng video</button>}
         {canEdit && <button onClick={onScore} className="text-xs font-semibold text-amber-600 px-2 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-50">Chấm/Góp ý</button>}
         {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
@@ -546,7 +549,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSourc
 };
 
 // ---------- Thẻ Kho media (chế độ thẻ) ----------
-const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
@@ -574,6 +577,7 @@ const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onEditSour
       </div>
       {s.source_feedback && <div className="text-[11px] text-slate-500 italic mt-1 truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
       <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-50 pt-2">
+        {(s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-semibold text-violet-600 px-2 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50"><PlayCircle className="w-3 h-3 inline mr-0.5" />Xem source</button>}
         {canEdit && <button onClick={onBuild} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700"><Scissors className="w-3 h-3 inline mr-0.5" />Dựng</button>}
         {canEdit && <button onClick={onScore} className="text-xs font-semibold text-amber-600 px-2 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-50">Chấm/Góp ý</button>}
         {owner && <button onClick={onEditSource} className="text-xs font-semibold text-slate-600 px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Sửa nguồn</button>}
@@ -1008,7 +1012,7 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
 
 // ---------- Trình phát video (phóng to/thu nhỏ + toàn màn hình) ----------
 const VID_SIZES = [{ name: 'Nhỏ', w: '480px' }, { name: 'Vừa', w: '720px' }, { name: 'Lớn', w: '960px' }, { name: 'Tối đa', w: '100%' }];
-const VideoModal = ({ clip, onClose }) => {
+const VideoModal = ({ clip, onClose, title = 'Xem video clip' }) => {
   const links = clip.clip_links || [];
   const [ci, setCi] = useState(0);
   const [zi, setZi] = useState(1);
@@ -1023,7 +1027,7 @@ const VideoModal = ({ clip, onClose }) => {
     <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-4xl shadow-xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-3 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><PlayCircle className="w-5 h-5 text-violet-600" /> Xem video clip</h3>
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><PlayCircle className="w-5 h-5 text-violet-600" /> {title}</h3>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
         </div>
         <div className="p-4">
