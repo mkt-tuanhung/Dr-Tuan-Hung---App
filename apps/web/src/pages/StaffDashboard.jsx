@@ -6,7 +6,7 @@ import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard,
-  Trophy, Scissors, CheckCircle2, Database
+  Trophy, Scissors, CheckCircle2, Database, UserCheck
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -27,6 +27,7 @@ import PayrollPage from '@/pages/PayrollPage.jsx';
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
 import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
+import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
 import { loadPayrollDetail } from '@/lib/payrollData';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
@@ -61,6 +62,7 @@ const FULL_MENU = [
 
   // CRM
   { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['accountant'] },
+  { id: 'khach_tu_van', label: 'Khách tư vấn',    icon: UserCheck, roles: ['sale_offline', 'admin'] },
   { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
@@ -362,6 +364,7 @@ const StaffDashboard = () => {
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
     if (activeTab === 'content') return <ContentProductionPage />;
     if (activeTab === 'data_kh') return <MarketingDataPage />;
+    if (activeTab === 'khach_tu_van') return <KhachTuVanPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;

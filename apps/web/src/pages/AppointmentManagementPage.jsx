@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const AppointmentManagementPage = () => {
@@ -299,6 +299,13 @@ const AppointmentManagementPage = () => {
     });
     setConsultFiles([]);
     setShowEvalModal(true);
+  };
+
+  const receiveConsult = async (app) => {
+    const { error } = await supabase.from('customer_appointments').update({ consult_received: true }).eq('id', app.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã tiếp nhận tư vấn — khách vào module “Khách tư vấn”');
+    loadData();
   };
 
   const handleEvalSubmit = async (e) => {
@@ -657,6 +664,14 @@ const AppointmentManagementPage = () => {
                             <button onClick={() => setConsultView(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
                               <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
                             </button>
+                          )}
+                          {app.status === 'scheduled' && !app.consult_received && ['admin', 'sale_offline', 'telesale'].includes(profile?.role) && (
+                            <button onClick={() => receiveConsult(app)} className="w-full py-2 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                              <UserCheck className="w-4 h-4" /> Tiếp nhận tư vấn
+                            </button>
+                          )}
+                          {app.consult_received && app.status === 'scheduled' && (
+                            <div className="w-full py-1.5 text-center text-xs font-semibold text-emerald-600 bg-emerald-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
                           )}
                           <div className="flex items-center gap-2 w-full">
                             {['admin', 'sale_offline'].includes(profile?.role) && (

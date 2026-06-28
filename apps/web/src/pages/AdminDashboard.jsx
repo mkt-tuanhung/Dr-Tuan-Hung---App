@@ -22,6 +22,7 @@ import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
 import MarketingHubPage from '@/pages/MarketingHubPage.jsx';
 import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
+import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import {
@@ -40,6 +41,7 @@ const MENU_GROUPS = [
     { id: 'data_kh', label: 'Data khách hàng', icon: Database },
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
+    { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
     { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
     { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
   ]},
@@ -296,6 +298,7 @@ const AdminDashboard = () => {
       case 'notifications': return <NotificationsPage />;
       case 'marketing': return <MarketingHubPage />;
       case 'data_kh': return <MarketingDataPage />;
+      case 'khach_tu_van': return <KhachTuVanPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
