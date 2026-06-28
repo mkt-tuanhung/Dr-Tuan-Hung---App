@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play } from 'lucide-react';
+import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 
 const ST = {
@@ -35,6 +35,7 @@ const KhachTuVanPage = () => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const canWrite = roles.includes('sale_offline') || roles.includes('admin');
+  const isAdmin = roles.includes('admin');
   const [rows, setRows] = useState([]);
   const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,8 @@ const KhachTuVanPage = () => {
   const [consultFor, setConsultFor] = useState(null);
   const [recFor, setRecFor] = useState(null);
   const [transcriptView, setTranscriptView] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -63,19 +66,32 @@ const KhachTuVanPage = () => {
     await supabase.functions.invoke('analyze-consult', { body: { recording_id: id } });
     loadData();
   };
-  const delRec = async (id) => {
-    setRecs(p => p.filter(r => r.id !== id));
-    await supabase.from('consult_recordings').delete().eq('id', id);
+  const upd = async (id, payload, msg) => {
+    const { error } = await supabase.from('consult_recordings').update(payload).eq('id', id);
+    if (error) { toast.error(error.message); return; }
+    if (msg) toast.success(msg); loadData();
   };
+  // Sale: xin xoá (chờ admin duyệt)
+  const requestDelete = (rec) => setConfirm({ message: 'Gửi yêu cầu xoá ghi âm này? Admin sẽ duyệt trước khi xoá.', okLabel: 'Gửi yêu cầu',
+    onOk: () => upd(rec.id, { delete_requested_by: me.id, delete_requested_at: new Date().toISOString() }, 'Đã gửi yêu cầu xoá — chờ admin duyệt') });
+  // Admin: duyệt xoá / xoá thẳng -> vào thùng rác (xoá mềm)
+  const softDelete = (rec, label) => setConfirm({ message: label, okLabel: 'Chuyển vào thùng rác', danger: true,
+    onOk: () => upd(rec.id, { deleted_at: new Date().toISOString(), deleted_by: me.id, delete_requested_by: null, delete_requested_at: null }, 'Đã chuyển vào thùng rác') });
+  const rejectDelete = (rec) => upd(rec.id, { delete_requested_by: null, delete_requested_at: null }, 'Đã từ chối yêu cầu xoá');
+  const restore = (rec) => upd(rec.id, { deleted_at: null, deleted_by: null }, 'Đã khôi phục ghi âm');
+  const permanentDelete = (rec) => setConfirm({ message: 'Xoá VĨNH VIỄN ghi âm này? Không thể khôi phục lại.', okLabel: 'Xoá vĩnh viễn', danger: true,
+    onOk: async () => { const { error } = await supabase.from('consult_recordings').delete().eq('id', rec.id); if (error) { toast.error(error.message); return; } toast.success('Đã xoá vĩnh viễn'); loadData(); } });
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments,consult_recordings', loadData);
 
   const q = search.trim().toLowerCase();
   const visible = rows.filter(r => !q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q));
-  const recsOf = (apptId) => recs.filter(r => r.appointment_id === apptId);
+  const recsOf = (apptId) => recs.filter(r => r.appointment_id === apptId && !r.deleted_at);
+  const trash = recs.filter(r => r.deleted_at);
+  const apptName = (id) => rows.find(x => x.id === id)?.customer_name || 'Khách';
 
   // Bảng xếp hạng chất lượng tư vấn (điểm AI TB theo sale)
-  const lb = Object.values(recs.filter(r => r.ai_score != null).reduce((a, r) => {
+  const lb = Object.values(recs.filter(r => r.ai_score != null && !r.deleted_at).reduce((a, r) => {
     const id = r.created_by || 'x';
     a[id] = a[id] || { id, name: r.by?.full_name || 'Sale', n: 0, sum: 0 };
     a[id].n++; a[id].sum += Number(r.ai_score || 0); return a;
@@ -92,7 +108,12 @@ const KhachTuVanPage = () => {
             <p className="text-slate-400 text-sm">Tiếp nhận tư vấn trực tiếp · hồ sơ, ghi âm, đánh giá</p>
           </div>
         </div>
-        {!loading && <span className="text-sm font-semibold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full">{visible.length} khách</span>}
+        {!loading && (
+          <div className="flex items-center gap-2">
+            {isAdmin && trash.length > 0 && <button onClick={() => setTrashOpen(true)} className="text-sm font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>}
+            <span className="text-sm font-semibold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full">{visible.length} khách</span>
+          </div>
+        )}
       </div>
 
       {lb.length > 0 && (
@@ -163,7 +184,13 @@ const KhachTuVanPage = () => {
                             {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-[11px] font-bold text-slate-600">{rec.ai_analysis.level}</span>}
                             {(rec.segment_urls || []).length > 1 && <span className="text-[10px] text-slate-400">· {rec.segment_urls.length} đoạn</span>}
                             {rec.status === 'processing' && <span className="text-[10px] text-amber-600">Đang phân tích…</span>}
-                            {(rec.created_by === me?.id || roles.includes('admin')) && <button onClick={() => delRec(rec.id)} className="ml-auto text-slate-300 hover:text-rose-500"><X className="w-3.5 h-3.5" /></button>}
+                            <div className="ml-auto flex items-center gap-1.5">
+                              {rec.delete_requested_by && <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Chờ duyệt xoá</span>}
+                              {isAdmin ? (rec.delete_requested_by
+                                ? <><button onClick={() => softDelete(rec, 'Duyệt xoá: chuyển ghi âm này vào Thùng rác?')} title="Duyệt xoá" className="text-rose-400 hover:text-rose-600"><Trash2 className="w-3.5 h-3.5" /></button><button onClick={() => rejectDelete(rec)} title="Từ chối" className="text-slate-300 hover:text-slate-500"><X className="w-3.5 h-3.5" /></button></>
+                                : <button onClick={() => softDelete(rec, 'Chuyển ghi âm này vào Thùng rác?')} title="Xoá" className="text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>)
+                                : (rec.created_by === me?.id && !rec.delete_requested_by && <button onClick={() => requestDelete(rec)} title="Yêu cầu xoá" className="text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>)}
+                            </div>
                           </div>
                           <audio src={rec.audio_url} controls className="h-7 w-full mt-1" />
                         </div>
@@ -246,6 +273,31 @@ const KhachTuVanPage = () => {
           ); })()}
         </Modal>
       )}
+      {trashOpen && (
+        <Modal title={`Thùng rác — ${trash.length} ghi âm`} onClose={() => setTrashOpen(false)}>
+          {trash.length === 0 ? <p className="text-sm text-slate-400">Thùng rác trống.</p> : (
+            <div className="space-y-2">
+              {trash.map(rec => (
+                <div key={rec.id} className="bg-slate-50 rounded-xl p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-slate-700 truncate">{apptName(rec.appointment_id)}</div>
+                      <div className="text-[11px] text-slate-400">{rec.by?.full_name || '—'}{rec.deleted_at ? ` · xoá ${new Date(rec.deleted_at).toLocaleString('vi-VN')}` : ''}</div>
+                    </div>
+                    {rec.ai_score != null && <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${scoreCls(rec.ai_score)}`}>{rec.ai_score}/10</span>}
+                  </div>
+                  <audio src={rec.audio_url} controls className="h-7 w-full mt-1.5" />
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => restore(rec)} className="flex-1 h-9 rounded-lg border border-teal-200 text-teal-700 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-teal-50"><RotateCcw className="w-3.5 h-3.5" /> Khôi phục</button>
+                    <button onClick={() => permanentDelete(rec)} className="flex-1 h-9 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" /> Xoá vĩnh viễn</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
+      {confirm && <ConfirmDialog {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 };
@@ -357,5 +409,20 @@ const Modal = ({ title, onClose, children }) => (
 const ModalActions = ({ onClose, onSave, saving }) => (
   <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button></div>
 );
+
+const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk, onClose }) => {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
+        <p className="text-sm text-slate-700 mb-4">{message}</p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Huỷ</button>
+          <button disabled={busy} onClick={async () => { setBusy(true); await onOk(); onClose(); }} className={`px-4 py-2 rounded-xl text-white font-semibold text-sm disabled:opacity-50 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : okLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default KhachTuVanPage;
