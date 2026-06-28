@@ -4,6 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
+import MoneyInput from '@/components/MoneyInput.jsx';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -398,11 +399,11 @@ const KhachBongPage = ({ isNested = false }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Doanh thu (VNĐ)</label>
-                  <input required type="number" value={surgeryForm.revenue} onChange={e => setSurgeryForm({ ...surgeryForm, revenue: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
+                  <MoneyInput required value={surgeryForm.revenue} onChange={v => setSurgeryForm({ ...surgeryForm, revenue: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Upsale (VNĐ)</label>
-                  <input type="number" value={surgeryForm.upsale_revenue} onChange={e => setSurgeryForm({ ...surgeryForm, upsale_revenue: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
+                  <MoneyInput value={surgeryForm.upsale_revenue} onChange={v => setSurgeryForm({ ...surgeryForm, upsale_revenue: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
                 </div>
               </div>
             </div>

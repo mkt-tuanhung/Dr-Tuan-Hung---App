@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import MoneyInput from '@/components/MoneyInput.jsx';
 
 const AppointmentManagementPage = () => {
   const { profile } = useAuth();
@@ -804,11 +805,11 @@ const AppointmentManagementPage = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Bill dự kiến (VNĐ)</label>
-                        <input type="number" value={createForm.expected_bill} onChange={e => setCreateForm({...createForm, expected_bill: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
+                        <MoneyInput value={createForm.expected_bill} onChange={v => setCreateForm({...createForm, expected_bill: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Đã cọc (VNĐ)</label>
-                        <input type="number" value={createForm.deposit_amount} onChange={e => setCreateForm({...createForm, deposit_amount: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
+                        <MoneyInput value={createForm.deposit_amount} onChange={v => setCreateForm({...createForm, deposit_amount: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
                       </div>
                     </>
                   )}
@@ -936,12 +937,12 @@ const AppointmentManagementPage = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Doanh thu (VNĐ) <span className="text-red-500">*</span></label>
-                        <input type="number" required value={evalForm.revenue} onChange={e => setEvalForm({...evalForm, revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="VD: 50,000,000" />
+                        <MoneyInput required value={evalForm.revenue} onChange={v => setEvalForm({...evalForm, revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="VD: 50.000.000" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Doanh thu Upsale (VNĐ)</label>
-                      <input type="number" value={evalForm.upsale_revenue} onChange={e => setEvalForm({...evalForm, upsale_revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="0" />
+                      <MoneyInput value={evalForm.upsale_revenue} onChange={v => setEvalForm({...evalForm, upsale_revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="0" />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Dịch vụ thực tế làm</label>
@@ -959,7 +960,7 @@ const AppointmentManagementPage = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Tiền cọc (VNĐ) <span className="text-red-500">*</span></label>
-                        <input type="number" required value={evalForm.deposit_amount} onChange={e => setEvalForm({...evalForm, deposit_amount: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="0" />
+                        <MoneyInput required value={evalForm.deposit_amount} onChange={v => setEvalForm({...evalForm, deposit_amount: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="0" />
                       </div>
                     </div>
                     <div>

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
+import MoneyInput from '@/components/MoneyInput.jsx';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
   Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
@@ -1013,7 +1014,7 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       {win && (
         <>
           <label className="block text-sm font-semibold text-slate-700 mb-1">Tiền thưởng editor</label>
-          <input value={amount} onChange={e => setAmount(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="VD: 100000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
+          <MoneyInput value={amount} onChange={setAmount} placeholder="VD: 100.000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
         </>
       )}
       <label className="block text-sm font-semibold text-slate-700 mb-1">Nhận xét kết quả</label>

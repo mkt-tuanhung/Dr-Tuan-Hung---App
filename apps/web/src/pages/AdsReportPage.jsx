@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Plus, X, BarChart2, Edit, Save, Trash2, Search, DollarSign, Target, TrendingUp, AlertCircle, Phone } from 'lucide-react';
+import MoneyInput from '@/components/MoneyInput.jsx';
 
 const AdsReportPage = () => {
   const { profile } = useAuth();
@@ -384,7 +385,7 @@ const AdsReportPage = () => {
             <form onSubmit={handleConfigSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ngân sách (VNĐ)</label>
-                <input required type="number" value={configForm.budget} onChange={e => setConfigForm({...configForm, budget: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+                <MoneyInput required value={configForm.budget} onChange={v => setConfigForm({...configForm, budget: v})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Data KPI (Số Leads mục tiêu)</label>
@@ -417,7 +418,7 @@ const AdsReportPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Đã tiêu (Spend VNĐ)</label>
-                <input required type="number" value={entryForm.amount_spent} onChange={e => setEntryForm({...entryForm, amount_spent: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+                <MoneyInput required value={entryForm.amount_spent} onChange={v => setEntryForm({...entryForm, amount_spent: v})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Số đơn PAGE (DATA Leads)</label>

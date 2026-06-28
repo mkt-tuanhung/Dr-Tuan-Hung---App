@@ -6,6 +6,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
+import MoneyInput from '@/components/MoneyInput.jsx';
 
 const ST = {
   scheduled: { label: 'Đã tiếp nhận', cls: 'bg-amber-100 text-amber-700' },
@@ -340,17 +341,17 @@ const EvalModal = ({ app, onClose, onSaved }) => {
       {f.status === 'phau_thuat' && (<>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Ngày mổ"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>
-          <Field label="Doanh thu (VNĐ)"><input type="number" value={f.revenue} onChange={e => setF({ ...f, revenue: e.target.value })} className={inp} /></Field>
+          <Field label="Doanh thu (VNĐ)"><MoneyInput value={f.revenue} onChange={v => setF({ ...f, revenue: v })} className={inp} /></Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Upsale (VNĐ)"><input type="number" value={f.upsale_revenue} onChange={e => setF({ ...f, upsale_revenue: e.target.value })} className={inp} /></Field>
+          <Field label="Upsale (VNĐ)"><MoneyInput value={f.upsale_revenue} onChange={v => setF({ ...f, upsale_revenue: v })} className={inp} /></Field>
           <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
         </div>
       </>)}
       {f.status === 'coc' && (<>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Ngày cọc"><input type="date" value={f.deposit_date} onChange={e => setF({ ...f, deposit_date: e.target.value })} className={inp} /></Field>
-          <Field label="Số tiền cọc"><input type="number" value={f.deposit_amount} onChange={e => setF({ ...f, deposit_amount: e.target.value })} className={inp} /></Field>
+          <Field label="Số tiền cọc"><MoneyInput value={f.deposit_amount} onChange={v => setF({ ...f, deposit_amount: v })} className={inp} /></Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Ngày mổ dự kiến"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>

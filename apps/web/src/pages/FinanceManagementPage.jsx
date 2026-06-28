@@ -4,6 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import MoneyInput from '@/components/MoneyInput.jsx';
 import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
@@ -661,11 +662,11 @@ const FinanceManagementPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu tổng (VNĐ) <span className="text-red-500">*</span></label>
-                  <input required type="number" value={createForm.revenue} onChange={e => setCreateForm({...createForm, revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-700 font-bold" placeholder="0" />
+                  <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-700 font-bold" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu Upsale (VNĐ)</label>
-                  <input type="number" value={createForm.upsale_revenue} onChange={e => setCreateForm({...createForm, upsale_revenue: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-purple-700 font-bold" placeholder="0" />
+                  <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-purple-700 font-bold" placeholder="0" />
                 </div>
               </div>
 
