@@ -73,7 +73,7 @@ const isVideoFile = (url) => /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url || '');
 const VideoPreview = ({ url }) => {
   const emb = embedUrl(url);
   if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className="w-full aspect-video rounded-lg border border-slate-200 bg-black" />;
-  if (isVideoFile(url)) return <video src={url} controls className="w-full rounded-lg border border-slate-200 bg-black" />;
+  if (isVideoFile(url)) return <video src={url} controls playsInline preload="metadata" className="w-full max-h-[68vh] rounded-lg border border-slate-200 bg-black" />;
   return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
 };
 const thumbSrc = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url; };
@@ -331,11 +331,11 @@ const ContentProductionPage = () => {
         </div>
         {tab === 'kho' && (
           <>
-            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi trạng thái source</option>
               {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
-            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
@@ -349,11 +349,11 @@ const ContentProductionPage = () => {
         )}
         {tab === 'video' && (
           <>
-            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi mức điểm</option>
               {Object.entries(SCORE_FILTERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
-            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
@@ -1034,34 +1034,43 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip' }) => {
   const [zi, setZi] = useState(1);
   const playerRef = useRef(null);
   const cur = links[ci] || links[0];
-  const goFs = () => { const el = playerRef.current; if (el?.requestFullscreen) el.requestFullscreen(); else if (el?.webkitRequestFullscreen) el.webkitRequestFullscreen(); };
+  const goFs = () => {
+    const host = playerRef.current;
+    const media = host?.querySelector('video, iframe') || host;
+    if (media?.requestFullscreen) media.requestFullscreen();
+    else if (media?.webkitRequestFullscreen) media.webkitRequestFullscreen();
+    else if (media?.webkitEnterFullscreen) media.webkitEnterFullscreen(); // iOS <video>
+  };
   const IconBtn = ({ onClick, disabled, title, children }) => (
     <button type="button" onClick={onClick} disabled={disabled} title={title}
       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40">{children}</button>
   );
   return (
-    <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-3 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><PlayCircle className="w-5 h-5 text-violet-600" /> {title}</h3>
-          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+    <div className="fixed inset-0 bg-slate-900/70 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-4xl shadow-xl max-h-[94vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="px-4 sm:px-5 py-3 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl sm:rounded-t-2xl z-10">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base min-w-0"><PlayCircle className="w-5 h-5 text-violet-600 shrink-0" /> <span className="truncate">{title}</span></h3>
+          <button onClick={onClose} className="w-9 h-9 -mr-1.5 flex items-center justify-center rounded-full hover:bg-slate-100 shrink-0"><X className="w-5 h-5 text-slate-500" /></button>
         </div>
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           {links.length > 1 && (
             <div className="flex gap-1.5 mb-3 flex-wrap">
-              {links.map((_, i) => <button key={i} onClick={() => setCi(i)} className={`px-3 py-1 rounded-lg text-xs font-semibold ${i === ci ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Video {i + 1}</button>)}
+              {links.map((_, i) => <button key={i} onClick={() => setCi(i)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${i === ci ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Video {i + 1}</button>)}
             </div>
           )}
-          <div ref={playerRef} className="mx-auto bg-black rounded-xl overflow-hidden" style={{ width: VID_SIZES[zi].w, maxWidth: '100%' }}>
+          <div ref={playerRef} className="mx-auto bg-black rounded-xl overflow-hidden w-full" style={{ width: VID_SIZES[zi].w, maxWidth: '100%' }}>
             <VideoPreview url={cur} />
           </div>
-          <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-            <IconBtn onClick={() => setZi(z => Math.max(0, z - 1))} disabled={zi === 0} title="Thu nhỏ"><ZoomOut className="w-4 h-4" /></IconBtn>
-            <span className="text-xs font-semibold text-slate-500 w-12 text-center">{VID_SIZES[zi].name}</span>
-            <IconBtn onClick={() => setZi(z => Math.min(VID_SIZES.length - 1, z + 1))} disabled={zi === VID_SIZES.length - 1} title="Phóng to"><ZoomIn className="w-4 h-4" /></IconBtn>
-            <span className="w-px h-5 bg-slate-200 mx-1" />
-            <IconBtn onClick={goFs} title="Toàn màn hình"><Maximize2 className="w-4 h-4" /> Toàn màn hình</IconBtn>
-            <a href={cur} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50"><ExternalLink className="w-4 h-4" /> Mở Drive</a>
+          <div className="mt-3 space-y-2">
+            <div className="hidden sm:flex items-center justify-center gap-2 flex-wrap">
+              <IconBtn onClick={() => setZi(z => Math.max(0, z - 1))} disabled={zi === 0} title="Thu nhỏ"><ZoomOut className="w-4 h-4" /></IconBtn>
+              <span className="text-xs font-semibold text-slate-500 w-12 text-center">{VID_SIZES[zi].name}</span>
+              <IconBtn onClick={() => setZi(z => Math.min(VID_SIZES.length - 1, z + 1))} disabled={zi === VID_SIZES.length - 1} title="Phóng to"><ZoomIn className="w-4 h-4" /></IconBtn>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={goFs} className="flex-1 h-11 sm:h-9 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 inline-flex items-center justify-center gap-1.5"><Maximize2 className="w-4 h-4" /> Toàn màn hình</button>
+              <a href={cur} target="_blank" rel="noreferrer" className="flex-1 h-11 sm:h-9 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 inline-flex items-center justify-center gap-1.5"><ExternalLink className="w-4 h-4" /> Mở Drive</a>
+            </div>
           </div>
         </div>
       </div>
