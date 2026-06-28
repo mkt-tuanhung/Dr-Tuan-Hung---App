@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, Square, X, Loader2, Trash2, Save } from 'lucide-react';
-import { uploadToR2 } from '@/lib/r2Client';
+import { uploadViaPresign } from '@/lib/r2Client';
 import { toast } from 'sonner';
 
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-const SEGMENT_MS = 5 * 60 * 1000; // tự cắt đoạn mỗi 5 phút (file nhỏ, upload an toàn, dễ transcribe)
-// Tạo MediaRecorder bitrate thấp (32kbps đủ cho giọng nói) — không ép mimeType để iOS/Safari vẫn chạy
-const makeRecorder = (s) => { try { return new MediaRecorder(s, { audioBitsPerSecond: 32000 }); } catch { return new MediaRecorder(s); } };
+const SEGMENT_MS = 5 * 60 * 1000; // tự cắt đoạn mỗi 5 phút (dễ transcribe; upload thẳng R2 nên không lo dung lượng)
+// MediaRecorder chất lượng tốt cho giọng nói (96kbps) — không ép mimeType để iOS/Safari vẫn chạy
+const makeRecorder = (s) => { try { return new MediaRecorder(s, { audioBitsPerSecond: 96000 }); } catch { return new MediaRecorder(s); } };
 
 // Popup ghi âm tư vấn — như recorder điện thoại (sóng âm + dB). Cuộc dài tự cắt đoạn 5'.
 export default function AudioRecorder({ onClose, onSaved }) {
@@ -134,7 +134,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
         const b = segBlobs.current[i];
         const ext = b.type.includes('mp4') ? 'm4a' : 'webm';
         const file = new File([b], `tu-van-${Date.now()}-p${i + 1}.${ext}`, { type: b.type });
-        urls.push(await uploadToR2(file, 'consult-audio'));
+        urls.push(await uploadViaPresign(file, 'consult-audio'));
       }
       onSaved(urls, seconds);
     } catch (err) { toast.error('Lỗi tải lên: ' + err.message); }

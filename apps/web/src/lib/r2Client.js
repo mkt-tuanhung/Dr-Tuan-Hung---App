@@ -19,3 +19,14 @@ export const uploadToR2 = async (file, folder = 'avatars') => {
   // URL công khai để lưu vào DB / hiển thị (giống bản cũ)
   return data.publicUrl;
 };
+
+// Upload THẲNG lên R2 qua presigned URL (không qua Edge Function) — dùng cho file lớn
+// như audio chất lượng cao, không vướng giới hạn dung lượng. Trả về URL công khai.
+export const uploadViaPresign = async (file, folder = 'misc') => {
+  const { data, error } = await supabase.functions.invoke('r2-presign', { body: { folder, filename: file.name } });
+  if (error) throw new Error('Không lấy được link tải lên: ' + error.message);
+  if (data?.error) throw new Error(data.error);
+  const put = await fetch(data.uploadUrl, { method: 'PUT', body: file });
+  if (!put.ok) throw new Error('Tải lên R2 thất bại (HTTP ' + put.status + ')');
+  return data.publicUrl;
+};
