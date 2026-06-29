@@ -172,7 +172,7 @@ const AppointmentManagementPage = () => {
       if (app.status === 'coc') st.coc++;
       if (app.status === 'bong') st.bong++;
       st.expected_bill += Number(app.expected_bill || 0);
-      st.total_deposit += Number(app.deposit_amount || 0);
+      if (app.status === 'coc') st.total_deposit += Number(app.deposit_amount || 0);
 
       const dateStr = app.appointment_date;
       if (!groups[dateStr]) {
@@ -307,11 +307,14 @@ const AppointmentManagementPage = () => {
     try {
       let updateData = { status: evalForm.status, surgery_type: evalForm.surgery_type };
       if (evalForm.status === 'phau_thuat') {
-        updateData = { ...updateData, surgery_date: evalForm.expected_surgery_date, expected_surgery_date: evalForm.expected_surgery_date, revenue: evalForm.revenue || 0, upsale_revenue: evalForm.upsale_revenue || 0, service: evalForm.service };
+        // Lên phẫu thuật: ghi doanh thu/ngày mổ, xoá dấu bong cũ (nếu có)
+        updateData = { ...updateData, surgery_date: evalForm.expected_surgery_date, expected_surgery_date: evalForm.expected_surgery_date, revenue: evalForm.revenue || 0, upsale_revenue: evalForm.upsale_revenue || 0, service: evalForm.service, bong_date: null };
       } else if (evalForm.status === 'coc') {
-        updateData = { ...updateData, deposit_date: evalForm.deposit_date, deposit_amount: evalForm.deposit_amount || 0, service: evalForm.service, expected_surgery_date: evalForm.expected_surgery_date };
+        // Cọc: chưa mổ → xoá doanh thu/ngày mổ và dấu bong cũ
+        updateData = { ...updateData, deposit_date: evalForm.deposit_date, deposit_amount: evalForm.deposit_amount || 0, service: evalForm.service, expected_surgery_date: evalForm.expected_surgery_date, revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
       } else if (evalForm.status === 'bong') {
-        updateData = { ...updateData, notes: evalForm.notes, bong_date: new Date().toISOString().split('T')[0] };
+        // Bong: huỷ → xoá doanh thu/ngày mổ để không lọt vào thống kê
+        updateData = { ...updateData, notes: evalForm.notes, bong_date: new Date().toISOString().split('T')[0], revenue: 0, upsale_revenue: 0, surgery_date: null };
       }
 
       // Hồ sơ tư vấn: upload ảnh mới + giữ ảnh cũ + ghi chú
