@@ -16,7 +16,8 @@ const AdsReportPage = () => {
 
   const [targets, setTargets] = useState({ budget: 0, target_leads: 0 });
   const [performanceData, setPerformanceData] = useState([]);
-  
+  const [pageReports, setPageReports] = useState([]); // lead do Trực page nhập (page_daily_reports)
+
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [configForm, setConfigForm] = useState({ budget: 0, target_leads: 0 });
 
@@ -25,8 +26,6 @@ const AdsReportPage = () => {
     id: null,
     date: new Date().toISOString().split('T')[0],
     amount_spent: '',
-    impressions: '',
-    leads: ''
   });
 
   const loadData = useCallback(async () => {
@@ -59,6 +58,14 @@ const AdsReportPage = () => {
       if (perfError) throw perfError;
       setPerformanceData(perfData || []);
 
+      // Lead do Trực page nhập (gộp tất cả nhân sự trực page theo ngày)
+      const { data: pageData } = await supabase
+        .from('page_daily_reports')
+        .select('date, total_phones, total_interested_phones, total_messages')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      setPageReports(pageData || []);
+
     } catch (error) {
       toast.error('Lỗi tải dữ liệu: ' + error.message);
     } finally {
@@ -68,32 +75,41 @@ const AdsReportPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Calculations
-  const stats = useMemo(() => {
-    let totalSpent = 0;
-    let totalLeads = 0;
+  // Gộp theo ngày: chi tiêu (Marketing nhập) + lead (Trực page nhập)
+  const rows = useMemo(() => {
+    const byDate = {};
     performanceData.forEach(p => {
-      totalSpent += Number(p.amount_spent || 0);
-      totalLeads += Number(p.leads || 0);
+      byDate[p.date] = { date: p.date, id: p.id, amount_spent: Number(p.amount_spent || 0), phones: 0, interested: 0, messages: 0 };
     });
+    pageReports.forEach(r => {
+      if (!byDate[r.date]) byDate[r.date] = { date: r.date, id: null, amount_spent: 0, phones: 0, interested: 0, messages: 0 };
+      byDate[r.date].phones += Number(r.total_phones || 0);
+      byDate[r.date].interested += Number(r.total_interested_phones || 0);
+      byDate[r.date].messages += Number(r.total_messages || 0);
+    });
+    return Object.values(byDate)
+      .map(r => ({ ...r, cpa: r.phones > 0 ? Math.round(r.amount_spent / r.phones) : 0 }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [performanceData, pageReports]);
 
+  const stats = useMemo(() => {
+    let totalSpent = 0, totalLeads = 0, totalInterested = 0, totalMessages = 0;
+    rows.forEach(r => { totalSpent += r.amount_spent; totalLeads += r.phones; totalInterested += r.interested; totalMessages += r.messages; });
     const remaining = targets.budget - totalSpent;
     const cpa = totalLeads > 0 ? Math.round(totalSpent / totalLeads) : 0;
-    const daysWithData = performanceData.filter(p => p.leads > 0).length;
+    const daysWithData = rows.filter(r => r.phones > 0).length;
     const avgLeads = daysWithData > 0 ? Math.round((totalLeads / daysWithData) * 10) / 10 : 0;
-
-    return { totalSpent, totalLeads, remaining, cpa, avgLeads };
-  }, [performanceData, targets]);
+    return { totalSpent, totalLeads, totalInterested, totalMessages, remaining, cpa, avgLeads };
+  }, [rows, targets]);
 
   const chartData = useMemo(() => {
-    // Sort ascending for chart
-    return [...performanceData].sort((a,b) => new Date(a.date) - new Date(b.date)).map(p => ({
-      name: new Date(p.date).getDate() + '/' + (new Date(p.date).getMonth()+1),
-      'Chi phí (VNĐ)': Number(p.amount_spent || 0),
-      'Số SĐT (Leads)': Number(p.leads || 0),
-      CPA: p.leads > 0 ? Math.round(Number(p.amount_spent || 0)/Number(p.leads || 0)) : 0
+    return [...rows].sort((a, b) => new Date(a.date) - new Date(b.date)).map(r => ({
+      name: new Date(r.date).getDate() + '/' + (new Date(r.date).getMonth() + 1),
+      'Chi phí (VNĐ)': r.amount_spent,
+      'SĐT xin được': r.phones,
+      CPA: r.cpa,
     }));
-  }, [performanceData]);
+  }, [rows]);
 
   // Handlers
   const handleConfigSubmit = async (e) => {
@@ -129,19 +145,17 @@ const AdsReportPage = () => {
     try {
       const payload = {
         date: entryForm.date,
-        amount_spent: Number(entryForm.amount_spent),
-        impressions: entryForm.impressions || '',
-        leads: Number(entryForm.leads)
+        amount_spent: Number(String(entryForm.amount_spent).replace(/\D/g, '')) || 0,
       };
 
       if (entryForm.id) {
         const { error } = await supabase.from('marketing_ads_performance').update(payload).eq('id', entryForm.id);
         if (error) throw error;
-        toast.success('Đã cập nhật số liệu');
+        toast.success('Đã cập nhật chi tiêu');
       } else {
-        const { error } = await supabase.from('marketing_ads_performance').insert(payload);
+        const { error } = await supabase.from('marketing_ads_performance').insert({ ...payload, leads: 0 });
         if (error) throw error;
-        toast.success('Đã thêm số liệu mới');
+        toast.success('Đã thêm chi tiêu ngày');
       }
       setShowEntryModal(false);
       loadData();
@@ -152,16 +166,10 @@ const AdsReportPage = () => {
     }
   };
 
-  const openEntry = (item = null) => {
-    if (item) {
-      setEntryForm({ ...item });
-    } else {
-      setEntryForm({
-        id: null,
-        date: new Date().toISOString().split('T')[0],
-        amount_spent: '', impressions: '', leads: ''
-      });
-    }
+  const openEntry = (row = null) => {
+    setEntryForm(row && row.id
+      ? { id: row.id, date: row.date, amount_spent: row.amount_spent }
+      : { id: null, date: row?.date || new Date().toISOString().split('T')[0], amount_spent: '' });
     setShowEntryModal(true);
   };
 
@@ -210,7 +218,7 @@ const AdsReportPage = () => {
           )}
           {['admin', 'marketing'].includes(profile?.role) && (
             <button onClick={() => openEntry()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 font-semibold px-4 py-2 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Nhập số liệu
+              <Plus className="w-4 h-4" /> Nhập chi tiêu
             </button>
           )}
         </div>
@@ -253,8 +261,9 @@ const AdsReportPage = () => {
 
         {/* Lead thu về */}
         <div className="col-span-2 md:col-span-2 lg:col-span-1 bg-blue-50 rounded-2xl border border-blue-100 p-4 flex flex-col justify-center items-center text-center">
-          <p className="text-blue-600 text-xs font-semibold uppercase tracking-wider mb-1">Lead QT</p>
+          <p className="text-blue-600 text-xs font-semibold uppercase tracking-wider mb-1">SĐT xin được</p>
           <div className="text-3xl font-black text-blue-700">{fmt(stats.totalLeads)}</div>
+          <p className="text-[10px] text-blue-400 mt-1">QT {fmt(stats.totalInterested)} · Tin {fmt(stats.totalMessages)}</p>
         </div>
 
         {/* Giá 1 số */}
@@ -285,7 +294,7 @@ const AdsReportPage = () => {
               <RechartsTooltip formatter={(val, name) => [fmt(val), name]} />
               <Legend />
               <Line yAxisId="left" type="monotone" dataKey="Chi phí (VNĐ)" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 8 }} />
-              <Line yAxisId="right" type="monotone" dataKey="Số SĐT (Leads)" stroke="#f59e0b" strokeWidth={3} />
+              <Line yAxisId="right" type="monotone" dataKey="SĐT xin được" stroke="#f59e0b" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -296,73 +305,68 @@ const AdsReportPage = () => {
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-800 text-white flex justify-between items-center">
           <h3 className="font-bold">Chi tiết theo ngày</h3>
         </div>
+        <div className="px-5 py-2 text-[11px] text-slate-400 bg-slate-50 border-b border-slate-100">Chi tiêu do Marketing nhập · SĐT/Quan tâm/Tin nhắn lấy từ báo cáo Trực page (theo ngày)</div>
         {/* Mobile: dạng thẻ */}
         <div className="md:hidden divide-y divide-slate-100">
-          {performanceData.length === 0 ? (
+          {rows.length === 0 ? (
             <div className="text-center py-8 text-slate-400 text-sm">Chưa có dữ liệu</div>
-          ) : performanceData.map((item) => (
-            <div key={item.id} className="p-4">
+          ) : rows.map((r) => (
+            <div key={r.date} className="p-4">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800">{item.date}</span>
+                <span className="font-bold text-slate-800">{r.date}</span>
                 <div className="flex gap-2">
-                  <button onClick={() => openEntry(item)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Edit className="w-4 h-4" /></button>
-                  <button onClick={() => deleteEntry(item.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                  {['admin', 'marketing'].includes(profile?.role) && (r.id
+                    ? <><button onClick={() => openEntry(r)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => deleteEntry(r.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></button></>
+                    : <button onClick={() => openEntry(r)} className="px-2 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold flex items-center gap-1"><Plus className="w-3.5 h-3.5" />Chi phí</button>)}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-                <div className="bg-slate-50 rounded-lg py-2">
-                  <div className="text-[10px] text-slate-400 uppercase">Chi phí</div>
-                  <div className="font-bold text-slate-700 text-sm">{fmt(item.amount_spent)}đ</div>
-                </div>
-                <div className="bg-blue-50 rounded-lg py-2">
-                  <div className="text-[10px] text-blue-400 uppercase">Số SĐT</div>
-                  <div className="font-bold text-blue-600 text-sm">{fmt(item.leads)}</div>
-                </div>
-                <div className="bg-teal-50 rounded-lg py-2">
-                  <div className="text-[10px] text-teal-400 uppercase">CP/số</div>
-                  <div className="font-bold text-teal-600 text-sm">{item.leads > 0 ? fmt(Math.round(item.amount_spent / item.leads)) : 0}đ</div>
-                </div>
+                <div className="bg-slate-50 rounded-lg py-2"><div className="text-[10px] text-slate-400 uppercase">Chi phí</div><div className="font-bold text-slate-700 text-sm">{fmt(r.amount_spent)}đ</div></div>
+                <div className="bg-blue-50 rounded-lg py-2"><div className="text-[10px] text-blue-400 uppercase">SĐT xin được</div><div className="font-bold text-blue-600 text-sm">{fmt(r.phones)}</div></div>
+                <div className="bg-teal-50 rounded-lg py-2"><div className="text-[10px] text-teal-400 uppercase">CP/số</div><div className="font-bold text-teal-600 text-sm">{r.cpa ? fmt(r.cpa) : 0}đ</div></div>
+                <div className="bg-violet-50 rounded-lg py-2"><div className="text-[10px] text-violet-400 uppercase">Quan tâm</div><div className="font-bold text-violet-600 text-sm">{fmt(r.interested)}</div></div>
+                <div className="bg-amber-50 rounded-lg py-2 col-span-2"><div className="text-[10px] text-amber-500 uppercase">Tin nhắn</div><div className="font-bold text-amber-600 text-sm">{fmt(r.messages)}</div></div>
               </div>
-              {item.impressions ? <div className="text-xs text-slate-400 mt-2">Ghi chú: {item.impressions}</div> : null}
             </div>
           ))}
         </div>
 
         {/* Desktop: bảng */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm text-left">
+          <table className="w-full min-w-[760px] text-sm text-left">
             <thead className="bg-amber-400 text-slate-800 uppercase text-xs font-bold">
               <tr>
-                <th className="px-4 py-3">Date (Day)</th>
-                <th className="px-4 py-3">Spend (Amount)</th>
-                <th className="px-4 py-3">Ghi chú (Impressions)</th>
-                <th className="px-4 py-3 text-center">DATA (Số đơn PAGE)</th>
+                <th className="px-4 py-3">Ngày</th>
+                <th className="px-4 py-3">Chi tiêu (Marketing)</th>
+                <th className="px-4 py-3 text-center">SĐT xin được</th>
+                <th className="px-4 py-3 text-center">Quan tâm</th>
+                <th className="px-4 py-3 text-center">Tin nhắn</th>
                 <th className="px-4 py-3 text-right">Chi phí/số (CPA)</th>
                 <th className="px-4 py-3 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {performanceData.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-8 text-slate-500">Chưa có dữ liệu</td></tr>
+              {rows.length === 0 ? (
+                <tr><td colSpan="7" className="text-center py-8 text-slate-500">Chưa có dữ liệu</td></tr>
               ) : (
-                performanceData.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-slate-700">{item.date}</td>
-                    <td className="px-4 py-3 font-medium text-slate-600">{fmt(item.amount_spent)} đ</td>
-                    <td className="px-4 py-3 text-slate-500">{item.impressions || '-'}</td>
-                    <td className="px-4 py-3 text-center font-bold text-blue-600">{fmt(item.leads)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-teal-600">
-                      {item.leads > 0 ? fmt(Math.round(item.amount_spent / item.leads)) : 0} đ
-                    </td>
+                rows.map((r) => (
+                  <tr key={r.date} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-slate-700">{r.date}</td>
+                    <td className="px-4 py-3 font-medium text-slate-600">{fmt(r.amount_spent)} đ</td>
+                    <td className="px-4 py-3 text-center font-bold text-blue-600">{fmt(r.phones)}</td>
+                    <td className="px-4 py-3 text-center text-violet-600">{fmt(r.interested)}</td>
+                    <td className="px-4 py-3 text-center text-amber-600">{fmt(r.messages)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-teal-600">{r.cpa ? fmt(r.cpa) : 0} đ</td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button onClick={() => openEntry(item)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => deleteEntry(item.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {['admin', 'marketing'].includes(profile?.role) ? (
+                        <div className="flex justify-center gap-2">
+                          {r.id
+                            ? <><button onClick={() => openEntry(r)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"><Edit className="w-4 h-4" /></button>
+                                <button onClick={() => deleteEntry(r.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4" /></button></>
+                            : <button onClick={() => openEntry(r)} className="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-blue-100"><Plus className="w-3.5 h-3.5" />Chi phí</button>}
+                        </div>
+                      ) : <span className="text-slate-300">—</span>}
                     </td>
                   </tr>
                 ))
@@ -406,7 +410,7 @@ const AdsReportPage = () => {
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 text-lg">{entryForm.id ? 'Sửa số liệu' : 'Nhập số liệu mới'}</h3>
+              <h3 className="font-bold text-slate-800 text-lg">{entryForm.id ? 'Sửa chi tiêu ngày' : 'Nhập chi tiêu ngày'}</h3>
               <button onClick={() => setShowEntryModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -417,21 +421,14 @@ const AdsReportPage = () => {
                 <input required type="date" value={entryForm.date} onChange={e => setEntryForm({...entryForm, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Đã tiêu (Spend VNĐ)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Số tiền chi tiêu (VNĐ)</label>
                 <MoneyInput required value={entryForm.amount_spent} onChange={v => setEntryForm({...entryForm, amount_spent: v})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Số đơn PAGE (DATA Leads)</label>
-                <input required type="number" value={entryForm.leads} onChange={e => setEntryForm({...entryForm, leads: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ghi chú (Impressions / V.v.)</label>
-                <input type="text" value={entryForm.impressions} onChange={e => setEntryForm({...entryForm, impressions: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" placeholder="VD: 54,000 lượt hiển thị" />
-              </div>
+              <p className="text-xs text-slate-400 -mt-1">Số lead (SĐT xin được, quan tâm, tin nhắn) lấy tự động từ báo cáo Trực page theo ngày.</p>
               <div className="pt-4 flex justify-end gap-3">
                 <button type="button" onClick={() => setShowEntryModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium">Hủy</button>
                 <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 flex items-center gap-2">
-                  {saving ? 'Đang lưu...' : <><Save className="w-4 h-4" /> Lưu số liệu</>}
+                  {saving ? 'Đang lưu...' : <><Save className="w-4 h-4" /> Lưu chi tiêu</>}
                 </button>
               </div>
             </form>
