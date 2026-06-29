@@ -299,7 +299,13 @@ export default function AdvanceExpensePage() {
               <div className="flex items-center gap-2 text-slate-500"><Filter className="w-4 h-4" /> Bộ lọc:</div>
               <div className="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold outline-none text-slate-700"><option value="6">Tháng 6 năm 2026</option></select>
+                <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+                </select>
+                <span className="text-slate-300">/</span>
+                <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                  {Array.from({ length: 4 }, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
               </div>
               {isAdminOrAccountant && (
                 <div className="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">

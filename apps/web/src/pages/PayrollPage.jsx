@@ -75,7 +75,7 @@ const PayrollPage = () => {
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', meDay),
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
-      supabase.from('expenses').select('staff_id, amount').eq('is_advance', true).eq('status', 'approved'),
+      supabase.from('expenses').select('staff_id, amount').eq('is_advance', true).eq('status', 'approved').gte('date', ms).lte('date', meDay),
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
       supabase.from('payroll').select('month, year, net_salary'),
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
