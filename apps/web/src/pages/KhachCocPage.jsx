@@ -64,7 +64,7 @@ const KhachCocPage = ({ isNested = false }) => {
   const [bongForm, setBongForm] = useState({ notes: '' });
   const [surgeryForm, setSurgeryForm] = useState({
     expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '',
-    service_group: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
+    service_group: 'Tiểu phẫu', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
   });
 
   const loadData = useCallback(async () => {
@@ -194,6 +194,7 @@ const KhachCocPage = ({ isNested = false }) => {
         upsale_revenue: surgeryForm.upsale_revenue || 0,
         service: surgeryForm.service,
         service_group: surgeryForm.service_group,
+        surgery_type: surgeryForm.surgery_type,
         customer_source: surgeryForm.customer_source,
         customer_type: surgeryForm.customer_type
       }).eq('id', selectedApp.id);
@@ -211,6 +212,7 @@ const KhachCocPage = ({ isNested = false }) => {
       expected_surgery_date: app.expected_surgery_date || new Date().toISOString().split('T')[0],
       revenue: app.deposit_amount || '', upsale_revenue: '', service: app.service || '',
       service_group: app.service_group || 'Tiểu phẫu',
+      surgery_type: app.surgery_type || 'Tiểu phẫu',
       customer_source: app.customer_source || 'Ads',
       customer_type: app.customer_type || 'Mới'
     });
@@ -464,6 +466,13 @@ const KhachCocPage = ({ isNested = false }) => {
                     <option value="Hàm mặt">Hàm mặt</option>
                     <option value="Body">Body</option>
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Loại phẫu thuật</label>
+                  <select value={surgeryForm.surgery_type} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                    <option value="Tiểu phẫu">Tiểu phẫu</option>
+                    <option value="Đại phẫu">Đại phẫu</option>
                   </select>
                 </div>
                 <div>
