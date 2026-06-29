@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft } from 'lucide-react';
@@ -26,6 +27,7 @@ const QUICK_NOTES = [
 ];
 
 const KhachBongPage = ({ isNested = false }) => {
+  const { profile } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -47,16 +49,25 @@ const KhachBongPage = ({ isNested = false }) => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('customer_appointments')
       .select('*, telesale:profiles!telesale_id(full_name), sale:profiles!sale_id(full_name)')
-      .eq('status', 'bong')
-      .order('updated_at', { ascending: false });
+      .eq('status', 'bong');
+    // Telesale/Sale chỉ thấy khách MÌNH phụ trách; role giám sát thấy tất cả
+    const roles = [profile?.role, profile?.role_2].filter(Boolean);
+    const SEE_ALL = ['admin', 'accountant', 'shareholder', 'marketing', 'cskh'];
+    if (!roles.some(r => SEE_ALL.includes(r))) {
+      const conds = [];
+      if (roles.includes('telesale')) conds.push(`telesale_id.eq.${profile.id}`, `telesale_id_2.eq.${profile.id}`);
+      if (roles.includes('sale_offline')) conds.push(`sale_id.eq.${profile.id}`);
+      query = conds.length ? query.or(conds.join(',')) : query.eq('id', '00000000-0000-0000-0000-000000000000');
+    }
+    const { data, error } = await query.order('updated_at', { ascending: false });
 
     if (error) toast.error('Lỗi tải dữ liệu: ' + error.message);
     else setCustomers(data || []);
     setLoading(false);
-  }, []);
+  }, [profile?.id, profile?.role, profile?.role_2]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments', loadData);
