@@ -7,6 +7,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { computeSaleOffline, isRecheck } from '@/lib/kpiCalc';
+import StatCell from '@/components/kpi/StatCell.jsx';
 
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
@@ -179,7 +180,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
             <div className="px-5 py-4 border-b border-slate-50">
               <h3 className="font-bold text-slate-700">Bảng thông số Sale Offline ({year}-{String(month).padStart(2, '0')})</h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hidden md:block">
               <table className="w-full text-sm whitespace-nowrap">
                 <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100">
                   <tr>
@@ -220,6 +221,29 @@ const SaleOfflineAdmin = ({ month, year }) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="md:hidden divide-y divide-slate-50">
+              {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có nhân sự Sale Offline.</div>
+                : rows.map(r => (
+                  <div key={r.staff.id} className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="min-w-0"><div className="font-bold text-slate-800 truncate">{r.staff.full_name}</div><div className="text-[11px] text-slate-400">{r.staff.employee_id}</div></div>
+                      <button onClick={() => editRow(r)} className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>{r.kpi ? 'Sửa KPI' : 'Giao KPI'}</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                      <StatCell label="Tổng hẹn" value={r.total} />
+                      <StatCell label="Bong" value={r.cntBong} className="text-red-500" />
+                      <StatCell label="Cọc" value={r.cntCoc} className="text-blue-500" />
+                      <StatCell label="Phẫu thuật" value={r.cntPT} className="text-teal-600" />
+                      <StatCell label="Tỷ lệ chốt" value={`${r.closeRate.toFixed(1)}%`} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <StatCell label="Doanh thu" value={fmtM(r.doanhThu)} className="text-violet-700" />
+                      <StatCell label="Upsale" value={fmtM(r.upsale)} className="text-orange-600" />
+                      <StatCell label="Hoa hồng" value={fmtM(r.tongHH)} className="text-teal-700" />
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         </>

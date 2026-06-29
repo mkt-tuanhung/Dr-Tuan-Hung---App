@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { X } from 'lucide-react';
 import { computeDieuDuong } from '@/lib/kpiCalc';
+import StatCell from '@/components/kpi/StatCell.jsx';
 
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
@@ -125,7 +126,7 @@ const DieuDuongAdmin = ({ month, year }) => {
 
           <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700">Bảng thông số Điều dưỡng ({year}-{String(month).padStart(2, '0')})</h3></div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hidden md:block">
               <table className="w-full text-sm whitespace-nowrap">
                 <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
                   <th className="text-left px-4 py-2.5 font-medium">Nhân sự</th>
@@ -153,6 +154,25 @@ const DieuDuongAdmin = ({ month, year }) => {
                     ))}
                 </tbody>
               </table>
+            </div>
+            <div className="md:hidden divide-y divide-slate-50">
+              {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có điều dưỡng.</div>
+                : rows.map(r => (
+                  <div key={r.staff.id} className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="min-w-0"><div className="font-bold text-slate-800 truncate">{r.staff.full_name}</div><div className="text-[11px] text-slate-400">{r.staff.position || r.staff.employee_id}</div></div>
+                      <button onClick={() => editRow(r)} className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>{r.kpi ? 'Sửa KPI' : 'Giao KPI'}</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                      <StatCell label="Trực đêm" value={<button onClick={() => openDetail(r.staff, 'truc_dem')} disabled={!r.trucDem} className="text-orange-600 disabled:text-slate-400">{r.trucDem}</button>} />
+                      <StatCell label="Phụ mổ 1" value={<button onClick={() => openDetail(r.staff, 'pm1')} disabled={!r.pm1} className="text-slate-700 disabled:text-slate-400">{r.pm1}</button>} />
+                      <StatCell label="Phụ mổ 2" value={<button onClick={() => openDetail(r.staff, 'pm2')} disabled={!r.pm2} className="text-slate-700 disabled:text-slate-400">{r.pm2}</button>} />
+                      <StatCell label="Phụ mổ 3" value={<button onClick={() => openDetail(r.staff, 'pm3')} disabled={!r.pm3} className="text-slate-700 disabled:text-slate-400">{r.pm3}</button>} />
+                      <StatCell label="Hậu phẫu" value={<button onClick={() => openDetail(r.staff, 'hau_phau')} disabled={!r.hauPhau} className="text-pink-600 disabled:text-slate-400">{r.hauPhau}</button>} />
+                    </div>
+                    <StatCell label="Hoa hồng" value={fmtM(r.tongHH)} className="text-teal-700" />
+                  </div>
+                ))}
             </div>
           </div>
         </>

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { computeTrucPage } from '@/lib/kpiCalc';
+import StatCell from '@/components/kpi/StatCell.jsx';
 
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
@@ -122,7 +123,7 @@ const TrucPageAdmin = ({ month, year }) => {
 
           <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700">Bảng thông số Trực page ({year}-{String(month).padStart(2, '0')})</h3></div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hidden md:block">
               <table className="w-full text-sm whitespace-nowrap">
                 <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100">
                   <tr>
@@ -153,6 +154,24 @@ const TrucPageAdmin = ({ month, year }) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="md:hidden divide-y divide-slate-50">
+              {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có nhân sự Trực page.</div>
+                : rows.map(r => (
+                  <div key={r.staff.id} className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="min-w-0"><div className="font-bold text-slate-800 truncate">{r.staff.full_name}</div><div className="text-[11px] text-slate-400">{r.staff.employee_id}</div></div>
+                      <button onClick={() => editRow(r)} className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>{r.kpi ? 'Sửa KPI' : 'Giao KPI'}</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <StatCell label="SĐT xin được" value={fmt(r.phones)} className="text-teal-700" />
+                      <StatCell label="Quan tâm" value={fmt(r.interested)} className="text-violet-600" />
+                      <StatCell label="Tin nhắn" value={fmt(r.messages)} />
+                      <StatCell label="Tỉ lệ xin số" value={`${r.rate.toFixed(1)}%`} />
+                      <StatCell label="Hoa hồng" value={fmtM(r.hh)} className="text-teal-700" />
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         </>
