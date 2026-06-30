@@ -93,6 +93,16 @@ const KhachTuVanPage = () => {
       if (ka !== kb) return kb.localeCompare(ka);                       // theo ngày, mới nhất trên
       return (b.created_at || '').localeCompare(a.created_at || '');     // cùng ngày: tạo sau lên trên
     });
+  // Gom nhóm theo ngày hẹn (giữ thứ tự đã sắp xếp — mới nhất trên)
+  const groupedVisible = (() => {
+    const map = new Map();
+    for (const r of visible) {
+      const d = r.appointment_date ? new Date(r.appointment_date).toLocaleDateString('vi-VN') : 'Không rõ ngày';
+      if (!map.has(d)) map.set(d, []);
+      map.get(d).push(r);
+    }
+    return [...map.entries()];
+  })();
   const recsOf = (apptId) => recs.filter(r => r.appointment_id === apptId && !r.deleted_at);
   const trash = recs.filter(r => r.deleted_at);
   const apptName = (id) => rows.find(x => x.id === id)?.customer_name || 'Khách';
@@ -149,8 +159,16 @@ const KhachTuVanPage = () => {
       ) : visible.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-400">Chưa có khách tư vấn. Vào Lịch hẹn bấm “Tiếp nhận tư vấn”.</div>
       ) : (
-        <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map(r => {
+        <div className="space-y-5">
+          {groupedVisible.map(([date, items]) => (
+            <div key={date}>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                <span className="text-base">📅</span>
+                <h3 className="font-bold text-teal-700 text-base">Ngày {date}</h3>
+                <span className="px-2.5 py-0.5 bg-teal-100 text-teal-700 text-xs font-bold rounded-full ml-auto">{items.length} khách</span>
+              </div>
+              <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-3">
+          {items.map(r => {
             const rs = recsOf(r.id);
             return (
             <div key={r.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-teal-100 transition-all p-4 flex flex-col">
@@ -223,6 +241,9 @@ const KhachTuVanPage = () => {
               )}
             </div>
           );})}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
