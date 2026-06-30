@@ -18,8 +18,7 @@ const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-s
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
-const AV = ['bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-amber-500'];
-const avatarBg = (n) => { let h = 0; for (const c of (n || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
+const avatarBg = () => 'bg-teal-500';
 const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-teal-600 border-teal-300 bg-teal-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Bôi đỏ/đậm các câu AI thấy chưa phù hợp trong văn bản
@@ -163,7 +162,6 @@ const KhachTuVanPage = () => {
           {groupedVisible.map(([date, items]) => (
             <div key={date}>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                <span className="text-base">📅</span>
                 <h3 className="font-bold text-teal-700 text-base">Ngày {date}</h3>
                 <span className="px-2.5 py-0.5 bg-teal-100 text-teal-700 text-xs font-bold rounded-full ml-auto">{items.length} khách</span>
               </div>
@@ -179,17 +177,17 @@ const KhachTuVanPage = () => {
                     <div className="font-bold text-slate-800 text-[17px] truncate flex-1">{r.customer_name}</div>
                     <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}><span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{ST[r.status]?.label || r.status}</span>
                   </div>
-                  <div className="text-sm text-slate-500 flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-400">📅 {new Date(r.appointment_date).toLocaleDateString('vi-VN')}</span>}</div>
+                  <div className="text-sm text-slate-500 flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-400">{new Date(r.appointment_date).toLocaleDateString('vi-VN')}</span>}</div>
                 </div>
               </div>
 
-              {r.service && <div className="mt-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 line-clamp-2">💉 {r.service}</div>}
-              {r.consult_note && <div className="mt-1.5 text-sm text-slate-500 line-clamp-2">📝 {r.consult_note}</div>}
+              {r.service && <div className="mt-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 line-clamp-2">{r.service}</div>}
+              {r.consult_note && <div className="mt-1.5 text-sm text-slate-500 line-clamp-2">{r.consult_note}</div>}
 
               {((r.consult_image_urls || []).length > 0 || rs.length > 0) && (
                 <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                  {(r.consult_image_urls || []).length > 0 && <span className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">🖼 {(r.consult_image_urls || []).length} ảnh</span>}
-                  {rs.length > 0 && <span className="bg-rose-50 text-rose-500 px-2.5 py-1 rounded-full">🎙 {rs.length} ghi âm</span>}
+                  {(r.consult_image_urls || []).length > 0 && <span className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">{(r.consult_image_urls || []).length} ảnh</span>}
+                  {rs.length > 0 && <span className="bg-rose-50 text-rose-500 px-2.5 py-1 rounded-full">{rs.length} ghi âm</span>}
                 </div>
               )}
 
