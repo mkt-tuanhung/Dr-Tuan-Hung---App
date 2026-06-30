@@ -322,11 +322,13 @@ const EvalModal = ({ app, onClose, onSaved }) => {
     if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service, bong_date: null };
     else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, expected_surgery_date: f.expected_surgery_date, revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
     else if (f.status === 'bong') upd = { ...upd, notes: f.notes, bong_date: today, revenue: 0, upsale_revenue: 0, surgery_date: null };
-    const { data, error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id).select('id');
+    const { data, error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id).select('id, status, revenue, surgery_date');
     setSaving(false);
-    if (error) { toast.error('Lỗi: ' + error.message); return; }
-    if (!data || data.length === 0) { toast.error('Cập nhật bị từ chối (quyền RLS). Cần chạy SQL phân quyền — báo admin.'); return; }
-    toast.success('Đã lưu đánh giá'); onSaved();
+    if (error) { console.error('eval update error', error); toast.error(`LỖI [${error.code || '?'}]: ${error.message}`, { duration: 20000 }); return; }
+    if (!data || data.length === 0) { toast.error('Cập nhật 0 dòng — RLS chặn quyền. Chạy SQL phân quyền.', { duration: 20000 }); return; }
+    const r = data[0];
+    toast.success(`Đã lưu: ${r.status} · DT ${Number(r.revenue || 0).toLocaleString('vi-VN')}đ · ngày mổ ${r.surgery_date || '(trống)'}`, { duration: 8000 });
+    onSaved();
   };
   const STBtn = ({ k, label, on }) => <button onClick={() => setF({ ...f, status: k })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-full transition ${f.status === k ? on : 'text-slate-500 hover:bg-white/60'}`}>{label}</button>;
   return (

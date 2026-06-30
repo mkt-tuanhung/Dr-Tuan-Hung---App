@@ -126,8 +126,8 @@ export default function CashFlowPage() {
       created_by: profile.id
     }).select('id');
 
-    if (error) toast.error('Lỗi: ' + error.message);
-    else if (!data || data.length === 0) toast.error('Không ghi nhận được — quyền RLS chặn. Cần chạy SQL phân quyền cho kế toán (role_2).');
+    if (error) { console.error('cash_flows insert error', error); toast.error(`LỖI [${error.code || '?'}]: ${error.message}${error.hint ? ' | ' + error.hint : ''}`, { duration: 20000 }); }
+    else if (!data || data.length === 0) toast.error('Insert OK nhưng RLS SELECT chặn đọc lại — chạy SQL phân quyền.', { duration: 20000 });
     else {
       toast.success('Đã lưu giao dịch!');
       setShowCreateModal(false);
