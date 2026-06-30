@@ -93,7 +93,7 @@ const AttendancePage = () => {
     if (!profile?.id) return;
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
     const [todayRes, histRes, leaveRes] = await Promise.all([
       supabase.from('attendance').select('*').eq('staff_id', profile.id).eq('date', todayStr).single(),

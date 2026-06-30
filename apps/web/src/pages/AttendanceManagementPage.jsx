@@ -40,7 +40,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const loadData = useCallback(async () => {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
     const [staffRes, attRes] = await Promise.all([
       supabase.from('profiles').select('id, full_name, employee_id, role, avatar_url').eq('is_active', true).order('full_name'),

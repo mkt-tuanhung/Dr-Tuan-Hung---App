@@ -85,7 +85,7 @@ const FinanceManagementPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
     let query = supabase
       .from('customer_appointments')

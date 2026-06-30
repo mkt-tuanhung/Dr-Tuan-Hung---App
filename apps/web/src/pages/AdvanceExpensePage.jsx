@@ -66,7 +66,7 @@ export default function AdvanceExpensePage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const startDate = `${filterYear}-${String(filterMonth).padStart(2,'0')}-01`;
-    const endDate = new Date(filterYear, filterMonth, 0).toISOString().split('T')[0];
+    const endDate = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(new Date(filterYear, filterMonth, 0).getDate()).padStart(2, '0')}`;
 
     let query = supabase
       .from('expenses')

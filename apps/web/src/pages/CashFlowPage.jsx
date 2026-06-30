@@ -45,7 +45,7 @@ export default function CashFlowPage() {
     if (!canRead) return;
     setLoading(true);
     const startDate = `${filterYear}-${String(filterMonth).padStart(2,'0')}-01`;
-    const endDate = new Date(filterYear, filterMonth, 0).toISOString().split('T')[0];
+    const endDate = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(new Date(filterYear, filterMonth, 0).getDate()).padStart(2, '0')}`;
 
     const { data: flowsData, error } = await supabase
       .from('cash_flows')
