@@ -331,9 +331,10 @@ const AppointmentManagementPage = () => {
       updateData.consult_note = evalForm.consult_note || null;
       updateData.consult_image_urls = consultUrls;
 
-      const { error } = await supabase.from('customer_appointments').update(updateData).eq('id', evalApp.id);
+      const { data: updated, error } = await supabase.from('customer_appointments').update(updateData).eq('id', evalApp.id).select('id');
       if (error) throw error;
-      
+      if (!updated || updated.length === 0) throw new Error('Cập nhật bị từ chối (quyền RLS). Cần chạy SQL phân quyền — báo admin.');
+
       toast.success('Đã lưu đánh giá!');
       setShowEvalModal(false);
       loadData();
@@ -664,7 +665,7 @@ const AppointmentManagementPage = () => {
                               <MessageCircle className="w-4 h-4" /> Lịch sử tư vấn
                             </button>
                           )}
-                          {((app.consult_image_urls || []).length > 0 || app.consult_note) && (
+                          {profile?.role !== 'sale_offline' && ((app.consult_image_urls || []).length > 0 || app.consult_note) && (
                             <button onClick={() => setConsultView(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
                               <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
                             </button>
@@ -678,7 +679,7 @@ const AppointmentManagementPage = () => {
                             <div className="w-full py-1.5 text-center text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
                           )}
                           <div className="flex items-center gap-2 w-full">
-                            {['admin', 'sale_offline'].includes(profile?.role) && (
+                            {profile?.role === 'admin' && (
                               <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm py-2 rounded-xl hover:bg-teal-100 transition-colors">
                                 <Edit className="w-4 h-4" /> Đánh giá
                               </button>

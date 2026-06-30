@@ -54,7 +54,7 @@ const KhachTuVanPage = () => {
     const { data } = await supabase.from('customer_appointments')
       .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls')
       .or('status.in.(coc,bong,phau_thuat),consult_received.eq.true')
-      .order('updated_at', { ascending: false }).limit(500);
+      .order('created_at', { ascending: false }).limit(500);
     setRows(data || []);
     const { data: recData } = await supabase.from('consult_recordings')
       .select('*, by:profiles!created_by(full_name)').order('created_at', { ascending: false }).limit(1000);
@@ -210,7 +210,9 @@ const KhachTuVanPage = () => {
                 <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
                   <button onClick={() => setConsultFor(r)} className="h-11 text-sm font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" />Hồ sơ tư vấn</button>
                   <button onClick={() => setRecFor(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" />Ghi âm</button>
-                  <button onClick={() => setEvalFor(r)} className="col-span-2 h-11 text-base font-bold text-white rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-sm shadow-teal-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
+                  {r.status === 'scheduled'
+                    ? <button onClick={() => setEvalFor(r)} className="col-span-2 h-11 text-base font-bold text-white rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-sm shadow-teal-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
+                    : <div className="col-span-2 h-11 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border border-slate-200">✓ Đã đánh giá · {ST[r.status]?.label || r.status}</div>}
                 </div>
               )}
             </div>
@@ -317,12 +319,13 @@ const EvalModal = ({ app, onClose, onSaved }) => {
   const save = async () => {
     setSaving(true);
     let upd = { status: f.status, surgery_type: f.surgery_type };
-    if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service };
-    else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, expected_surgery_date: f.expected_surgery_date };
-    else if (f.status === 'bong') upd = { ...upd, notes: f.notes, bong_date: today };
-    const { error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id);
+    if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service, bong_date: null };
+    else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, expected_surgery_date: f.expected_surgery_date, revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
+    else if (f.status === 'bong') upd = { ...upd, notes: f.notes, bong_date: today, revenue: 0, upsale_revenue: 0, surgery_date: null };
+    const { data, error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id).select('id');
     setSaving(false);
     if (error) { toast.error('Lỗi: ' + error.message); return; }
+    if (!data || data.length === 0) { toast.error('Cập nhật bị từ chối (quyền RLS). Cần chạy SQL phân quyền — báo admin.'); return; }
     toast.success('Đã lưu đánh giá'); onSaved();
   };
   const STBtn = ({ k, label, on }) => <button onClick={() => setF({ ...f, status: k })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-full transition ${f.status === k ? on : 'text-slate-500 hover:bg-white/60'}`}>{label}</button>;

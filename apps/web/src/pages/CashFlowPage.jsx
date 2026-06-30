@@ -116,7 +116,7 @@ export default function CashFlowPage() {
     
     const numericAmount = parseInt(form.amount.replace(/\./g, ''), 10);
 
-    const { error } = await supabase.from('cash_flows').insert({
+    const { data, error } = await supabase.from('cash_flows').insert({
       date: form.date,
       flow_type: form.flow_type,
       amount: numericAmount,
@@ -124,9 +124,10 @@ export default function CashFlowPage() {
       handover_person: form.handover_person,
       notes: form.notes,
       created_by: profile.id
-    });
+    }).select('id');
 
-    if (error) toast.error(error.message);
+    if (error) toast.error('Lỗi: ' + error.message);
+    else if (!data || data.length === 0) toast.error('Không ghi nhận được — quyền RLS chặn. Cần chạy SQL phân quyền cho kế toán (role_2).');
     else {
       toast.success('Đã lưu giao dịch!');
       setShowCreateModal(false);
