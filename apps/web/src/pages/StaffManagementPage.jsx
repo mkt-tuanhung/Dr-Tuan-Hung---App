@@ -124,6 +124,10 @@ const StaffManagementPage = ({ isNested = false }) => {
       toast.error('Vui lòng nhập mật khẩu');
       return;
     }
+    if (form.password && form.password.length < 6) {
+      toast.error('Mật khẩu phải từ 6 ký tự trở lên');
+      return;
+    }
     setSaving(true);
     try {
       let avatar_url = editTarget?.avatar_url || null;
@@ -152,7 +156,13 @@ const StaffManagementPage = ({ isNested = false }) => {
             body: { targetUserId: editTarget.id, newPassword: form.password },
           });
           if (pwErr || pwData?.error) {
-            throw new Error('Cập nhật hồ sơ OK nhưng đổi mật khẩu thất bại: ' + (pwData?.error || pwErr.message));
+            // Lấy lý do lỗi thực từ body Edge Function (invoke chỉ trả message chung chung)
+            let detail = pwData?.error || pwErr?.message || 'Lỗi không xác định';
+            try {
+              const body = await pwErr?.context?.json?.();
+              if (body?.error) detail = body.error;
+            } catch { /* giữ detail mặc định */ }
+            throw new Error('Cập nhật hồ sơ OK nhưng đổi mật khẩu thất bại: ' + detail);
           }
           toast.success('Đã cập nhật nhân sự & đổi mật khẩu');
         } else {
