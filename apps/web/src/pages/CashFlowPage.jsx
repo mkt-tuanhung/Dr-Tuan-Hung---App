@@ -132,6 +132,10 @@ export default function CashFlowPage() {
       toast.success('Đã lưu giao dịch!');
       setShowCreateModal(false);
       setForm({ ...form, amount: '', handover_person: '', notes: '' });
+      // Nhảy bộ lọc về đúng tháng của giao dịch vừa nhập để chắc chắn hiển thị
+      const d = new Date(form.date);
+      setFilterMonth(d.getMonth() + 1);
+      setFilterYear(d.getFullYear());
       loadData();
     }
     setSaving(false);
