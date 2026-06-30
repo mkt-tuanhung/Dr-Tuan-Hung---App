@@ -52,7 +52,7 @@ const KhachTuVanPage = () => {
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     const { data } = await supabase.from('customer_appointments')
-      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls')
+      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls, appointment_date, created_at')
       .or('status.in.(coc,bong,phau_thuat),consult_received.eq.true')
       .order('created_at', { ascending: false }).limit(500);
     setRows(data || []);
@@ -86,7 +86,13 @@ const KhachTuVanPage = () => {
   useRealtimeReload('customer_appointments,consult_recordings', loadData);
 
   const q = search.trim().toLowerCase();
-  const visible = rows.filter(r => !q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q));
+  const visible = rows.filter(r => !q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q))
+    .sort((a, b) => {
+      const ka = a.appointment_date || (a.created_at || '').slice(0, 10);
+      const kb = b.appointment_date || (b.created_at || '').slice(0, 10);
+      if (ka !== kb) return kb.localeCompare(ka);                       // theo ngày, mới nhất trên
+      return (b.created_at || '').localeCompare(a.created_at || '');     // cùng ngày: tạo sau lên trên
+    });
   const recsOf = (apptId) => recs.filter(r => r.appointment_id === apptId && !r.deleted_at);
   const trash = recs.filter(r => r.deleted_at);
   const apptName = (id) => rows.find(x => x.id === id)?.customer_name || 'Khách';
@@ -155,7 +161,7 @@ const KhachTuVanPage = () => {
                     <div className="font-bold text-slate-800 text-[17px] truncate flex-1">{r.customer_name}</div>
                     <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}><span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{ST[r.status]?.label || r.status}</span>
                   </div>
-                  <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-3.5 h-3.5" /> {maskPhone(r.phone)}</div>
+                  <div className="text-sm text-slate-500 flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-400">📅 {new Date(r.appointment_date).toLocaleDateString('vi-VN')}</span>}</div>
                 </div>
               </div>
 
