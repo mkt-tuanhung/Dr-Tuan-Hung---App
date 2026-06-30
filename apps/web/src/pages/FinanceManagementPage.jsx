@@ -90,9 +90,7 @@ const FinanceManagementPage = () => {
     let query = supabase
       .from('customer_appointments')
       .select('*, profiles!customer_appointments_created_by_fkey(full_name)')
-      .eq('status', 'phau_thuat')
-      .gte('surgery_date', startDate)
-      .lte('surgery_date', endDate);
+      .eq('status', 'phau_thuat');
 
     // Phân quyền hiển thị: nhóm quản lý xem tất cả, còn lại chỉ xem doanh thu cá nhân
     const canSeeAll = ['admin', 'accountant', 'shareholder', 'marketing'].includes(profile?.role)
@@ -110,7 +108,9 @@ const FinanceManagementPage = () => {
     if (error) {
       toast.error('Lỗi tải dữ liệu: ' + error.message);
     } else {
-      const records = data || [];
+      // Quy doanh thu theo tháng: ưu tiên surgery_date, thiếu thì dùng ngày đánh giá (updated_at)
+      const inMonth = (r) => { const d = String(r.surgery_date || r.updated_at || '').slice(0, 10); return d >= startDate && d <= endDate; };
+      const records = (data || []).filter(inMonth);
       setRevenueData(records);
 
       let tRev = 0, tUp = 0, adsC = 0, tFee = 0, tFeeCash = 0, tFeeTransfer = 0, feeCount = 0;
