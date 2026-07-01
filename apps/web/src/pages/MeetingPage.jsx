@@ -175,11 +175,8 @@ export default function MeetingPage() {
           </div>
         </div>
 
-        {/* Hàng nút — phân biệt theo chức năng */}
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => setShowCreate(true)} className="h-12 rounded-2xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 inline-flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Tạo cuộc họp</button>
-          <button onClick={() => setShowAsk(true)} className="h-12 rounded-2xl bg-violet-500/15 text-violet-200 border border-violet-400/25 font-bold hover:bg-violet-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Hỏi AI</button>
-        </div>
+        {/* Hỏi AI (tạo cuộc họp = nút FAB nổi góc dưới phải) */}
+        <button onClick={() => setShowAsk(true)} className="w-full h-12 rounded-2xl bg-violet-500/15 text-violet-200 border border-violet-400/25 font-bold hover:bg-violet-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Hỏi kho biên bản (AI)</button>
 
         {/* Bộ lọc pill */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
@@ -261,6 +258,14 @@ export default function MeetingPage() {
       )}
 
       {view && <MinutesModal m={view} onClose={() => setView(null)} onReanalyze={() => { reanalyze(view); setView(null); }} />}
+
+      {/* FAB tạo cuộc họp — góc dưới phải, thuận ngón cái (như Google Meet) */}
+      {!showCreate && !showAsk && !sheet && !view && (
+        <button onClick={() => setShowCreate(true)} title="Tạo cuộc họp"
+          className="fixed z-[60] bottom-20 lg:bottom-8 right-5 lg:right-8 w-14 h-14 rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-900/50 ring-4 ring-emerald-500/20 flex items-center justify-center hover:bg-emerald-600 hover:scale-105 active:scale-95 transition">
+          <Plus className="w-7 h-7" strokeWidth={2.5} />
+        </button>
+      )}
     </div>
   );
 }
