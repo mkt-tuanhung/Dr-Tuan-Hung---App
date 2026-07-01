@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Video, Plus, X, Loader2, Radio, Clock, LogIn, Circle, Square, Sparkles, FileText, Link2, CalendarClock } from 'lucide-react';
+import { Video, Plus, X, Loader2, Radio, LogIn, Circle, Square, Sparkles, FileText, Link2, CalendarClock, ChevronRight } from 'lucide-react';
 
 const ST = {
   scheduled: { label: 'Sắp diễn ra', cls: 'bg-amber-400/15 text-amber-300' },
@@ -55,6 +55,8 @@ export default function MeetingPage() {
   const [room, setRoom] = useState(null);
   const [view, setView] = useState(null);     // xem biên bản
   const [q, setQ] = useState(''); const [answer, setAnswer] = useState(''); const [asking, setAsking] = useState(false);
+  const [showCreate, setShowCreate] = useState(false); const [showAsk, setShowAsk] = useState(false);
+  const [sheet, setSheet] = useState(null); const [filterTab, setFilterTab] = useState('all');
   const autoJoined = useRef(false);
 
   const load = useCallback(async () => {
@@ -141,96 +143,138 @@ export default function MeetingPage() {
   const sorted = [...meetings].sort((a, b) => (order[a.status] - order[b.status]) || (new Date(b.scheduled_at || b.created_at) - new Date(a.scheduled_at || a.created_at)));
   const liveCount = meetings.filter(m => m.status === 'live').length;
   const initial = (n) => (n || '?').trim().charAt(0).toUpperCase();
+  const isOwner = (m) => m.created_by === me?.id || me?.role === 'admin';
+  const FILTERS = [{ k: 'all', label: 'Tất cả' }, { k: 'live', label: 'Đang họp' }, { k: 'scheduled', label: 'Sắp tới' }, { k: 'ended', label: 'Đã xong' }];
+  const filtered = filterTab === 'all' ? sorted : sorted.filter(m => m.status === filterTab);
+  const dayLabel = (d) => {
+    const s = new Date(d).toLocaleDateString('vi-VN'); const t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+    if (s === t.toLocaleDateString('vi-VN')) return 'Hôm nay';
+    if (s === y.toLocaleDateString('vi-VN')) return 'Hôm qua';
+    return s;
+  };
+  const groups = (() => { const map = new Map(); for (const m of filtered) { const l = dayLabel(m.scheduled_at || m.created_at); if (!map.has(l)) map.set(l, []); map.get(l).push(m); } return [...map.entries()]; })();
 
   return (
-    <div className="-m-4 lg:-m-6 p-4 lg:p-6 min-h-[calc(100vh-3.25rem)]" style={{ background: 'radial-gradient(130% 90% at 50% -10%, #123a29 0%, #0b1712 55%, #070b09 100%)' }}>
-      <div className="max-w-7xl mx-auto grid lg:grid-cols-[1fr_360px] gap-5 items-start">
+    <div className="-m-4 lg:-m-6 p-4 lg:p-6 min-h-[calc(100vh-3.25rem)]" style={{ background: 'radial-gradient(130% 90% at 50% -10%, #0f2c20 0%, #0a1512 55%, #070b09 100%)' }}>
+      <div className="max-w-2xl mx-auto space-y-4">
 
-        {/* CỘT TRÁI: danh sách cuộc họp */}
-        <div className="order-2 lg:order-1 space-y-4 min-w-0">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-white font-bold text-xl">Cuộc họp</h2>
-            <span className="text-white/40 text-sm">{meetings.length} cuộc</span>
-          </div>
-          {loading ? (
-            <div className="flex justify-center h-40 items-center"><div className="w-7 h-7 border-4 border-white/15 border-t-emerald-400 rounded-full animate-spin" /></div>
-          ) : sorted.length === 0 ? (
-            <div className="bg-white/[0.03] rounded-2xl border border-dashed border-white/10 p-12 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3"><Video className="w-7 h-7 text-emerald-300" /></div>
-              <div className="text-white/70 font-semibold">Chưa có cuộc họp nào</div>
-              <div className="text-white/40 text-sm mt-1">Tạo cuộc họp ở cột bên phải để bắt đầu.</div>
+        {/* Hero — dark tinh tế (như Balance card) */}
+        <div className="relative overflow-hidden rounded-3xl p-5 border border-white/10" style={{ background: 'linear-gradient(150deg, #16241d 0%, #0f1b16 100%)' }}>
+          <div className="absolute -top-16 -right-10 w-52 h-52 rounded-full bg-emerald-500/20 blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 text-white/60 text-sm"><Video className="w-4 h-4" /> Phòng họp</span>
+              <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 mtg-float"><Radio className="w-4 h-4" /></span>
             </div>
-          ) : (
-            <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
-              {sorted.map((m, i) => {
-            const live = m.status === 'live';
-            return (
-            <div key={m.id} className="mtg-card mtg-in rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl p-5 pt-6 flex flex-col relative overflow-hidden" style={{ animationDelay: `${Math.min(i, 12) * 55}ms` }}>
-              <div className={`absolute top-0 inset-x-0 h-1.5 ${live ? 'bg-gradient-to-r from-rose-500 to-orange-400' : m.status === 'scheduled' ? 'bg-gradient-to-r from-emerald-400 to-green-500' : 'bg-white/10'}`} />
-              <div className="flex items-start justify-between gap-2">
-                <div className="font-bold text-white text-[15px] truncate flex-1">{m.title}</div>
-                <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 ${ST[m.status]?.cls || 'bg-white/10 text-white/50'}`}>{live && <span className="w-2 h-2 rounded-full bg-rose-400 mtg-live-dot" />}{ST[m.status]?.label || m.status}</span>
-              </div>
-              <div className="text-xs text-white/45 mt-2.5 flex items-center gap-2 min-w-0">
-                <span className="w-6 h-6 rounded-full bg-emerald-500/25 text-emerald-200 text-[10px] font-bold flex items-center justify-center shrink-0">{initial(m.by?.full_name)}</span>
-                <span className="truncate">{m.by?.full_name || '—'}</span>
-                <span className="text-white/25 shrink-0">·</span>
-                <span className="inline-flex items-center gap-1 shrink-0"><Clock className="w-3 h-3" /> {new Date(m.created_at).toLocaleDateString('vi-VN')}</span>
-              </div>
-              {m.scheduled_at && <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 px-2.5 py-1 rounded-lg w-fit"><CalendarClock className="w-3.5 h-3.5" /> {new Date(m.scheduled_at).toLocaleString('vi-VN')}</div>}
-              {m.ai_status === 'processing' && <div className="mt-3 text-xs font-semibold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 w-fit"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tạo biên bản AI…</div>}
-              {m.ai_status === 'done' && m.ai_result?.summary && <div className="mt-3 text-xs text-slate-200 bg-violet-500/10 border border-violet-400/20 rounded-lg p-2.5 line-clamp-2"><Sparkles className="w-3 h-3 inline text-violet-300 mr-1 -mt-0.5" />{m.ai_result.summary}</div>}
-              <div className="mt-auto pt-4 flex flex-wrap gap-2">
-                {m.status !== 'ended'
-                  ? <button onClick={() => join(m)} disabled={joining === m.id} className="flex-1 h-10 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 active:scale-95 transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-1.5">{joining === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />} Vào họp</button>
-                  : <button onClick={() => join(m)} disabled={joining === m.id} className="flex-1 h-10 rounded-xl border border-white/15 text-white/80 text-sm font-bold hover:bg-white/5 active:scale-95 transition inline-flex items-center justify-center gap-1.5">{joining === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />} Vào lại</button>}
-                {m.status !== 'ended' && <button onClick={() => copyLink(m)} title="Copy link phòng họp" className="h-10 px-3 rounded-xl border border-white/15 text-white/70 hover:bg-white/5 active:scale-95 transition inline-flex items-center"><Link2 className="w-4 h-4" /></button>}
-                {m.status === 'live' && (m.created_by === me?.id || me?.role === 'admin') && <button onClick={() => endMeeting(m)} className="h-10 px-3 rounded-xl border border-rose-400/30 text-rose-300 text-sm font-bold hover:bg-rose-500/10 active:scale-95 transition">Kết thúc</button>}
-                {m.ai_status === 'done' && <button onClick={() => setView(m)} className="h-10 px-3 rounded-xl bg-violet-500/15 text-violet-300 text-sm font-bold hover:bg-violet-500/25 active:scale-95 transition inline-flex items-center gap-1.5"><Sparkles className="w-4 h-4" /> Biên bản</button>}
-              </div>
+            <div className="mt-4 text-white/50 text-xs">Tổng cuộc họp</div>
+            <div className="flex items-end gap-2.5 mt-0.5">
+              <div className="text-4xl font-bold text-white leading-none">{meetings.length}</div>
+              <span className={`mb-0.5 px-2.5 py-1 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 ${liveCount > 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>{liveCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mtg-live-dot" />}{liveCount > 0 ? `${liveCount} đang họp` : 'Rảnh'}</span>
             </div>
-          );})}
-            </div>
-          )}
-        </div>
-
-        {/* CỘT PHẢI: hero + tạo họp + hỏi AI */}
-        <div className="order-1 lg:order-2 space-y-4 lg:sticky lg:top-4 min-w-0">
-          <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-xl shadow-emerald-900/40" style={{ background: 'linear-gradient(135deg, #1fa25a 0%, #157a48 55%, #0d5636 100%)' }}>
-            <div className="absolute -top-10 -right-6 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 text-white/85 text-sm font-medium"><Video className="w-4 h-4" /> Phòng họp</span>
-                <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center mtg-float"><Radio className="w-4 h-4" /></span>
-              </div>
-              <div className="mt-4 text-white/70 text-xs">Tổng cuộc họp</div>
-              <div className="text-4xl font-bold leading-none mt-0.5">{meetings.length}</div>
-              <div className="mt-3 text-[11px]">
-                {liveCount > 0
-                  ? <span className="px-2.5 py-1 rounded-full bg-rose-500 font-semibold inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-white mtg-live-dot" />{liveCount} đang họp</span>
-                  : <span className="text-white/60">Không có cuộc đang họp</span>}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-2.5">
-            <div className="flex items-center gap-2 text-sm font-bold text-white/90"><span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center"><Plus className="w-4 h-4 text-emerald-300" /></span> Tạo cuộc họp mới</div>
-            <input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && createMeeting(!!schedAt)} placeholder="Tên cuộc họp…" className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none transition" />
-            <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white/80 [color-scheme:dark] focus:border-emerald-400 outline-none" />
-            <button onClick={() => createMeeting(!!schedAt)} disabled={creating} className="w-full h-11 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedAt ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedAt ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
-            <p className="text-xs text-white/40">Để trống ngày giờ = họp ngay. Chọn ngày giờ = lên lịch, rồi bấm <b className="text-white/60">Copy link</b> ở thẻ.</p>
-          </div>
-
-          <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-2.5">
-            <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><Sparkles className="w-4 h-4" /> Hỏi kho biên bản (AI)</div>
-            <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && askAI()} placeholder="VD: Tháng trước chốt gì về giá dịch vụ?" className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none transition" />
-            <button onClick={askAI} disabled={asking} className="w-full h-11 rounded-xl bg-emerald-500/90 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition disabled:opacity-50 inline-flex items-center justify-center gap-2">{asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Hỏi AI</button>
-            {answer && <div className="mtg-in text-sm text-slate-200 bg-white/5 border border-white/10 rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">{answer}</div>}
+            <div className="text-white/35 text-xs mt-3">Họp video · ghi lại · AI biên bản &amp; việc cần làm</div>
           </div>
         </div>
+
+        {/* Hàng nút — phân biệt theo chức năng */}
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => setShowCreate(true)} className="h-12 rounded-2xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 inline-flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Tạo cuộc họp</button>
+          <button onClick={() => setShowAsk(true)} className="h-12 rounded-2xl bg-violet-500/15 text-violet-200 border border-violet-400/25 font-bold hover:bg-violet-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Hỏi AI</button>
+        </div>
+
+        {/* Bộ lọc pill */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {FILTERS.map(f => (
+            <button key={f.k} onClick={() => setFilterTab(f.k)} className={`shrink-0 px-4 h-9 rounded-full text-sm font-semibold transition ${filterTab === f.k ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}>{f.label}</button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between px-1 pt-1">
+          <h2 className="text-white font-bold text-lg">Cuộc họp</h2>
+          <span className="text-white/40 text-sm">{filtered.length} cuộc</span>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center h-40 items-center"><div className="w-7 h-7 border-4 border-white/15 border-t-emerald-400 rounded-full animate-spin" /></div>
+        ) : groups.length === 0 ? (
+          <div className="bg-white/[0.03] rounded-2xl border border-dashed border-white/10 p-12 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3"><Video className="w-7 h-7 text-emerald-300" /></div>
+            <div className="text-white/70 font-semibold">Chưa có cuộc họp</div>
+            <div className="text-white/40 text-sm mt-1">Bấm “Tạo cuộc họp” để bắt đầu.</div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {groups.map(([label, items]) => (
+              <div key={label}>
+                <div className="text-white/40 text-xs font-semibold px-1 mb-2">{label}</div>
+                <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden divide-y divide-white/5">
+                  {items.map((m, i) => {
+                    const live = m.status === 'live';
+                    return (
+                    <button key={m.id} onClick={() => setSheet(m)} className="mtg-in w-full flex items-center gap-3 p-3.5 hover:bg-white/[0.04] transition text-left" style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
+                      <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${live ? 'bg-rose-500/20 text-rose-300' : m.status === 'scheduled' ? 'bg-amber-400/20 text-amber-200' : 'bg-emerald-500/20 text-emerald-200'}`}>{initial(m.title)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-white font-semibold truncate">{m.title}</div>
+                        <div className="text-white/40 text-xs truncate">{m.by?.full_name || '—'} · {new Date(m.scheduled_at || m.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{m.ai_status === 'done' ? ' · có biên bản' : m.ai_status === 'processing' ? ' · đang tạo biên bản…' : ''}</div>
+                      </div>
+                      <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 ${ST[m.status]?.cls || 'bg-white/10 text-white/50'}`}>{live && <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mtg-live-dot" />}{ST[m.status]?.label || m.status}</span>
+                      <ChevronRight className="w-4 h-4 text-white/25 shrink-0" />
+                    </button>
+                  );})}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
+      {showCreate && (
+        <Sheet title="Tạo cuộc họp" onClose={() => setShowCreate(false)}>
+          <div className="space-y-3">
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Tên cuộc họp…" className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none" />
+            <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white/80 [color-scheme:dark] focus:border-emerald-400 outline-none" />
+            <button onClick={async () => { await createMeeting(!!schedAt); setShowCreate(false); }} disabled={creating} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedAt ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedAt ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
+            <p className="text-xs text-white/40 text-center">Để trống ngày giờ = họp ngay · Chọn ngày giờ = lên lịch</p>
+          </div>
+        </Sheet>
+      )}
+
+      {showAsk && (
+        <Sheet title="Hỏi kho biên bản (AI)" onClose={() => setShowAsk(false)}>
+          <div className="space-y-3">
+            <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && askAI()} placeholder="VD: Tháng trước chốt gì về giá dịch vụ?" className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-violet-400 outline-none" />
+            <button onClick={askAI} disabled={asking} className="w-full h-12 rounded-xl bg-violet-500 text-white font-bold hover:bg-violet-600 active:scale-[0.98] transition disabled:opacity-50 inline-flex items-center justify-center gap-2">{asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Hỏi AI</button>
+            {answer && <div className="mtg-in text-sm text-slate-200 bg-white/5 border border-white/10 rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">{answer}</div>}
+          </div>
+        </Sheet>
+      )}
+
+      {sheet && (
+        <Sheet title={sheet.title} onClose={() => setSheet(null)}>
+          <div className="text-white/40 text-sm mb-4">{ST[sheet.status]?.label || sheet.status} · {sheet.by?.full_name || '—'} · {new Date(sheet.scheduled_at || sheet.created_at).toLocaleString('vi-VN')}</div>
+          <div className="space-y-2.5">
+            <button onClick={() => { setSheet(null); join(sheet); }} className={`w-full h-12 rounded-xl font-bold active:scale-[0.98] transition inline-flex items-center justify-center gap-2 ${sheet.status !== 'ended' ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-900/40' : 'bg-white/5 text-white/80 border border-white/15 hover:bg-white/10'}`}><LogIn className="w-4 h-4" /> {sheet.status !== 'ended' ? 'Vào họp' : 'Vào lại'}</button>
+            {sheet.status !== 'ended' && <button onClick={() => copyLink(sheet)} className="w-full h-12 rounded-xl bg-sky-500/15 text-sky-200 border border-sky-400/25 font-bold hover:bg-sky-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Link2 className="w-4 h-4" /> Copy link phòng họp</button>}
+            {sheet.ai_status === 'done' && <button onClick={() => { setSheet(null); setView(sheet); }} className="w-full h-12 rounded-xl bg-violet-500/15 text-violet-200 border border-violet-400/25 font-bold hover:bg-violet-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Xem biên bản AI</button>}
+            {sheet.status === 'live' && isOwner(sheet) && <button onClick={() => { endMeeting(sheet); setSheet(null); }} className="w-full h-12 rounded-xl bg-rose-500/15 text-rose-200 border border-rose-400/25 font-bold hover:bg-rose-500/25 active:scale-[0.98] transition">Kết thúc cuộc họp</button>}
+          </div>
+        </Sheet>
+      )}
+
       {view && <MinutesModal m={view} onClose={() => setView(null)} onReanalyze={() => { reanalyze(view); setView(null); }} />}
+    </div>
+  );
+}
+
+function Sheet({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-white/10" style={{ background: '#131b17' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-bold text-lg truncate pr-2">{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 shrink-0"><X className="w-4 h-4" /></button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
