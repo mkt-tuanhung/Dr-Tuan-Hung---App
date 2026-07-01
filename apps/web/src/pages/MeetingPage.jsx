@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LiveKitRoom, VideoConference, useRoomContext } from '@livekit/components-react';
 import { RoomEvent } from 'livekit-client';
 import '@livekit/components-styles';
+import '@/styles/meeting-theme.css';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';

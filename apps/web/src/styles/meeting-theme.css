@@ -1,0 +1,82 @@
+/* Theme phòng họp giống Google Meet, phủ lên @livekit/components-styles */
+[data-lk-theme='default'] {
+  --lk-bg: #202124;
+  --lk-bg2: #2a2b2e;
+  --lk-fg: #e8eaed;
+  --lk-fg2: #bdc1c6;
+  --lk-accent-bg: #1a73e8;          /* Google blue */
+  --lk-accent-fg: #ffffff;
+  --lk-accent2: #1765cc;
+  --lk-danger: #ea4335;             /* Google red */
+  --lk-danger2: #d33b2c;
+  --lk-danger-text: #ffffff;
+  --lk-control-bg: rgba(255, 255, 255, 0.08);
+  --lk-control-hover-bg: rgba(255, 255, 255, 0.16);
+  --lk-control-active-bg: rgba(255, 255, 255, 0.22);
+  --lk-control-active-hover-bg: rgba(255, 255, 255, 0.3);
+  --lk-control-fg: #e8eaed;
+  --lk-border-radius: 12px;
+  --lk-grid-gap: 12px;
+}
+
+.lk-video-conference,
+.lk-grid-layout,
+.lk-focus-layout {
+  background: #202124;
+}
+
+/* Ô video: bo góc mềm giống Meet */
+.lk-participant-tile {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+.lk-participant-tile .lk-participant-name,
+.lk-participant-metadata {
+  font-weight: 600;
+}
+
+/* Thanh điều khiển nổi dạng viên thuốc ở giữa dưới (Google Meet) */
+.lk-control-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: 96vw;
+  border: none;
+  border-top: none;
+  background: rgba(32, 33, 36, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 999px;
+  padding: 8px 12px;
+  gap: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+.lk-video-conference,
+.lk-focus-layout { position: relative; }
+
+/* Nút điều khiển tròn giống Meet */
+.lk-control-bar .lk-button {
+  border-radius: 999px;
+  height: 46px;
+  min-width: 46px;
+  padding: 0 14px;
+  border: none;
+  font-weight: 600;
+}
+.lk-control-bar .lk-button:hover { background: var(--lk-control-hover-bg); }
+
+/* Nút rời phòng đỏ */
+.lk-button.lk-disconnect-button,
+.lk-disconnect-button {
+  background: #ea4335 !important;
+  color: #fff !important;
+  border-radius: 999px;
+  padding: 0 18px;
+}
+.lk-button.lk-disconnect-button:hover { background: #d33b2c !important; }
+
+/* Nút bật chat/participant */
+.lk-chat { border-radius: 16px 0 0 16px; background: #2a2b2e; }
