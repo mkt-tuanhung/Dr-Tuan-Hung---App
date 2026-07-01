@@ -244,7 +244,7 @@ const ComingSoon = ({ label }) => (
 const AdminDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('admin_active_tab') || 'overview');
+  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).get('meeting') ? 'meetings' : (localStorage.getItem('admin_active_tab') || 'overview')));
   const [hrInitialTab, setHrInitialTab] = useState('staff');
 
   useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
