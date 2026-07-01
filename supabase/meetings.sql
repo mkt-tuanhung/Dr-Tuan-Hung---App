@@ -38,3 +38,4 @@ drop policy if exists "meet_delete" on meetings;
 create policy "meet_delete" on meetings for delete using (created_by = auth.uid() or public.is_admin());
 
 do $$ begin alter publication supabase_realtime add table meetings; exception when duplicate_object then null; end $$;
+alter table meetings add column if not exists egress_id text;

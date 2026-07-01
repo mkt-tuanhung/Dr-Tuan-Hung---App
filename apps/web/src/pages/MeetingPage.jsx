@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { LiveKitRoom, VideoConference, useRoomContext } from '@livekit/components-react';
-import { RoomEvent } from 'livekit-client';
+import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
 import '@/styles/meeting-theme.css';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
-import { uploadViaPresign } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { Video, Plus, X, Loader2, Radio, Clock, LogIn, Circle, Square, Sparkles, FileText, Link2, CalendarClock } from 'lucide-react';
 
@@ -16,63 +14,32 @@ const ST = {
   ended: { label: 'Đã kết thúc', cls: 'bg-slate-100 text-slate-500' },
 };
 
-// Ghi âm cả phòng (trộn mic mình + tiếng mọi người) -> R2 -> AI biên bản
+// Ghi cuộc họp bằng LiveKit Egress (server-side) -> R2 -> webhook tự tạo biên bản
 function RoomRecorder({ meeting }) {
-  const room = useRoomContext();
   const [rec, setRec] = useState(false);
   const [busy, setBusy] = useState(false);
-  const ctx = useRef(null); const dest = useRef(null); const mr = useRef(null);
-  const chunks = useRef([]); const added = useRef(new Set());
+  const egId = useRef(null);
 
-  const addTrack = (mst) => {
-    if (!mst || added.current.has(mst.id) || !ctx.current) return;
-    added.current.add(mst.id);
-    try { ctx.current.createMediaStreamSource(new MediaStream([mst])).connect(dest.current); } catch { /* noop */ }
+  const start = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('livekit-egress', { body: { action: 'start', room: meeting.room_name, meetingId: meeting.id } });
+    setBusy(false);
+    if (error || data?.error) { toast.error('Không ghi được: ' + (error?.message || data?.error)); return; }
+    egId.current = data.egressId; setRec(true);
+    toast.success('Đang ghi cuộc họp (server) — rời máy vẫn ghi tiếp');
   };
-  const collect = () => {
-    room?.localParticipant?.audioTrackPublications?.forEach(p => p.track?.mediaStreamTrack && addTrack(p.track.mediaStreamTrack));
-    room?.remoteParticipants?.forEach(rp => rp.audioTrackPublications?.forEach(p => p.track?.mediaStreamTrack && addTrack(p.track.mediaStreamTrack)));
-  };
-  const onSub = (track) => { if (track.kind === 'audio') addTrack(track.mediaStreamTrack); };
-
-  const start = () => {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    ctx.current = new AC();
-    dest.current = ctx.current.createMediaStreamDestination();
-    added.current = new Set();
-    collect();
-    room?.on(RoomEvent.TrackSubscribed, onSub);
-    chunks.current = [];
-    const m = new MediaRecorder(dest.current.stream, { audioBitsPerSecond: 96000 });
-    m.ondataavailable = e => e.data.size > 0 && chunks.current.push(e.data);
-    m.start(1000);
-    mr.current = m; setRec(true);
-    toast.success('Đang ghi lại cuộc họp…');
-  };
-
   const stop = async () => {
     setBusy(true);
-    room?.off(RoomEvent.TrackSubscribed, onSub);
-    await new Promise(res => { mr.current.onstop = res; mr.current.stop(); });
-    try { if (ctx.current?.state !== 'closed') ctx.current.close(); } catch { /* noop */ }
-    setRec(false);
-    try {
-      const blob = new Blob(chunks.current, { type: mr.current.mimeType || 'audio/webm' });
-      const file = new File([blob], `meeting-${Date.now()}.webm`, { type: blob.type });
-      const url = await uploadViaPresign(file, 'meeting-audio');
-      const segs = [...(meeting.segment_urls || []), url];
-      await supabase.from('meetings').update({ segment_urls: segs, recording_url: url, ai_status: 'processing' }).eq('id', meeting.id);
-      toast.success('Đã lưu bản ghi — đang tạo biên bản AI…');
-      supabase.functions.invoke('analyze-meeting', { body: { meeting_id: meeting.id } });
-    } catch (e) { toast.error('Lỗi lưu bản ghi: ' + e.message); }
-    setBusy(false);
+    await supabase.functions.invoke('livekit-egress', { body: { action: 'stop', egressId: egId.current, meetingId: meeting.id } });
+    setBusy(false); setRec(false);
+    toast.success('Đã dừng ghi — biên bản AI sẽ tạo khi file sẵn sàng (~1–2 phút)');
   };
 
   return (
     <button onClick={rec ? stop : start} disabled={busy}
-      className={`fixed top-14 left-1/2 -translate-x-1/2 z-[95] px-4 h-10 rounded-full text-sm font-bold shadow-lg inline-flex items-center gap-2 disabled:opacity-60 ${rec ? 'bg-white text-rose-600' : 'bg-rose-600 text-white hover:bg-rose-700'}`}>
+      className={`fixed top-14 left-1/2 -translate-x-1/2 z-[95] px-4 h-10 rounded-full text-sm font-bold shadow-lg inline-flex items-center gap-2 disabled:opacity-60 transition ${rec ? 'bg-white text-rose-600 ring-2 ring-rose-300' : 'bg-rose-600 text-white hover:bg-rose-700'}`}>
       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : rec ? <Square className="w-4 h-4 fill-current" /> : <Circle className="w-4 h-4 fill-current" />}
-      {busy ? 'Đang lưu…' : rec ? 'Dừng & tạo biên bản' : 'Ghi lại cuộc họp'}
+      {busy ? 'Đang xử lý…' : rec ? 'Dừng ghi & tạo biên bản' : 'Ghi lại cuộc họp'}
     </button>
   );
 }
