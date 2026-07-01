@@ -311,7 +311,7 @@ const AdminDashboard = () => {
   const activeMenu = MENU.find(m => m.id === activeTab);
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#f0fdf4' }}>
+    <div className="min-h-screen flex" style={{ background: '#f3f6f5' }}>
 
       {/* Overlay */}
       {sidebarOpen && (
@@ -321,23 +321,23 @@ const AdminDashboard = () => {
       {/* Sidebar desktop */}
       <aside className={`
         fixed top-0 left-0 h-full w-64 z-30 flex flex-col
-        bg-white border-r border-teal-100 shadow-xl
+        bg-slate-900 border-r border-slate-800 shadow-2xl
         transform transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:relative lg:translate-x-0
       `}>
-        <div className="p-5 border-b border-teal-50">
+        <div className="p-5 border-b border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-md overflow-hidden p-1">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shadow-md overflow-hidden p-1">
                 <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <div className="font-bold text-slate-800 text-sm">Dr Tuấn Hùng</div>
-                <div className="text-xs text-teal-500">Internal System</div>
+                <div className="font-bold text-white text-sm">Dr Tuấn Hùng</div>
+                <div className="text-xs text-teal-400">Internal System</div>
               </div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600 p-1">
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white p-1">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -347,10 +347,10 @@ const AdminDashboard = () => {
           {MENU_GROUPS.map((group, gi) => {
             const gs = GROUP_STYLE[group.color] || {};
             return (
-            <div key={group.title || `g${gi}`} className={group.title ? `rounded-2xl p-1.5 ${gs.box}` : ''}>
+            <div key={group.title || `g${gi}`} className={group.title ? 'pt-3' : ''}>
               {group.title && (
-                <div className={`flex items-center gap-1.5 px-2.5 pt-1.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider ${gs.label}`}>
-                  <span className={`w-1 h-3 rounded-full ${gs.bar}`} />
+                <div className="flex items-center gap-2 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <span className={`w-1.5 h-1.5 rounded-full ${gs.bar}`} />
                   {group.title}
                 </div>
               )}
@@ -365,8 +365,8 @@ const AdminDashboard = () => {
                       className={`
                         w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
                         ${active
-                          ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200'
-                          : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
+                          ? 'bg-teal-500 text-white shadow-lg shadow-teal-900/40'
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
                         }
                       `}
                     >
@@ -394,17 +394,17 @@ const AdminDashboard = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top bar - chỉ desktop */}
-        <header className="hidden lg:flex items-center justify-between bg-white border-b border-teal-100 px-6 py-3 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
-            <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
+        <header className="hidden lg:flex items-center justify-between bg-white/85 backdrop-blur border-b border-slate-100 px-6 py-3.5 sticky top-0 z-10">
+          <div className="flex items-center gap-2.5">
+            {activeMenu && <span className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center"><activeMenu.icon className="w-4 h-4 text-teal-600" /></span>}
+            <span className="font-bold text-slate-800 text-[15px]">{activeMenu?.label}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <NotificationBell />
             <ProfileMenu mobile={false}>
-              <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+              <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 pr-3 rounded-full transition-colors border border-slate-100">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                   {profile?.full_name?.charAt(0) || 'A'}
                 </div>
                 <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
