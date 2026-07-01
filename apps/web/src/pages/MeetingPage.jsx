@@ -55,7 +55,7 @@ export default function MeetingPage() {
   const [room, setRoom] = useState(null);
   const [view, setView] = useState(null);     // xem biên bản
   const [q, setQ] = useState(''); const [answer, setAnswer] = useState(''); const [asking, setAsking] = useState(false);
-  const [showCreate, setShowCreate] = useState(false); const [showAsk, setShowAsk] = useState(false);
+  const [showCreate, setShowCreate] = useState(false); const [showAsk, setShowAsk] = useState(false); const [schedOn, setSchedOn] = useState(false);
   const [sheet, setSheet] = useState(null); const [filterTab, setFilterTab] = useState('all');
   const autoJoined = useRef(false);
 
@@ -228,9 +228,17 @@ export default function MeetingPage() {
         <Sheet title="Tạo cuộc họp" onClose={() => setShowCreate(false)}>
           <div className="space-y-3">
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Tên cuộc họp…" className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none" />
-            <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white/80 [color-scheme:dark] focus:border-emerald-400 outline-none" />
-            <button onClick={async () => { await createMeeting(!!schedAt); setShowCreate(false); }} disabled={creating} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedAt ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedAt ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
-            <p className="text-xs text-white/40 text-center">Để trống ngày giờ = họp ngay · Chọn ngày giờ = lên lịch</p>
+            <div className="grid grid-cols-2 gap-1.5 bg-white/5 border border-white/10 rounded-xl p-1">
+              <button onClick={() => { setSchedOn(false); setSchedAt(''); }} className={`h-9 rounded-lg text-sm font-semibold transition ${!schedOn ? 'bg-emerald-500 text-white shadow' : 'text-white/55 hover:text-white'}`}>Họp ngay</button>
+              <button onClick={() => setSchedOn(true)} className={`h-9 rounded-lg text-sm font-semibold transition ${schedOn ? 'bg-emerald-500 text-white shadow' : 'text-white/55 hover:text-white'}`}>Lên lịch</button>
+            </div>
+            {schedOn && (
+              <div>
+                <label className="block text-white/50 text-xs mb-1.5 px-0.5">Chọn ngày &amp; giờ họp</label>
+                <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white [color-scheme:dark] focus:border-emerald-400 outline-none" />
+              </div>
+            )}
+            <button onClick={async () => { await createMeeting(schedOn && !!schedAt); setShowCreate(false); }} disabled={creating || (schedOn && !schedAt)} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedOn ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedOn ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
           </div>
         </Sheet>
       )}
@@ -261,7 +269,7 @@ export default function MeetingPage() {
 
       {/* FAB tạo cuộc họp — góc dưới phải, thuận ngón cái (như Google Meet) */}
       {!showCreate && !showAsk && !sheet && !view && (
-        <button onClick={() => setShowCreate(true)} title="Tạo cuộc họp"
+        <button onClick={() => { setSchedOn(false); setSchedAt(''); setShowCreate(true); }} title="Tạo cuộc họp"
           className="fixed z-[60] bottom-20 lg:bottom-8 right-5 lg:right-8 w-14 h-14 rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-900/50 ring-4 ring-emerald-500/20 flex items-center justify-center hover:bg-emerald-600 hover:scale-105 active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
