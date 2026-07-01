@@ -143,54 +143,26 @@ export default function MeetingPage() {
   const initial = (n) => (n || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div className="-m-4 lg:-m-6 p-4 lg:p-6 min-h-[calc(100vh-3.25rem)] space-y-5" style={{ background: 'radial-gradient(130% 90% at 50% -10%, #123a29 0%, #0b1712 55%, #070b09 100%)' }}>
-      <div className="relative overflow-hidden rounded-3xl p-6 shadow-2xl shadow-emerald-900/40 text-white" style={{ background: 'linear-gradient(135deg, #1fa25a 0%, #157a48 55%, #0d5636 100%)' }}>
-        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-14 left-24 w-40 h-40 rounded-full bg-emerald-200/20 blur-3xl" />
-        <div className="relative">
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-2 text-white/85 text-sm font-medium"><span className="w-9 h-9 rounded-2xl bg-white/15 flex items-center justify-center mtg-float"><Video className="w-5 h-5" /></span> Phòng họp</div>
-            <span className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center"><Radio className="w-4 h-4" /></span>
+    <div className="-m-4 lg:-m-6 p-4 lg:p-6 min-h-[calc(100vh-3.25rem)]" style={{ background: 'radial-gradient(130% 90% at 50% -10%, #123a29 0%, #0b1712 55%, #070b09 100%)' }}>
+      <div className="max-w-7xl mx-auto grid lg:grid-cols-[1fr_360px] gap-5 items-start">
+
+        {/* CỘT TRÁI: danh sách cuộc họp */}
+        <div className="order-2 lg:order-1 space-y-4 min-w-0">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-white font-bold text-xl">Cuộc họp</h2>
+            <span className="text-white/40 text-sm">{meetings.length} cuộc</span>
           </div>
-          <div className="mt-5 text-white/70 text-sm">Tổng cuộc họp</div>
-          <div className="text-4xl font-bold leading-none mt-1">{meetings.length}</div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            {liveCount > 0 && <span className="px-2.5 py-1 rounded-full bg-rose-500 text-white font-semibold inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-white mtg-live-dot" />{liveCount} đang họp</span>}
-            <span className="text-white/70">Họp video · ghi lại · AI biên bản, PRD &amp; việc cần làm</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-2.5">
-        <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><Sparkles className="w-4 h-4" /> Hỏi kho biên bản (AI) <span className="text-[11px] font-normal text-white/40">— tra cứu mọi cuộc họp cũ</span></div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && askAI()} placeholder="VD: Tháng trước chốt gì về giá dịch vụ? Ai phụ trách việc X?" className="flex-1 px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none transition" />
-          <button onClick={askAI} disabled={asking} className="h-11 px-6 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2 whitespace-nowrap">{asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Hỏi AI</button>
-        </div>
-        {answer && <div className="mtg-in text-sm text-slate-200 bg-white/5 border border-white/10 rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed">{answer}</div>}
-      </div>
-
-      <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-2.5">
-        <div className="flex items-center gap-2 text-sm font-bold text-white/90"><span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center"><Plus className="w-4 h-4 text-emerald-300" /></span> Tạo cuộc họp mới</div>
-        <input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && createMeeting(!!schedAt)} placeholder="Tên cuộc họp…" className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none transition" />
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="flex-1 px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white/80 [color-scheme:dark] focus:border-emerald-400 outline-none" />
-          <button onClick={() => createMeeting(!!schedAt)} disabled={creating} className="h-11 px-6 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2 whitespace-nowrap">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedAt ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedAt ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
-        </div>
-        <p className="text-xs text-white/40">Để trống ngày giờ = họp ngay. Chọn ngày giờ = lên lịch, rồi bấm <b className="text-white/60">Copy link</b> ở thẻ để gửi mọi người.</p>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center h-40 items-center"><div className="w-7 h-7 border-4 border-white/15 border-t-emerald-400 rounded-full animate-spin" /></div>
-      ) : sorted.length === 0 ? (
-        <div className="bg-white/[0.03] rounded-2xl border border-dashed border-white/10 p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3"><Video className="w-7 h-7 text-emerald-300" /></div>
-          <div className="text-white/70 font-semibold">Chưa có cuộc họp nào</div>
-          <div className="text-white/40 text-sm mt-1">Tạo cuộc họp mới ở trên để bắt đầu.</div>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {sorted.map((m, i) => {
+          {loading ? (
+            <div className="flex justify-center h-40 items-center"><div className="w-7 h-7 border-4 border-white/15 border-t-emerald-400 rounded-full animate-spin" /></div>
+          ) : sorted.length === 0 ? (
+            <div className="bg-white/[0.03] rounded-2xl border border-dashed border-white/10 p-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3"><Video className="w-7 h-7 text-emerald-300" /></div>
+              <div className="text-white/70 font-semibold">Chưa có cuộc họp nào</div>
+              <div className="text-white/40 text-sm mt-1">Tạo cuộc họp ở cột bên phải để bắt đầu.</div>
+            </div>
+          ) : (
+            <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
+              {sorted.map((m, i) => {
             const live = m.status === 'live';
             return (
             <div key={m.id} className="mtg-card mtg-in rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl p-5 pt-6 flex flex-col relative overflow-hidden" style={{ animationDelay: `${Math.min(i, 12) * 55}ms` }}>
@@ -218,8 +190,45 @@ export default function MeetingPage() {
               </div>
             </div>
           );})}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* CỘT PHẢI: hero + tạo họp + hỏi AI */}
+        <div className="order-1 lg:order-2 space-y-4 lg:sticky lg:top-4 min-w-0">
+          <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-xl shadow-emerald-900/40" style={{ background: 'linear-gradient(135deg, #1fa25a 0%, #157a48 55%, #0d5636 100%)' }}>
+            <div className="absolute -top-10 -right-6 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-white/85 text-sm font-medium"><Video className="w-4 h-4" /> Phòng họp</span>
+                <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center mtg-float"><Radio className="w-4 h-4" /></span>
+              </div>
+              <div className="mt-4 text-white/70 text-xs">Tổng cuộc họp</div>
+              <div className="text-4xl font-bold leading-none mt-0.5">{meetings.length}</div>
+              <div className="mt-3 text-[11px]">
+                {liveCount > 0
+                  ? <span className="px-2.5 py-1 rounded-full bg-rose-500 font-semibold inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-white mtg-live-dot" />{liveCount} đang họp</span>
+                  : <span className="text-white/60">Không có cuộc đang họp</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-2.5">
+            <div className="flex items-center gap-2 text-sm font-bold text-white/90"><span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center"><Plus className="w-4 h-4 text-emerald-300" /></span> Tạo cuộc họp mới</div>
+            <input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && createMeeting(!!schedAt)} placeholder="Tên cuộc họp…" className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none transition" />
+            <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white/80 [color-scheme:dark] focus:border-emerald-400 outline-none" />
+            <button onClick={() => createMeeting(!!schedAt)} disabled={creating} className="w-full h-11 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedAt ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedAt ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
+            <p className="text-xs text-white/40">Để trống ngày giờ = họp ngay. Chọn ngày giờ = lên lịch, rồi bấm <b className="text-white/60">Copy link</b> ở thẻ.</p>
+          </div>
+
+          <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-2.5">
+            <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><Sparkles className="w-4 h-4" /> Hỏi kho biên bản (AI)</div>
+            <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && askAI()} placeholder="VD: Tháng trước chốt gì về giá dịch vụ?" className="w-full px-3.5 py-2.5 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/35 focus:border-emerald-400 outline-none transition" />
+            <button onClick={askAI} disabled={asking} className="w-full h-11 rounded-xl bg-emerald-500/90 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition disabled:opacity-50 inline-flex items-center justify-center gap-2">{asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Hỏi AI</button>
+            {answer && <div className="mtg-in text-sm text-slate-200 bg-white/5 border border-white/10 rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">{answer}</div>}
+          </div>
+        </div>
+      </div>
 
       {view && <MinutesModal m={view} onClose={() => setView(null)} onReanalyze={() => { reanalyze(view); setView(null); }} />}
     </div>
