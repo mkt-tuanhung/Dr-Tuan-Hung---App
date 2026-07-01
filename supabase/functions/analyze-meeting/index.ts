@@ -65,6 +65,24 @@ Deno.serve(async (req) => {
     const result = JSON.parse(cj.choices[0].message.content);
 
     await supabase.from('meetings').update({ transcript, ai_result: result, ai_status: 'done' }).eq('id', id);
+
+    // Đẩy "việc cần làm" cho từng nhân sự (khớp tên) -> notifications -> Telegram tự bắn qua webhook
+    try {
+      const items = Array.isArray(result.action_items) ? result.action_items : [];
+      const named = items.filter((it: { assignee?: string }) => it.assignee && String(it.assignee).trim());
+      if (named.length) {
+        const { data: profs } = await supabase.from('profiles').select('id, full_name').eq('is_active', true);
+        const norm = (s: string) => (s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+        const notifs: Record<string, unknown>[] = [];
+        for (const it of named) {
+          const a = norm(it.assignee);
+          const p = (profs || []).find((x: { full_name?: string }) => { const f = norm(x.full_name || ''); return f && (f === a || f.includes(a) || a.includes(f)); });
+          if (p) notifs.push({ user_id: (p as { id: string }).id, actor_id: m.created_by, type: 'meeting_task', title: 'Việc cần làm — họp: ' + m.title, body: it.task + (it.due ? ` (hạn: ${it.due})` : ''), link: 'meetings' });
+        }
+        if (notifs.length) await supabase.from('notifications').insert(notifs);
+      }
+    } catch (_) { /* không chặn luồng chính */ }
+
     return json({ ok: true });
   } catch (e) {
     if (id) await supabase.from('meetings').update({ ai_status: 'error', ai_result: { error: (e as Error).message } }).eq('id', id);

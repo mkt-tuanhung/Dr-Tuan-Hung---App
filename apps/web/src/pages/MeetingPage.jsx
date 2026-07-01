@@ -87,6 +87,7 @@ export default function MeetingPage() {
   const [joining, setJoining] = useState(null);
   const [room, setRoom] = useState(null);
   const [view, setView] = useState(null);     // xem biên bản
+  const [q, setQ] = useState(''); const [answer, setAnswer] = useState(''); const [asking, setAsking] = useState(false);
   const autoJoined = useRef(false);
 
   const load = useCallback(async () => {
@@ -138,6 +139,16 @@ export default function MeetingPage() {
     setJoining(null);
   };
 
+  const askAI = async () => {
+    if (!q.trim()) return;
+    setAsking(true); setAnswer('');
+    const { data, error } = await supabase.functions.invoke('ask-meetings', { body: { question: q } });
+    setAsking(false);
+    if (error) { toast.error(error.message); return; }
+    if (data?.error) { toast.error(data.error); return; }
+    setAnswer(data.answer || '');
+  };
+
   const leave = () => { setRoom(null); load(); };
   const endMeeting = async (m) => { await supabase.from('meetings').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', m.id); toast.success('Đã kết thúc cuộc họp'); load(); };
   const reanalyze = (m) => { supabase.from('meetings').update({ ai_status: 'processing' }).eq('id', m.id); supabase.functions.invoke('analyze-meeting', { body: { meeting_id: m.id } }).then(load); toast.success('Đang tạo lại biên bản…'); };
@@ -180,6 +191,15 @@ export default function MeetingPage() {
             {liveCount > 0 && <div className="text-center px-4 py-2 rounded-2xl bg-rose-500/90 shadow-lg shadow-rose-900/20"><div className="text-2xl font-bold leading-none">{liveCount}</div><div className="text-[11px] text-white/90 mt-1">đang họp</div></div>}
           </div>
         </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-violet-50 to-white rounded-2xl border border-violet-100 shadow-sm p-4 space-y-2.5">
+        <div className="flex items-center gap-2 text-sm font-bold text-violet-800"><Sparkles className="w-4 h-4" /> Hỏi kho biên bản (AI) <span className="text-[11px] font-normal text-violet-400">— tra cứu mọi cuộc họp cũ</span></div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && askAI()} placeholder="VD: Tháng trước chốt gì về giá dịch vụ? Ai phụ trách việc X?" className="flex-1 px-3.5 py-2.5 text-[15px] rounded-xl border border-violet-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition" />
+          <button onClick={askAI} disabled={asking} className="h-11 px-6 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 active:scale-[0.98] transition shadow-sm shadow-violet-500/25 disabled:opacity-50 inline-flex items-center justify-center gap-2 whitespace-nowrap">{asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Hỏi AI</button>
+        </div>
+        {answer && <div className="mtg-in text-sm text-slate-700 bg-white border border-violet-100 rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed">{answer}</div>}
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-2.5">
