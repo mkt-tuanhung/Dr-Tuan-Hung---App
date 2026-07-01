@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
-  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard,
+  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
   Trophy, Scissors, CheckCircle2, Database, UserCheck
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
@@ -14,6 +14,7 @@ import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
 import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
 import TelesaleStaffKPI from '@/components/kpi/TelesaleStaffKPI.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
+import MeetingPage from '@/pages/MeetingPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
@@ -50,6 +51,7 @@ const FULL_MENU = [
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
   { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
+  { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
@@ -368,6 +370,7 @@ const StaffDashboard = () => {
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
+    if (activeTab === 'meetings') return <MeetingPage />;
     return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 

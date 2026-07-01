@@ -23,13 +23,14 @@ import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
 import MarketingHubPage from '@/pages/MarketingHubPage.jsx';
 import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
 import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
+import MeetingPage from '@/pages/MeetingPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -58,6 +59,7 @@ const MENU_GROUPS = [
     { id: 'marketing', label: 'Marketing / Ads', icon: Target },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
+    { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
@@ -294,6 +296,7 @@ const AdminDashboard = () => {
       case 'finance': return <FinanceManagementPage />;
       case 'kpi': return <KPIManagementPage />;
       case 'payroll': return <PayrollPage />;
+      case 'meetings': return <MeetingPage />;
       case 'community': return <CommunityPage />;
       case 'notifications': return <NotificationsPage />;
       case 'marketing': return <MarketingHubPage />;
