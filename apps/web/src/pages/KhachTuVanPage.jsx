@@ -491,7 +491,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
   return (
   <div className="fx-glass relative overflow-hidden rounded-3xl p-5">
     <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${stripCls[r.status] || 'from-slate-300 to-slate-400'}`} />
-    <div className="flex items-start gap-3.5">
+    <div className="flex items-start gap-3.5 flex-wrap">
       <div className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-lg">{initials(r.customer_name)}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
@@ -500,12 +500,12 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
         </div>
         <div className="text-sm text-slate-400 flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" strokeWidth={1.75} /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-500">{dOnly(r.appointment_date)}</span>}</div>
       </div>
-      {/* Nút nhỏ (icon) — nhường chỗ cho nội dung */}
+      {/* Nút gọn nhưng nổi bật — nhãn + màu rõ */}
       {canWrite && (
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button title="Hồ sơ tư vấn" onClick={() => onConsult(r)} className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/15 text-slate-200 hover:bg-white/10 transition"><FileText className="w-4 h-4" strokeWidth={1.75} /></button>
-          <button title="Ghi âm" onClick={() => onRec(r)} className="w-9 h-9 rounded-xl flex items-center justify-center border border-rose-400/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition"><Mic className="w-4 h-4" strokeWidth={1.75} /></button>
-          {r.status === 'scheduled' && <button title="Đánh giá" onClick={() => onEval(r)} className="fx-btn-primary h-9 px-3.5 rounded-xl text-white text-sm font-bold inline-flex items-center gap-1.5"><ClipboardCheck className="w-4 h-4" strokeWidth={2} />Đánh giá</button>}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <button title="Hồ sơ tư vấn" onClick={() => onConsult(r)} className="h-9 px-3 rounded-xl inline-flex items-center gap-1.5 bg-white/12 border border-white/25 text-white text-[13px] font-bold hover:bg-white/20 transition"><FileText className="w-4 h-4" strokeWidth={2} />Hồ sơ</button>
+          <button title="Ghi âm cuộc tư vấn" onClick={() => onRec(r)} className="h-9 px-3 rounded-xl inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white text-[13px] font-bold shadow-lg shadow-rose-500/40 hover:brightness-110 transition"><span className="relative flex w-2 h-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/80" /><span className="relative inline-flex rounded-full w-2 h-2 bg-white" /></span><Mic className="w-4 h-4" strokeWidth={2} />Ghi âm</button>
+          {r.status === 'scheduled' && <button title="Đánh giá" onClick={() => onEval(r)} className="fx-btn-primary h-9 px-3.5 rounded-xl text-white text-[13px] font-bold inline-flex items-center gap-1.5"><ClipboardCheck className="w-4 h-4" strokeWidth={2} />Đánh giá</button>}
         </div>
       )}
     </div>
