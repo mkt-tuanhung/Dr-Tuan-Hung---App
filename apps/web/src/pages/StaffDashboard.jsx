@@ -6,7 +6,7 @@ import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
-  Trophy, Scissors, CheckCircle2, Database, UserCheck
+  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -17,6 +17,7 @@ import CommunityPage from '@/pages/CommunityPage.jsx';
 import MeetingPage from '@/pages/MeetingPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
+import PLPage from '@/pages/PLPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
@@ -58,6 +59,7 @@ const FULL_MENU = [
   { id: 'content',    label: 'Sản xuất Ads',     icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
   { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
+  { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin'] },
   { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin'] },
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong'] },
@@ -355,6 +357,7 @@ const StaffDashboard = () => {
       );
     }
     if (activeTab === 'finance') return <FinanceManagementPage />;
+    if (activeTab === 'pl') return <PLPage />;
     if (activeTab === 'appointments') return <AppointmentManagementPage setActiveTab={setActiveTab} />;
     if (activeTab === 'khach_coc') return <KhachCocPage setActiveTab={setActiveTab} />;
     if (activeTab === 'khach_bong') return <KhachBongPage setActiveTab={setActiveTab} />;
