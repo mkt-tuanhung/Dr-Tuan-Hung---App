@@ -235,7 +235,11 @@ export default function MeetingPage() {
             {schedOn && (
               <div>
                 <label className="block text-white/50 text-xs mb-1.5 px-0.5">Chọn ngày &amp; giờ họp</label>
-                <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="block w-full min-w-0 max-w-full box-border appearance-none px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white [color-scheme:dark] focus:border-emerald-400 outline-none" />
+                <label className="relative flex items-center justify-between gap-2 w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 focus-within:border-emerald-400 cursor-pointer">
+                  <span className={schedAt ? 'text-white' : 'text-white/40'}>{schedAt ? new Date(schedAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Chọn ngày & giờ họp'}</span>
+                  <CalendarClock className="w-4 h-4 text-white/40 shrink-0" />
+                  <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 [color-scheme:dark] cursor-pointer" />
+                </label>
               </div>
             )}
             <button onClick={async () => { await createMeeting(schedOn && !!schedAt); setShowCreate(false); }} disabled={creating || (schedOn && !schedAt)} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedOn ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedOn ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
