@@ -1,0 +1,76 @@
+/* ============================================================
+   FINTECH DESIGN SYSTEM — Dr Tuấn Hùng App
+   Gu: hiện đại, có chiều sâu, sang trọng. Dùng lại toàn app.
+   Nguyên tắc: đổ bóng mềm nhiều lớp thay cho viền cứng, panel tối
+   cao cấp cho vùng tổng quan, ô "kính" (glass) cho số liệu, nút có
+   khối. Tránh cảm giác "khối vuông phẳng" mặc định.
+   ============================================================ */
+
+:root {
+  /* Nền tối cao cấp (hero / panel tổng quan) */
+  --fx-ink-900: #0b1220;
+  --fx-ink-800: #101c33;
+
+  /* Đổ bóng mềm nhiều lớp — chữ ký fintech */
+  --fx-shadow-sm: 0 1px 2px rgba(15, 23, 42, .04), 0 1px 3px rgba(15, 23, 42, .06);
+  --fx-shadow:    0 2px 4px rgba(15, 23, 42, .04), 0 10px 26px -8px rgba(15, 23, 42, .12);
+  --fx-shadow-lg: 0 4px 8px rgba(15, 23, 42, .05), 0 28px 52px -14px rgba(15, 23, 42, .20);
+  --fx-shadow-ink: 0 24px 50px -18px rgba(11, 18, 32, .60);
+}
+
+/* -------- Panel tối cao cấp (hero) -------- */
+.fx-hero {
+  position: relative;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(20, 184, 166, .30) 0%, rgba(20, 184, 166, 0) 46%),
+    radial-gradient(120% 120% at 0% 100%, rgba(56, 189, 248, .16) 0%, rgba(56, 189, 248, 0) 52%),
+    linear-gradient(135deg, #0d1526 0%, #101c33 55%, #0b1220 100%);
+  box-shadow: var(--fx-shadow-ink);
+  overflow: hidden;
+}
+/* đường highlight mảnh chạy dọc mép trên */
+.fx-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .28), transparent);
+}
+
+/* -------- Ô "kính" đặt trong hero -------- */
+.fx-tile {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .10);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background .2s ease, border-color .2s ease;
+}
+.fx-tile:hover {
+  background: rgba(255, 255, 255, .10);
+  border-color: rgba(255, 255, 255, .18);
+}
+
+/* -------- Thẻ nổi trên nền sáng -------- */
+.fx-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, .06);
+  box-shadow: var(--fx-shadow-sm);
+  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+}
+.fx-card:hover {
+  box-shadow: var(--fx-shadow);
+  transform: translateY(-2px);
+  border-color: rgba(20, 184, 166, .28);
+}
+
+/* -------- Nút nhấn chính có khối -------- */
+.fx-btn-primary {
+  background: linear-gradient(180deg, #16c2ad 0%, #0f9e8c 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 22px -10px rgba(15, 118, 110, .65);
+  transition: filter .2s ease, transform .1s ease;
+}
+.fx-btn-primary:hover { filter: brightness(1.05); }
+.fx-btn-primary:active { transform: scale(.985); }
+
+/* -------- Số liệu canh cột đều -------- */
+.fx-num { font-variant-numeric: tabular-nums; letter-spacing: -.01em; }

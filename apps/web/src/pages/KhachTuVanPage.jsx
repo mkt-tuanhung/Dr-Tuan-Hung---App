@@ -18,7 +18,6 @@ const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-s
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
-const avatarBg = () => 'bg-teal-500';
 const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-teal-600 border-teal-300 bg-teal-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Bôi đỏ/đậm các câu AI thấy chưa phù hợp trong văn bản
@@ -114,22 +113,52 @@ const KhachTuVanPage = () => {
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
   const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-teal-100 text-teal-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
 
+  // Số liệu tổng quan cho hero
+  const stat = {
+    total: visible.length,
+    coc: rows.filter(r => r.status === 'coc').length,
+    pt: rows.filter(r => r.status === 'phau_thuat').length,
+  };
+  const aiAvg = (() => { const a = recs.filter(r => r.ai_score != null && !r.deleted_at); return a.length ? a.reduce((s, r) => s + Number(r.ai_score || 0), 0) / a.length : null; })();
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20"><UserCheck className="w-6 h-6 text-white" /></div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 leading-tight">Khách tư vấn</h2>
-            <p className="text-slate-400 text-sm">Tiếp nhận tư vấn trực tiếp · hồ sơ, ghi âm, đánh giá</p>
+      <div className="fx-hero rounded-3xl p-5 sm:p-6">
+        <div className="relative flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur"><UserCheck className="w-6 h-6 text-teal-300" /></div>
+            <div>
+              <h2 className="text-2xl font-bold text-white leading-tight tracking-tight">Khách tư vấn</h2>
+              <p className="text-slate-300/70 text-sm">Tiếp nhận trực tiếp · hồ sơ · ghi âm · đánh giá AI</p>
+            </div>
           </div>
+          {!loading && isAdmin && trash.length > 0 && (
+            <button onClick={() => setTrashOpen(true)} className="fx-tile text-sm font-semibold text-slate-200 px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>
+          )}
         </div>
+
         {!loading && (
-          <div className="flex items-center gap-2">
-            {isAdmin && trash.length > 0 && <button onClick={() => setTrashOpen(true)} className="text-sm font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>}
-            <span className="text-sm font-semibold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full">{visible.length} khách</span>
+          <div className="relative mt-5 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {[
+              { label: 'Tổng khách', value: stat.total, sub: 'đang theo dõi', accent: 'text-white' },
+              { label: 'Đã cọc', value: stat.coc, sub: 'chờ lên mổ', accent: 'text-cyan-300' },
+              { label: 'Phẫu thuật', value: stat.pt, sub: 'đã chốt', accent: 'text-teal-300' },
+              { label: 'Điểm tư vấn TB', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: aiAvg != null ? 'AI chấm · /10' : 'chưa có', accent: 'text-amber-300' },
+            ].map(t => (
+              <div key={t.label} className="fx-tile rounded-2xl p-3.5">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{t.label}</div>
+                <div className={`fx-num text-2xl font-bold mt-1 ${t.accent}`}>{t.value}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">{t.sub}</div>
+              </div>
+            ))}
           </div>
         )}
+
+        <div className="relative mt-4">
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl bg-white/10 border border-white/10 text-white placeholder-slate-400 focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/20 outline-none backdrop-blur transition" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>}
+        </div>
       </div>
 
       {lb.length > 0 && (
@@ -147,12 +176,6 @@ const KhachTuVanPage = () => {
         </div>
       )}
 
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl border border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none bg-white shadow-sm transition" />
-        {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X className="w-4 h-4" /></button>}
-      </div>
-
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : visible.length === 0 ? (
@@ -169,9 +192,9 @@ const KhachTuVanPage = () => {
           {items.map(r => {
             const rs = recsOf(r.id);
             return (
-            <div key={r.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-teal-100 transition-all p-4 flex flex-col">
+            <div key={r.id} className="group fx-card rounded-2xl p-4 flex flex-col">
               <div className="flex items-start gap-3">
-                <div className={`w-11 h-11 shrink-0 rounded-xl ${avatarBg(r.customer_name)} text-white flex items-center justify-center font-bold text-base shadow-sm`}>{initials(r.customer_name)}</div>
+                <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-base shadow-sm shadow-teal-500/25">{initials(r.customer_name)}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <div className="font-bold text-slate-800 text-[17px] truncate flex-1">{r.customer_name}</div>
@@ -233,7 +256,7 @@ const KhachTuVanPage = () => {
                   <button onClick={() => setConsultFor(r)} className="h-11 text-sm font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" />Hồ sơ tư vấn</button>
                   <button onClick={() => setRecFor(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" />Ghi âm</button>
                   {r.status === 'scheduled'
-                    ? <button onClick={() => setEvalFor(r)} className="col-span-2 h-11 text-base font-bold text-white rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-sm shadow-teal-500/20 inline-flex items-center justify-center gap-1.5 transition"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
+                    ? <button onClick={() => setEvalFor(r)} className="fx-btn-primary col-span-2 h-11 text-base font-bold text-white rounded-xl inline-flex items-center justify-center gap-1.5"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
                     : <div className="col-span-2 h-11 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border border-slate-200">✓ Đã đánh giá · {ST[r.status]?.label || r.status}</div>}
                 </div>
               )}
