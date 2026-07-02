@@ -60,9 +60,9 @@ const FULL_MENU = [
   { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
   { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
-  { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin'] },
-  { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin'] },
-  { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong'] },
+  { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin', 'shareholder'] },
+  { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin', 'shareholder'] },
+  { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong', 'shareholder'] },
 
   // CRM
   { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['accountant'] },
