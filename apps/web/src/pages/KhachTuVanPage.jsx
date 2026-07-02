@@ -126,7 +126,7 @@ const KhachTuVanPage = () => {
       <div className="fx-hero rounded-3xl p-5 sm:p-6">
         <div className="relative flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur"><UserCheck className="w-6 h-6 text-teal-300" /></div>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur"><UserCheck className="w-6 h-6 text-teal-300" strokeWidth={1.75} /></div>
             <div>
               <h2 className="text-2xl font-bold text-white leading-tight tracking-tight">Khách tư vấn</h2>
               <p className="text-slate-300/70 text-sm">Tiếp nhận trực tiếp · hồ sơ · ghi âm · đánh giá AI</p>
@@ -155,7 +155,7 @@ const KhachTuVanPage = () => {
         )}
 
         <div className="relative mt-4">
-          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.75} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl bg-white/10 border border-white/10 text-white placeholder-slate-400 focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/20 outline-none backdrop-blur transition" />
           {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>}
         </div>
@@ -253,10 +253,10 @@ const KhachTuVanPage = () => {
 
               {canWrite && (
                 <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
-                  <button onClick={() => setConsultFor(r)} className="h-11 text-sm font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" />Hồ sơ tư vấn</button>
-                  <button onClick={() => setRecFor(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" />Ghi âm</button>
+                  <button onClick={() => setConsultFor(r)} className="h-11 text-sm font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" strokeWidth={1.75} />Hồ sơ tư vấn</button>
+                  <button onClick={() => setRecFor(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" strokeWidth={1.75} />Ghi âm</button>
                   {r.status === 'scheduled'
-                    ? <button onClick={() => setEvalFor(r)} className="fx-btn-primary col-span-2 h-11 text-base font-bold text-white rounded-xl inline-flex items-center justify-center gap-1.5"><ClipboardCheck className="w-4 h-4" />Đánh giá</button>
+                    ? <button onClick={() => setEvalFor(r)} className="fx-btn-primary group col-span-2 h-12 text-base font-bold text-white rounded-2xl inline-flex items-center justify-between pl-5 pr-2.5"><span>Đánh giá</span><span className="fx-btn-icon w-8 h-8 rounded-full inline-flex items-center justify-center"><ClipboardCheck className="w-4 h-4" strokeWidth={2} /></span></button>
                     : <div className="col-span-2 h-11 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border border-slate-200">✓ Đã đánh giá · {ST[r.status]?.label || r.status}</div>}
                 </div>
               )}
