@@ -8,7 +8,7 @@ import { uploadViaPresign } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Video, Plus, X, Loader2, Radio, LogIn, Circle, Square, Sparkles, FileText, Link2, CalendarClock, ChevronRight } from 'lucide-react';
+import { Video, Plus, X, Loader2, Radio, LogIn, Circle, Square, Sparkles, FileText, Link2, CalendarClock, ChevronRight, Trash2 } from 'lucide-react';
 
 const ST = {
   scheduled: { label: 'Sắp diễn ra', cls: 'bg-amber-400/15 text-amber-300' },
@@ -153,6 +153,12 @@ export default function MeetingPage() {
 
   const leave = () => { setRoom(null); load(); };
   const endMeeting = async (m) => { await supabase.from('meetings').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', m.id); toast.success('Đã kết thúc cuộc họp'); load(); };
+  const delMeeting = async (m) => {
+    if (!window.confirm(`Xoá cuộc họp “${m.title}”? Không thể khôi phục.`)) return;
+    const { error } = await supabase.from('meetings').delete().eq('id', m.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã xoá cuộc họp'); setSheet(null); load();
+  };
   const reanalyze = (m) => { supabase.from('meetings').update({ ai_status: 'processing' }).eq('id', m.id); supabase.functions.invoke('analyze-meeting', { body: { meeting_id: m.id } }).then(load); toast.success('Đang tạo lại biên bản…'); };
 
   if (room) {
@@ -298,6 +304,7 @@ export default function MeetingPage() {
             {sheet.status !== 'ended' && <button onClick={() => copyLink(sheet)} className="w-full h-12 rounded-xl bg-sky-500/15 text-sky-200 border border-sky-400/25 font-bold hover:bg-sky-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Link2 className="w-4 h-4" /> Copy link phòng họp</button>}
             {sheet.ai_status === 'done' && <button onClick={() => { setSheet(null); setView(sheet); }} className="w-full h-12 rounded-xl bg-violet-500/15 text-violet-200 border border-violet-400/25 font-bold hover:bg-violet-500/25 active:scale-[0.98] transition inline-flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Xem biên bản AI</button>}
             {sheet.status === 'live' && isOwner(sheet) && <button onClick={() => { endMeeting(sheet); setSheet(null); }} className="w-full h-12 rounded-xl bg-rose-500/15 text-rose-200 border border-rose-400/25 font-bold hover:bg-rose-500/25 active:scale-[0.98] transition">Kết thúc cuộc họp</button>}
+            {isOwner(sheet) && <button onClick={() => delMeeting(sheet)} className="w-full h-11 rounded-xl text-rose-300/70 text-sm font-semibold hover:bg-rose-500/10 active:scale-[0.98] transition inline-flex items-center justify-center gap-2 mt-1"><Trash2 className="w-4 h-4" /> Xoá cuộc họp</button>}
           </div>
         </Sheet>
       )}
