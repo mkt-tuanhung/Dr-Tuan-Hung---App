@@ -107,5 +107,36 @@
 }
 .group:hover .fx-btn-icon { transform: translate(2px, -1px) scale(1.06); }
 
+/* ============================================================
+   DARK GLASS — tông tối gradient liền mạch, tách khối bằng KÍNH
+   + viền mảnh (KHÔNG đổ bóng, tránh cảm giác rời rạc).
+   ============================================================ */
+
+/* Nền tối liền mạch cho cả trang */
+.fx-shell {
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(20, 184, 166, .20) 0%, rgba(20, 184, 166, 0) 45%),
+    radial-gradient(100% 100% at 0% 100%, rgba(56, 189, 248, .12) 0%, rgba(56, 189, 248, 0) 50%),
+    linear-gradient(160deg, #0d1526 0%, #0f1a2f 55%, #0b1220 100%);
+}
+
+/* Panel kính trên nền tối — chỉ viền tóc + highlight trong, KHÔNG bóng */
+.fx-glass {
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.fx-glass-hover { transition: background .25s var(--fx-ease), border-color .25s var(--fx-ease); }
+.fx-glass-hover:hover { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); }
+
+/* Trạng thái đang chọn — sáng hơn + viền teal, vẫn không đổ bóng */
+.fx-glass-active {
+  background: rgba(255, 255, 255, .10);
+  border: 1px solid rgba(20, 184, 166, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), inset 0 0 0 1px rgba(20, 184, 166, .25);
+}
+
 /* -------- Số liệu canh cột đều -------- */
 .fx-num { font-variant-numeric: tabular-nums; letter-spacing: -.01em; }

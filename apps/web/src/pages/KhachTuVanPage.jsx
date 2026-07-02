@@ -128,8 +128,8 @@ const KhachTuVanPage = () => {
   const aiAvg = (() => { const a = recs.filter(r => r.ai_score != null && !r.deleted_at); return a.length ? a.reduce((s, r) => s + Number(r.ai_score || 0), 0) / a.length : null; })();
 
   return (
-    <div className="space-y-4">
-      <div className="fx-hero rounded-3xl p-5 sm:p-6">
+    <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-200">
+      <div className="relative">
         <div className="relative flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur"><UserCheck className="w-6 h-6 text-teal-300" strokeWidth={1.75} /></div>
@@ -168,13 +168,13 @@ const KhachTuVanPage = () => {
       </div>
 
       {lb.length > 0 && (
-        <div className="bg-gradient-to-br from-amber-50 to-white rounded-2xl border border-amber-100 shadow-sm p-4">
-          <h3 className="font-bold text-amber-700 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI)</h3>
+        <div className="fx-glass rounded-2xl p-4">
+          <h3 className="font-bold text-amber-300 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI)</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {lb.map((e, i) => (
-              <div key={e.id} className="flex items-center gap-2.5 bg-white rounded-xl px-3 py-2 border border-amber-50">
-                <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'bg-slate-100 text-slate-500'}`}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
-                <span className="text-sm font-semibold text-slate-700 truncate flex-1 min-w-0">{e.name}</span>
+              <div key={e.id} className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+                <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'bg-white/10 text-slate-300'}`}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
+                <span className="text-sm font-semibold text-slate-200 truncate flex-1 min-w-0">{e.name}</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreCls(e.avg)}`}>{e.avg.toFixed(1)}<span className="opacity-60">/10</span></span>
               </div>
             ))}
@@ -185,7 +185,7 @@ const KhachTuVanPage = () => {
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : visible.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-400">Chưa có khách tư vấn. Vào Lịch hẹn bấm “Tiếp nhận tư vấn”.</div>
+        <div className="fx-glass rounded-2xl p-10 text-center text-slate-400">Chưa có khách tư vấn. Vào Lịch hẹn bấm “Tiếp nhận tư vấn”.</div>
       ) : (
         <div className="lg:grid lg:grid-cols-[minmax(300px,360px)_1fr] lg:gap-5 lg:items-start">
           {/* MASTER — danh sách gọn, scan nhanh */}
@@ -204,14 +204,14 @@ const KhachTuVanPage = () => {
                     const active = selected?.id === r.id;
                     return (
                       <button key={r.id} onClick={() => { setSelectedId(r.id); setSheetFor(r); }}
-                        className={`w-full text-left relative overflow-hidden rounded-2xl p-3 pl-4 flex items-center gap-3 transition-all duration-300 ${active
-                          ? 'bg-white ring-2 ring-teal-500/70 shadow-[0_16px_34px_-12px_rgba(15,118,110,.35)]'
-                          : 'bg-white/70 border border-slate-100 hover:bg-white hover:shadow-md'}`}>
+                        className={`w-full text-left relative overflow-hidden rounded-2xl p-3 pl-4 flex items-center gap-3 ${active
+                          ? 'fx-glass-active'
+                          : 'fx-glass fx-glass-hover'}`}>
                         <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${stripCls[r.status] || 'from-slate-300 to-slate-400'}`} />
-                        <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shadow-teal-500/25">{initials(r.customer_name)}</div>
+                        <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm">{initials(r.customer_name)}</div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800 text-[15px] truncate flex-1">{r.customer_name}</span>
+                            <span className="font-bold text-white text-[15px] truncate flex-1">{r.customer_name}</span>
                             <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
                           </div>
                           <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
@@ -234,7 +234,7 @@ const KhachTuVanPage = () => {
               ? <CustomerDetail r={selected} rs={recsOf(selected.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
                   onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
                   onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
-              : <div className="fx-card rounded-3xl p-12 text-center text-slate-400 flex flex-col items-center gap-3"><UserCheck className="w-12 h-12 text-slate-200" strokeWidth={1.25} /><span className="font-semibold">Chọn một khách để xem chi tiết</span></div>}
+              : <div className="fx-glass rounded-3xl p-12 text-center text-slate-400 flex flex-col items-center gap-3"><UserCheck className="w-12 h-12 text-white/20" strokeWidth={1.25} /><span className="font-semibold">Chọn một khách để xem chi tiết</span></div>}
           </div>
         </div>
       )}
@@ -243,8 +243,8 @@ const KhachTuVanPage = () => {
       {sheetFor && (() => { const live = visible.find(x => x.id === sheetFor.id) || sheetFor; return (
         <div className="lg:hidden fixed inset-0 z-40 flex items-end" onClick={() => setSheetFor(null)}>
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
-          <div className="relative w-full max-h-[92vh] overflow-y-auto bg-slate-50 rounded-t-3xl p-4 pb-8" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center mb-3"><span className="w-10 h-1.5 rounded-full bg-slate-300" /></div>
+          <div className="relative w-full max-h-[92vh] overflow-y-auto fx-shell rounded-t-3xl p-4 pb-8 text-slate-200" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center mb-3"><span className="w-10 h-1.5 rounded-full bg-white/30" /></div>
             <CustomerDetail r={live} rs={recsOf(live.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
               onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
               onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
@@ -468,25 +468,25 @@ const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk,
 
 // ---------- Khung chi tiết 1 khách (desktop panel + mobile sheet) ----------
 const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval, onTranscript, onReanalyze, onReqDelete, onSoftDelete, onRejectDelete }) => (
-  <div className="fx-card relative overflow-hidden rounded-3xl p-5">
+  <div className="fx-glass relative overflow-hidden rounded-3xl p-5">
     <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${stripCls[r.status] || 'from-slate-300 to-slate-400'}`} />
     <div className="flex items-start gap-3.5">
-      <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-xl shadow-sm shadow-teal-500/25">{initials(r.customer_name)}</div>
+      <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-xl">{initials(r.customer_name)}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-bold text-slate-800 text-xl leading-tight">{r.customer_name}</h3>
+          <h3 className="font-bold text-white text-xl leading-tight">{r.customer_name}</h3>
           <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}><span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{ST[r.status]?.label || r.status}</span>
         </div>
-        <div className="text-sm text-slate-500 flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" strokeWidth={1.75} /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-400">{new Date(r.appointment_date).toLocaleDateString('vi-VN')}</span>}</div>
+        <div className="text-sm text-slate-400 flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" strokeWidth={1.75} /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-500">{new Date(r.appointment_date).toLocaleDateString('vi-VN')}</span>}</div>
       </div>
     </div>
 
-    {r.service && <div className="mt-3.5 text-[15px] text-slate-700 bg-slate-50 rounded-xl px-3.5 py-2.5">{r.service}</div>}
-    {r.consult_note && <div className="mt-2 text-sm text-slate-500 leading-relaxed">{r.consult_note}</div>}
+    {r.service && <div className="mt-3.5 text-[15px] text-slate-200 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">{r.service}</div>}
+    {r.consult_note && <div className="mt-2 text-sm text-slate-400 leading-relaxed">{r.consult_note}</div>}
 
     {(r.consult_image_urls || []).length > 0 && (
       <div className="mt-3 flex flex-wrap gap-2">
-        {(r.consult_image_urls || []).map((u, i) => <img key={i} src={u} alt="" className="h-20 w-20 object-cover rounded-xl border border-slate-100" />)}
+        {(r.consult_image_urls || []).map((u, i) => <img key={i} src={u} alt="" className="h-20 w-20 object-cover rounded-xl border border-white/10" />)}
       </div>
     )}
 
@@ -494,7 +494,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
       <div className="mt-4 space-y-2">
         <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ghi âm &amp; phân tích AI</div>
         {rs.map(rec => (
-          <div key={rec.id} className="rounded-xl border border-slate-100 bg-slate-50/60 p-2.5">
+          <div key={rec.id} className="rounded-xl border border-white/10 bg-white/5 p-2.5">
             <div className="flex items-center gap-2.5">
               <div className={`w-11 h-11 shrink-0 rounded-full border-2 flex flex-col items-center justify-center ${scoreRing(rec.ai_score)}`}>
                 {rec.ai_score != null ? <><span className="text-sm font-bold leading-none">{rec.ai_score}</span><span className="text-[8px] opacity-60 leading-none">/10</span></>
@@ -504,7 +504,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-sm font-bold text-slate-700">{rec.ai_analysis.level}</span>}
+                  {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-sm font-bold text-slate-200">{rec.ai_analysis.level}</span>}
                   {(rec.segment_urls || []).length > 1 && <span className="text-xs text-slate-400">· {rec.segment_urls.length} đoạn</span>}
                   {rec.status === 'processing' && <span className="text-xs text-amber-600">Đang phân tích…</span>}
                   <div className="ml-auto flex items-center gap-1.5">
@@ -518,10 +518,10 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
                 <audio src={rec.audio_url} controls className="h-7 w-full mt-1" />
               </div>
             </div>
-            {rec.ai_analysis?.summary && <div className="text-sm text-slate-500 mt-1.5">{rec.ai_analysis.summary}</div>}
+            {rec.ai_analysis?.summary && <div className="text-sm text-slate-400 mt-1.5">{rec.ai_analysis.summary}</div>}
             <div className="flex gap-4 mt-2">
-              {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-600 hover:text-teal-700">Xem chi tiết →</button>}
-              {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Phân tích lại</button>}
+              {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-300 hover:text-teal-200">Xem chi tiết →</button>}
+              {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-400 hover:text-slate-200">Phân tích lại</button>}
             </div>
           </div>
         ))}
@@ -530,11 +530,11 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
 
     {canWrite && (
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <button onClick={() => onConsult(r)} className="h-11 text-sm font-bold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" strokeWidth={1.75} />Hồ sơ tư vấn</button>
-        <button onClick={() => onRec(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" strokeWidth={1.75} />Ghi âm</button>
+        <button onClick={() => onConsult(r)} className="h-11 text-sm font-bold text-slate-200 rounded-xl border border-white/15 hover:bg-white/10 inline-flex items-center justify-center gap-1.5 transition"><FileText className="w-4 h-4" strokeWidth={1.75} />Hồ sơ tư vấn</button>
+        <button onClick={() => onRec(r)} className="h-11 text-sm font-bold text-rose-300 rounded-xl border border-rose-400/30 bg-rose-500/10 hover:bg-rose-500/20 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" strokeWidth={1.75} />Ghi âm</button>
         {r.status === 'scheduled'
           ? <button onClick={() => onEval(r)} className="fx-btn-primary group col-span-2 h-12 text-base font-bold text-white rounded-2xl inline-flex items-center justify-between pl-5 pr-2.5"><span>Đánh giá</span><span className="fx-btn-icon w-8 h-8 rounded-full inline-flex items-center justify-center"><ClipboardCheck className="w-4 h-4" strokeWidth={2} /></span></button>
-          : <div className="col-span-2 h-11 rounded-xl inline-flex items-center justify-center gap-2 bg-slate-50/80 border border-slate-100"><span className={`w-5 h-5 rounded-full inline-flex items-center justify-center ${ST[r.status]?.cls || 'bg-slate-200 text-slate-500'}`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></span><span className="text-sm font-bold text-slate-600">Đã đánh giá · {ST[r.status]?.label || r.status}</span></div>}
+          : <div className="col-span-2 h-11 rounded-xl inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10"><span className={`w-5 h-5 rounded-full inline-flex items-center justify-center ${ST[r.status]?.cls || 'bg-slate-200 text-slate-500'}`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></span><span className="text-sm font-bold text-slate-200">Đã đánh giá · {ST[r.status]?.label || r.status}</span></div>}
       </div>
     )}
   </div>
