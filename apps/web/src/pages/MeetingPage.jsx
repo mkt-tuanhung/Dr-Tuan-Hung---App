@@ -235,7 +235,7 @@ export default function MeetingPage() {
             {schedOn && (
               <div>
                 <label className="block text-white/50 text-xs mb-1.5 px-0.5">Chọn ngày &amp; giờ họp</label>
-                <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="w-full px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white [color-scheme:dark] focus:border-emerald-400 outline-none" />
+                <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)} className="block w-full min-w-0 max-w-full box-border appearance-none px-3.5 py-3 text-[15px] rounded-xl bg-white/5 border border-white/10 text-white [color-scheme:dark] focus:border-emerald-400 outline-none" />
               </div>
             )}
             <button onClick={async () => { await createMeeting(schedOn && !!schedAt); setShowCreate(false); }} disabled={creating || (schedOn && !schedAt)} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 active:scale-[0.98] transition shadow-lg shadow-emerald-900/40 disabled:opacity-50 inline-flex items-center justify-center gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : schedOn ? <CalendarClock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {schedOn ? 'Lên lịch họp' : 'Tạo & vào họp ngay'}</button>
