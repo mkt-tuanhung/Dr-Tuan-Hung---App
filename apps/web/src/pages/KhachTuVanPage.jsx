@@ -241,13 +241,20 @@ const KhachTuVanPage = () => {
 
       {/* DETAIL — mobile: sheet trượt lên khi chạm 1 khách */}
       {sheetFor && (() => { const live = visible.find(x => x.id === sheetFor.id) || sheetFor; return (
-        <div className="lg:hidden fixed inset-0 z-40 flex items-end" onClick={() => setSheetFor(null)}>
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
-          <div className="relative w-full max-h-[92vh] overflow-y-auto fx-shell rounded-t-3xl p-4 pb-8 text-slate-200" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center mb-3"><span className="w-10 h-1.5 rounded-full bg-white/30" /></div>
-            <CustomerDetail r={live} rs={recsOf(live.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
-              onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
-              onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
+        <div className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end" onClick={() => setSheetFor(null)}>
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+          <div className="relative w-full flex flex-col max-h-[88vh] fx-shell rounded-t-3xl text-slate-200" onClick={e => e.stopPropagation()}>
+            {/* Đầu sheet cố định: tay kéo + nút đóng */}
+            <div className="shrink-0 relative flex items-center justify-center pt-3 pb-2">
+              <span className="w-10 h-1.5 rounded-full bg-white/30" />
+              <button onClick={() => setSheetFor(null)} aria-label="Đóng" className="absolute right-3 top-2 w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-slate-200 hover:bg-white/20"><X className="w-5 h-5" /></button>
+            </div>
+            {/* Vùng cuộn nội dung */}
+            <div className="overflow-y-auto overscroll-contain px-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+              <CustomerDetail r={live} rs={recsOf(live.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
+                onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
+                onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
+            </div>
           </div>
         </div>
       ); })()}
