@@ -14,6 +14,7 @@ import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
+import PLPage from '@/pages/PLPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
@@ -30,7 +31,7 @@ import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -53,6 +54,7 @@ const MENU_GROUPS = [
   ]},
   { title: 'TÀI CHÍNH', color: 'amber', items: [
     { id: 'finance', label: 'Doanh thu / Tài chính', icon: Banknote },
+    { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
     { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
@@ -294,6 +296,7 @@ const AdminDashboard = () => {
       case 'hau_phau': return <HauPhauPage />;
       case 'advances': return <AdvanceExpensePage />;
       case 'finance': return <FinanceManagementPage />;
+      case 'pl': return <PLPage />;
       case 'kpi': return <KPIManagementPage />;
       case 'payroll': return <PayrollPage />;
       case 'meetings': return <MeetingPage />;
