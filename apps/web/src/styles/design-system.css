@@ -63,8 +63,12 @@
 /* -------- Thẻ nổi trên nền sáng -------- */
 .fx-card {
   background: #fff;
-  border: 1px solid rgba(15, 23, 42, .06);
-  box-shadow: var(--fx-shadow-sm);
+  border: 1px solid rgba(15, 23, 42, .05);
+  /* bóng khuếch tán mềm, thấy rõ độ nổi ngay khi đứng yên */
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, .03),
+    0 12px 24px -10px rgba(15, 23, 42, .10),
+    0 34px 60px -24px rgba(15, 23, 42, .12);
   transition: box-shadow .35s var(--fx-ease), transform .35s var(--fx-ease), border-color .35s var(--fx-ease);
 }
 .fx-card:hover {

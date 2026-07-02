@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw } from 'lucide-react';
+import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
@@ -14,6 +14,8 @@ const ST = {
   bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' },
   phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' },
 };
+// Vạch màu trạng thái bên trái mỗi thẻ
+const stripCls = { scheduled: 'from-amber-400 to-amber-500', coc: 'from-cyan-400 to-cyan-500', bong: 'from-rose-400 to-rose-500', phau_thuat: 'from-teal-400 to-teal-500' };
 const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition';
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
@@ -192,7 +194,8 @@ const KhachTuVanPage = () => {
           {items.map(r => {
             const rs = recsOf(r.id);
             return (
-            <div key={r.id} className="group fx-card rounded-2xl p-4 flex flex-col">
+            <div key={r.id} className="group fx-card relative overflow-hidden rounded-2xl p-4 pl-5 flex flex-col">
+              <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${stripCls[r.status] || 'from-slate-300 to-slate-400'}`} />
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-base shadow-sm shadow-teal-500/25">{initials(r.customer_name)}</div>
                 <div className="min-w-0 flex-1">
@@ -257,7 +260,7 @@ const KhachTuVanPage = () => {
                   <button onClick={() => setRecFor(r)} className="h-11 text-sm font-bold text-rose-600 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 inline-flex items-center justify-center gap-1.5 transition"><Mic className="w-4 h-4" strokeWidth={1.75} />Ghi âm</button>
                   {r.status === 'scheduled'
                     ? <button onClick={() => setEvalFor(r)} className="fx-btn-primary group col-span-2 h-12 text-base font-bold text-white rounded-2xl inline-flex items-center justify-between pl-5 pr-2.5"><span>Đánh giá</span><span className="fx-btn-icon w-8 h-8 rounded-full inline-flex items-center justify-center"><ClipboardCheck className="w-4 h-4" strokeWidth={2} /></span></button>
-                    : <div className="col-span-2 h-11 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border border-slate-200">✓ Đã đánh giá · {ST[r.status]?.label || r.status}</div>}
+                    : <div className="col-span-2 h-11 rounded-xl inline-flex items-center justify-center gap-2 bg-slate-50/80 border border-slate-100"><span className={`w-5 h-5 rounded-full inline-flex items-center justify-center ${ST[r.status]?.cls || 'bg-slate-200 text-slate-500'}`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></span><span className="text-sm font-bold text-slate-600">Đã đánh giá · {ST[r.status]?.label || r.status}</span></div>}
                 </div>
               )}
             </div>
