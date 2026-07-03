@@ -569,9 +569,20 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
                       : (rec.created_by === me?.id && !rec.delete_requested_by && <button onClick={() => onReqDelete(rec)} title="Yêu cầu xoá" className="text-slate-400 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button>)}
                   </div>
                 </div>
-                <audio src={rec.audio_url} controls className="h-8 w-full mt-1" />
               </div>
             </div>
+
+            {/* Tất cả các đoạn ghi âm đã cắt (mỗi đoạn 5 phút) */}
+            {(() => { const segs = (rec.segment_urls && rec.segment_urls.length) ? rec.segment_urls : (rec.audio_url ? [rec.audio_url] : []); return segs.length > 0 ? (
+              <div className="mt-2.5 space-y-1.5">
+                {segs.map((u, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    {segs.length > 1 && <span className="text-[11px] font-bold text-slate-400 w-14 shrink-0">Đoạn {i + 1}</span>}
+                    <audio src={u} controls preload="none" className="h-8 flex-1 min-w-0" />
+                  </div>
+                ))}
+              </div>
+            ) : null; })()}
 
             {/* Điểm từng tiêu chí — thanh trực quan */}
             {rec.ai_analysis?.criteria && (
