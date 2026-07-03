@@ -128,33 +128,33 @@ const KhachTuVanPage = () => {
   const aiAvg = (() => { const a = recs.filter(r => r.ai_score != null && !r.deleted_at); return a.length ? a.reduce((s, r) => s + Number(r.ai_score || 0), 0) / a.length : null; })();
 
   return (
-    <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-200">
+    <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-700">
       <div className="relative">
         <div className="relative flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur"><UserCheck className="w-6 h-6 text-teal-300" strokeWidth={1.75} /></div>
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center"><UserCheck className="w-6 h-6 text-teal-600" strokeWidth={1.75} /></div>
             <div>
-              <h2 className="text-2xl font-bold text-white leading-tight tracking-tight">Khách tư vấn</h2>
-              <p className="text-slate-300/70 text-sm">Tiếp nhận trực tiếp · hồ sơ · ghi âm · đánh giá AI</p>
+              <h2 className="text-2xl font-bold text-slate-800 leading-tight tracking-tight">Khách tư vấn</h2>
+              <p className="text-slate-500 text-sm">Tiếp nhận trực tiếp · hồ sơ · ghi âm · đánh giá AI</p>
             </div>
           </div>
           {!loading && isAdmin && trash.length > 0 && (
-            <button onClick={() => setTrashOpen(true)} className="fx-tile text-sm font-semibold text-slate-200 px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>
+            <button onClick={() => setTrashOpen(true)} className="fx-glass text-sm font-semibold text-slate-600 px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>
           )}
         </div>
 
         {!loading && (
           <div className="relative mt-5 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             {[
-              { label: 'Tổng khách', value: stat.total, sub: 'đang theo dõi', accent: 'text-white' },
-              { label: 'Đã cọc', value: stat.coc, sub: 'chờ lên mổ', accent: 'text-cyan-300' },
-              { label: 'Phẫu thuật', value: stat.pt, sub: 'đã chốt', accent: 'text-teal-300' },
-              { label: 'Điểm tư vấn TB', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: aiAvg != null ? 'AI chấm · /10' : 'chưa có', accent: 'text-amber-300' },
+              { label: 'Tổng khách', value: stat.total, sub: 'đang theo dõi', accent: 'text-slate-800' },
+              { label: 'Đã cọc', value: stat.coc, sub: 'chờ lên mổ', accent: 'text-cyan-600' },
+              { label: 'Phẫu thuật', value: stat.pt, sub: 'đã chốt', accent: 'text-teal-600' },
+              { label: 'Điểm tư vấn TB', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: aiAvg != null ? 'AI chấm · /10' : 'chưa có', accent: 'text-amber-600' },
             ].map(t => (
-              <div key={t.label} className="fx-tile rounded-2xl p-3.5">
+              <div key={t.label} className="fx-glass rounded-2xl p-3.5">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{t.label}</div>
                 <div className={`fx-num text-2xl font-bold mt-1 ${t.accent}`}>{t.value}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">{t.sub}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{t.sub}</div>
               </div>
             ))}
           </div>
@@ -162,19 +162,19 @@ const KhachTuVanPage = () => {
 
         <div className="relative mt-4">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.75} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl bg-white/10 border border-white/10 text-white placeholder-slate-400 focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/20 outline-none backdrop-blur transition" />
-          {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>}
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl bg-white/80 border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none backdrop-blur transition" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
         </div>
       </div>
 
       {lb.length > 0 && (
         <div className="fx-glass rounded-2xl p-4">
-          <h3 className="font-bold text-amber-300 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI)</h3>
+          <h3 className="font-bold text-amber-600 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI)</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {lb.map((e, i) => (
-              <div key={e.id} className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2 border border-white/10">
-                <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'bg-white/10 text-slate-300'}`}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
-                <span className="text-sm font-semibold text-slate-200 truncate flex-1 min-w-0">{e.name}</span>
+              <div key={e.id} className="flex items-center gap-2.5 bg-white/60 rounded-xl px-3 py-2 border border-white/70">
+                <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'bg-slate-100 text-slate-500'}`}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
+                <span className="text-sm font-semibold text-slate-700 truncate flex-1 min-w-0">{e.name}</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreCls(e.avg)}`}>{e.avg.toFixed(1)}<span className="opacity-60">/10</span></span>
               </div>
             ))}
@@ -211,7 +211,7 @@ const KhachTuVanPage = () => {
                         <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm">{initials(r.customer_name)}</div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-[15px] truncate flex-1">{r.customer_name}</span>
+                            <span className="font-bold text-slate-800 text-[15px] truncate flex-1">{r.customer_name}</span>
                             <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
                           </div>
                           <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
@@ -234,7 +234,7 @@ const KhachTuVanPage = () => {
               ? <CustomerDetail r={selected} rs={recsOf(selected.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
                   onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
                   onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
-              : <div className="fx-glass rounded-3xl p-12 text-center text-slate-400 flex flex-col items-center gap-3"><UserCheck className="w-12 h-12 text-white/20" strokeWidth={1.25} /><span className="font-semibold">Chọn một khách để xem chi tiết</span></div>}
+              : <div className="fx-glass rounded-3xl p-12 text-center text-slate-400 flex flex-col items-center gap-3"><UserCheck className="w-12 h-12 text-slate-300" strokeWidth={1.25} /><span className="font-semibold">Chọn một khách để xem chi tiết</span></div>}
           </div>
         </div>
       )}
@@ -243,11 +243,11 @@ const KhachTuVanPage = () => {
       {sheetFor && (() => { const live = visible.find(x => x.id === sheetFor.id) || sheetFor; return (
         <div className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end" onClick={() => setSheetFor(null)}>
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-          <div className="relative w-full flex flex-col max-h-[88vh] fx-shell rounded-t-3xl text-slate-200" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full flex flex-col max-h-[88vh] fx-shell rounded-t-3xl text-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* Đầu sheet cố định: tay kéo + nút đóng */}
             <div className="shrink-0 relative flex items-center justify-center pt-3 pb-2">
-              <span className="w-10 h-1.5 rounded-full bg-white/30" />
-              <button onClick={() => setSheetFor(null)} aria-label="Đóng" className="absolute right-3 top-2 w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-slate-200 hover:bg-white/20"><X className="w-5 h-5" /></button>
+              <span className="w-10 h-1.5 rounded-full bg-slate-300" />
+              <button onClick={() => setSheetFor(null)} aria-label="Đóng" className="absolute right-3 top-2 w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-200"><X className="w-5 h-5" /></button>
             </div>
             {/* Vùng cuộn nội dung */}
             <div className="overflow-y-auto overscroll-contain px-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
@@ -482,14 +482,14 @@ const critBar = (v) => v == null ? 'bg-slate-500' : v >= 8 ? 'bg-teal-400' : v >
 const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval, onTranscript, onReanalyze, onReqDelete, onSoftDelete, onRejectDelete }) => {
   const stats = r.status === 'phau_thuat'
     ? [
-      { label: 'Doanh thu', value: money(r.revenue), accent: 'text-teal-300' },
-      { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-cyan-300' },
+      { label: 'Doanh thu', value: money(r.revenue), accent: 'text-teal-600' },
+      { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-cyan-600' },
       { label: 'Loại mổ', value: r.surgery_type || '—' },
       { label: 'Ngày mổ', value: dOnly(r.surgery_date) },
     ]
     : r.status === 'coc'
       ? [
-        { label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-cyan-300' },
+        { label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-cyan-600' },
         { label: 'Ngày cọc', value: dOnly(r.deposit_date) },
         { label: 'Mổ dự kiến', value: dOnly(r.expected_surgery_date) },
         { label: 'Loại mổ', value: r.surgery_type || '—' },
@@ -502,7 +502,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
       <div className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-lg">{initials(r.customer_name)}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-bold text-white text-lg leading-tight">{r.customer_name}</h3>
+          <h3 className="font-bold text-slate-800 text-lg leading-tight">{r.customer_name}</h3>
           <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}><span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{ST[r.status]?.label || r.status}</span>
         </div>
         <div className="text-sm text-slate-400 flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" strokeWidth={1.75} /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-500">{dOnly(r.appointment_date)}</span>}</div>
@@ -510,7 +510,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
       {/* Nút gọn nhưng nổi bật — nhãn + màu rõ */}
       {canWrite && (
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <button title="Hồ sơ tư vấn" onClick={() => onConsult(r)} className="h-9 px-3 rounded-xl inline-flex items-center gap-1.5 bg-white/12 border border-white/25 text-white text-[13px] font-bold hover:bg-white/20 transition"><FileText className="w-4 h-4" strokeWidth={2} />Hồ sơ</button>
+          <button title="Hồ sơ tư vấn" onClick={() => onConsult(r)} className="h-9 px-3 rounded-xl inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 text-[13px] font-bold hover:bg-slate-50 hover:border-slate-300 transition"><FileText className="w-4 h-4" strokeWidth={2} />Hồ sơ</button>
           <button title="Ghi âm cuộc tư vấn" onClick={() => onRec(r)} className="h-9 px-3 rounded-xl inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white text-[13px] font-bold shadow-lg shadow-rose-500/40 hover:brightness-110 transition"><span className="relative flex w-2 h-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/80" /><span className="relative inline-flex rounded-full w-2 h-2 bg-white" /></span><Mic className="w-4 h-4" strokeWidth={2} />Ghi âm</button>
           {r.status === 'scheduled' && <button title="Đánh giá" onClick={() => onEval(r)} className="fx-btn-primary h-9 px-3.5 rounded-xl text-white text-[13px] font-bold inline-flex items-center gap-1.5"><ClipboardCheck className="w-4 h-4" strokeWidth={2} />Đánh giá</button>}
         </div>
@@ -521,26 +521,26 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
     {stats.length > 0 && (
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
         {stats.map(s => (
-          <div key={s.label} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+          <div key={s.label} className="rounded-xl bg-white/60 border border-white/70 px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">{s.label}</div>
-            <div className={`fx-num text-lg font-bold mt-0.5 leading-tight ${s.accent || 'text-white'}`}>{s.value}</div>
+            <div className={`fx-num text-lg font-bold mt-0.5 leading-tight ${s.accent || 'text-slate-800'}`}>{s.value}</div>
           </div>
         ))}
       </div>
     )}
     {r.status === 'bong' && r.notes && (
-      <div className="mt-4 rounded-xl bg-rose-500/10 border border-rose-400/20 px-3.5 py-2.5">
-        <div className="text-[10px] uppercase tracking-wide text-rose-300 font-semibold">Lý do bong</div>
-        <div className="text-sm text-slate-200 mt-0.5">{r.notes}</div>
+      <div className="mt-4 rounded-xl bg-rose-50 border border-rose-100 px-3.5 py-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-rose-600 font-semibold">Lý do bong</div>
+        <div className="text-sm text-slate-700 mt-0.5">{r.notes}</div>
       </div>
     )}
 
-    {r.service && <div className="mt-3 text-[15px] text-slate-200 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">{r.service}</div>}
-    {r.consult_note && <div className="mt-2 text-sm text-slate-400 leading-relaxed">{r.consult_note}</div>}
+    {r.service && <div className="mt-3 text-[15px] text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5">{r.service}</div>}
+    {r.consult_note && <div className="mt-2 text-sm text-slate-500 leading-relaxed">{r.consult_note}</div>}
 
     {(r.consult_image_urls || []).length > 0 && (
       <div className="mt-3 flex flex-wrap gap-2">
-        {(r.consult_image_urls || []).map((u, i) => <img key={i} src={u} alt="" className="h-20 w-20 object-cover rounded-xl border border-white/10" />)}
+        {(r.consult_image_urls || []).map((u, i) => <img key={i} src={u} alt="" className="h-20 w-20 object-cover rounded-xl border border-slate-100" />)}
       </div>
     )}
 
@@ -548,7 +548,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
       <div className="mt-4 space-y-2.5">
         <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ghi âm &amp; phân tích AI</div>
         {rs.map(rec => (
-          <div key={rec.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div key={rec.id} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
             <div className="flex items-center gap-2.5">
               <div className={`w-12 h-12 shrink-0 rounded-full border-2 flex flex-col items-center justify-center ${scoreRing(rec.ai_score)}`}>
                 {rec.ai_score != null ? <><span className="text-base font-bold leading-none fx-num">{rec.ai_score}</span><span className="text-[8px] opacity-60 leading-none">/10</span></>
@@ -558,13 +558,13 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-sm font-bold text-slate-100">{rec.ai_analysis.level}</span>}
+                  {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-sm font-bold text-slate-700">{rec.ai_analysis.level}</span>}
                   {(rec.segment_urls || []).length > 1 && <span className="text-xs text-slate-400">· {rec.segment_urls.length} đoạn</span>}
-                  {rec.status === 'processing' && <span className="text-xs text-amber-400">Đang phân tích…</span>}
+                  {rec.status === 'processing' && <span className="text-xs text-amber-600">Đang phân tích…</span>}
                   <div className="ml-auto flex items-center gap-1.5">
-                    {rec.delete_requested_by && <span className="text-xs font-semibold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full">Chờ duyệt xoá</span>}
+                    {rec.delete_requested_by && <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Chờ duyệt xoá</span>}
                     {isAdmin ? (rec.delete_requested_by
-                      ? <><button onClick={() => onSoftDelete(rec, 'Duyệt xoá: chuyển ghi âm này vào Thùng rác?')} title="Duyệt xoá" className="text-rose-400 hover:text-rose-300"><Trash2 className="w-3.5 h-3.5" /></button><button onClick={() => onRejectDelete(rec)} title="Từ chối" className="text-slate-400 hover:text-slate-200"><X className="w-3.5 h-3.5" /></button></>
+                      ? <><button onClick={() => onSoftDelete(rec, 'Duyệt xoá: chuyển ghi âm này vào Thùng rác?')} title="Duyệt xoá" className="text-rose-500 hover:text-rose-600"><Trash2 className="w-3.5 h-3.5" /></button><button onClick={() => onRejectDelete(rec)} title="Từ chối" className="text-slate-400 hover:text-slate-600"><X className="w-3.5 h-3.5" /></button></>
                       : <button onClick={() => onSoftDelete(rec, 'Chuyển ghi âm này vào Thùng rác?')} title="Xoá" className="text-slate-400 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button>)
                       : (rec.created_by === me?.id && !rec.delete_requested_by && <button onClick={() => onReqDelete(rec)} title="Yêu cầu xoá" className="text-slate-400 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button>)}
                   </div>
@@ -578,8 +578,8 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
               <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
                 {Object.entries(CRIT).map(([k, l]) => { const v = rec.ai_analysis.criteria[k]; return (
                   <div key={k}>
-                    <div className="flex items-center justify-between text-[11px]"><span className="text-slate-400">{l}</span><span className="fx-num font-bold text-slate-100">{v ?? '—'}<span className="text-slate-500 text-[9px]">/10</span></span></div>
-                    <div className="mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className={`h-full rounded-full ${critBar(v)}`} style={{ width: `${Math.min((Number(v) || 0) * 10, 100)}%` }} /></div>
+                    <div className="flex items-center justify-between text-[11px]"><span className="text-slate-500">{l}</span><span className="fx-num font-bold text-slate-700">{v ?? '—'}<span className="text-slate-400 text-[9px]">/10</span></span></div>
+                    <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full rounded-full ${critBar(v)}`} style={{ width: `${Math.min((Number(v) || 0) * 10, 100)}%` }} /></div>
                   </div>
                 ); })}
               </div>
@@ -589,24 +589,24 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
             {(rec.ai_analysis?.strengths?.length > 0 || rec.ai_analysis?.weaknesses?.length > 0) && (
               <div className="mt-3 grid sm:grid-cols-2 gap-2">
                 {rec.ai_analysis?.strengths?.length > 0 && (
-                  <div className="rounded-lg bg-teal-500/10 border border-teal-400/20 p-2.5">
-                    <div className="text-[11px] font-bold text-teal-300 mb-1">Điểm mạnh</div>
-                    <ul className="text-[13px] text-slate-300 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.strengths.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                  <div className="rounded-lg bg-teal-50 border border-teal-100 p-2.5">
+                    <div className="text-[11px] font-bold text-teal-700 mb-1">Điểm mạnh</div>
+                    <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.strengths.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
                   </div>
                 )}
                 {rec.ai_analysis?.weaknesses?.length > 0 && (
-                  <div className="rounded-lg bg-rose-500/10 border border-rose-400/20 p-2.5">
-                    <div className="text-[11px] font-bold text-rose-300 mb-1">Cần cải thiện</div>
-                    <ul className="text-[13px] text-slate-300 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.weaknesses.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                  <div className="rounded-lg bg-rose-50 border border-rose-100 p-2.5">
+                    <div className="text-[11px] font-bold text-rose-700 mb-1">Cần cải thiện</div>
+                    <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.weaknesses.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
                   </div>
                 )}
               </div>
             )}
 
-            {rec.ai_analysis?.summary && <div className="text-sm text-slate-400 mt-2.5 leading-relaxed">{rec.ai_analysis.summary}</div>}
+            {rec.ai_analysis?.summary && <div className="text-sm text-slate-500 mt-2.5 leading-relaxed">{rec.ai_analysis.summary}</div>}
             <div className="flex gap-4 mt-2.5">
-              {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-300 hover:text-teal-200">Xem timeline đầy đủ →</button>}
-              {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-400 hover:text-slate-200">Phân tích lại</button>}
+              {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-600 hover:text-teal-700">Xem timeline đầy đủ →</button>}
+              {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">Phân tích lại</button>}
             </div>
           </div>
         ))}
