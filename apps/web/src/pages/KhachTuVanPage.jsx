@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check } from 'lucide-react';
+import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
@@ -479,6 +479,99 @@ const dOnly = (s) => s ? new Date(s).toLocaleDateString('vi-VN') : '—';
 const CRIT = { thien_cam: 'Thiện cảm', khai_thac_nhu_cau: 'Nhu cầu', tu_van_chuyen_mon: 'Chuyên môn', xu_ly_tu_choi: 'Xử lý từ chối', chot: 'Chốt', thai_do: 'Thái độ' };
 const critBar = (v) => v == null ? 'bg-slate-500' : v >= 8 ? 'bg-teal-400' : v >= 5 ? 'bg-amber-400' : 'bg-rose-400';
 
+const fmtDur = (s) => { s = Number(s) || 0; return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; };
+
+// 1 bản ghi âm — accordion gập/mở để danh sách gọn khi có nhiều bản
+const RecordingItem = ({ rec, index, isAdmin, me, onTranscript, onReanalyze, onReqDelete, onSoftDelete, onRejectDelete }) => {
+  const [open, setOpen] = useState(index === 0); // mở sẵn bản mới nhất
+  const segs = (rec.segment_urls && rec.segment_urls.length) ? rec.segment_urls : (rec.audio_url ? [rec.audio_url] : []);
+  const dt = rec.created_at ? new Date(rec.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 overflow-hidden">
+      {/* Dòng tóm tắt — luôn hiện, bấm để gập/mở */}
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2.5 p-2.5 text-left hover:bg-slate-100/70 transition">
+        <div className={`w-10 h-10 shrink-0 rounded-full border-2 flex flex-col items-center justify-center ${scoreRing(rec.ai_score)}`}>
+          {rec.ai_score != null ? <><span className="text-sm font-bold leading-none fx-num">{rec.ai_score}</span><span className="text-[7px] opacity-60 leading-none">/10</span></>
+            : rec.status === 'processing' ? <Loader2 className="w-4 h-4 animate-spin" />
+              : rec.status === 'error' ? <span className="text-[9px] font-bold">Lỗi</span>
+                : <span className="text-xs">—</span>}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-slate-700 truncate">{rec.ai_analysis?.level || (rec.status === 'processing' ? 'Đang phân tích…' : rec.status === 'error' ? 'Lỗi phân tích' : 'Bản ghi')}</span>
+            {rec.delete_requested_by && <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full shrink-0">Chờ xoá</span>}
+          </div>
+          <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+            <span>{segs.length} đoạn · {fmtDur(rec.duration_sec)}</span>
+            {dt && <span>· {dt}</span>}
+          </div>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3">
+          {/* Xoá / duyệt xoá */}
+          <div className="flex items-center justify-end gap-3 mb-2">
+            {isAdmin ? (rec.delete_requested_by
+              ? <><button onClick={() => onSoftDelete(rec, 'Duyệt xoá: chuyển ghi âm này vào Thùng rác?')} className="text-xs font-semibold text-rose-500 hover:text-rose-600 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" />Duyệt xoá</button><button onClick={() => onRejectDelete(rec)} className="text-xs font-semibold text-slate-400 hover:text-slate-600">Từ chối</button></>
+              : <button onClick={() => onSoftDelete(rec, 'Chuyển ghi âm này vào Thùng rác?')} className="text-xs font-semibold text-slate-400 hover:text-rose-500 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" />Xoá</button>)
+              : (rec.created_by === me?.id && !rec.delete_requested_by && <button onClick={() => onReqDelete(rec)} className="text-xs font-semibold text-slate-400 hover:text-rose-500 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" />Yêu cầu xoá</button>)}
+          </div>
+
+          {/* Các đoạn ghi âm */}
+          {segs.length > 0 && (
+            <div className="space-y-1.5">
+              {segs.map((u, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  {segs.length > 1 && <span className="text-[11px] font-bold text-slate-400 w-14 shrink-0">Đoạn {i + 1}</span>}
+                  <audio src={u} controls preload="none" className="h-8 flex-1 min-w-0" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Điểm từng tiêu chí */}
+          {rec.ai_analysis?.criteria && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+              {Object.entries(CRIT).map(([k, l]) => { const v = rec.ai_analysis.criteria[k]; return (
+                <div key={k}>
+                  <div className="flex items-center justify-between text-[11px]"><span className="text-slate-500">{l}</span><span className="fx-num font-bold text-slate-700">{v ?? '—'}<span className="text-slate-400 text-[9px]">/10</span></span></div>
+                  <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full rounded-full ${critBar(v)}`} style={{ width: `${Math.min((Number(v) || 0) * 10, 100)}%` }} /></div>
+                </div>
+              ); })}
+            </div>
+          )}
+
+          {/* Điểm mạnh / cần cải thiện */}
+          {(rec.ai_analysis?.strengths?.length > 0 || rec.ai_analysis?.weaknesses?.length > 0) && (
+            <div className="mt-3 grid sm:grid-cols-2 gap-2">
+              {rec.ai_analysis?.strengths?.length > 0 && (
+                <div className="rounded-lg bg-teal-50 border border-teal-100 p-2.5">
+                  <div className="text-[11px] font-bold text-teal-700 mb-1">Điểm mạnh</div>
+                  <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.strengths.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </div>
+              )}
+              {rec.ai_analysis?.weaknesses?.length > 0 && (
+                <div className="rounded-lg bg-rose-50 border border-rose-100 p-2.5">
+                  <div className="text-[11px] font-bold text-rose-700 mb-1">Cần cải thiện</div>
+                  <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.weaknesses.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {rec.ai_analysis?.summary && <div className="text-sm text-slate-500 mt-2.5 leading-relaxed">{rec.ai_analysis.summary}</div>}
+          <div className="flex gap-4 mt-2.5">
+            {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-600 hover:text-teal-700">Xem timeline đầy đủ →</button>}
+            {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">Phân tích lại</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval, onTranscript, onReanalyze, onReqDelete, onSoftDelete, onRejectDelete }) => {
   const stats = r.status === 'phau_thuat'
     ? [
@@ -545,81 +638,14 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
     )}
 
     {rs.length > 0 && (
-      <div className="mt-4 space-y-2.5">
-        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ghi âm &amp; phân tích AI</div>
-        {rs.map(rec => (
-          <div key={rec.id} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
-            <div className="flex items-center gap-2.5">
-              <div className={`w-12 h-12 shrink-0 rounded-full border-2 flex flex-col items-center justify-center ${scoreRing(rec.ai_score)}`}>
-                {rec.ai_score != null ? <><span className="text-base font-bold leading-none fx-num">{rec.ai_score}</span><span className="text-[8px] opacity-60 leading-none">/10</span></>
-                  : rec.status === 'processing' ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : rec.status === 'error' ? <span className="text-[9px] font-bold">Lỗi</span>
-                      : <span className="text-xs">—</span>}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  {rec.ai_score != null && rec.ai_analysis?.level && <span className="text-sm font-bold text-slate-700">{rec.ai_analysis.level}</span>}
-                  {(rec.segment_urls || []).length > 1 && <span className="text-xs text-slate-400">· {rec.segment_urls.length} đoạn</span>}
-                  {rec.status === 'processing' && <span className="text-xs text-amber-600">Đang phân tích…</span>}
-                  <div className="ml-auto flex items-center gap-1.5">
-                    {rec.delete_requested_by && <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Chờ duyệt xoá</span>}
-                    {isAdmin ? (rec.delete_requested_by
-                      ? <><button onClick={() => onSoftDelete(rec, 'Duyệt xoá: chuyển ghi âm này vào Thùng rác?')} title="Duyệt xoá" className="text-rose-500 hover:text-rose-600"><Trash2 className="w-3.5 h-3.5" /></button><button onClick={() => onRejectDelete(rec)} title="Từ chối" className="text-slate-400 hover:text-slate-600"><X className="w-3.5 h-3.5" /></button></>
-                      : <button onClick={() => onSoftDelete(rec, 'Chuyển ghi âm này vào Thùng rác?')} title="Xoá" className="text-slate-400 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button>)
-                      : (rec.created_by === me?.id && !rec.delete_requested_by && <button onClick={() => onReqDelete(rec)} title="Yêu cầu xoá" className="text-slate-400 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button>)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tất cả các đoạn ghi âm đã cắt (mỗi đoạn 5 phút) */}
-            {(() => { const segs = (rec.segment_urls && rec.segment_urls.length) ? rec.segment_urls : (rec.audio_url ? [rec.audio_url] : []); return segs.length > 0 ? (
-              <div className="mt-2.5 space-y-1.5">
-                {segs.map((u, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    {segs.length > 1 && <span className="text-[11px] font-bold text-slate-400 w-14 shrink-0">Đoạn {i + 1}</span>}
-                    <audio src={u} controls preload="none" className="h-8 flex-1 min-w-0" />
-                  </div>
-                ))}
-              </div>
-            ) : null; })()}
-
-            {/* Điểm từng tiêu chí — thanh trực quan */}
-            {rec.ai_analysis?.criteria && (
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-                {Object.entries(CRIT).map(([k, l]) => { const v = rec.ai_analysis.criteria[k]; return (
-                  <div key={k}>
-                    <div className="flex items-center justify-between text-[11px]"><span className="text-slate-500">{l}</span><span className="fx-num font-bold text-slate-700">{v ?? '—'}<span className="text-slate-400 text-[9px]">/10</span></span></div>
-                    <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full rounded-full ${critBar(v)}`} style={{ width: `${Math.min((Number(v) || 0) * 10, 100)}%` }} /></div>
-                  </div>
-                ); })}
-              </div>
-            )}
-
-            {/* Điểm mạnh / cần cải thiện — gọn */}
-            {(rec.ai_analysis?.strengths?.length > 0 || rec.ai_analysis?.weaknesses?.length > 0) && (
-              <div className="mt-3 grid sm:grid-cols-2 gap-2">
-                {rec.ai_analysis?.strengths?.length > 0 && (
-                  <div className="rounded-lg bg-teal-50 border border-teal-100 p-2.5">
-                    <div className="text-[11px] font-bold text-teal-700 mb-1">Điểm mạnh</div>
-                    <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.strengths.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
-                  </div>
-                )}
-                {rec.ai_analysis?.weaknesses?.length > 0 && (
-                  <div className="rounded-lg bg-rose-50 border border-rose-100 p-2.5">
-                    <div className="text-[11px] font-bold text-rose-700 mb-1">Cần cải thiện</div>
-                    <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.weaknesses.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {rec.ai_analysis?.summary && <div className="text-sm text-slate-500 mt-2.5 leading-relaxed">{rec.ai_analysis.summary}</div>}
-            <div className="flex gap-4 mt-2.5">
-              {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-600 hover:text-teal-700">Xem timeline đầy đủ →</button>}
-              {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">Phân tích lại</button>}
-            </div>
-          </div>
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ghi âm &amp; phân tích AI</div>
+          <span className="text-[11px] font-bold text-slate-400">· {rs.length} bản</span>
+        </div>
+        {rs.map((rec, i) => (
+          <RecordingItem key={rec.id} rec={rec} index={i} isAdmin={isAdmin} me={me}
+            onTranscript={onTranscript} onReanalyze={onReanalyze} onReqDelete={onReqDelete} onSoftDelete={onSoftDelete} onRejectDelete={onRejectDelete} />
         ))}
       </div>
     )}
