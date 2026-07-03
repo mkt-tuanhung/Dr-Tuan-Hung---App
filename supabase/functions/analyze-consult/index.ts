@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     if (!rec) return json({ error: 'không tìm thấy bản ghi' }, 404);
     await supabase.from('consult_recordings').update({ status: 'processing' }).eq('id', recId);
 
-    // Danh sách đoạn (cuộc dài đã chia 10 phút/đoạn). Fallback file đơn.
+    // Danh sách TẤT CẢ đoạn ghi âm (cuộc dài đã chia 5 phút/đoạn). Fallback file đơn.
     const urls: string[] = (Array.isArray(rec.segment_urls) && rec.segment_urls.length) ? rec.segment_urls : [rec.audio_url];
 
     // Whisper verbose_json -> lấy cả timestamp từng câu (song song, tối đa 4 đoạn)
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         model: 'gpt-4o-mini', temperature: 0.3, response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: RUBRIC },
-          { role: 'user', content: `Transcript cuộc tư vấn (kèm mốc thời gian):\n${timelineStr.slice(0, 16000)}` },
+          { role: 'user', content: `Đây là transcript ĐẦY ĐỦ của toàn bộ cuộc tư vấn (đã ghép từ tất cả các đoạn ghi âm, kèm mốc thời gian). Hãy phân tích & chấm điểm dựa trên TOÀN BỘ nội dung dưới đây:\n${timelineStr.slice(0, 60000)}` },
         ],
       }),
     });
