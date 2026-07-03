@@ -244,10 +244,10 @@ const KhachTuVanPage = () => {
         <div className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end" onClick={() => setSheetFor(null)}>
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
           <div className="relative w-full flex flex-col max-h-[88vh] fx-shell rounded-t-3xl text-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
-            {/* Đầu sheet cố định: tay kéo + nút đóng */}
-            <div className="shrink-0 relative flex items-center justify-center pt-3 pb-2">
-              <span className="w-10 h-1.5 rounded-full bg-slate-300" />
-              <button onClick={() => setSheetFor(null)} aria-label="Đóng" className="absolute right-3 top-2 w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-200"><X className="w-5 h-5" /></button>
+            {/* Đầu sheet cố định: tay kéo + nút đóng (đủ cao để X không đè nội dung) */}
+            <div className="shrink-0 relative h-12">
+              <span className="absolute left-1/2 -translate-x-1/2 top-2.5 w-10 h-1.5 rounded-full bg-slate-300" />
+              <button onClick={() => setSheetFor(null)} aria-label="Đóng" className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 active:scale-95 transition"><X className="w-5 h-5" /></button>
             </div>
             {/* Vùng cuộn nội dung */}
             <div className="overflow-y-auto overscroll-contain px-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
