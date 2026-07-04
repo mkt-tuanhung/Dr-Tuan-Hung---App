@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, B
 import { 
   Plus, RefreshCw, Trash2, ArrowDownLeft, FileText, Users, BarChart2,
   Calendar, Filter, Search, CheckCircle, XCircle, Clock, Image as ImageIcon,
-  MoreVertical, X, UploadCloud, Loader2, Wallet
+  MoreVertical, X, UploadCloud, Loader2, Wallet, ChevronDown
 } from 'lucide-react';
 
 const CATEGORIES = {
@@ -50,6 +50,8 @@ export default function AdvanceExpensePage() {
 
   // View Image Modal
   const [viewImage, setViewImage] = useState(null);
+  // Xổ chi tiết theo nhân sự
+  const [expandedStaff, setExpandedStaff] = useState(null);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -461,13 +463,38 @@ export default function AdvanceExpensePage() {
           const staffMap = {};
           data.forEach(d => {
             if (d.status === 'approved' || d.status === 'paid') {
-              if (!staffMap[d.staff_id]) staffMap[d.staff_id] = { name: d.profiles?.full_name, total: 0, repaid: 0, count: 0 };
+              if (!staffMap[d.staff_id]) staffMap[d.staff_id] = { staff_id: d.staff_id, name: d.profiles?.full_name, total: 0, repaid: 0, count: 0 };
               staffMap[d.staff_id].count++;
               staffMap[d.staff_id].total += Number(d.amount);
               if (d.status === 'paid') staffMap[d.staff_id].repaid += Number(d.advance_repaid_amount || d.amount);
             }
           });
           const rows = Object.values(staffMap);
+          // Chi tiết từng khoản chi của 1 nhân sự
+          const StaffDetail = ({ staffId }) => {
+            const items = data.filter(d => d.staff_id === staffId && (d.status === 'approved' || d.status === 'paid'));
+            return (
+              <div className="space-y-2">
+                {items.length === 0 ? <div className="text-sm text-slate-400 italic py-2">Không có khoản chi.</div> : items.map(d => (
+                  <div key={d.id} className="bg-white rounded-lg border border-slate-100 p-3 flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{CATEGORIES[d.category] || d.category}</span>
+                        <span className="text-[11px] text-slate-400">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${d.status === 'paid' ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>{d.status === 'paid' ? 'Đã hoàn' : 'Đã duyệt'}</span>
+                      </div>
+                      <div className="text-sm text-slate-700 mt-1 font-medium">{d.description || <span className="text-slate-400 italic font-normal">(không ghi nội dung)</span>}</div>
+                      {d.notes && <div className="text-[11px] text-slate-400 mt-0.5">{d.notes}</div>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-bold text-amber-600">{fmt(d.amount)}</div>
+                      {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="mt-1 text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" />{d.proof_image_urls.length} ảnh</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          };
           return (
             <div className="p-4 sm:p-6 bg-white">
               <h3 className="font-bold text-slate-800 mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
@@ -476,15 +503,19 @@ export default function AdvanceExpensePage() {
               <div className="md:hidden space-y-3">
                 {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có dữ liệu</div> : rows.map((s, i) => (
                   <div key={i} className="border border-slate-200 rounded-2xl p-4">
-                    <div className="flex items-center justify-between">
+                    <button onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="w-full flex items-center justify-between">
                       <span className="font-bold text-slate-800">{s.name}</span>
-                      <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{s.count} phiếu</span>
-                    </div>
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{s.count} phiếu</span>
+                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedStaff === s.staff_id ? 'rotate-180' : ''}`} />
+                      </span>
+                    </button>
                     <div className="grid grid-cols-3 gap-2 mt-3 text-center">
                       <div className="bg-amber-50 rounded-lg py-2"><div className="text-[10px] text-amber-500 uppercase">Đã chi</div><div className="font-bold text-amber-600 text-sm">{fmt(s.total)}</div></div>
                       <div className="bg-teal-50 rounded-lg py-2"><div className="text-[10px] text-teal-500 uppercase">Đã hoàn</div><div className="font-bold text-teal-600 text-sm">{fmt(s.repaid)}</div></div>
                       <div className="bg-red-50 rounded-lg py-2"><div className="text-[10px] text-red-500 uppercase">Còn nợ</div><div className="font-bold text-red-600 text-sm">{fmt(s.total - s.repaid)}</div></div>
                     </div>
+                    {expandedStaff === s.staff_id && <div className="mt-3 pt-3 border-t border-slate-100"><StaffDetail staffId={s.staff_id} /></div>}
                   </div>
                 ))}
               </div>
@@ -503,13 +534,23 @@ export default function AdvanceExpensePage() {
                   </thead>
                   <tbody>
                     {rows.map((s, i) => (
-                      <tr key={i} className="hover:bg-slate-50">
-                        <td className="p-3 border font-semibold text-slate-800">{s.name}</td>
+                      <React.Fragment key={i}>
+                      <tr onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="hover:bg-slate-50 cursor-pointer">
+                        <td className="p-3 border font-semibold text-slate-800"><span className="inline-flex items-center gap-1.5"><ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedStaff === s.staff_id ? 'rotate-180' : ''}`} />{s.name}</span></td>
                         <td className="p-3 border text-center">{s.count}</td>
                         <td className="p-3 border font-bold text-amber-600">{fmt(s.total)}</td>
                         <td className="p-3 border font-bold text-teal-600">{fmt(s.repaid)}</td>
                         <td className="p-3 border font-bold text-red-600">{fmt(s.total - s.repaid)}</td>
                       </tr>
+                      {expandedStaff === s.staff_id && (
+                        <tr>
+                          <td colSpan={5} className="p-3 border bg-slate-50">
+                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Chi tiết các khoản chi — {s.name}</div>
+                            <StaffDetail staffId={s.staff_id} />
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
