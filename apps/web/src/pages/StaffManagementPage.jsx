@@ -29,6 +29,7 @@ const ROLES = [
   { value: 'editor',       label: 'Editor' },
   { value: 'marketing',    label: 'Marketing' },
   { value: 'dieu_duong',   label: 'Điều dưỡng' },
+  { value: 'bac_si',       label: 'Bác sĩ' },
   { value: 'accountant',   label: 'Kế toán' },
   { value: 'shareholder',  label: 'Cổ đông' },
   { value: 'admin',        label: 'Admin' },
@@ -48,6 +49,7 @@ const ROLE_COLORS = {
   editor:       'bg-teal-100 text-teal-700',
   marketing:    'bg-indigo-100 text-indigo-700',
   dieu_duong:   'bg-teal-100 text-teal-700',
+  bac_si:       'bg-sky-100 text-sky-700',
 };
 
 const EMPTY_FORM = {

@@ -71,8 +71,8 @@ const FULL_MENU = [
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
   // Phẫu thuật
-  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity, roles: ['dieu_duong', 'cskh'] },
-  { id: 'hau_phau',      label: 'Hậu phẫu / CSKH', icon: ClipboardList, roles: ['dieu_duong', 'cskh'] },
+  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity, roles: ['dieu_duong', 'cskh', 'bac_si'] },
+  { id: 'hau_phau',      label: 'Hậu phẫu / CSKH', icon: ClipboardList, roles: ['dieu_duong', 'cskh', 'bac_si'] },
 ];
 
 const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actual || 0) / target) * 100), 100) : 0;
