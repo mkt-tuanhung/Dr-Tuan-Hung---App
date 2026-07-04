@@ -54,7 +54,7 @@ export default function AdvanceExpensePage() {
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     staff_id: '', category: 'Vat_tu', amount: '', description: '',
-    provider: '', method: 'transfer', proof: ''
+    provider: '', method: 'transfer', proofs: []
   });
 
   const [repayForm, setRepayForm] = useState({
@@ -139,6 +139,24 @@ export default function AdvanceExpensePage() {
     setUploadingImage(false);
   };
 
+  // Tải LÊN NHIỀU ảnh chứng từ (nối vào mảng proofs)
+  const handleMultiUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingImage(true);
+    try {
+      const urls = [];
+      for (const f of files) urls.push(await uploadToR2(f, 'expenses'));
+      setForm(prev => ({ ...prev, proofs: [...(prev.proofs || []), ...urls] }));
+      toast.success(`Đã tải ${urls.length} ảnh lên!`);
+    } catch (err) {
+      toast.error('Lỗi tải ảnh: ' + err.message);
+    }
+    setUploadingImage(false);
+    e.target.value = '';
+  };
+  const removeProof = (idx) => setForm(prev => ({ ...prev, proofs: (prev.proofs || []).filter((_, i) => i !== idx) }));
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!form.amount) return toast.error('Vui lòng nhập số tiền');
@@ -154,7 +172,7 @@ export default function AdvanceExpensePage() {
       amount: numericAmount,
       description: form.description,
       notes: form.provider + ' | ' + form.method, // Lưu tạm vào notes
-      proof_image_urls: form.proof ? [form.proof] : [],
+      proof_image_urls: form.proofs || [],
       is_advance: true,
       status: 'pending'
     });
@@ -163,7 +181,7 @@ export default function AdvanceExpensePage() {
     else {
       toast.success('Đã tạo phiếu tạm ứng thành công!');
       setShowCreateModal(false);
-      setForm({ ...form, amount: '', description: '', provider: '', proof: '' });
+      setForm({ ...form, amount: '', description: '', provider: '', proofs: [] });
       loadData();
     }
     setSaving(false);
@@ -356,7 +374,7 @@ export default function AdvanceExpensePage() {
                     {d.status === 'rejected' && <span className="text-xs text-red-500 italic">"{d.reject_reason}"</span>}
                   </div>
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    {d.proof_image_urls?.[0] && <button onClick={() => setViewImage(d.proof_image_urls[0])} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg" title="Bill chi"><ImageIcon className="w-4 h-4" /></button>}
+                    {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg inline-flex items-center gap-1" title="Bill chi"><ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-xs font-bold">{d.proof_image_urls.length}</span>}</button>}
                     {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-teal-50 text-teal-600 rounded-lg" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
                     {isAdminOrAccountant && d.status === 'pending' && (
                       <>
@@ -406,9 +424,9 @@ export default function AdvanceExpensePage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          {d.proof_image_urls?.[0] && (
-                            <button onClick={() => setViewImage(d.proof_image_urls[0])} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Xem bill chi">
-                              <ImageIcon className="w-4 h-4" />
+                          {d.proof_image_urls?.length > 0 && (
+                            <button onClick={() => setViewImage(d.proof_image_urls)} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1" title="Xem bill chi">
+                              <ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-xs font-bold">{d.proof_image_urls.length}</span>}
                             </button>
                           )}
                           {d.advance_repaid_proof && (
@@ -552,16 +570,15 @@ export default function AdvanceExpensePage() {
       </div>
 
       {/* Image Viewer Modal */}
-      {viewImage && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
-          <div className="relative max-w-5xl w-full flex justify-center">
-            <button onClick={() => setViewImage(null)} className="absolute -top-12 right-0 md:-right-12 text-white hover:text-slate-300 p-2">
-              <X className="w-8 h-8" />
-            </button>
-            <img src={viewImage} alt="Chứng từ" className="max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={e => e.stopPropagation()} />
+      {viewImage && (() => { const imgs = Array.isArray(viewImage) ? viewImage : [viewImage]; return (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-start justify-center p-4 pt-16 overflow-y-auto backdrop-blur-sm" onClick={() => setViewImage(null)}>
+          <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 text-white hover:text-slate-300 p-2 z-10"><X className="w-8 h-8" /></button>
+          <div className="relative max-w-5xl w-full flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
+            {imgs.length > 1 && <span className="text-white/80 text-sm font-semibold">{imgs.length} ảnh chứng từ</span>}
+            {imgs.map((u, i) => <img key={i} src={u} alt={`Chứng từ ${i + 1}`} className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" />)}
           </div>
         </div>
-      )}
+      ); })()}
 
       {/* Create Modal */}
       {showCreateModal && (
@@ -619,20 +636,26 @@ export default function AdvanceExpensePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Chứng từ đính kèm (Hóa đơn, bill...)</label>
-                <div 
-                  onClick={() => !uploadingImage && fileInputRef.current?.click()} 
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${form.proof ? 'border-teal-500 bg-teal-50' : 'border-slate-300 hover:border-teal-400 bg-slate-50'}`}
-                >
-                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={(e) => handleImageUpload(e, url => setForm({...form, proof: url}))} />
-                  {uploadingImage ? (
-                    <div className="flex flex-col items-center gap-2 text-teal-600"><Loader2 className="w-6 h-6 animate-spin" /><span className="font-semibold text-sm">Đang tải...</span></div>
-                  ) : form.proof ? (
-                    <div className="flex flex-col items-center gap-2 text-teal-700"><CheckCircle className="w-6 h-6" /><span className="font-semibold text-sm">Đã tải ảnh thành công</span></div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-slate-500"><UploadCloud className="w-6 h-6 text-teal-500" /><span className="font-semibold text-sm text-teal-600">Click để tải lên</span><span className="text-xs">Hỗ trợ JPG, PNG (Max 5MB)</span></div>
-                  )}
+                <label className="block text-sm font-semibold mb-2 text-slate-700">Chứng từ đính kèm (Hóa đơn, bill... — có thể chọn nhiều ảnh)</label>
+                <div className="flex flex-wrap gap-2.5">
+                  {(form.proofs || []).map((u, i) => (
+                    <div key={i} className="relative w-20 h-20">
+                      <img src={u} alt="" className="w-full h-full object-cover rounded-xl border border-slate-200" />
+                      <button type="button" onClick={() => removeProof(i)} className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow hover:bg-rose-600"><X className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-teal-400 bg-slate-50 flex flex-col items-center justify-center text-teal-600 gap-1 transition-colors"
+                  >
+                    {uploadingImage
+                      ? <Loader2 className="w-5 h-5 animate-spin" />
+                      : <><UploadCloud className="w-5 h-5" /><span className="text-[11px] font-semibold">Thêm ảnh</span></>}
+                  </button>
+                  <input type="file" accept="image/*" multiple className="hidden" ref={fileInputRef} onChange={handleMultiUpload} />
                 </div>
+                <p className="text-xs text-slate-400 mt-1.5">Có thể chọn nhiều ảnh cùng lúc. JPG, PNG (Max 5MB/ảnh).</p>
               </div>
             </div>
 
