@@ -52,6 +52,11 @@ export default function AdvanceExpensePage() {
   const [viewImage, setViewImage] = useState(null);
   // Xổ chi tiết theo nhân sự
   const [expandedStaff, setExpandedStaff] = useState(null);
+  // Lịch sử xoá (thùng rác)
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashData, setTrashData] = useState([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  const isAdmin = profile?.role === 'admin';
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -189,6 +194,41 @@ export default function AdvanceExpensePage() {
     setSaving(false);
   };
 
+  // Xoá mềm -> vào Lịch sử xoá (có thể khôi phục)
+  const handleSoftDelete = async (exp) => {
+    if (!confirm('Chuyển giao dịch tạm ứng này vào Lịch sử xoá? (có thể khôi phục sau)')) return;
+    const { data: upd, error } = await supabase.from('expenses')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: profile.id }).eq('id', exp.id).select('id');
+    if (error) return toast.error(error.message);
+    if (!upd || upd.length === 0) return toast.error('Không xoá được — RLS chặn quyền. Chạy SQL phân quyền.');
+    toast.success('Đã chuyển vào Lịch sử xoá');
+    loadData();
+  };
+  const loadTrash = async () => {
+    setTrashLoading(true);
+    let q = supabase.from('expenses').select('*, profiles!expenses_staff_id_fkey(full_name), remover:profiles!expenses_deleted_by_fkey(full_name)')
+      .eq('is_advance', true).not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
+    if (!isAdminOrAccountant) q = q.eq('staff_id', profile.id);
+    const { data: t, error } = await q;
+    if (error) { // fallback nếu chưa có FK remover
+      const { data: t2 } = await supabase.from('expenses').select('*, profiles!expenses_staff_id_fkey(full_name)')
+        .eq('is_advance', true).not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
+      setTrashData(t2 || []);
+    } else setTrashData(t || []);
+    setTrashLoading(false);
+  };
+  const handleRestore = async (exp) => {
+    const { error } = await supabase.from('expenses').update({ deleted_at: null, deleted_by: null }).eq('id', exp.id);
+    if (error) return toast.error(error.message);
+    toast.success('Đã khôi phục giao dịch'); loadTrash(); loadData();
+  };
+  const handlePermanentDelete = async (exp) => {
+    if (!confirm('Xoá VĨNH VIỄN giao dịch này? Không thể khôi phục lại.')) return;
+    const { error } = await supabase.from('expenses').delete().eq('id', exp.id);
+    if (error) return toast.error(error.message);
+    toast.success('Đã xoá vĩnh viễn'); loadTrash();
+  };
+
   const handleApprove = async (id) => {
     if (!confirm('Bạn chắc chắn muốn DUYỆT phiếu này?')) return;
     const { error } = await supabase.from('expenses').update({ 
@@ -269,6 +309,11 @@ export default function AdvanceExpensePage() {
           {isAdminOrAccountant && (
             <button onClick={openRepayFast} className="px-4 py-2 bg-teal-50 text-teal-600 border border-teal-200 hover:bg-teal-100 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
               <ArrowDownLeft className="w-4 h-4" /> Ghi nhận hoàn ứng
+            </button>
+          )}
+          {isAdminOrAccountant && (
+            <button onClick={() => { setShowTrash(true); loadTrash(); }} className="px-4 py-2 bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
+              <Trash2 className="w-4 h-4" /> Lịch sử xoá
             </button>
           )}
           <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 font-bold rounded-xl text-sm shadow-md flex items-center gap-2 transition-colors">
@@ -387,6 +432,9 @@ export default function AdvanceExpensePage() {
                     {isAdminOrAccountant && d.status === 'approved' && (
                       <button onClick={() => { setSelectedExpense(d); setRepayForm(prev => ({ ...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount) })); setShowRepayModal(true); }} className="flex-1 px-3 py-2 bg-amber-500 text-white rounded-lg font-semibold text-xs">Hoàn ứng</button>
                     )}
+                    {isAdminOrAccountant && (
+                      <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="p-2 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors ml-auto"><Trash2 className="w-4 h-4" /></button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -443,11 +491,14 @@ export default function AdvanceExpensePage() {
                             </>
                           )}
                           {isAdminOrAccountant && d.status === 'approved' && (
-                            <button onClick={() => { 
-                              setSelectedExpense(d); 
+                            <button onClick={() => {
+                              setSelectedExpense(d);
                               setRepayForm(prev => ({...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount)}));
-                              setShowRepayModal(true); 
+                              setShowRepayModal(true);
                             }} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors">Hoàn ứng</button>
+                          )}
+                          {isAdminOrAccountant && (
+                            <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                           )}
                         </div>
                       </td>
@@ -611,6 +662,42 @@ export default function AdvanceExpensePage() {
       </div>
 
       {/* Image Viewer Modal */}
+      {showTrash && (
+        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowTrash(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b flex items-center justify-between shrink-0">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2"><Trash2 className="w-5 h-5 text-rose-500" /> Lịch sử xoá — {trashData.length} giao dịch</h3>
+              <button onClick={() => setShowTrash(false)}><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-2">
+              {trashLoading ? <div className="text-center py-8 text-slate-400 text-sm">Đang tải...</div>
+                : trashData.length === 0 ? <div className="text-center py-10 text-slate-400 text-sm">Chưa có giao dịch nào bị xoá.</div>
+                  : trashData.map(d => (
+                    <div key={d.id} className="border border-slate-100 rounded-xl p-3 flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-slate-800">{d.profiles?.full_name}</span>
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{CATEGORIES[d.category] || d.category}</span>
+                          <span className="text-[11px] text-slate-400">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                        <div className="text-sm text-slate-700 mt-1">{d.description || <span className="text-slate-400 italic">(không ghi nội dung)</span>}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">Xoá lúc {d.deleted_at ? new Date(d.deleted_at).toLocaleString('vi-VN') : '—'}{d.remover?.full_name ? ` · bởi ${d.remover.full_name}` : ''}</div>
+                        {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="mt-1 text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" />{d.proof_image_urls.length} ảnh</button>}
+                      </div>
+                      <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                        <span className="font-bold text-amber-600">{fmt(d.amount)}</span>
+                        <div className="flex gap-1.5">
+                          <button onClick={() => handleRestore(d)} className="px-2.5 py-1.5 rounded-lg border border-teal-200 text-teal-700 text-xs font-bold inline-flex items-center gap-1 hover:bg-teal-50"><RefreshCw className="w-3.5 h-3.5" />Khôi phục</button>
+                          {isAdmin && <button onClick={() => handlePermanentDelete(d)} className="px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" />Xoá vĩnh viễn</button>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewImage && (() => { const imgs = Array.isArray(viewImage) ? viewImage : [viewImage]; return (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-start justify-center p-4 pt-16 overflow-y-auto backdrop-blur-sm" onClick={() => setViewImage(null)}>
           <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 text-white hover:text-slate-300 p-2 z-10"><X className="w-8 h-8" /></button>
