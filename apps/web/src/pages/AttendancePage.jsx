@@ -161,6 +161,17 @@ const AttendancePage = () => {
 
   const handleCheckOut = async () => {
     if (!todayRecord?.id) return;
+    // Chống bấm nhầm check-out ngay sau check-in (do lag) → Ra trùng Vào.
+    // Yêu cầu cách lần vào tối thiểu 1 phút.
+    if (todayRecord.check_in) {
+      const [h, m, s] = todayRecord.check_in.split(':').map(Number);
+      const inSec = h * 3600 + m * 60 + (s || 0);
+      const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      if (nowSec - inSec < 60) {
+        toast.error('Chưa thể chấm công ra ngay sau khi vào (tránh bấm nhầm). Vui lòng thử lại sau ít phút.');
+        return;
+      }
+    }
     setSaving(true);
     try {
       let lat = null, lng = null, ip = null, dist = 0, warningMsg = null;
@@ -336,6 +347,13 @@ const AttendancePage = () => {
             <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white">
               <CalendarCheck className="w-3 h-3" />
               {STATUS_CONFIG[todayRecord.status]?.label || 'Đã chấm công'}
+            </div>
+            <div>
+              <button onClick={handleCheckOut} disabled={saving}
+                className="mt-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-white/20 text-white text-xs font-semibold border border-white/30 hover:bg-white/30 transition-all active:scale-95 disabled:opacity-50">
+                <LogOut className="w-3.5 h-3.5" /> Cập nhật giờ ra
+              </button>
+              <p className="text-emerald-200 text-[10px] mt-1">Bấm lại khi về để cập nhật đúng giờ ra</p>
             </div>
           </div>
         )}
