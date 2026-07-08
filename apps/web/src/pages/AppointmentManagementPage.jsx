@@ -31,6 +31,8 @@ const AppointmentManagementPage = () => {
   const [viewNoteApp, setViewNoteApp] = useState(null);
   const [careHistoryApp, setCareHistoryApp] = useState(null);
   const [viewImage, setViewImage] = useState(null);
+  const [custEdit, setCustEdit] = useState(null);                 // khách đang sửa tên/SĐT
+  const [custForm, setCustForm] = useState({ customer_name: '', phone: '' });
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
@@ -282,6 +284,25 @@ const AppointmentManagementPage = () => {
       surgery_date: app.surgery_date || ''
     });
     setShowCreateModal(true);
+  };
+
+  // Sửa nhanh Tên + SĐT khách — cho phép cả khi đã tiếp nhận/đánh giá (Admin, Telesale)
+  const canEditCustomer = ['admin', 'telesale'].includes(profile?.role);
+  const openCustEdit = (app) => {
+    setCustForm({ customer_name: app.customer_name || '', phone: app.phone || '' });
+    setCustEdit(app);
+  };
+  const saveCustEdit = async () => {
+    if (!custForm.customer_name.trim()) { toast.error('Vui lòng nhập tên khách'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('customer_appointments')
+      .update({ customer_name: custForm.customer_name.trim(), phone: custForm.phone.trim() })
+      .eq('id', custEdit.id);
+    setSaving(false);
+    if (error) { toast.error('Lỗi cập nhật: ' + error.message); return; }
+    toast.success('Đã cập nhật thông tin khách');
+    setCustEdit(null);
+    loadData();
   };
 
   const openEval = (app) => {
@@ -685,8 +706,13 @@ const AppointmentManagementPage = () => {
                               </button>
                             )}
                             {['admin', 'telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled' && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Sửa lịch hẹn">
                                 <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            {canEditCustomer && (
+                              <button onClick={() => openCustEdit(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-colors" title="Sửa tên & SĐT khách">
+                                <User className="w-4 h-4" />
                               </button>
                             )}
                             {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
@@ -1099,6 +1125,36 @@ const AppointmentManagementPage = () => {
               <X className="w-8 h-8" />
             </button>
             <img src={viewImage} alt="Phóng to" className="max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={e => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+
+      {/* Sửa nhanh Tên + SĐT khách (Admin / Telesale) — dùng được ở mọi trạng thái */}
+      {custEdit && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50">
+              <h3 className="font-bold text-amber-800 flex items-center gap-2"><User className="w-4 h-4" /> Sửa thông tin khách</h3>
+              <button onClick={() => setCustEdit(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tên khách <span className="text-red-500">*</span></label>
+                <input value={custForm.customer_name} onChange={e => setCustForm(f => ({ ...f, customer_name: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none" placeholder="Tên khách hàng" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
+                <input value={custForm.phone} onChange={e => setCustForm(f => ({ ...f, phone: e.target.value }))}
+                  inputMode="tel" className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none" placeholder="SĐT khách" />
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
+              <button onClick={() => setCustEdit(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
+              <button onClick={saveCustEdit} disabled={saving} className="px-6 py-2 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50">
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </button>
+            </div>
           </div>
         </div>
       )}
