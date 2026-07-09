@@ -465,7 +465,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                     <p className="mt-1 text-xs text-slate-400">Theo lịch hẹn / đánh giá đã chọn — không sửa ở đây</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Bác sĩ mổ (công mổ: Tiểu 10% · Đại 5% doanh thu)</label>
+                    <label className="block text-sm font-semibold mb-2">Bác sĩ mổ</label>
                     <select value={form.bac_si_id} onChange={e => setForm({...form, bac_si_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
                       <option value="">-- Trống --</option>
                       {nurses.filter(n => n.role === 'bac_si' || n.role_2 === 'bac_si' || n.role === 'admin').map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}

@@ -19,6 +19,7 @@ const EMPTY = {
 const MoDoiTacPage = () => {
   const { profile } = useAuth();
   const canWrite = ['admin', 'accountant', 'dieu_duong'].includes(profile?.role) || profile?.role_2 === 'dieu_duong';
+  const canSeeDoctorPay = ['admin', 'accountant'].includes(profile?.role); // ẩn công mổ BS với điều dưỡng — tránh lộ cơ chế
 
   const [rows, setRows] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -122,10 +123,12 @@ const MoDoiTacPage = () => {
           <div className="text-xs text-slate-400 font-semibold uppercase">Tổng thu đối tác</div>
           <div className="text-2xl font-black text-teal-600 mt-1">{fmtM(totalFee)}</div>
         </div>
-        <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
-          <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (50%)</div>
-          <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(totalFee * PARTNER_BACSI_RATE))}</div>
-        </div>
+        {canSeeDoctorPay && (
+          <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
+            <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (50%)</div>
+            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(totalFee * PARTNER_BACSI_RATE))}</div>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -156,7 +159,7 @@ const MoDoiTacPage = () => {
                       </div>
                     </div>
                     <div className="text-xs space-y-1 text-slate-600">
-                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b> <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(Number(r.partner_fee || 0) * PARTNER_BACSI_RATE))}</span></div>
+                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(Number(r.partner_fee || 0) * PARTNER_BACSI_RATE))}</span>}</div>
                       <div className="text-slate-500">Phụ mổ: {[nameOf(r, 'p1'), nameOf(r, 'p2'), nameOf(r, 'p3')].filter(Boolean).join(', ') || '—'}</div>
                     </div>
                     {canWrite && (
@@ -212,11 +215,11 @@ const MoDoiTacPage = () => {
                 <div>
                   <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền nhận từ đối tác (VNĐ) *</label>
                   <input inputMode="numeric" value={modal.partner_fee} onChange={e => setModal({ ...modal, partner_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-teal-700" placeholder="15.000.000" />
-                  {modal.partner_fee && <p className="text-xs text-blue-500 mt-1">Công BS (50%): {fmtM(Math.round((Number(String(modal.partner_fee).replace(/\D/g, '')) || 0) * PARTNER_BACSI_RATE))}</p>}
+                  {canSeeDoctorPay && modal.partner_fee && <p className="text-xs text-blue-500 mt-1">Công BS (50%): {fmtM(Math.round((Number(String(modal.partner_fee).replace(/\D/g, '')) || 0) * PARTNER_BACSI_RATE))}</p>}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Bác sĩ mổ (nhận 50% tiền đối tác)</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Bác sĩ mổ</label>
                 <select value={modal.bac_si_id} onChange={e => setModal({ ...modal, bac_si_id: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500">
                   <option value="">-- Trống --</option>
                   {doctors.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
