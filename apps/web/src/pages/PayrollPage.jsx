@@ -281,17 +281,19 @@ const PayrollPage = () => {
       ...(r.salaryAdvance ? [['Trừ: Ứng lương', '-' + fmtM(r.salaryAdvance)]] : []),
       ['Trừ: Khấu trừ khác', '-' + fmtM(r.otherDeduction)],
     ];
-    // Chi tiết hoa hồng theo từng khách (Sale Offline)
-    const hhDetail = r.saleOff?.perCustomer?.length
-      ? r.saleOff.perCustomer.map(c => ({ n: c.name, rev: fmtM(c.revenue), up: c.upsale ? fmtM(c.upsale) : '', hh: fmtM(c.hh) }))
-      : null;
+    // Chi tiết hoa hồng theo TỪNG khách/ca cho mọi vị trí — {n:tên, d:mô tả, a:tiền}
+    const hhDetail = [];
+    (r.saleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Sale · DT ${fmtM(c.revenue)}${c.upsale ? ` · Upsale ${fmtM(c.upsale)}` : ''}`, a: fmtM(c.hh) }));
+    (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}`, a: fmtM(c.hh) }));
+    (r.ddOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `${c.surgeryType} · ${c.roles.join(', ')}`, a: fmtM(c.bonus) }));
+    (r.commDetail || []).forEach(d => hhDetail.push({ n: d.label, d: '', a: fmtM(d.amount) }));
     const payload = {
       n: s.full_name,
       r: (ROLE_LABELS[s.role] || s.role) + (s.employment_status === 'probation' ? ' · Thử việc (85%)' : ''),
       m: `${month}/${year}`,
       bank: s.bank_name ? `${s.bank_name} - ${s.bank_account || ''}` : '',
       items,
-      ...(hhDetail ? { hh: hhDetail } : {}),
+      ...(hhDetail.length ? { hh: hhDetail } : {}),
       net: fmtM(r.net),
     };
 
@@ -299,7 +301,7 @@ const PayrollPage = () => {
     try {
       const token = await encryptPayslip(payload, passcode);
       const url = `${window.location.origin}/phieu-luong#${token}`;
-      qrDataUrl = await QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: 'M' });
+      qrDataUrl = await QRCode.toDataURL(url, { width: 360, margin: 1, errorCorrectionLevel: 'L' });
     } catch {
       toast.error('Không tạo được mã QR phiếu lương');
       return;
