@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Handshake, Plus, Edit, Trash2, X, Calendar as CalendarIcon, Stethoscope, Search } from 'lucide-react';
+import { Handshake, Plus, Edit, Trash2, X, Calendar as CalendarIcon, Stethoscope, Search, CheckCircle } from 'lucide-react';
 import { PARTNER_BACSI_RATE } from '@/lib/kpiCalc';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0));
@@ -84,11 +84,22 @@ const MoDoiTacPage = () => {
     else { toast.success('Đã xoá'); loadData(); }
   };
 
+  // Xác nhận đối tác đã thanh toán -> mới cộng dòng tiền & công mổ bác sĩ
+  const togglePaid = async (r) => {
+    const paid = !r.partner_paid;
+    setRows(list => list.map(x => x.id === r.id ? { ...x, partner_paid: paid } : x)); // phản hồi ngay
+    const { error } = await supabase.from('partner_surgeries')
+      .update({ partner_paid: paid, paid_at: paid ? new Date().toISOString() : null }).eq('id', r.id);
+    if (error) { toast.error(error.message); loadData(); return; }
+    toast.success(paid ? 'Đã xác nhận đối tác thanh toán — đã cộng dòng tiền & lương BS' : 'Đã bỏ đánh dấu thanh toán');
+  };
+
   const filtered = search
     ? rows.filter(r => (r.customer_name || '').toLowerCase().includes(search.toLowerCase()) || (r.partner_name || '').toLowerCase().includes(search.toLowerCase()))
     : rows;
 
   const totalFee = filtered.reduce((s, r) => s + Number(r.partner_fee || 0), 0);
+  const paidFee = filtered.filter(r => r.partner_paid).reduce((s, r) => s + Number(r.partner_fee || 0), 0);
   const grouped = filtered.reduce((acc, r) => {
     const d = r.surgery_date ? new Date(r.surgery_date).toLocaleDateString('vi-VN') : 'Không rõ';
     (acc[d] = acc[d] || []).push(r); return acc;
@@ -125,8 +136,9 @@ const MoDoiTacPage = () => {
         </div>
         {canSeeDoctorPay && (
           <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
-            <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (50%)</div>
-            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(totalFee * PARTNER_BACSI_RATE))}</div>
+            <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (đã TT)</div>
+            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(paidFee * PARTNER_BACSI_RATE))}</div>
+            {paidFee < totalFee && <div className="text-[11px] text-amber-500 mt-0.5">Chưa TT: {fmtM(Math.round((totalFee - paidFee) * PARTNER_BACSI_RATE))}</div>}
           </div>
         )}
       </div>
@@ -162,6 +174,21 @@ const MoDoiTacPage = () => {
                       <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(Number(r.partner_fee || 0) * PARTNER_BACSI_RATE))}</span>}</div>
                       <div className="text-slate-500">Phụ mổ: {[nameOf(r, 'p1'), nameOf(r, 'p2'), nameOf(r, 'p3')].filter(Boolean).join(', ') || '—'}</div>
                     </div>
+
+                    {/* Trạng thái thanh toán đối tác — bấm mới cộng dòng tiền & lương BS */}
+                    <div className="mt-3 pt-2 border-t border-slate-50">
+                      {r.partner_paid ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1 text-teal-700 bg-teal-50 border border-teal-100 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3.5 h-3.5" /> Đối tác đã thanh toán</span>
+                          {canSeeDoctorPay && <button onClick={() => togglePaid(r)} className="text-[11px] text-slate-400 hover:text-slate-600 underline shrink-0">Bỏ đánh dấu</button>}
+                        </div>
+                      ) : canSeeDoctorPay ? (
+                        <button onClick={() => togglePaid(r)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-sm"><CheckCircle className="w-4 h-4" /> Đối tác đã thanh toán</button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg text-xs font-semibold">Chưa thanh toán</span>
+                      )}
+                    </div>
+
                     {canWrite && (
                       <div className="flex gap-2 mt-3 pt-2 border-t border-slate-50">
                         <button onClick={() => openEdit(r)} className="flex-1 flex justify-center items-center gap-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg border border-slate-200"><Edit className="w-3.5 h-3.5" /> Sửa</button>
