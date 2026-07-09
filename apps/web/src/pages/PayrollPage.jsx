@@ -98,6 +98,7 @@ const PayrollPage = () => {
         const rate = new Date(a.date).getDay() === 0 ? 2 : 1.5;
         return s + Number(a.overtime_hours) * rate * (Number(base || 0) / STANDARD_DAYS / 8);
       }, 0);
+    const overtimeHoursOf = (id) => att.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.overtime_hours || 0), 0);
 
     const computed = (staff || []).map(s => {
       const workingDays = workingDaysOf(s.id);
@@ -143,7 +144,9 @@ const PayrollPage = () => {
       const gross = luongCong + phuCap + commission + overtime + otherBonus;
       const net = gross - salaryAdvance - otherDeduction;
 
-      return { staff: s, workingDays, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff };
+      const overtimeHours = overtimeHoursOf(s.id);
+      const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
+      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff };
     });
 
     setRows(computed);
@@ -261,22 +264,30 @@ const PayrollPage = () => {
     const s = r.staff;
 
     // Chi tiết lương -> mã hoá -> QR. Phiếu in KHÔNG hiện số tiền nào.
+    const congLabel = s.fixed_salary
+      ? 'Lương (cố định — đủ tháng)'
+      : `Lương theo công (${r.workingDays} công · nghỉ ${r.daysOff}/${STANDARD_DAYS})`;
     const items = [
-      ['Lương theo công (' + r.workingDays + '/' + STANDARD_DAYS + ' công)', fmtM(r.luongCong)],
+      [congLabel, fmtM(r.luongCong)],
       ['Phụ cấp', fmtM(r.phuCap)],
       ['Hoa hồng / thưởng', fmtM(r.commission)],
-      ...(r.overtime ? [['Lương tăng ca', '+' + fmtM(r.overtime)]] : []),
+      ...(r.overtime ? [[`Lương tăng ca (${r.overtimeHours} giờ)`, '+' + fmtM(r.overtime)]] : []),
       ['Thưởng khác', fmtM(r.otherBonus)],
       ['Tổng thu nhập', fmtM(r.gross)],
       ...(r.salaryAdvance ? [['Trừ: Ứng lương', '-' + fmtM(r.salaryAdvance)]] : []),
       ['Trừ: Khấu trừ khác', '-' + fmtM(r.otherDeduction)],
     ];
+    // Chi tiết hoa hồng theo từng khách (Sale Offline)
+    const hhDetail = r.saleOff?.perCustomer?.length
+      ? r.saleOff.perCustomer.map(c => ({ n: c.name, rev: fmtM(c.revenue), up: c.upsale ? fmtM(c.upsale) : '', hh: fmtM(c.hh) }))
+      : null;
     const payload = {
       n: s.full_name,
       r: (ROLE_LABELS[s.role] || s.role) + (s.employment_status === 'probation' ? ' · Thử việc (85%)' : ''),
       m: `${month}/${year}`,
       bank: s.bank_name ? `${s.bank_name} - ${s.bank_account || ''}` : '',
       items,
+      ...(hhDetail ? { hh: hhDetail } : {}),
       net: fmtM(r.net),
     };
 

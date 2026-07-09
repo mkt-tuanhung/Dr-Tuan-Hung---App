@@ -71,6 +71,22 @@ const PayslipViewPage = () => {
                 ))}
               </tbody>
             </table>
+            {Array.isArray(data.hh) && data.hh.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Chi tiết hoa hồng theo khách ({data.hh.length})</div>
+                <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+                  {data.hh.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <div className="min-w-0 pr-2">
+                        <div className="font-medium text-slate-700 truncate">{c.n}</div>
+                        <div className="text-[11px] text-slate-400">DT {c.rev}{c.up ? ` · Upsale ${c.up}` : ''}</div>
+                      </div>
+                      <div className="font-semibold text-teal-700 tabular-nums shrink-0">{c.hh}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-4 bg-teal-50 border border-teal-100 rounded-xl p-4 flex items-center justify-between">
               <span className="font-bold text-slate-700">THỰC NHẬN</span>
               <span className="text-2xl font-bold text-teal-700 tabular-nums">{data.net}</span>
