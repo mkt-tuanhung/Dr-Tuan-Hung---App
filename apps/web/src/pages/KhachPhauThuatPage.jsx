@@ -38,6 +38,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   const [form, setForm] = useState({
     activeTab: 'phu_mo',
+    bac_si_id: '',
     phu_mo_1_id: '', phu_mo_2_id: '', phu_mo_3_id: '', surgery_notes: '',
     truc_dem_id: '', truc_dem_id_2: '', truc_dem_notes: '',
     hau_phau_id: ''
@@ -51,7 +52,8 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       .eq('status', 'phau_thuat')
       .order('surgery_date', { ascending: false });
 
-    const { data: nursesData } = await supabase.from('profiles').select('*').in('role', ['dieu_duong', 'admin']);
+    const { data: nursesData } = await supabase.from('profiles').select('*')
+      .or('role.in.(dieu_duong,admin,bac_si),role_2.in.(dieu_duong,admin,bac_si)');
 
     const appIds = appsData ? appsData.map(a => a.id) : [];
     let consumedSet = new Set();
@@ -82,6 +84,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setSelectedApp(app);
     setForm({
       activeTab: 'phu_mo',
+      bac_si_id: app.bac_si_id || '',
       phu_mo_1_id: app.phu_mo_1_id || '',
       phu_mo_2_id: app.phu_mo_2_id || '',
       phu_mo_3_id: app.phu_mo_3_id || '',
@@ -99,6 +102,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     setSaving(true);
     const { error } = await supabase.from('customer_appointments')
       .update({
+        bac_si_id: form.bac_si_id || null,
         phu_mo_1_id: form.phu_mo_1_id || null,
         phu_mo_2_id: form.phu_mo_2_id || null,
         phu_mo_3_id: form.phu_mo_3_id || null,
@@ -446,6 +450,13 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                       {selectedApp?.surgery_type || 'Tiểu phẫu'}
                     </div>
                     <p className="mt-1 text-xs text-slate-400">Theo lịch hẹn / đánh giá đã chọn — không sửa ở đây</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Bác sĩ mổ (công mổ: Tiểu 10% · Đại 5% doanh thu)</label>
+                    <select value={form.bac_si_id} onChange={e => setForm({...form, bac_si_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                      <option value="">-- Trống --</option>
+                      {nurses.filter(n => n.role === 'bac_si' || n.role_2 === 'bac_si' || n.role === 'admin').map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-2">Phụ mổ 1</label>
