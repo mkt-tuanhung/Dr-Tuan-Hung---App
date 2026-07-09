@@ -15,6 +15,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<'
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const STANDARD_DAYS = 26;
+// Nhãn trạng thái chấm công KHÔNG tính là ngày công (dùng cho chi tiết ngày nghỉ)
+const ATT_STATUS_LABEL = { leave: 'Nghỉ phép', half_day: 'Nghỉ nửa ngày', absent: 'Vắng', unpaid_leave: 'Nghỉ không lương', sick: 'Nghỉ ốm' };
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const ROLE_LABELS = {
@@ -131,6 +133,11 @@ const PayrollPage = () => {
         })
         .sort((x, y) => (x.date < y.date ? -1 : 1));
 
+      // Chi tiết ngày nghỉ — các ngày chấm công KHÔNG tính là ngày công (nghỉ phép, vắng, nửa ngày...)
+      const offDetail = s.fixed_salary ? [] : att.filter(a => a.staff_id === s.id && !['present', 'late', 'early_leave'].includes(a.status))
+        .map(a => ({ date: a.date, status: a.status }))
+        .sort((x, y) => (x.date < y.date ? -1 : 1));
+
       const saved = payroll.find(p => p.staff_id === s.id);
       const otherBonus = Number(saved?.other_bonus || 0);
       const otherDeduction = Number(saved?.other_deduction || 0);
@@ -142,7 +149,7 @@ const PayrollPage = () => {
 
       const overtimeHours = overtimeHoursOf(s.id);
       const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
-      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, partnerOff, commDetail, otDetail };
+      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, partnerOff, commDetail, otDetail, offDetail };
     });
 
     setRows(computed);
@@ -306,14 +313,22 @@ const PayrollPage = () => {
     (r.partnerOff?.bacSiCases || []).forEach(c => hhDetail.push({ n: c.name, d: `Mổ đối tác ${c.surgeryType} · công BS 50%${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.cong) }));
     (r.partnerOff?.phuMoCases || []).forEach(c => hhDetail.push({ n: c.name, d: `Mổ đối tác ${c.surgeryType} · ${c.roles.join(', ')}${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.bonus) }));
     (r.commDetail || []).forEach(d => hhDetail.push({ n: d.label, d: '', a: fmtM(d.amount) }));
+    // Chi tiết ngày nghỉ & tăng ca theo từng ngày (đưa vào phiếu lương digital)
+    const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const dLabel = (ds) => { const dt = new Date(ds); return `${WD[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`; };
+    const offList = (r.offDetail || []).map(o => ({ d: dLabel(o.date), s: ATT_STATUS_LABEL[o.status] || o.status || 'Nghỉ' }));
+    const otList = (r.otDetail || []).map(o => ({ d: dLabel(o.date), h: o.hours, r: o.rate === 2 ? '200%' : '150%', a: '+' + fmtM(o.amount) }));
     const payload = {
       n: s.full_name,
       r: (ROLE_LABELS[s.role] || s.role) + (s.employment_status === 'probation' ? ' · Thử việc (85%)' : ''),
       m: `${month}/${year}`,
       k: `${s.id}:${month}/${year}`,   // định danh phiếu (phát hiện thiết bị xem trùng)
       bank: s.bank_name ? `${s.bank_name} - ${s.bank_account || ''}` : '',
+      cong: s.fixed_salary ? null : { w: r.workingDays, off: r.daysOff, std: STANDARD_DAYS },
       items,
       ...(hhDetail.length ? { hh: hhDetail } : {}),
+      ...(offList.length ? { off: offList } : {}),
+      ...(otList.length ? { ot: otList } : {}),
       net: fmtM(r.net),
     };
 
@@ -787,6 +802,24 @@ const PayrollPage = () => {
                   <div className="text-sm text-slate-400 italic">Không có hoa hồng/thưởng trong tháng.</div>
                 )}
               </div>
+
+              {/* Ngày công & ngày nghỉ */}
+              {!saleDetail.staff?.fixed_salary && (
+                <div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ngày công · {saleDetail.workingDays}/{STANDARD_DAYS} · nghỉ {saleDetail.daysOff}</div>
+                  {saleDetail.offDetail?.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {saleDetail.offDetail.map((o, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-xs bg-rose-50 text-rose-600 border border-rose-100 px-2 py-1 rounded-lg font-medium">
+                          {new Date(o.date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })} · {ATT_STATUS_LABEL[o.status] || o.status || 'Nghỉ'}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-400 italic">{saleDetail.daysOff > 0 ? 'Nghỉ (không có bản ghi chấm công cụ thể).' : 'Đi làm đủ công.'}</div>
+                  )}
+                </div>
+              )}
 
               {/* Tăng ca theo ngày */}
               {saleDetail.otDetail?.length > 0 && (
