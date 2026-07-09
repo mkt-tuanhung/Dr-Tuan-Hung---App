@@ -32,7 +32,7 @@ const AppointmentManagementPage = () => {
   const [careHistoryApp, setCareHistoryApp] = useState(null);
   const [viewImage, setViewImage] = useState(null);
   const [custEdit, setCustEdit] = useState(null);                 // khách đang sửa tên/SĐT
-  const [custForm, setCustForm] = useState({ customer_name: '', phone: '' });
+  const [custForm, setCustForm] = useState({ customer_name: '', phone: '', telesale_id: '', telesale_id_2: '', sale_id: '' });
   const [createForm, setCreateForm] = useState({
     appointment_type: 'new',
     appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
@@ -289,14 +289,24 @@ const AppointmentManagementPage = () => {
   // Sửa nhanh Tên + SĐT khách — cho phép cả khi đã tiếp nhận/đánh giá (Admin, Telesale)
   const canEditCustomer = ['admin', 'telesale'].includes(profile?.role);
   const openCustEdit = (app) => {
-    setCustForm({ customer_name: app.customer_name || '', phone: app.phone || '' });
+    setCustForm({
+      customer_name: app.customer_name || '', phone: app.phone || '',
+      telesale_id: app.telesale_id || '', telesale_id_2: app.telesale_id_2 || '', sale_id: app.sale_id || '',
+    });
     setCustEdit(app);
   };
   const saveCustEdit = async () => {
     if (!custForm.customer_name.trim()) { toast.error('Vui lòng nhập tên khách'); return; }
     setSaving(true);
+    const payload = { customer_name: custForm.customer_name.trim(), phone: custForm.phone.trim() };
+    // Chỉ Admin mới được đổi nhân sự phụ trách (ảnh hưởng ghi nhận hoa hồng)
+    if (isAdmin) {
+      payload.telesale_id = custForm.telesale_id || null;
+      payload.telesale_id_2 = custForm.telesale_id_2 || null;
+      payload.sale_id = custForm.sale_id || null;
+    }
     const { error } = await supabase.from('customer_appointments')
-      .update({ customer_name: custForm.customer_name.trim(), phone: custForm.phone.trim() })
+      .update(payload)
       .eq('id', custEdit.id);
     setSaving(false);
     if (error) { toast.error('Lỗi cập nhật: ' + error.message); return; }
@@ -1137,7 +1147,7 @@ const AppointmentManagementPage = () => {
               <h3 className="font-bold text-amber-800 flex items-center gap-2"><User className="w-4 h-4" /> Sửa thông tin khách</h3>
               <button onClick={() => setCustEdit(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tên khách <span className="text-red-500">*</span></label>
                 <input value={custForm.customer_name} onChange={e => setCustForm(f => ({ ...f, customer_name: e.target.value }))}
@@ -1148,6 +1158,41 @@ const AppointmentManagementPage = () => {
                 <input value={custForm.phone} onChange={e => setCustForm(f => ({ ...f, phone: e.target.value }))}
                   inputMode="tel" className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none" placeholder="SĐT khách" />
               </div>
+              {isAdmin && (
+                <>
+                  <div className="pt-2 border-t border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">Nhân sự phụ trách (ảnh hưởng hoa hồng)</div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
+                    <select value={custForm.telesale_id} onChange={e => setCustForm(f => ({ ...f, telesale_id: e.target.value, telesale_id_2: e.target.value === f.telesale_id_2 ? '' : f.telesale_id_2 }))}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none bg-white">
+                      <option value="">— Không có —</option>
+                      {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale').map(s => (
+                        <option key={s.id} value={s.id}>{s.full_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi hoa hồng)</span></label>
+                    <select value={custForm.telesale_id_2} onChange={e => setCustForm(f => ({ ...f, telesale_id_2: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none bg-white">
+                      <option value="">— Không có —</option>
+                      {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale') && s.id !== custForm.telesale_id).map(s => (
+                        <option key={s.id} value={s.id}>{s.full_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
+                    <select value={custForm.sale_id} onChange={e => setCustForm(f => ({ ...f, sale_id: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none bg-white">
+                      <option value="">— Không có —</option>
+                      {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline').map(s => (
+                        <option key={s.id} value={s.id}>{s.full_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
             <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
               <button onClick={() => setCustEdit(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
