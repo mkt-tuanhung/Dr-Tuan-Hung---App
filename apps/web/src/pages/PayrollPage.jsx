@@ -73,8 +73,8 @@ const PayrollPage = () => {
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
       supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
-      supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', meDay),
-      supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
       supabase.from('expenses').select('staff_id, amount').eq('is_advance', true).eq('status', 'approved').gte('date', ms).lte('date', meDay),
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
@@ -109,52 +109,26 @@ const PayrollPage = () => {
         : Math.round(effectiveBase / STANDARD_DAYS * workingDays);
       const phuCap = Number(s.allowance || 0);
 
-      // Chi tiết Sale Offline (hoa hồng từng khách) nếu nhân sự là sale_offline
-      const saleOff = [s.role, s.role_2].includes('sale_offline')
+      // Tính chi tiết từng vị trí một lần — dùng chung cho tổng HH + modal chi tiết
+      const rolesArr = [s.role, s.role_2].filter(Boolean);
+      const mineTele = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
+      const telePhones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
+
+      const saleOff = rolesArr.includes('sale_offline')
         ? computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id))
         : null;
-
-      // Hoa hồng theo từng vị trí — cộng dồn nếu kiêm nhiệm 2 vị trí
-      const commissionForRole = (role) => {
-        if (role === 'sale_offline') {
-          return (saleOff || computeSaleOffline([], [])).tongHH;
-        } else if (role === 'telesale') {
-          const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
-          const phones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
-          return computeTelesale({
-            phones,
-            appts: appts.filter(a => mine(a) && !isRecheck(a)),
-            bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine),
-          }).tongHH;
-        } else if (role === 'truc_page') {
-          return computeTrucPage(pages.filter(p => p.staff_id === s.id)).hh;
-        } else if (role === 'dieu_duong') {
-          return computeDieuDuong(surg, s.id).tongHH;
-        }
-        return 0;
-      };
-      const commission = [s.role, s.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonusOf(s.id);
-
-      // Chi tiết hoa hồng/thưởng theo vị trí (admin xem chi tiết)
-      const commDetail = [];
-      const rolesArr = [s.role, s.role_2].filter(Boolean);
-      if (rolesArr.includes('telesale')) {
-        const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
-        const phones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
-        const t = computeTelesale({ phones, appts: appts.filter(a => mine(a) && !isRecheck(a)), bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine) });
-        if (t.thuongDoanhThu) commDetail.push({ label: `Thưởng doanh thu telesale (${t.dtRate}% · DT ${fmtM(t.doanhThu)})`, amount: t.thuongDoanhThu });
-        if (t.thuongLichHen) commDetail.push({ label: `Thưởng hẹn khách (${t.direct} trực tiếp · ${t.fromBong} bong→PT · ${t.fromCoc} cọc→PT)`, amount: t.thuongLichHen });
-      }
-      if (rolesArr.includes('truc_page')) {
-        const tp = computeTrucPage(pages.filter(p => p.staff_id === s.id));
-        if (tp.hh) commDetail.push({ label: `SĐT quan tâm (${tp.interested} × 20.000đ)`, amount: tp.hh });
-      }
-      if (rolesArr.includes('dieu_duong')) {
-        const dd = computeDieuDuong(surg, s.id);
-        if (dd.thuongTrucDem) commDetail.push({ label: `Trực đêm (${dd.trucDem} ca)`, amount: dd.thuongTrucDem });
-        if (dd.thuongPhuMo) commDetail.push({ label: `Phụ mổ (P1:${dd.pm1} P2:${dd.pm2} P3:${dd.pm3}) · Hậu phẫu (${dd.hauPhau})`, amount: dd.thuongPhuMo });
-      }
+      const teleOff = rolesArr.includes('telesale')
+        ? computeTelesale({ phones: telePhones, appts: appts.filter(a => mineTele(a) && !isRecheck(a)), bongRows: bong.filter(mineTele), cocRows: coc.filter(mineTele), surgRows: surg.filter(mineTele) })
+        : null;
+      const ddOff = rolesArr.includes('dieu_duong') ? computeDieuDuong(surg, s.id) : null;
+      const trucOff = rolesArr.includes('truc_page') ? computeTrucPage(pages.filter(p => p.staff_id === s.id)) : null;
       const wins = winBonusOf(s.id);
+
+      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + wins;
+
+      // Thành phần cho Trực page / Editor (các vị trí không có bảng từng khách)
+      const commDetail = [];
+      if (trucOff?.hh) commDetail.push({ label: `SĐT quan tâm (${trucOff.interested} × 20.000đ)`, amount: trucOff.hh });
       if (wins) commDetail.push({ label: 'Thưởng clip (Media/Editor)', amount: wins });
 
       // Chi tiết tăng ca theo từng ngày
@@ -176,7 +150,7 @@ const PayrollPage = () => {
 
       const overtimeHours = overtimeHoursOf(s.id);
       const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
-      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, commDetail, otDetail };
+      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, commDetail, otDetail };
     });
 
     setRows(computed);
@@ -634,7 +608,61 @@ const PayrollPage = () => {
                     </table>
                   </div>
                 )}
-                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && (
+                {saleDetail.teleOff?.perCustomer?.length > 0 && (
+                  <div className="overflow-auto border border-slate-100 rounded-xl mt-3">
+                    <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-500 border-b">Telesale · Thưởng DT {fmtM(saleDetail.teleOff.thuongDoanhThu)} ({saleDetail.teleOff.dtRate}%) + Thưởng hẹn {fmtM(saleDetail.teleOff.thuongLichHen)}</div>
+                    <table className="w-full text-sm whitespace-nowrap">
+                      <thead className="bg-slate-50 text-slate-500 border-b">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Khách</th>
+                          <th className="text-left px-3 py-2 font-medium">Giai đoạn</th>
+                          <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
+                          <th className="text-right px-3 py-2 font-medium">Thưởng DT</th>
+                          <th className="text-right px-3 py-2 font-medium">Thưởng hẹn</th>
+                          <th className="text-right px-3 py-2 font-medium">Tổng</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {saleDetail.teleOff.perCustomer.map((c, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.share === 0.5 && <span className="text-[10px] text-amber-600"> ·½</span>}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.journey} · {c.dai ? 'Đại' : 'Tiểu'}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{c.revenue ? fmtM(c.revenue) : '—'}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{c.hhRev ? fmtM(c.hhRev) : '—'}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{c.hhHen ? fmtM(c.hhHen) : '—'}</td>
+                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {saleDetail.ddOff?.perCase?.length > 0 && (
+                  <div className="overflow-auto border border-slate-100 rounded-xl mt-3">
+                    <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-500 border-b">Điều dưỡng · từng ca mổ</div>
+                    <table className="w-full text-sm whitespace-nowrap">
+                      <thead className="bg-slate-50 text-slate-500 border-b">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Khách</th>
+                          <th className="text-left px-3 py-2 font-medium">Loại PT</th>
+                          <th className="text-left px-3 py-2 font-medium">Vai trò</th>
+                          <th className="text-right px-3 py-2 font-medium">Thưởng</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {saleDetail.ddOff.perCase.map((c, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.roles.join(', ')}</td>
+                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.bonus)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && !saleDetail.teleOff?.perCustomer?.length && !saleDetail.ddOff?.perCase?.length && (
                   <div className="text-sm text-slate-400 italic">Không có hoa hồng/thưởng trong tháng.</div>
                 )}
               </div>
