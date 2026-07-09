@@ -67,6 +67,7 @@ export default function CashFlowPage() {
           .eq('status', 'paid')
           .gte('date', startDate).lte('date', endDate),
         supabase.from('partner_surgeries').select('partner_fee, surgery_date')
+          .eq('partner_paid', true)
           .gte('surgery_date', startDate).lte('surgery_date', endDate)
       ]);
 

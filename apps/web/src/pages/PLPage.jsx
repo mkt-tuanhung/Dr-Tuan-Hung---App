@@ -22,7 +22,7 @@ export default function PLPage() {
       supabase.from('marketing_ads_performance').select('amount_spent, date').gte('date', startDate).lte('date', endDate),
       supabase.from('expenses').select('amount, date, status').eq('status', 'paid').gte('date', startDate).lte('date', endDate),
       supabase.from('payroll').select('net_salary, unpaid_advance').eq('month', month).eq('year', year),
-      supabase.from('partner_surgeries').select('partner_fee, surgery_date').gte('surgery_date', startDate).lte('surgery_date', endDate),
+      supabase.from('partner_surgeries').select('partner_fee, surgery_date').eq('partner_paid', true).gte('surgery_date', startDate).lte('surgery_date', endDate),
     ]);
     let revenue = 0, hospitalFee = 0, cases = 0;
     (apptRes.data || []).forEach(a => {

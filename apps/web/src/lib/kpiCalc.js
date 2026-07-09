@@ -76,7 +76,8 @@ export const computePartner = (partnerRows = [], staffId) => {
   for (const s of partnerRows) {
     const tier = PHU_MO_BONUS[s.surgery_type] || PHU_MO_BONUS['Tiểu phẫu'];
     const fee = Number(s.partner_fee || 0);
-    if (s.bac_si_id === staffId) {
+    // Công mổ bác sĩ CHỈ tính khi đối tác đã thanh toán
+    if (s.bac_si_id === staffId && s.partner_paid) {
       const cong = Math.round(fee * PARTNER_BACSI_RATE);
       bacSiCong += cong;
       bacSiCases.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', partner: s.partner_name || '', fee, cong });

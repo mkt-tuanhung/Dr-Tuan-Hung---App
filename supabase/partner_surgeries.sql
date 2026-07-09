@@ -16,6 +16,8 @@ create table if not exists partner_surgeries (
   surgery_type text default 'Tiểu phẫu',      -- 'Tiểu phẫu' | 'Đại phẫu'
   surgery_date date,
   partner_fee bigint default 0,               -- tiền nhận từ đối tác
+  partner_paid boolean not null default false,-- đối tác đã thanh toán? (mới cộng dòng tiền + lương BS)
+  paid_at timestamptz,
   bac_si_id uuid references profiles(id),     -- bác sĩ mổ (nhận 50% fee)
   phu_mo_1_id uuid references profiles(id),
   phu_mo_2_id uuid references profiles(id),
