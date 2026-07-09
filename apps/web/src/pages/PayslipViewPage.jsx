@@ -179,6 +179,47 @@ const PayslipViewPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Ngày công & ngày nghỉ */}
+            {data.cong && (
+              <div className="mt-4">
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Ngày công · nghỉ</div>
+                <div className="border border-slate-100 rounded-xl p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Số ngày công</span>
+                    <span className="font-semibold text-slate-700">{data.cong.w}/{data.cong.std}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-slate-500">Số ngày nghỉ</span>
+                    <span className="font-semibold text-rose-600">{data.cong.off} ngày</span>
+                  </div>
+                  {Array.isArray(data.off) && data.off.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-50 flex flex-wrap gap-1.5">
+                      {data.off.map((o, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-[11px] bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded-lg font-medium">{o.d} · {o.s}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Chi tiết tăng ca theo ngày */}
+            {Array.isArray(data.ot) && data.ot.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Chi tiết tăng ca ({data.ot.length} ngày)</div>
+                <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+                  {data.ot.map((o, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
+                      <div className="text-slate-600">{o.d}</div>
+                      <div className="text-slate-400 text-[11px]">{o.h}h · {o.r}</div>
+                      <div className="font-semibold text-teal-700 tabular-nums shrink-0">{o.a}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 bg-teal-50 border border-teal-100 rounded-xl p-4 flex items-center justify-between">
               <span className="font-bold text-slate-700">THỰC NHẬN</span>
               <span className="text-2xl font-bold text-teal-700 tabular-nums">{data.net}</span>
