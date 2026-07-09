@@ -137,10 +137,10 @@ const PayrollPage = () => {
       const saved = payroll.find(p => p.staff_id === s.id);
       const otherBonus = Number(saved?.other_bonus || 0);
       const otherDeduction = Number(saved?.other_deduction || 0);
-      const advance = advanceOf(s.id);              // tạm ứng chi (NV chi hộ) → CỘNG (hoàn lại)
+      const advance = advanceOf(s.id);              // tạm ứng chi (NV chi hộ) — KHÔNG cộng vào lương, thanh toán riêng
       const overtime = Math.round(overtimeOf(s.id, s.base_salary)); // lương tăng ca → CỘNG
       const salaryAdvance = salaryAdvanceOf(s.id);  // ứng lương → TRỪ
-      const gross = luongCong + phuCap + commission + overtime + advance + otherBonus;
+      const gross = luongCong + phuCap + commission + overtime + otherBonus;
       const net = gross - salaryAdvance - otherDeduction;
 
       return { staff: s, workingDays, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff };
@@ -163,7 +163,7 @@ const PayrollPage = () => {
           working_days: r.workingDays, salary_by_attendance: r.luongCong,
           total_commission: r.commission, other_bonus: r.otherBonus,
           overtime_pay: r.overtime || 0, salary_advance: r.salaryAdvance || 0,
-          unpaid_advance: r.advance, other_deduction: r.otherDeduction,
+          unpaid_advance: 0, other_deduction: r.otherDeduction,
           gross_income: r.gross, total_deductions: (r.salaryAdvance || 0) + r.otherDeduction, net_salary: r.net,
           status: 'draft', updated_at: new Date().toISOString(),
         }));
@@ -225,7 +225,7 @@ const PayrollPage = () => {
     const e = edits[r.staff.id] || {};
     const otherBonus = Number(e.other_bonus || 0);
     const otherDeduction = Number(e.other_deduction || 0);
-    const gross = r.luongCong + r.phuCap + r.commission + (r.overtime || 0) + r.advance + otherBonus;
+    const gross = r.luongCong + r.phuCap + r.commission + (r.overtime || 0) + otherBonus;
     const net = gross - (r.salaryAdvance || 0) - otherDeduction;
     return { ...r, otherBonus, otherDeduction, gross, net };
   });
@@ -242,7 +242,7 @@ const PayrollPage = () => {
         working_days: r.workingDays, salary_by_attendance: r.luongCong,
         total_commission: r.commission, other_bonus: r.otherBonus,
         overtime_pay: r.overtime || 0, salary_advance: r.salaryAdvance || 0,
-        unpaid_advance: r.advance, other_deduction: r.otherDeduction,
+        unpaid_advance: 0, other_deduction: r.otherDeduction,
         gross_income: r.gross, total_deductions: (r.salaryAdvance || 0) + r.otherDeduction, net_salary: r.net,
         status: lock ? 'locked' : 'draft',
         locked_at: lock ? new Date().toISOString() : null, locked_by: lock ? me?.id : null,
@@ -266,7 +266,6 @@ const PayrollPage = () => {
       ['Phụ cấp', fmtM(r.phuCap)],
       ['Hoa hồng / thưởng', fmtM(r.commission)],
       ...(r.overtime ? [['Lương tăng ca', '+' + fmtM(r.overtime)]] : []),
-      ...(r.advance ? [['Hoàn tạm ứng chi (NV chi hộ)', '+' + fmtM(r.advance)]] : []),
       ['Thưởng khác', fmtM(r.otherBonus)],
       ['Tổng thu nhập', fmtM(r.gross)],
       ...(r.salaryAdvance ? [['Trừ: Ứng lương', '-' + fmtM(r.salaryAdvance)]] : []),
@@ -386,7 +385,6 @@ const PayrollPage = () => {
                 <th className="text-right px-4 py-3 font-medium">Hoa hồng</th>
                 <th className="text-right px-4 py-3 font-medium">Lương tăng ca</th>
                 <th className="text-right px-4 py-3 font-medium">Thưởng khác</th>
-                <th className="text-right px-4 py-3 font-medium">Tạm ứng chi (hoàn)</th>
                 <th className="text-right px-4 py-3 font-medium">Ứng lương</th>
                 <th className="text-right px-4 py-3 font-medium">Khấu trừ</th>
                 <th className="text-right px-4 py-3 font-medium">Thực nhận</th>
@@ -394,7 +392,7 @@ const PayrollPage = () => {
               </tr></thead>
               <tbody className="divide-y divide-slate-50">
                 {rowsView.length === 0 ? (
-                  <tr><td colSpan={12} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
+                  <tr><td colSpan={11} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
                 ) : rowsView.map(r => (
                   <tr key={r.staff.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}
@@ -414,7 +412,6 @@ const PayrollPage = () => {
                       <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
                         className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-teal-400 disabled:bg-slate-50" />
                     </td>
-                    <td className="text-right px-4 py-2.5 text-teal-700">{r.advance ? '+' + fmtM(r.advance) : '0đ'}</td>
                     <td className="text-right px-4 py-2.5 text-rose-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
@@ -457,7 +454,7 @@ const PayrollPage = () => {
       )}
 
       <p className="text-xs text-slate-400">
-        Thực nhận = Lương theo công + Phụ cấp + Hoa hồng + Lương tăng ca + Tạm ứng chi (hoàn lại) + Thưởng khác − Ứng lương − Khấu trừ.
+        Thực nhận = Lương theo công + Phụ cấp + Hoa hồng + Lương tăng ca + Thưởng khác − Ứng lương − Khấu trừ. (Tạm ứng chi thanh toán riêng, không tính vào đây.)
         Tăng ca = số giờ {'×'} (150% ngày thường / 200% chủ nhật) {'×'} Lương cơ bản ÷ {STANDARD_DAYS} ÷ 8.
       </p>
 
