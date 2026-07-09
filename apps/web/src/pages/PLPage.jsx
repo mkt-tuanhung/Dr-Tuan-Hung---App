@@ -17,17 +17,20 @@ export default function PLPage() {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = lastDay(year, month);
-    const [apptRes, adsRes, expRes, prRes] = await Promise.all([
+    const [apptRes, adsRes, expRes, prRes, partnerRes] = await Promise.all([
       supabase.from('customer_appointments').select('revenue, hospital_fee, surgery_date, hospital_fee_date').eq('status', 'phau_thuat'),
       supabase.from('marketing_ads_performance').select('amount_spent, date').gte('date', startDate).lte('date', endDate),
       supabase.from('expenses').select('amount, date, status').eq('status', 'paid').gte('date', startDate).lte('date', endDate),
       supabase.from('payroll').select('net_salary, unpaid_advance').eq('month', month).eq('year', year),
+      supabase.from('partner_surgeries').select('partner_fee, surgery_date').gte('surgery_date', startDate).lte('surgery_date', endDate),
     ]);
     let revenue = 0, hospitalFee = 0, cases = 0;
     (apptRes.data || []).forEach(a => {
       if (a.surgery_date && a.surgery_date >= startDate && a.surgery_date <= endDate) { revenue += Number(a.revenue || 0); cases++; }
       if (a.hospital_fee_date && a.hospital_fee_date >= startDate && a.hospital_fee_date <= endDate) hospitalFee += Number(a.hospital_fee || 0);
     });
+    // Thu nhập thêm từ mổ đối tác → cộng vào doanh thu (công BS/phụ mổ đã nằm trong chi phí lương)
+    (partnerRes.data || []).forEach(p => { revenue += Number(p.partner_fee || 0); cases++; });
     const ads = (adsRes.data || []).reduce((s, x) => s + Number(x.amount_spent || 0), 0);
     const expenses = (expRes.data || []).reduce((s, x) => s + Number(x.amount || 0), 0);
     const labor = (prRes.data || []).reduce((s, x) => s + (Number(x.net_salary || 0) - Number(x.unpaid_advance || 0)), 0);

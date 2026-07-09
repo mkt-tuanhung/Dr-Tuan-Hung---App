@@ -59,18 +59,20 @@ export default function CashFlowPage() {
     else setData(flowsData || []);
 
     try {
-      const [payrollRes, appRes, expRes] = await Promise.all([
+      const [payrollRes, appRes, expRes, partnerRes] = await Promise.all([
         supabase.from('payroll').select('net_salary').eq('month', filterMonth).eq('year', filterYear),
         supabase.from('customer_appointments').select('revenue, upsale_revenue, hospital_fee, surgery_date, hospital_fee_date')
           .or(`surgery_date.gte.${startDate},hospital_fee_date.gte.${startDate}`),
         supabase.from('expenses').select('amount, category, is_advance')
           .eq('status', 'paid')
-          .gte('date', startDate).lte('date', endDate)
+          .gte('date', startDate).lte('date', endDate),
+        supabase.from('partner_surgeries').select('partner_fee, surgery_date')
+          .gte('surgery_date', startDate).lte('surgery_date', endDate)
       ]);
 
       let rev = 0, fee = 0, pr = 0, adv = 0, mat = 0;
       payrollRes.data?.forEach(d => pr += Number(d.net_salary || 0));
-      
+
       appRes.data?.forEach(d => {
         if (d.surgery_date && d.surgery_date >= startDate && d.surgery_date <= endDate) {
           rev += Number(d.revenue || 0); // revenue đã bao gồm upsale → không cộng thêm
@@ -79,6 +81,8 @@ export default function CashFlowPage() {
           fee += Number(d.hospital_fee || 0);
         }
       });
+      // Thu nhập thêm từ mổ đối tác → cộng vào doanh thu
+      partnerRes.data?.forEach(d => rev += Number(d.partner_fee || 0));
 
       expRes.data?.forEach(d => {
         if (d.is_advance) adv += Number(d.amount || 0);
