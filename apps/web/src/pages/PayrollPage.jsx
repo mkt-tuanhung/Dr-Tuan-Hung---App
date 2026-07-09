@@ -291,10 +291,15 @@ const PayrollPage = () => {
     let qrDataUrl;
     try {
       const token = await encryptPayslip(payload, passcode.toUpperCase());
-      const url = `${window.location.origin}/phieu-luong#${token}`;
-      qrDataUrl = await QRCode.toDataURL(url, { width: 360, margin: 1, errorCorrectionLevel: 'L' });
-    } catch {
-      toast.error('Không tạo được mã QR phiếu lương');
+      // Lưu blob mã hoá ở máy chủ, QR chỉ chứa id ngắn -> QR nhỏ, luôn quét được
+      const { data: pid, error: saveErr } = await supabase.rpc('save_payslip', {
+        p_key: payload.k, p_staff: payload.n, p_period: payload.m, p_token: token,
+      });
+      if (saveErr || !pid) throw saveErr || new Error('no id');
+      const url = `${window.location.origin}/phieu-luong#${pid}`;
+      qrDataUrl = await QRCode.toDataURL(url, { width: 360, margin: 2, errorCorrectionLevel: 'M' });
+    } catch (err) {
+      toast.error('Không tạo được mã QR phiếu lương' + (err?.message ? ': ' + err.message : ''));
       return;
     }
 
