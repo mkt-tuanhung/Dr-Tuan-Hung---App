@@ -50,16 +50,19 @@ const PHU_MO_BONUS = {
 export const computeDieuDuong = (surgeries = [], nurseId) => {
   let trucDem = 0, pm1 = 0, pm2 = 0, pm3 = 0, hauPhau = 0;
   let thuongTrucDem = 0, thuongPhuMo = 0;
+  const perCase = [];
   for (const s of surgeries) {
     const tier = PHU_MO_BONUS[s.surgery_type] || PHU_MO_BONUS['Tiểu phẫu'];
-    if (s.truc_dem_id === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; }
-    if (s.truc_dem_id_2 === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; }
-    if (s.phu_mo_1_id === nurseId) { pm1++; thuongPhuMo += tier[1]; }
-    if (s.phu_mo_2_id === nurseId) { pm2++; thuongPhuMo += tier[2]; }
-    if (s.phu_mo_3_id === nurseId) { pm3++; thuongPhuMo += tier[3]; }
-    if (s.hau_phau_id === nurseId || (s.additional_hau_phau_ids || []).includes(nurseId)) hauPhau++;
+    const roles = []; let bonus = 0;
+    if (s.truc_dem_id === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; roles.push('Trực đêm'); bonus += TRUC_DEM_BONUS; }
+    if (s.truc_dem_id_2 === nurseId) { trucDem++; thuongTrucDem += TRUC_DEM_BONUS; roles.push('Trực đêm'); bonus += TRUC_DEM_BONUS; }
+    if (s.phu_mo_1_id === nurseId) { pm1++; thuongPhuMo += tier[1]; roles.push('Phụ mổ 1'); bonus += tier[1]; }
+    if (s.phu_mo_2_id === nurseId) { pm2++; thuongPhuMo += tier[2]; roles.push('Phụ mổ 2'); bonus += tier[2]; }
+    if (s.phu_mo_3_id === nurseId) { pm3++; thuongPhuMo += tier[3]; roles.push('Phụ mổ 3'); bonus += tier[3]; }
+    if (s.hau_phau_id === nurseId || (s.additional_hau_phau_ids || []).includes(nurseId)) { hauPhau++; roles.push('Hậu phẫu'); }
+    if (roles.length) perCase.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', roles, bonus });
   }
-  return { trucDem, pm1, pm2, pm3, hauPhau, thuongTrucDem, thuongPhuMo, tongHH: thuongTrucDem + thuongPhuMo };
+  return { trucDem, pm1, pm2, pm3, hauPhau, thuongTrucDem, thuongPhuMo, tongHH: thuongTrucDem + thuongPhuMo, perCase };
 };
 
 // ===================== TELESALE =====================
@@ -112,11 +115,37 @@ export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows
   thuongLichHen = Math.round(thuongLichHen);
 
   const tongHH = thuongDoanhThu + thuongLichHen;
+
+  // Chi tiết thưởng theo TỪNG khách (để bảng lương hiển thị chi tiết)
+  const perCustomer = [];
+  for (const a of surgRows) {
+    const sh = telesaleShare(a);
+    const dai = isDai(a);
+    const rev = Number(a.revenue || 0) * sh;
+    const hhRev = Math.round(rev * dtRate / 100);
+    let hhHen, journey;
+    if (a.bong_date) { hhHen = (dai ? 300000 : 150000) * sh; journey = 'Bong → PT'; }
+    else if (a.deposit_date) { hhHen = (dai ? 200000 : 100000) * sh; journey = 'Cọc → PT'; }
+    else { hhHen = (dai ? 500000 : 300000) * sh; journey = 'Trực tiếp'; }
+    hhHen = Math.round(hhHen);
+    perCustomer.push({ name: a.customer_name || '—', stage: 'Phẫu thuật', journey, dai, share: sh, revenue: rev, hhRev, hhHen, hh: hhRev + hhHen });
+  }
+  for (const a of bongRows) {
+    const sh = telesaleShare(a);
+    const hhHen = Math.round((isDai(a) ? 200000 : 150000) * sh);
+    perCustomer.push({ name: a.customer_name || '—', stage: 'Bong', journey: 'Bong (chưa PT)', dai: isDai(a), share: sh, revenue: 0, hhRev: 0, hhHen, hh: hhHen });
+  }
+  for (const a of cocRows) {
+    const sh = telesaleShare(a);
+    const hhHen = Math.round((isDai(a) ? 300000 : 200000) * sh);
+    perCustomer.push({ name: a.customer_name || '—', stage: 'Cọc', journey: 'Cọc (chưa PT)', dai: isDai(a), share: sh, revenue: 0, hhRev: 0, hhHen, hh: hhHen });
+  }
+
   return {
     phones, tongLichHen, tyLeChotHen, doanhThu, dtRate,
     thuongDoanhThu, thuongLichHen, tongHH,
     bongCount: bongRows.length, cocCount: cocRows.length, ptCount: surgRows.length,
-    direct, fromBong, fromCoc,
+    direct, fromBong, fromCoc, perCustomer,
   };
 };
 
