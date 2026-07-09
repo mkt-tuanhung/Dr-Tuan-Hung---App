@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
-  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, isRecheck,
+  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, isRecheck, SALE_HALF_SOURCES,
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
@@ -54,6 +54,7 @@ const PayrollPage = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [codeReveal, setCodeReveal] = useState(null);      // { name, code } — hiện mã 1 lần cho admin sau khi in
   const [copied, setCopied] = useState(false);
+  const [saleDetail, setSaleDetail] = useState(null);      // { staff, saleOff } — chi tiết HH sale offline
   const autosavedRef = useRef('');                         // chống tự-lưu nháp lặp lại cùng 1 tháng
 
   const loadData = useCallback(async () => {
@@ -71,7 +72,7 @@ const PayrollPage = () => {
     const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes] = await Promise.all([
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
-      supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', meDay),
       supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
@@ -107,10 +108,15 @@ const PayrollPage = () => {
         : Math.round(effectiveBase / STANDARD_DAYS * workingDays);
       const phuCap = Number(s.allowance || 0);
 
+      // Chi tiết Sale Offline (hoa hồng từng khách) nếu nhân sự là sale_offline
+      const saleOff = [s.role, s.role_2].includes('sale_offline')
+        ? computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id))
+        : null;
+
       // Hoa hồng theo từng vị trí — cộng dồn nếu kiêm nhiệm 2 vị trí
       const commissionForRole = (role) => {
         if (role === 'sale_offline') {
-          return computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id)).tongHH;
+          return (saleOff || computeSaleOffline([], [])).tongHH;
         } else if (role === 'telesale') {
           const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
           const phones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
@@ -137,7 +143,7 @@ const PayrollPage = () => {
       const gross = luongCong + phuCap + commission + overtime + advance + otherBonus;
       const net = gross - salaryAdvance - otherDeduction;
 
-      return { staff: s, workingDays, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status };
+      return { staff: s, workingDays, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff };
     });
 
     setRows(computed);
@@ -396,7 +402,13 @@ const PayrollPage = () => {
                     <td className="text-center px-3 py-2.5">{r.workingDays}</td>
                     <td className="text-right px-4 py-2.5">{fmtM(r.luongCong)}</td>
                     <td className="text-right px-4 py-2.5 text-slate-500">{fmtM(r.phuCap)}</td>
-                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{fmtM(r.commission)}</td>
+                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{fmtM(r.commission)}
+                      {r.saleOff?.perCustomer?.length > 0 && (
+                        <button onClick={() => setSaleDetail({ staff: r.staff, saleOff: r.saleOff })}
+                          className="block ml-auto mt-0.5 text-[11px] font-normal text-blue-500 hover:underline">
+                          Chi tiết {r.saleOff.perCustomer.length} khách
+                        </button>
+                      )}</td>
                     <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
@@ -519,6 +531,63 @@ const PayrollPage = () => {
             </div>
             <div className="p-4 bg-slate-50 border-t flex justify-end">
               <button onClick={() => setCodeReveal(null)} className="px-6 py-2 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700">Xong</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {saleDetail && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-xl overflow-hidden flex flex-col max-h-[88vh]">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50 shrink-0">
+              <div>
+                <h3 className="font-bold text-teal-800">Chi tiết hoa hồng Sale Offline</h3>
+                <p className="text-xs text-teal-600 mt-0.5">{saleDetail.staff.full_name} · {MONTHS[month - 1]} {year} · Bậc doanh thu {saleDetail.saleOff.dtRate}%</p>
+              </div>
+              <button onClick={() => setSaleDetail(null)}><X className="w-5 h-5 text-teal-400" /></button>
+            </div>
+            <div className="overflow-auto">
+              <table className="w-full text-sm whitespace-nowrap">
+                <thead className="bg-slate-50 text-slate-500 border-b sticky top-0">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-medium">Khách</th>
+                    <th className="text-left px-3 py-2 font-medium">Nguồn</th>
+                    <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
+                    <th className="text-right px-3 py-2 font-medium">Upsale</th>
+                    <th className="text-right px-3 py-2 font-medium">HH cơ bản</th>
+                    <th className="text-right px-3 py-2 font-medium">HH upsale</th>
+                    <th className="text-right px-4 py-2 font-medium">Tổng HH</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {saleDetail.saleOff.perCustomer.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-8 text-slate-400">Chưa có khách phẫu thuật trong tháng.</td></tr>
+                  ) : saleDetail.saleOff.perCustomer.map((c, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50">
+                      <td className="px-4 py-2 font-medium text-slate-800">{c.name}
+                        {c.service && <div className="text-[11px] text-slate-400">{c.service}</div>}</td>
+                      <td className="px-3 py-2 text-slate-500">{c.source || '—'}
+                        {SALE_HALF_SOURCES.includes(c.source) && <span className="text-[10px] text-amber-600"> ·×50%</span>}</td>
+                      <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.revenue)}</td>
+                      <td className="text-right px-3 py-2 tabular-nums text-orange-600">{c.upsale ? fmtM(c.upsale) : '—'}</td>
+                      <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.hhBase)} <span className="text-[10px] text-slate-400">({c.dtRate}%)</span></td>
+                      <td className="text-right px-3 py-2 tabular-nums">{c.hhUp ? `${fmtM(c.hhUp)} (${c.upRate}%)` : '—'}</td>
+                      <td className="text-right px-4 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t bg-slate-50 font-semibold text-slate-700">
+                  <tr>
+                    <td className="px-4 py-2.5" colSpan={4}>Tổng {saleDetail.saleOff.cntPT} khách · Doanh thu {fmtM(saleDetail.saleOff.doanhThu)}</td>
+                    <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(saleDetail.saleOff.hhDoanhThu)}</td>
+                    <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(saleDetail.saleOff.hhUpsale)}</td>
+                    <td className="text-right px-4 py-2.5 text-teal-700 tabular-nums">{fmtM(saleDetail.saleOff.tongHH)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="px-6 py-3 border-t bg-white text-[11px] text-slate-400 shrink-0">
+              HH cơ bản = phần cơ bản (giảm 50% nếu khách nguồn quen/CTV) × bậc doanh thu {saleDetail.saleOff.dtRate}%. HH upsale = upsale × bậc upsale của từng khách.
             </div>
           </div>
         </div>

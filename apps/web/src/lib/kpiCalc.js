@@ -157,7 +157,27 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 
   const tongHH = hhDoanhThu + hhUpsale;
 
-  return { total, cntPT, cntCoc, cntBong, closeRate, doanhThu, upsale, dtRate, hhDoanhThu, hhUpsale, tongHH };
+  // Chi tiết hoa hồng theo TỪNG khách (để hiển thị bảng lương chi tiết)
+  const perCustomer = surgeries.map(a => {
+    const base = saleBaseOf(a);
+    const u = Number(a.upsale_revenue || 0);
+    const upRate = saleUpsaleRate(u);
+    const hhBase = Math.round(base * dtRate / 100);
+    const hhUp = Math.round(u * upRate / 100);
+    return {
+      name: a.customer_name || '—',
+      source: a.customer_source || '',
+      service: a.service || '',
+      revenue: Number(a.revenue || 0),
+      upsale: u,
+      base,                       // phần cơ bản đã điều chỉnh (quen/CTV × 50%)
+      dtRate, upRate,
+      hhBase, hhUp,
+      hh: hhBase + hhUp,
+    };
+  });
+
+  return { total, cntPT, cntCoc, cntBong, closeRate, doanhThu, upsale, dtRate, hhDoanhThu, hhUpsale, tongHH, perCustomer };
 };
 
 // ============================================================
