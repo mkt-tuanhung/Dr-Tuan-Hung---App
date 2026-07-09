@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import VienPhiPage from './VienPhiPage.jsx';
 import InventoryManagementPage from './InventoryManagementPage.jsx';
+import NhapVatTuMoiPage from './NhapVatTuMoiPage.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Activity, PackageOpen } from 'lucide-react';
+import { Activity, PackageOpen, PackagePlus } from 'lucide-react';
 
 export default function HospitalFeeAndInventoryPage() {
   const { profile } = useAuth();
@@ -39,12 +40,21 @@ export default function HospitalFeeAndInventoryPage() {
           >
             <PackageOpen className="w-4 h-4" /> Vật tư
           </button>
+          <button
+            onClick={() => setActiveTab('nhap_moi')}
+            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
+              activeTab === 'nhap_moi' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <PackagePlus className="w-4 h-4" /> Vật tư nhập mới
+          </button>
         </div>
 
         {/* Content Area */}
         <div className="p-6 bg-slate-50/50 min-h-[60vh]">
           {activeTab === 'vien_phi' && showVienPhi && <VienPhiPage isNested={true} />}
           {activeTab === 'inventory' && <InventoryManagementPage isNested={true} />}
+          {activeTab === 'nhap_moi' && <NhapVatTuMoiPage />}
         </div>
       </div>
     </div>
