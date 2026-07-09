@@ -491,7 +491,10 @@ const PayrollPage = () => {
                   <tr key={r.staff.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}
                       <div className="text-[11px] text-slate-400">{ROLE_LABELS[r.staff.role] || r.staff.role}{r.staff.employment_status === 'probation' ? ' · TV' : ''}</div></td>
-                    <td className="text-center px-3 py-2.5">{r.workingDays}</td>
+                    <td className="text-center px-3 py-2.5">
+                      <div className="font-semibold text-slate-700">{r.workingDays}</div>
+                      {r.daysOff > 0 && <div className="text-[10px] text-rose-400">nghỉ {r.daysOff}</div>}
+                    </td>
                     <td className="text-right px-4 py-2.5">{fmtM(r.luongCong)}</td>
                     <td className="text-right px-4 py-2.5 text-slate-500">{fmtM(r.phuCap)}</td>
                     <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{fmtM(r.commission)}
