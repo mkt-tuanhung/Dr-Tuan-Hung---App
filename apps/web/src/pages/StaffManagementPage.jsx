@@ -55,7 +55,7 @@ const ROLE_COLORS = {
 const EMPTY_FORM = {
   employee_id: '', password: '', full_name: '', role: 'telesale', role_2: '',
   position: 'Nhân viên', base_salary: '', allowance: '', phone: '',
-  employment_status: 'official', probation_started_at: '',
+  employment_status: 'official', probation_started_at: '', fixed_salary: false,
 };
 
 const StaffManagementPage = ({ isNested = false }) => {
@@ -111,6 +111,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       phone: s.phone || '',
       employment_status: s.employment_status || 'official',
       probation_started_at: s.probation_started_at || '',
+      fixed_salary: s.fixed_salary || false,
     });
     setAvatarFile(null);
     setAvatarPreview(s.avatar_url || null);
@@ -148,6 +149,7 @@ const StaffManagementPage = ({ isNested = false }) => {
           phone: form.phone,
           employment_status: form.employment_status,
           probation_started_at: form.probation_started_at || null,
+          fixed_salary: form.fixed_salary,
           avatar_url,
         }).eq('id', editTarget.id);
         if (error) throw error;
@@ -188,6 +190,7 @@ const StaffManagementPage = ({ isNested = false }) => {
               probation_started_at: form.employment_status === 'probation'
                 ? (form.probation_started_at || new Date().toISOString().split('T')[0])
                 : null,
+              fixed_salary: form.fixed_salary,
               avatar_url,
             },
           },
@@ -643,6 +646,20 @@ const StaffManagementPage = ({ isNested = false }) => {
                   Thử việc (85%)
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-teal-100 bg-teal-50/30 px-3 py-2.5">
+              <div>
+                <div className="text-sm font-medium text-slate-700">Lương cố định</div>
+                <div className="text-xs text-slate-400">Nhận đủ lương tháng, không cần chấm công</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, fixed_salary: !f.fixed_salary }))}
+                className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${form.fixed_salary ? 'bg-teal-500' : 'bg-slate-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${form.fixed_salary ? 'translate-x-5' : ''}`} />
+              </button>
             </div>
 
             {form.employment_status === 'probation' && (
