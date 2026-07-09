@@ -180,6 +180,24 @@ const PayslipViewPage = () => {
               </div>
             )}
 
+            {/* Mổ đối tác — mục riêng màu vàng */}
+            {Array.isArray(data.pt) && data.pt.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1.5">Mổ đối tác ({data.pt.length})</div>
+                <div className="divide-y divide-amber-100/70 border border-amber-200 rounded-xl overflow-hidden bg-amber-50/50">
+                  {data.pt.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium text-slate-700 truncate">{c.n}</div>
+                        <div className="text-[11px] text-amber-700/80 truncate">{c.t} · {c.role}</div>
+                      </div>
+                      <div className="font-semibold text-amber-700 tabular-nums shrink-0">{c.a}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Ngày công & ngày nghỉ */}
             {data.cong && (
               <div className="mt-4">
