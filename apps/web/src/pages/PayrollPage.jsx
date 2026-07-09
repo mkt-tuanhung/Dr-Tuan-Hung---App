@@ -10,18 +10,8 @@ import {
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
-// Sinh mã bảo mật ngẫu nhiên cho MỖI lần in (bỏ ký tự dễ nhầm: 0 O 1 I L)
-const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const CODE_LEN = 8;
-const genPayslipCode = () => {
-  const limit = 256 - (256 % CODE_ALPHABET.length); // loại byte gây lệch xác suất (modulo bias)
-  let out = '';
-  while (out.length < CODE_LEN) {
-    const [b] = crypto.getRandomValues(new Uint8Array(1));
-    if (b < limit) out += CODE_ALPHABET[b % CODE_ALPHABET.length];
-  }
-  return out;
-};
+// Mã bảo mật phiếu lương CỐ ĐỊNH do admin đặt (lưu tại thiết bị admin).
+const PASSCODE_KEY = 'payslip_passcode';
 
 // Escape ký tự HTML khi nhúng dữ liệu nhân sự vào cửa sổ in (chống vỡ layout / chèn mã)
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -52,8 +42,9 @@ const PayrollPage = () => {
   const [saForm, setSaForm] = useState({ amount: '', reason: '' });
   const [rejectSA, setRejectSA] = useState(null);          // { id } khi từ chối
   const [rejectReason, setRejectReason] = useState('');
-  const [codeReveal, setCodeReveal] = useState(null);      // { name, code } — hiện mã 1 lần cho admin sau khi in
-  const [copied, setCopied] = useState(false);
+  const [passModal, setPassModal] = useState(false);       // đặt mã bảo mật cố định
+  const [passInput, setPassInput] = useState('');
+  const [hasPass, setHasPass] = useState(() => !!localStorage.getItem(PASSCODE_KEY));
   const [saleDetail, setSaleDetail] = useState(null);      // row nhân sự — modal chi tiết hoa hồng + tăng ca
   const autosavedRef = useRef('');                         // chống tự-lưu nháp lặp lại cùng 1 tháng
 
@@ -264,7 +255,8 @@ const PayrollPage = () => {
   };
 
   const printPayslip = async (r) => {
-    const passcode = genPayslipCode();   // mỗi lần in 1 mã ngẫu nhiên mới
+    const passcode = localStorage.getItem(PASSCODE_KEY);
+    if (!passcode) { toast.error('Hãy đặt Mã bảo mật phiếu lương (cố định) trước khi in'); setPassInput(''); setPassModal(true); return; }
     const s = r.staff;
 
     // Chi tiết lương -> mã hoá -> QR. Phiếu in KHÔNG hiện số tiền nào.
@@ -291,6 +283,7 @@ const PayrollPage = () => {
       n: s.full_name,
       r: (ROLE_LABELS[s.role] || s.role) + (s.employment_status === 'probation' ? ' · Thử việc (85%)' : ''),
       m: `${month}/${year}`,
+      k: `${s.id}:${month}/${year}`,   // định danh phiếu (phát hiện thiết bị xem trùng)
       bank: s.bank_name ? `${s.bank_name} - ${s.bank_account || ''}` : '',
       items,
       ...(hhDetail.length ? { hh: hhDetail } : {}),
@@ -331,18 +324,24 @@ const PayrollPage = () => {
       </div>
       <div class="qr"><img src="${qrDataUrl}" alt="QR phiếu lương"/></div>
       <div class="note">
-        🔒 <b>Lương được bảo mật.</b> Quét mã QR bằng điện thoại, sau đó nhập <b>mã bảo mật</b> để xem chi tiết lương của bạn.
-        Chi tiết từng mục và số tiền chỉ hiển thị sau khi nhập đúng mã.
+        🔒 <b>Lương được bảo mật.</b> Quét mã QR → nhập <b>mã bảo mật</b> → gửi yêu cầu, <b>chờ Admin duyệt</b> mới xem được chi tiết lương.
+        Mỗi lần xem đều cần Admin duyệt; xem trên 2 thiết bị sẽ bị cảnh báo.
       </div>
       <p class="sub" style="margin-top:24px;text-align:center">Phiếu lương tạo tự động — ${new Date().toLocaleString('vi-VN')}</p>
       </body></html>`);
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 400);
+  };
 
-    // Hiện mã 1 lần cho admin để gửi riêng cho nhân sự (KHÔNG in lên giấy)
-    setCopied(false);
-    setCodeReveal({ name: s.full_name, code: passcode });
+  const savePasscode = () => {
+    const code = passInput.trim();
+    if (code.length < 4) { toast.error('Mã bảo mật cần tối thiểu 4 ký tự'); return; }
+    localStorage.setItem(PASSCODE_KEY, code);
+    setHasPass(true);
+    setPassModal(false);
+    setPassInput('');
+    toast.success('Đã lưu mã bảo mật cố định trên thiết bị này');
   };
 
   return (
@@ -353,6 +352,10 @@ const PayrollPage = () => {
           <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-teal-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => { setPassInput(''); setPassModal(true); }} title="Đặt mã bảo mật phiếu lương (cố định)"
+            className={`flex items-center gap-1.5 px-3 h-8 rounded-xl border text-xs font-semibold ${hasPass ? 'border-teal-200 text-teal-600 hover:bg-teal-50' : 'border-amber-300 text-amber-600 hover:bg-amber-50'}`}>
+            <KeyRound className="w-3.5 h-3.5" /> {hasPass ? 'Mã bảo mật' : 'Đặt mã bảo mật'}
+          </button>
           <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
           <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month - 1]} {year}</span>
           <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
@@ -527,30 +530,27 @@ const PayrollPage = () => {
         </div>
       )}
 
-      {codeReveal && (
+      {passModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
               <h3 className="font-bold text-teal-800 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Mã bảo mật phiếu lương</h3>
-              <button onClick={() => setCodeReveal(null)}><X className="w-5 h-5 text-teal-400" /></button>
+              <button onClick={() => setPassModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
             </div>
-            <div className="p-6 text-center">
-              <p className="text-sm text-slate-500 mb-1">Mã xem phiếu lương của</p>
-              <p className="font-bold text-slate-800 mb-4">{codeReveal.name}</p>
-              <div className="bg-slate-50 border-2 border-dashed border-teal-200 rounded-xl py-4 mb-2">
-                <span className="text-3xl font-bold tracking-[0.3em] text-teal-700">{codeReveal.code}</span>
-              </div>
-              <button onClick={() => { navigator.clipboard?.writeText(codeReveal.code); setCopied(true); toast.success('Đã copy mã'); }}
-                className="inline-flex items-center gap-1.5 text-sm text-teal-600 font-semibold hover:text-teal-700">
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? 'Đã copy' : 'Copy mã'}
-              </button>
-              <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-3 text-left text-xs text-amber-700 leading-relaxed">
-                ⚠️ Mã này <b>chỉ hiện 1 lần</b> và <b>không in lên giấy</b>. Hãy gửi riêng cho nhân sự (Zalo/tin nhắn) để họ quét QR và nhập mã.
-                Mỗi lần in sẽ tạo mã mới — nếu quên, chỉ cần in lại.
-              </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-500 mb-4">
+                Mã <b>cố định</b> dùng để mã hoá & mở phiếu lương. Đặt <b>cùng một mã</b> trên mọi thiết bị in lương và chia sẻ cho nhân sự.
+                Sau khi nhập mã, nhân sự vẫn cần <b>Admin duyệt</b> mới xem được.
+              </p>
+              <label className="block text-sm font-semibold mb-2 text-slate-700">Mã bảo mật (≥ 4 ký tự)</label>
+              <input type="text" autoFocus value={passInput} onChange={e => setPassInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') savePasscode(); }}
+                className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 text-center tracking-widest text-lg" placeholder="VD: 2468" />
+              {hasPass && <p className="text-xs text-slate-400 mt-2">Đã có mã trên thiết bị này. Nhập mã mới để thay đổi.</p>}
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end">
-              <button onClick={() => setCodeReveal(null)} className="px-6 py-2 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700">Xong</button>
+            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
+              <button onClick={() => setPassModal(false)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
+              <button onClick={savePasscode} className="px-6 py-2 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700">Lưu mã</button>
             </div>
           </div>
         </div>

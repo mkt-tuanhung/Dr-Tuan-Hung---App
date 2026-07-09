@@ -1,48 +1,114 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Lock, ShieldCheck, AlertCircle, Loader2, Clock, Ban } from 'lucide-react';
 import { decryptPayslip } from '@/lib/payslipCrypto';
+import { supabase } from '@/lib/supabaseClient';
+import { getDeviceId, getDeviceLabel } from '@/lib/device';
 
-// Trang công khai: quét QR -> nhập mã bảo mật -> giải mã chi tiết lương.
-// Dữ liệu lương đã mã hoá nằm trong phần hash của URL (#...), không gửi lên server.
+// Trang công khai: quét QR -> nhập mã bảo mật -> gửi yêu cầu -> chờ Admin duyệt -> xem lương.
+// Dữ liệu lương đã mã hoá nằm trong hash URL (#...); chỉ hiện sau khi Admin duyệt.
 const PayslipViewPage = () => {
   const [payload, setPayload] = useState('');
   const [code, setCode] = useState('');
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(null);       // dữ liệu đã giải mã (chỉ render khi được duyệt)
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState('code');    // code | pending | approved | rejected
+  const [dup, setDup] = useState(false);         // thiết bị thứ 2
+  const reqIdRef = useRef(null);
 
   useEffect(() => {
     const h = (window.location.hash || '').replace(/^#/, '');
     setPayload(h);
   }, []);
 
+  // Poll trạng thái duyệt
+  useEffect(() => {
+    if (phase !== 'pending' || !reqIdRef.current) return;
+    const timer = setInterval(async () => {
+      const { data: st } = await supabase.rpc('payslip_view_status', { p_id: reqIdRef.current });
+      if (st === 'approved') { clearInterval(timer); setPhase('approved'); }
+      else if (st === 'rejected') { clearInterval(timer); setPhase('rejected'); }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [phase]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!code.trim()) return;
     setLoading(true);
     setError('');
+    let obj;
     try {
-      const obj = await decryptPayslip(payload, code.trim().toUpperCase());
-      setData(obj);
+      obj = await decryptPayslip(payload, code.trim().toUpperCase());
     } catch {
       setError('Sai mã bảo mật hoặc mã QR không hợp lệ.');
+      setLoading(false);
+      return;
+    }
+    setData(obj);
+    // Gửi yêu cầu xem lương -> thông báo Admin duyệt (kèm thiết bị)
+    try {
+      const { data: res, error: rpcErr } = await supabase.rpc('request_payslip_view', {
+        p_staff: obj.n || '', p_period: obj.m || '', p_key: obj.k || `${obj.n}:${obj.m}`,
+        p_device: getDeviceId(), p_label: getDeviceLabel(),
+      });
+      if (rpcErr) throw rpcErr;
+      const row = Array.isArray(res) ? res[0] : res;
+      reqIdRef.current = row?.req_id || null;
+      setDup(!!row?.is_duplicate);
+      setPhase('pending');
+    } catch (err) {
+      setError('Không gửi được yêu cầu xem: ' + (err.message || 'lỗi kết nối'));
     } finally {
       setLoading(false);
     }
   };
 
+  const Shell = ({ children }) => (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full text-center">{children}</div>
+    </div>
+  );
+
   if (!payload) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm text-center">
-          <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-          <p className="text-slate-600 text-sm">Không tìm thấy dữ liệu phiếu lương. Vui lòng quét lại mã QR trên phiếu lương.</p>
-        </div>
-      </div>
+      <Shell>
+        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+        <p className="text-slate-600 text-sm">Không tìm thấy dữ liệu phiếu lương. Vui lòng quét lại mã QR trên phiếu lương.</p>
+      </Shell>
     );
   }
 
-  if (data) {
+  // Chờ Admin duyệt
+  if (phase === 'pending') {
+    return (
+      <Shell>
+        <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-4"><Clock className="w-7 h-7" /></div>
+        <h1 className="text-lg font-bold text-slate-800">Đang chờ Admin duyệt</h1>
+        <p className="text-sm text-slate-500 mt-1">Yêu cầu xem lương đã được gửi. Trang sẽ tự mở khi Admin duyệt.</p>
+        <Loader2 className="w-5 h-5 animate-spin text-amber-400 mx-auto mt-4" />
+        {dup && (
+          <div className="mt-4 bg-rose-50 border border-rose-100 rounded-xl p-3 text-left text-xs text-rose-600 leading-relaxed">
+            ⚠️ <b>Cảnh báo:</b> phiếu lương này đã được xem trên một <b>thiết bị khác</b>. Admin đã nhận cảnh báo — nếu không phải bạn, việc xem có thể bị từ chối.
+          </div>
+        )}
+      </Shell>
+    );
+  }
+
+  // Bị từ chối / chặn
+  if (phase === 'rejected') {
+    return (
+      <Shell>
+        <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4"><Ban className="w-7 h-7" /></div>
+        <h1 className="text-lg font-bold text-slate-800">Yêu cầu bị từ chối</h1>
+        <p className="text-sm text-slate-500 mt-1">Admin đã từ chối / chặn xem phiếu lương này trên thiết bị của bạn.</p>
+      </Shell>
+    );
+  }
+
+  // Đã duyệt -> hiện lương
+  if (phase === 'approved' && data) {
     return (
       <div className="min-h-screen bg-slate-50 py-8 px-4">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -102,6 +168,7 @@ const PayslipViewPage = () => {
     );
   }
 
+  // Nhập mã bảo mật
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full">
@@ -109,7 +176,7 @@ const PayslipViewPage = () => {
           <Lock className="w-7 h-7" />
         </div>
         <h1 className="text-lg font-bold text-slate-800 text-center">Phiếu lương bảo mật</h1>
-        <p className="text-sm text-slate-500 text-center mt-1 mb-5">Nhập mã bảo mật để xem chi tiết lương của bạn.</p>
+        <p className="text-sm text-slate-500 text-center mt-1 mb-5">Nhập mã bảo mật, sau đó chờ Admin duyệt để xem lương.</p>
         <input
           type="text"
           autoFocus
@@ -118,7 +185,7 @@ const PayslipViewPage = () => {
           spellCheck={false}
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Mã bảo mật (VD: K7M2QP4N)"
+          placeholder="Mã bảo mật"
           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-400 outline-none text-center tracking-[0.3em] text-lg uppercase"
         />
         {error && <p className="text-sm text-rose-500 text-center mt-3 flex items-center justify-center gap-1"><AlertCircle className="w-4 h-4" /> {error}</p>}
@@ -127,7 +194,7 @@ const PayslipViewPage = () => {
           disabled={loading || !code.trim()}
           className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white font-semibold shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xem phiếu lương'}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gửi yêu cầu xem lương'}
         </button>
       </form>
     </div>
