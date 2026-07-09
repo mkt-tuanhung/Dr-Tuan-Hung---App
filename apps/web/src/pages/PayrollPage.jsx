@@ -54,7 +54,7 @@ const PayrollPage = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [codeReveal, setCodeReveal] = useState(null);      // { name, code } — hiện mã 1 lần cho admin sau khi in
   const [copied, setCopied] = useState(false);
-  const [saleDetail, setSaleDetail] = useState(null);      // { staff, saleOff } — chi tiết HH sale offline
+  const [saleDetail, setSaleDetail] = useState(null);      // row nhân sự — modal chi tiết hoa hồng + tăng ca
   const autosavedRef = useRef('');                         // chống tự-lưu nháp lặp lại cùng 1 tháng
 
   const loadData = useCallback(async () => {
@@ -135,6 +135,36 @@ const PayrollPage = () => {
       };
       const commission = [s.role, s.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonusOf(s.id);
 
+      // Chi tiết hoa hồng/thưởng theo vị trí (admin xem chi tiết)
+      const commDetail = [];
+      const rolesArr = [s.role, s.role_2].filter(Boolean);
+      if (rolesArr.includes('telesale')) {
+        const mine = (a) => a.telesale_id === s.id || a.telesale_id_2 === s.id;
+        const phones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
+        const t = computeTelesale({ phones, appts: appts.filter(a => mine(a) && !isRecheck(a)), bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine) });
+        if (t.thuongDoanhThu) commDetail.push({ label: `Thưởng doanh thu telesale (${t.dtRate}% · DT ${fmtM(t.doanhThu)})`, amount: t.thuongDoanhThu });
+        if (t.thuongLichHen) commDetail.push({ label: `Thưởng hẹn khách (${t.direct} trực tiếp · ${t.fromBong} bong→PT · ${t.fromCoc} cọc→PT)`, amount: t.thuongLichHen });
+      }
+      if (rolesArr.includes('truc_page')) {
+        const tp = computeTrucPage(pages.filter(p => p.staff_id === s.id));
+        if (tp.hh) commDetail.push({ label: `SĐT quan tâm (${tp.interested} × 20.000đ)`, amount: tp.hh });
+      }
+      if (rolesArr.includes('dieu_duong')) {
+        const dd = computeDieuDuong(surg, s.id);
+        if (dd.thuongTrucDem) commDetail.push({ label: `Trực đêm (${dd.trucDem} ca)`, amount: dd.thuongTrucDem });
+        if (dd.thuongPhuMo) commDetail.push({ label: `Phụ mổ (P1:${dd.pm1} P2:${dd.pm2} P3:${dd.pm3}) · Hậu phẫu (${dd.hauPhau})`, amount: dd.thuongPhuMo });
+      }
+      const wins = winBonusOf(s.id);
+      if (wins) commDetail.push({ label: 'Thưởng clip (Media/Editor)', amount: wins });
+
+      // Chi tiết tăng ca theo từng ngày
+      const otDetail = att.filter(a => a.staff_id === s.id && Number(a.overtime_hours) > 0)
+        .map(a => {
+          const rate = new Date(a.date).getDay() === 0 ? 2 : 1.5;
+          return { date: a.date, hours: Number(a.overtime_hours), rate, amount: Math.round(Number(a.overtime_hours) * rate * (Number(s.base_salary || 0) / STANDARD_DAYS / 8)) };
+        })
+        .sort((x, y) => (x.date < y.date ? -1 : 1));
+
       const saved = payroll.find(p => p.staff_id === s.id);
       const otherBonus = Number(saved?.other_bonus || 0);
       const otherDeduction = Number(saved?.other_deduction || 0);
@@ -146,7 +176,7 @@ const PayrollPage = () => {
 
       const overtimeHours = overtimeHoursOf(s.id);
       const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
-      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff };
+      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, commDetail, otDetail };
     });
 
     setRows(computed);
@@ -412,13 +442,19 @@ const PayrollPage = () => {
                     <td className="text-right px-4 py-2.5">{fmtM(r.luongCong)}</td>
                     <td className="text-right px-4 py-2.5 text-slate-500">{fmtM(r.phuCap)}</td>
                     <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{fmtM(r.commission)}
-                      {r.saleOff?.perCustomer?.length > 0 && (
-                        <button onClick={() => setSaleDetail({ staff: r.staff, saleOff: r.saleOff })}
+                      {r.commission > 0 && (
+                        <button onClick={() => setSaleDetail(r)}
                           className="block ml-auto mt-0.5 text-[11px] font-normal text-blue-500 hover:underline">
-                          Chi tiết {r.saleOff.perCustomer.length} khách
+                          Chi tiết
                         </button>
                       )}</td>
-                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}</td>
+                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}
+                      {r.otDetail?.length > 0 && (
+                        <button onClick={() => setSaleDetail(r)}
+                          className="block ml-auto mt-0.5 text-[11px] font-normal text-blue-500 hover:underline">
+                          {r.overtimeHours}h · chi tiết
+                        </button>
+                      )}</td>
                     <td className="text-right px-2 py-2.5">
                       <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
                         className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-teal-400 disabled:bg-slate-50" />
@@ -549,53 +585,88 @@ const PayrollPage = () => {
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-xl overflow-hidden flex flex-col max-h-[88vh]">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50 shrink-0">
               <div>
-                <h3 className="font-bold text-teal-800">Chi tiết hoa hồng Sale Offline</h3>
-                <p className="text-xs text-teal-600 mt-0.5">{saleDetail.staff.full_name} · {MONTHS[month - 1]} {year} · Bậc doanh thu {saleDetail.saleOff.dtRate}%</p>
+                <h3 className="font-bold text-teal-800">Chi tiết lương — {saleDetail.staff.full_name}</h3>
+                <p className="text-xs text-teal-600 mt-0.5">{ROLE_LABELS[saleDetail.staff.role] || saleDetail.staff.role}{saleDetail.staff.role_2 ? ' + ' + (ROLE_LABELS[saleDetail.staff.role_2] || saleDetail.staff.role_2) : ''} · {MONTHS[month - 1]} {year}</p>
               </div>
               <button onClick={() => setSaleDetail(null)}><X className="w-5 h-5 text-teal-400" /></button>
             </div>
-            <div className="overflow-auto">
-              <table className="w-full text-sm whitespace-nowrap">
-                <thead className="bg-slate-50 text-slate-500 border-b sticky top-0">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium">Khách</th>
-                    <th className="text-left px-3 py-2 font-medium">Nguồn</th>
-                    <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
-                    <th className="text-right px-3 py-2 font-medium">Upsale</th>
-                    <th className="text-right px-3 py-2 font-medium">HH cơ bản</th>
-                    <th className="text-right px-3 py-2 font-medium">HH upsale</th>
-                    <th className="text-right px-4 py-2 font-medium">Tổng HH</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {saleDetail.saleOff.perCustomer.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-8 text-slate-400">Chưa có khách phẫu thuật trong tháng.</td></tr>
-                  ) : saleDetail.saleOff.perCustomer.map((c, i) => (
-                    <tr key={i} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-2 font-medium text-slate-800">{c.name}
-                        {c.service && <div className="text-[11px] text-slate-400">{c.service}</div>}</td>
-                      <td className="px-3 py-2 text-slate-500">{c.source || '—'}
-                        {SALE_HALF_SOURCES.includes(c.source) && <span className="text-[10px] text-amber-600"> ·×50%</span>}</td>
-                      <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.revenue)}</td>
-                      <td className="text-right px-3 py-2 tabular-nums text-orange-600">{c.upsale ? fmtM(c.upsale) : '—'}</td>
-                      <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.hhBase)} <span className="text-[10px] text-slate-400">({c.dtRate}%)</span></td>
-                      <td className="text-right px-3 py-2 tabular-nums">{c.hhUp ? `${fmtM(c.hhUp)} (${c.upRate}%)` : '—'}</td>
-                      <td className="text-right px-4 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="border-t bg-slate-50 font-semibold text-slate-700">
-                  <tr>
-                    <td className="px-4 py-2.5" colSpan={4}>Tổng {saleDetail.saleOff.cntPT} khách · Doanh thu {fmtM(saleDetail.saleOff.doanhThu)}</td>
-                    <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(saleDetail.saleOff.hhDoanhThu)}</td>
-                    <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(saleDetail.saleOff.hhUpsale)}</td>
-                    <td className="text-right px-4 py-2.5 text-teal-700 tabular-nums">{fmtM(saleDetail.saleOff.tongHH)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            <div className="px-6 py-3 border-t bg-white text-[11px] text-slate-400 shrink-0">
-              HH cơ bản = phần cơ bản (giảm 50% nếu khách nguồn quen/CTV) × bậc doanh thu {saleDetail.saleOff.dtRate}%. HH upsale = upsale × bậc upsale của từng khách.
+            <div className="overflow-auto p-5 space-y-6">
+              {/* Hoa hồng / thưởng */}
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hoa hồng / thưởng · Tổng {fmtM(saleDetail.commission)}</div>
+                {saleDetail.commDetail?.length > 0 && (
+                  <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl mb-3">
+                    {saleDetail.commDetail.map((d, i) => (
+                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span className="text-slate-600 pr-2">{d.label}</span>
+                        <span className="font-semibold text-teal-700 tabular-nums shrink-0">{fmtM(d.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {saleDetail.saleOff?.perCustomer?.length > 0 && (
+                  <div className="overflow-auto border border-slate-100 rounded-xl">
+                    <table className="w-full text-sm whitespace-nowrap">
+                      <thead className="bg-slate-50 text-slate-500 border-b">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Khách (Sale Offline)</th>
+                          <th className="text-left px-3 py-2 font-medium">Nguồn</th>
+                          <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
+                          <th className="text-right px-3 py-2 font-medium">Upsale</th>
+                          <th className="text-right px-3 py-2 font-medium">HH cơ bản</th>
+                          <th className="text-right px-3 py-2 font-medium">HH upsale</th>
+                          <th className="text-right px-3 py-2 font-medium">Tổng HH</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {saleDetail.saleOff.perCustomer.map((c, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.service && <div className="text-[11px] text-slate-400">{c.service}</div>}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.source || '—'}{SALE_HALF_SOURCES.includes(c.source) && <span className="text-[10px] text-amber-600"> ·×50%</span>}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.revenue)}</td>
+                            <td className="text-right px-3 py-2 tabular-nums text-orange-600">{c.upsale ? fmtM(c.upsale) : '—'}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.hhBase)} <span className="text-[10px] text-slate-400">({c.dtRate}%)</span></td>
+                            <td className="text-right px-3 py-2 tabular-nums">{c.hhUp ? `${fmtM(c.hhUp)} (${c.upRate}%)` : '—'}</td>
+                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && (
+                  <div className="text-sm text-slate-400 italic">Không có hoa hồng/thưởng trong tháng.</div>
+                )}
+              </div>
+
+              {/* Tăng ca theo ngày */}
+              {saleDetail.otDetail?.length > 0 && (
+                <div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tăng ca · {saleDetail.overtimeHours} giờ · {fmtM(saleDetail.overtime)}</div>
+                  <div className="overflow-auto border border-slate-100 rounded-xl">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 text-slate-500 border-b">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Ngày</th>
+                          <th className="text-right px-3 py-2 font-medium">Số giờ</th>
+                          <th className="text-right px-3 py-2 font-medium">Hệ số</th>
+                          <th className="text-right px-3 py-2 font-medium">Thành tiền</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {saleDetail.otDetail.map((o, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-2 text-slate-700">{new Date(o.date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{o.hours}h</td>
+                            <td className="text-right px-3 py-2 tabular-nums text-slate-500">{o.rate === 2 ? '200% (CN)' : '150%'}</td>
+                            <td className="text-right px-3 py-2 font-semibold text-teal-700 tabular-nums">{fmtM(o.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
