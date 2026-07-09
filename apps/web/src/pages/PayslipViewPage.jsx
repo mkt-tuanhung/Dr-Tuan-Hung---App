@@ -167,13 +167,14 @@ const PayslipViewPage = () => {
                     const amt = c.a ?? c.hh;
                     const note = c.d ?? [c.rev && `DT ${c.rev}`, c.up && `Upsale ${c.up}`].filter(Boolean).join(' · ');
                     return (
-                      <div key={i} className="px-3 py-2 text-sm">
+                      <div key={i} className={`px-3 py-2 text-sm ${c.half ? 'bg-rose-50/70' : ''}`}>
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="font-medium text-slate-700 truncate">{c.n}</div>
+                            <div className={`font-medium truncate ${c.half ? 'text-rose-700' : 'text-slate-700'}`}>{c.n}</div>
                             {note && <div className="text-[11px] text-slate-400 truncate">{note}</div>}
+                            {c.half && <div className="text-[11px] font-bold text-rose-600 mt-0.5">⚠ {c.hsrc || 'Người quen'} · hưởng 50%</div>}
                           </div>
-                          <div className="font-semibold text-teal-700 tabular-nums shrink-0">{amt}</div>
+                          <div className={`font-semibold tabular-nums shrink-0 ${c.half ? 'text-rose-700' : 'text-teal-700'}`}>{amt}</div>
                         </div>
                         {Array.isArray(c.parts) && c.parts.length > 0 && (
                           <div className="mt-1 pl-2 border-l-2 border-slate-100 space-y-0.5">
