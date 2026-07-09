@@ -80,7 +80,9 @@ const PayrollPage = () => {
     const contentWins = winRes.data || [];
     const winBonusOf = (id) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? 500000 : 0), 0);
 
-    const workingDaysOf = (id) => att.filter(a => a.staff_id === id && ['present', 'late', 'early_leave'].includes(a.status)).length;
+    // Số công = tổng ngày chấm công CÓ MẶT (present/đi muộn/về sớm = 1 công; nghỉ nửa ngày = 0.5 công)
+    const workingDaysOf = (id) => att.filter(a => a.staff_id === id)
+      .reduce((s, a) => s + (['present', 'late', 'early_leave'].includes(a.status) ? 1 : a.status === 'half_day' ? 0.5 : 0), 0);
     const advanceOf = (id) => adv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
     const salaryAdvanceOf = (id) => salAdv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
     // Tăng ca: số giờ × (CN:200% | thường:150%) × lương cơ bản/26/8
@@ -148,7 +150,8 @@ const PayrollPage = () => {
       const net = gross - salaryAdvance - otherDeduction;
 
       const overtimeHours = overtimeHoursOf(s.id);
-      const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
+      // Số ngày nghỉ = đếm theo bản ghi chấm công nghỉ thực tế (nửa ngày = 0.5), KHÔNG lấy 26 − công
+      const daysOff = offDetail.reduce((sum, o) => sum + (o.status === 'half_day' ? 0.5 : 1), 0);
       return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, partnerOff, commDetail, otDetail, offDetail };
     });
 
@@ -293,7 +296,7 @@ const PayrollPage = () => {
     // Chi tiết lương -> mã hoá -> QR. Phiếu in KHÔNG hiện số tiền nào.
     const congLabel = s.fixed_salary
       ? 'Lương (cố định — đủ tháng)'
-      : `Lương theo công (${r.workingDays} công · nghỉ ${r.daysOff}/${STANDARD_DAYS})`;
+      : `Lương theo công (${r.workingDays}/${STANDARD_DAYS} công${r.daysOff ? ` · nghỉ ${r.daysOff} ngày` : ''})`;
     const items = [
       [congLabel, fmtM(r.luongCong)],
       ['Phụ cấp', fmtM(r.phuCap)],

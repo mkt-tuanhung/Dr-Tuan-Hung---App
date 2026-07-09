@@ -272,7 +272,9 @@ export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip đượ
 
 export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], saved = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
-  const workingDays = att.filter(a => a.staff_id === staff.id && ['present', 'late', 'early_leave'].includes(a.status)).length;
+  // Số công = ngày CÓ MẶT (present/muộn/về sớm = 1) + nghỉ nửa ngày (0.5)
+  const workingDays = att.filter(a => a.staff_id === staff.id)
+    .reduce((s, a) => s + (['present', 'late', 'early_leave'].includes(a.status) ? 1 : a.status === 'half_day' ? 0.5 : 0), 0);
   const effectiveBase = Number(staff.base_salary || 0) * (staff.employment_status === 'probation' ? 0.85 : 1);
   const luongCong = Math.round(effectiveBase / D * workingDays);
   const phuCap = Number(staff.allowance || 0);
