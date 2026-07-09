@@ -73,17 +73,21 @@ const PayslipViewPage = () => {
             </table>
             {Array.isArray(data.hh) && data.hh.length > 0 && (
               <div className="mt-4">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Chi tiết hoa hồng theo khách ({data.hh.length})</div>
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Chi tiết hoa hồng / thưởng ({data.hh.length})</div>
                 <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
-                  {data.hh.map((c, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                      <div className="min-w-0 pr-2">
-                        <div className="font-medium text-slate-700 truncate">{c.n}</div>
-                        <div className="text-[11px] text-slate-400">DT {c.rev}{c.up ? ` · Upsale ${c.up}` : ''}</div>
+                  {data.hh.map((c, i) => {
+                    const amt = c.a ?? c.hh;
+                    const note = c.d ?? [c.rev && `DT ${c.rev}`, c.up && `Upsale ${c.up}`].filter(Boolean).join(' · ');
+                    return (
+                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-700 truncate">{c.n}</div>
+                          {note && <div className="text-[11px] text-slate-400 truncate">{note}</div>}
+                        </div>
+                        <div className="font-semibold text-teal-700 tabular-nums shrink-0">{amt}</div>
                       </div>
-                      <div className="font-semibold text-teal-700 tabular-nums shrink-0">{c.hh}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
