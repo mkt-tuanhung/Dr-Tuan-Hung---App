@@ -35,6 +35,7 @@ const PayrollPage = () => {
   const [locked, setLocked] = useState(false);
   const [history, setHistory] = useState([]);
   const [pendingSA, setPendingSA] = useState([]);          // đơn ứng lương chờ duyệt
+  const [pendingPV, setPendingPV] = useState([]);          // yêu cầu XEM LƯƠNG chờ duyệt
   const [saModal, setSaModal] = useState(null);            // { staff } khi tạo đơn ứng lương
   const [saForm, setSaForm] = useState({ amount: '', reason: '' });
   const [rejectSA, setRejectSA] = useState(null);          // { id } khi từ chối
@@ -181,8 +182,22 @@ const PayrollPage = () => {
       .select('*, staff:profiles!staff_id(full_name)').eq('status', 'pending').order('created_at', { ascending: false });
     setPendingSA(pend || []);
 
+    // Yêu cầu xem lương chờ duyệt (duyệt ngay trong app, không cần Telegram)
+    const { data: pv } = await supabase.rpc('payslip_pending_requests');
+    setPendingPV(pv || []);
+
     setLoading(false);
   }, [month, year, me?.role]);
+
+  // Duyệt / từ chối xem lương ngay trong app
+  const resolvePV = async (id, approve) => {
+    const { data: res, error } = await supabase.rpc('resolve_payslip_view', { p_id: id, p_approve: approve });
+    if (error) { toast.error(error.message); return; }
+    if (res === 'approved') toast.success('Đã duyệt xem lương');
+    else if (res === 'rejected') toast.success('Đã từ chối xem lương');
+    else toast(res || 'Đã xử lý');
+    setPendingPV(list => list.filter(p => p.id !== id));
+  };
 
   // Tạo đơn ứng lương cho 1 nhân sự
   const submitSalaryAdvance = async () => {
@@ -211,6 +226,15 @@ const PayrollPage = () => {
   };
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Tự làm mới danh sách yêu cầu xem lương (để duyệt kịp thời, không cần Telegram)
+  useEffect(() => {
+    const t = setInterval(async () => {
+      const { data: pv } = await supabase.rpc('payslip_pending_requests');
+      setPendingPV(pv || []);
+    }, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -460,6 +484,28 @@ const PayrollPage = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Yêu cầu XEM LƯƠNG chờ duyệt — duyệt ngay trong app */}
+      {pendingPV.length > 0 && (
+        <div className="bg-white border border-teal-200 rounded-2xl shadow-sm p-4">
+          <h3 className="font-bold text-teal-700 mb-3 flex items-center gap-2"><KeyRound className="w-5 h-5" /> Yêu cầu xem lương chờ duyệt ({pendingPV.length})</h3>
+          <div className="space-y-2">
+            {pendingPV.map(pv => (
+              <div key={pv.id} className={`flex items-center justify-between gap-3 border rounded-xl p-3 ${pv.is_duplicate ? 'border-rose-200 bg-rose-50/50' : 'border-slate-100'}`}>
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-800 truncate">{pv.staff_name || '—'} <span className="text-slate-400 font-normal">· {pv.period || ''}</span></div>
+                  <div className="text-xs text-slate-400 truncate">📱 {pv.device_label || 'Thiết bị ?'}{pv.is_duplicate && <span className="text-rose-600 font-semibold"> · ⚠️ Thiết bị khác đã/đang xem phiếu này</span>}</div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => resolvePV(pv.id, true)} className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Duyệt</button>
+                  <button onClick={() => resolvePV(pv.id, false)} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">Từ chối</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">Tự làm mới mỗi 15 giây · nhân sự sẽ thấy lương ngay sau khi bạn duyệt.</p>
         </div>
       )}
 
