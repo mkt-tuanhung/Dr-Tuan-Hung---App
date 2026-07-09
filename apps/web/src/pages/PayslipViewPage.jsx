@@ -167,12 +167,24 @@ const PayslipViewPage = () => {
                     const amt = c.a ?? c.hh;
                     const note = c.d ?? [c.rev && `DT ${c.rev}`, c.up && `Upsale ${c.up}`].filter(Boolean).join(' · ');
                     return (
-                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
-                        <div className="min-w-0">
-                          <div className="font-medium text-slate-700 truncate">{c.n}</div>
-                          {note && <div className="text-[11px] text-slate-400 truncate">{note}</div>}
+                      <div key={i} className="px-3 py-2 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-medium text-slate-700 truncate">{c.n}</div>
+                            {note && <div className="text-[11px] text-slate-400 truncate">{note}</div>}
+                          </div>
+                          <div className="font-semibold text-teal-700 tabular-nums shrink-0">{amt}</div>
                         </div>
-                        <div className="font-semibold text-teal-700 tabular-nums shrink-0">{amt}</div>
+                        {Array.isArray(c.parts) && c.parts.length > 0 && (
+                          <div className="mt-1 pl-2 border-l-2 border-slate-100 space-y-0.5">
+                            {c.parts.map((p, j) => (
+                              <div key={j} className="flex items-center justify-between text-[11px] text-slate-500">
+                                <span>{p.l}</span>
+                                <span className="tabular-nums">{p.v}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
