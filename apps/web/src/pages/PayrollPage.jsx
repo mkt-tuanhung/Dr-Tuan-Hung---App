@@ -310,7 +310,8 @@ const PayrollPage = () => {
       const half = SALE_HALF_SOURCES.includes(c.source);
       hhDetail.push({
         n: c.name,
-        d: `Sale · DT ${fmtM(c.revenue)}${c.upsale ? ` · Upsale ${fmtM(c.upsale)}` : ''}${half ? ` · ${c.source || 'Quen/CTV'} 50%` : ''}`,
+        d: `Sale · DT ${fmtM(c.revenue)}${c.upsale ? ` · Upsale ${fmtM(c.upsale)}` : ''}`,
+        half, hsrc: c.source || 'Người quen',
         parts: [
           { l: `HH doanh thu (${c.dtRate}%)`, v: fmtM(c.hhBase) },
           ...(c.hhUp ? [{ l: `HH upsale (${c.upRate}%)`, v: fmtM(c.hhUp) }] : []),
@@ -320,7 +321,8 @@ const PayrollPage = () => {
     });
     (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({
       n: c.name,
-      d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}${c.half ? ` · ${c.source || 'Quen/CTV'} 50%` : ''}`,
+      d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}`,
+      half: c.half, hsrc: c.source || 'Người quen',
       parts: [
         ...(c.hhRev ? [{ l: 'HH doanh thu', v: fmtM(c.hhRev) }] : []),
         { l: 'Thưởng hẹn', v: fmtM(c.hhHen) },
