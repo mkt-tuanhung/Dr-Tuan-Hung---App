@@ -310,9 +310,11 @@ const PayrollPage = () => {
     (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}${c.half ? ` · ${c.source || 'Quen/CTV'} 50%` : ''}`, a: fmtM(c.hh) }));
     (r.ddOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `${c.surgeryType} · ${c.roles.join(', ')}`, a: fmtM(c.bonus) }));
     (r.bacSiOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `Công mổ ${c.surgeryType} · ${c.ratePct}%`, a: fmtM(c.cong) }));
-    (r.partnerOff?.bacSiCases || []).forEach(c => hhDetail.push({ n: c.name, d: `Mổ đối tác ${c.surgeryType} · công BS 50%${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.cong) }));
-    (r.partnerOff?.phuMoCases || []).forEach(c => hhDetail.push({ n: c.name, d: `Mổ đối tác ${c.surgeryType} · ${c.roles.join(', ')}${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.bonus) }));
     (r.commDetail || []).forEach(d => hhDetail.push({ n: d.label, d: '', a: fmtM(d.amount) }));
+    // Mổ đối tác — tách riêng thành mục màu vàng (giống chi tiết bảng lương)
+    const partnerList = [];
+    (r.partnerOff?.bacSiCases || []).forEach(c => partnerList.push({ n: c.name, t: c.surgeryType, role: `Công BS 50%${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.cong) }));
+    (r.partnerOff?.phuMoCases || []).forEach(c => partnerList.push({ n: c.name, t: c.surgeryType, role: `${c.roles.join(', ')}${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.bonus) }));
     // Chi tiết ngày nghỉ & tăng ca theo từng ngày (đưa vào phiếu lương digital)
     const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
     const dLabel = (ds) => { const dt = new Date(ds); return `${WD[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`; };
@@ -327,6 +329,7 @@ const PayrollPage = () => {
       cong: s.fixed_salary ? null : { w: r.workingDays, off: r.daysOff, std: STANDARD_DAYS },
       items,
       ...(hhDetail.length ? { hh: hhDetail } : {}),
+      ...(partnerList.length ? { pt: partnerList } : {}),
       ...(offList.length ? { off: offList } : {}),
       ...(otList.length ? { ot: otList } : {}),
       net: fmtM(r.net),
