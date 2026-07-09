@@ -5,9 +5,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { getDeviceId, getDeviceLabel } from '@/lib/device';
 
 // Trang công khai: quét QR -> nhập mã bảo mật -> gửi yêu cầu -> chờ Admin duyệt -> xem lương.
-// Dữ liệu lương đã mã hoá nằm trong hash URL (#...); chỉ hiện sau khi Admin duyệt.
+// QR mới chỉ chứa 1 id ngắn; blob mã hoá được tải từ máy chủ rồi giải mã tại chỗ.
+// (Tương thích ngược: QR cũ chứa trực tiếp blob trong hash URL.)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PayslipViewPage = () => {
-  const [payload, setPayload] = useState('');
+  const [payload, setPayload] = useState('');    // blob mã hoá cần giải mã
+  const [fetching, setFetching] = useState(true); // đang tải blob theo id
   const [code, setCode] = useState('');
   const [data, setData] = useState(null);       // dữ liệu đã giải mã (chỉ render khi được duyệt)
   const [error, setError] = useState('');
@@ -18,7 +21,17 @@ const PayslipViewPage = () => {
 
   useEffect(() => {
     const h = (window.location.hash || '').replace(/^#/, '');
-    setPayload(h);
+    if (!h) { setFetching(false); return; }
+    if (UUID_RE.test(h)) {
+      // QR mới: hash là id -> tải blob mã hoá từ máy chủ
+      supabase.rpc('get_payslip', { p_id: h }).then(({ data: tok }) => {
+        setPayload(tok || '');
+        setFetching(false);
+      });
+    } else {
+      setPayload(h); // QR cũ: blob nằm ngay trong hash
+      setFetching(false);
+    }
   }, []);
 
   // Poll trạng thái duyệt
@@ -69,6 +82,15 @@ const PayslipViewPage = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full text-center">{children}</div>
     </div>
   );
+
+  if (fetching) {
+    return (
+      <Shell>
+        <Loader2 className="w-8 h-8 animate-spin text-teal-400 mx-auto" />
+        <p className="text-slate-500 text-sm mt-3">Đang tải phiếu lương…</p>
+      </Shell>
+    );
+  }
 
   if (!payload) {
     return (
