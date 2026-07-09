@@ -69,7 +69,7 @@ const PayrollPage = () => {
       supabase.from('payroll').select('month, year, net_salary'),
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
       supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').gte('evaluated_at', ms).lt('evaluated_at', meNext),
-      supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, surgery_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').gte('surgery_date', ms).lte('surgery_date', meDay),
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];

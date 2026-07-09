@@ -12,9 +12,10 @@ const todayStr = () => new Date().toISOString().split('T')[0];
 
 const EMPTY = {
   customer_name: '', partner_name: '', service: '', surgery_type: 'Tiểu phẫu',
-  surgery_date: todayStr(), partner_fee: '', bac_si_id: '',
+  surgery_date: todayStr(), surgery_fee: '', material_fee: '', bac_si_id: '',
   phu_mo_1_id: '', phu_mo_2_id: '', phu_mo_3_id: '', notes: '',
 };
+const num = (v) => Number(String(v).replace(/\D/g, '')) || 0;
 
 const MoDoiTacPage = () => {
   const { profile } = useAuth();
@@ -49,19 +50,21 @@ const MoDoiTacPage = () => {
   const openEdit = (r) => setModal({
     id: r.id, customer_name: r.customer_name || '', partner_name: r.partner_name || '', service: r.service || '',
     surgery_type: r.surgery_type || 'Tiểu phẫu', surgery_date: r.surgery_date || todayStr(),
-    partner_fee: r.partner_fee ? fmt(r.partner_fee) : '', bac_si_id: r.bac_si_id || '',
+    surgery_fee: r.surgery_fee ? fmt(r.surgery_fee) : '', material_fee: r.material_fee ? fmt(r.material_fee) : '',
+    bac_si_id: r.bac_si_id || '',
     phu_mo_1_id: r.phu_mo_1_id || '', phu_mo_2_id: r.phu_mo_2_id || '', phu_mo_3_id: r.phu_mo_3_id || '', notes: r.notes || '',
   });
 
   const save = async () => {
     if (!modal.customer_name.trim()) return toast.error('Nhập tên khách');
-    const fee = Number(String(modal.partner_fee).replace(/\D/g, '')) || 0;
-    if (!fee) return toast.error('Nhập tiền nhận từ đối tác');
+    const surgeryFee = num(modal.surgery_fee);   // cho phép = 0
+    const materialFee = num(modal.material_fee);
     setSaving(true);
     const payload = {
       customer_name: modal.customer_name.trim(), partner_name: modal.partner_name.trim() || null,
       service: modal.service.trim() || null, surgery_type: modal.surgery_type,
-      surgery_date: modal.surgery_date || null, partner_fee: fee,
+      surgery_date: modal.surgery_date || null,
+      surgery_fee: surgeryFee, material_fee: materialFee, partner_fee: surgeryFee + materialFee,
       bac_si_id: modal.bac_si_id || null,
       phu_mo_1_id: modal.phu_mo_1_id || null, phu_mo_2_id: modal.phu_mo_2_id || null, phu_mo_3_id: modal.phu_mo_3_id || null,
       notes: modal.notes.trim() || null,
@@ -99,7 +102,8 @@ const MoDoiTacPage = () => {
     : rows;
 
   const totalFee = filtered.reduce((s, r) => s + Number(r.partner_fee || 0), 0);
-  const paidFee = filtered.filter(r => r.partner_paid).reduce((s, r) => s + Number(r.partner_fee || 0), 0);
+  const totalSurgery = filtered.reduce((s, r) => s + Number(r.surgery_fee || 0), 0);
+  const paidSurgery = filtered.filter(r => r.partner_paid).reduce((s, r) => s + Number(r.surgery_fee || 0), 0);
   const grouped = filtered.reduce((acc, r) => {
     const d = r.surgery_date ? new Date(r.surgery_date).toLocaleDateString('vi-VN') : 'Không rõ';
     (acc[d] = acc[d] || []).push(r); return acc;
@@ -137,8 +141,8 @@ const MoDoiTacPage = () => {
         {canSeeDoctorPay && (
           <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
             <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (đã TT)</div>
-            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(paidFee * PARTNER_BACSI_RATE))}</div>
-            {paidFee < totalFee && <div className="text-[11px] text-amber-500 mt-0.5">Chưa TT: {fmtM(Math.round((totalFee - paidFee) * PARTNER_BACSI_RATE))}</div>}
+            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(paidSurgery * PARTNER_BACSI_RATE))}</div>
+            {paidSurgery < totalSurgery && <div className="text-[11px] text-amber-500 mt-0.5">Chưa TT: {fmtM(Math.round((totalSurgery - paidSurgery) * PARTNER_BACSI_RATE))}</div>}
           </div>
         )}
       </div>
@@ -168,10 +172,11 @@ const MoDoiTacPage = () => {
                       <div className="text-right shrink-0">
                         <div className="text-[10px] text-slate-400 uppercase font-semibold">Thu đối tác</div>
                         <div className="text-sm font-bold text-teal-600">{fmtM(r.partner_fee)}</div>
+                        {Number(r.material_fee || 0) > 0 && <div className="text-[10px] text-slate-400">PT {fmtM(r.surgery_fee)} · VT {fmtM(r.material_fee)}</div>}
                       </div>
                     </div>
                     <div className="text-xs space-y-1 text-slate-600">
-                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(Number(r.partner_fee || 0) * PARTNER_BACSI_RATE))}</span>}</div>
+                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(Number(r.surgery_fee || 0) * PARTNER_BACSI_RATE))}</span>}</div>
                       <div className="text-slate-500">Phụ mổ: {[nameOf(r, 'p1'), nameOf(r, 'p2'), nameOf(r, 'p3')].filter(Boolean).join(', ') || '—'}</div>
                     </div>
 
@@ -240,9 +245,20 @@ const MoDoiTacPage = () => {
                   <input type="date" value={modal.surgery_date} onChange={e => setModal({ ...modal, surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền nhận từ đối tác (VNĐ) *</label>
-                  <input inputMode="numeric" value={modal.partner_fee} onChange={e => setModal({ ...modal, partner_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-teal-700" placeholder="15.000.000" />
-                  {canSeeDoctorPay && modal.partner_fee && <p className="text-xs text-blue-500 mt-1">Công BS (50%): {fmtM(Math.round((Number(String(modal.partner_fee).replace(/\D/g, '')) || 0) * PARTNER_BACSI_RATE))}</p>}
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền phẫu thuật (VNĐ)</label>
+                  <input inputMode="numeric" value={modal.surgery_fee} onChange={e => setModal({ ...modal, surgery_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-teal-700" placeholder="15.000.000" />
+                  {canSeeDoctorPay && <p className="text-xs text-blue-500 mt-1">Công BS (50% tiền phẫu thuật): {fmtM(Math.round(num(modal.surgery_fee) * PARTNER_BACSI_RATE))}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền vật tư (VNĐ)</label>
+                  <input inputMode="numeric" value={modal.material_fee} onChange={e => setModal({ ...modal, material_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-slate-700" placeholder="0" />
+                  <p className="text-xs text-slate-400 mt-1">Không tính vào công BS</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tổng thu đối tác</label>
+                  <div className="w-full border bg-slate-50 p-2.5 rounded-xl font-bold text-teal-700">{fmtM(num(modal.surgery_fee) + num(modal.material_fee))}</div>
                 </div>
               </div>
               <div>
