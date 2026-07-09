@@ -195,7 +195,12 @@ const StaffManagementPage = ({ isNested = false }) => {
             },
           },
         });
-        if (fnErr || res?.error) throw new Error(res?.error || fnErr.message);
+        if (fnErr || res?.error) {
+          // Lấy lý do lỗi thật từ body Edge Function (invoke chỉ trả message chung chung)
+          let detail = res?.error || fnErr?.message || 'Lỗi không xác định';
+          try { const body = await fnErr?.context?.json?.(); if (body?.error) detail = body.error; } catch { /* giữ detail */ }
+          throw new Error(detail);
+        }
         toast.success('Đã tạo nhân sự mới');
       }
       setModalOpen(false);
