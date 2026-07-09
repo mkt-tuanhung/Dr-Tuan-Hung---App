@@ -65,6 +65,34 @@ export const computeDieuDuong = (surgeries = [], nurseId) => {
   return { trucDem, pm1, pm2, pm3, hauPhau, thuongTrucDem, thuongPhuMo, tongHH: thuongTrucDem + thuongPhuMo, perCase };
 };
 
+// ===================== MỔ ĐỐI TÁC =====================
+// Khách của đối tác thuê phòng khám mổ.
+//   • Bác sĩ mổ: 50% tiền nhận từ đối tác (partner_fee).
+//   • Phụ mổ điều dưỡng: theo bậc PHU_MO_BONUS (Đại/Tiểu) — như khách nội bộ.
+export const PARTNER_BACSI_RATE = 0.5;
+export const computePartner = (partnerRows = [], staffId) => {
+  let bacSiCong = 0, phuMoBonus = 0;
+  const bacSiCases = [], phuMoCases = [];
+  for (const s of partnerRows) {
+    const tier = PHU_MO_BONUS[s.surgery_type] || PHU_MO_BONUS['Tiểu phẫu'];
+    const fee = Number(s.partner_fee || 0);
+    if (s.bac_si_id === staffId) {
+      const cong = Math.round(fee * PARTNER_BACSI_RATE);
+      bacSiCong += cong;
+      bacSiCases.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', partner: s.partner_name || '', fee, cong });
+    }
+    const roles = []; let bonus = 0;
+    if (s.phu_mo_1_id === staffId) { roles.push('Phụ mổ 1'); bonus += tier[1]; }
+    if (s.phu_mo_2_id === staffId) { roles.push('Phụ mổ 2'); bonus += tier[2]; }
+    if (s.phu_mo_3_id === staffId) { roles.push('Phụ mổ 3'); bonus += tier[3]; }
+    if (roles.length) {
+      phuMoBonus += bonus;
+      phuMoCases.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', partner: s.partner_name || '', roles, bonus });
+    }
+  }
+  return { bacSiCong, phuMoBonus, tongHH: bacSiCong + phuMoBonus, bacSiCases, phuMoCases };
+};
+
 // ===================== BÁC SĨ (công mổ) =====================
 // Công mổ theo doanh thu ca: Tiểu phẫu 10% · Đại phẫu 5%.
 // surgeries: ca phẫu thuật trong tháng; doctorId: bác sĩ mổ (bac_si_id).
@@ -241,7 +269,7 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 export const PAYROLL_STANDARD_DAYS = 26;
 export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip được Ads duyệt chạy Ads
 
-export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], saved = null }) => {
+export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], saved = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
   const workingDays = att.filter(a => a.staff_id === staff.id && ['present', 'late', 'early_leave'].includes(a.status)).length;
   const effectiveBase = Number(staff.base_salary || 0) * (staff.employment_status === 'probation' ? 0.85 : 1);
@@ -265,7 +293,9 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
   // Thưởng content cho editor: Win (win_amount) + Duyệt chạy Ads (500k/clip)
   const winBonus = contentWins.filter(w => w.editor_id === staff.id)
     .reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? CLIP_APPROVE_BONUS : 0), 0);
-  const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonus;
+  // Mổ đối tác: BS 50% tiền đối tác + phụ mổ điều dưỡng (áp dụng cho mọi nhân sự được phân)
+  const partnerHH = computePartner(partner, staff.id).tongHH;
+  const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonus + partnerHH;
 
   const otherBonus = Number(saved?.other_bonus || 0);
   const otherDeduction = Number(saved?.other_deduction || 0);

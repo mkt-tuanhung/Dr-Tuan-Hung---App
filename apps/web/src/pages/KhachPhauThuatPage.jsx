@@ -9,9 +9,12 @@ import {
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
+import MoDoiTacPage from '@/pages/MoDoiTacPage.jsx';
+import { Handshake } from 'lucide-react';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
   const { profile } = useAuth();
+  const [moduleTab, setModuleTab] = useState('noi_bo'); // 'noi_bo' | 'doi_tac'
 
   const [customers, setCustomers] = useState([]);
   const [nurses, setNurses] = useState([]);
@@ -287,6 +290,15 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   return (
     <div className="space-y-6">
+      {/* Tabs module: Khách nội bộ | Mổ đối tác */}
+      <div className="flex gap-2 border-b border-slate-200">
+        <button onClick={() => setModuleTab('noi_bo')} className={`px-4 py-2.5 font-semibold text-sm border-b-2 -mb-px transition-colors ${moduleTab === 'noi_bo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Khách phòng khám</button>
+        <button onClick={() => setModuleTab('doi_tac')} className={`px-4 py-2.5 font-semibold text-sm border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${moduleTab === 'doi_tac' ? 'border-amber-600 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}><Handshake className="w-4 h-4" /> Mổ Đối Tác</button>
+      </div>
+
+      {moduleTab === 'doi_tac' && <MoDoiTacPage />}
+
+      {moduleTab === 'noi_bo' && (<>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Khách Phẫu Thuật</h2>
@@ -425,6 +437,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
           ))}
         </div>
       )}
+      </>)}
 
       {/* Modal Phân công Điều dưỡng */}
       {showNurseModal && selectedApp && (

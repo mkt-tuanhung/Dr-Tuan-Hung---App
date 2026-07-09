@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
-  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, isRecheck, SALE_HALF_SOURCES,
+  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, isRecheck, SALE_HALF_SOURCES,
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
@@ -57,7 +57,7 @@ const PayrollPage = () => {
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
 
-    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes] = await Promise.all([
+    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes, partnerRes] = await Promise.all([
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
       supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
@@ -69,10 +69,11 @@ const PayrollPage = () => {
       supabase.from('payroll').select('month, year, net_salary'),
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
       supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').gte('evaluated_at', ms).lt('evaluated_at', meNext),
+      supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').gte('surgery_date', ms).lte('surgery_date', meDay),
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];
-    const bong = bongRes.data || [], coc = cocRes.data || [], pages = pageRes.data || [];
+    const bong = bongRes.data || [], coc = cocRes.data || [], pages = pageRes.data || [], partner = partnerRes.data || [];
     const adv = advRes.data || [], payroll = payRes.data || [], salAdv = salRes.data || [];
     const contentWins = winRes.data || [];
     const winBonusOf = (id) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? 500000 : 0), 0);
@@ -111,9 +112,11 @@ const PayrollPage = () => {
       const ddOff = rolesArr.includes('dieu_duong') ? computeDieuDuong(surg, s.id) : null;
       const trucOff = rolesArr.includes('truc_page') ? computeTrucPage(pages.filter(p => p.staff_id === s.id)) : null;
       const bacSiOff = rolesArr.includes('bac_si') ? computeBacSi(surg, s.id) : null;
+      // Mổ đối tác: BS nhận 50% tiền đối tác, ĐD phụ mổ như khách nội bộ (áp dụng cho mọi nhân sự được phân)
+      const partnerOff = computePartner(partner, s.id);
       const wins = winBonusOf(s.id);
 
-      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + (bacSiOff?.tongHH || 0) + wins;
+      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + (bacSiOff?.tongHH || 0) + (partnerOff?.tongHH || 0) + wins;
 
       // Thành phần cho Trực page / Editor (các vị trí không có bảng từng khách)
       const commDetail = [];
@@ -139,7 +142,7 @@ const PayrollPage = () => {
 
       const overtimeHours = overtimeHoursOf(s.id);
       const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
-      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, commDetail, otDetail };
+      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, partnerOff, commDetail, otDetail };
     });
 
     setRows(computed);
@@ -300,6 +303,8 @@ const PayrollPage = () => {
     (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}${c.half ? ` · ${c.source || 'Quen/CTV'} 50%` : ''}`, a: fmtM(c.hh) }));
     (r.ddOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `${c.surgeryType} · ${c.roles.join(', ')}`, a: fmtM(c.bonus) }));
     (r.bacSiOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `Công mổ ${c.surgeryType} · ${c.ratePct}%`, a: fmtM(c.cong) }));
+    (r.partnerOff?.bacSiCases || []).forEach(c => hhDetail.push({ n: c.name, d: `Mổ đối tác ${c.surgeryType} · công BS 50%${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.cong) }));
+    (r.partnerOff?.phuMoCases || []).forEach(c => hhDetail.push({ n: c.name, d: `Mổ đối tác ${c.surgeryType} · ${c.roles.join(', ')}${c.partner ? ` · ${c.partner}` : ''}`, a: fmtM(c.bonus) }));
     (r.commDetail || []).forEach(d => hhDetail.push({ n: d.label, d: '', a: fmtM(d.amount) }));
     const payload = {
       n: s.full_name,
@@ -745,7 +750,40 @@ const PayrollPage = () => {
                     </table>
                   </div>
                 )}
-                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && !saleDetail.teleOff?.perCustomer?.length && !saleDetail.ddOff?.perCase?.length && !saleDetail.bacSiOff?.perCase?.length && (
+                {(saleDetail.partnerOff?.bacSiCases?.length > 0 || saleDetail.partnerOff?.phuMoCases?.length > 0) && (
+                  <div className="overflow-auto border border-amber-100 rounded-xl mt-3">
+                    <div className="px-3 py-1.5 bg-amber-50 text-[11px] font-semibold text-amber-700 border-b">Mổ đối tác · BS 50% tiền đối tác · phụ mổ như khách nội bộ</div>
+                    <table className="w-full text-sm whitespace-nowrap">
+                      <thead className="bg-slate-50 text-slate-500 border-b">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Khách</th>
+                          <th className="text-left px-3 py-2 font-medium">Loại PT</th>
+                          <th className="text-left px-3 py-2 font-medium">Vai trò</th>
+                          <th className="text-right px-3 py-2 font-medium">Nhận</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {(saleDetail.partnerOff.bacSiCases || []).map((c, i) => (
+                          <tr key={'b' + i}>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.partner ? <span className="text-[11px] text-amber-600"> · {c.partner}</span> : ''}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
+                            <td className="px-3 py-2 text-blue-600">Công BS 50% ({fmtM(c.fee)})</td>
+                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.cong)}</td>
+                          </tr>
+                        ))}
+                        {(saleDetail.partnerOff.phuMoCases || []).map((c, i) => (
+                          <tr key={'p' + i}>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.partner ? <span className="text-[11px] text-amber-600"> · {c.partner}</span> : ''}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.roles.join(', ')}</td>
+                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.bonus)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && !saleDetail.teleOff?.perCustomer?.length && !saleDetail.ddOff?.perCase?.length && !saleDetail.bacSiOff?.perCase?.length && !saleDetail.partnerOff?.bacSiCases?.length && !saleDetail.partnerOff?.phuMoCases?.length && (
                   <div className="text-sm text-slate-400 italic">Không có hoa hồng/thưởng trong tháng.</div>
                 )}
               </div>

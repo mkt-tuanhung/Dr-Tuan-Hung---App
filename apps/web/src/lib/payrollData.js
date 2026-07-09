@@ -13,7 +13,7 @@ export async function loadPayrollDetail(staffId, month, year) {
   const orSale = `telesale_id.eq.${tid},telesale_id_2.eq.${tid},sale_id.eq.${tid}`;
   const orSurg = `${orSale},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid},truc_dem_id.eq.${tid},truc_dem_id_2.eq.${tid},hau_phau_id.eq.${tid}`;
 
-  const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes] = await Promise.all([
+  const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes] = await Promise.all([
     supabase.from('profiles').select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
     supabase.from('payroll').select('*').eq('staff_id', tid),
     supabase.from('attendance').select('staff_id, status, date, overtime_hours').eq('staff_id', tid).gte('date', ms).lte('date', meDay),
@@ -25,6 +25,7 @@ export async function loadPayrollDetail(staffId, month, year) {
     supabase.from('expenses').select('staff_id, amount').eq('staff_id', tid).eq('is_advance', true).eq('status', 'approved'),
     supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
     supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').eq('editor_id', tid).gte('evaluated_at', ms).lt('evaluated_at', meNext),
+    supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').or(`bac_si_id.eq.${tid},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid}`).gte('surgery_date', ms).lte('surgery_date', meDay),
   ]);
 
   const profile = profRes.data;
@@ -35,6 +36,7 @@ export async function loadPayrollDetail(staffId, month, year) {
     att: attRes.data || [], appts: apptRes.data || [], surg: surgRes.data || [],
     bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
     adv: advRes.data || [], salAdv: salRes.data || [], contentWins: winRes.data || [],
+    partner: partnerRes.data || [],
     saved: savedThisMonth,
   }) : null;
   const detail = savedThisMonth?.status === 'locked'

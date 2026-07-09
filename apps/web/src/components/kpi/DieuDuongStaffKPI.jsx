@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Moon, Scissors, HeartPulse, Smile, Target, Coins } from 'lucide-react';
-import { computeDieuDuong } from '@/lib/kpiCalc';
+import { computeDieuDuong, computePartner } from '@/lib/kpiCalc';
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
@@ -44,21 +44,26 @@ const DieuDuongStaffKPI = () => {
   const [loading, setLoading] = useState(true);
   const [kpi, setKpi] = useState(null);
   const [surgeries, setSurgeries] = useState([]);
+  const [partner, setPartner] = useState([]);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
     setLoading(true);
     const ms = `${year}-${String(month).padStart(2, '0')}-01`;
     const me = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
-    const [kpiRes, surgRes] = await Promise.all([
+    const [kpiRes, surgRes, partnerRes] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('staff_id', profile.id).eq('month', month).eq('year', year).maybeSingle(),
       supabase.from('customer_appointments')
         .select('id, customer_name, surgery_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids')
         .eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
+      supabase.from('partner_surgeries')
+        .select('customer_name, partner_name, surgery_date, surgery_type, partner_fee, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id')
+        .gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
     ]);
     if (surgRes.error) toast.error('Lỗi tải ca phẫu thuật: ' + surgRes.error.message);
     setKpi(kpiRes.data || null);
     setSurgeries(surgRes.data || []);
+    setPartner(partnerRes.data || []);
     setLoading(false);
   }, [profile?.id, month, year]);
 
@@ -69,10 +74,13 @@ const DieuDuongStaffKPI = () => {
 
   const id = profile?.id;
   const r = computeDieuDuong(surgeries, id);
+  const partnerR = computePartner(partner, id);       // phụ mổ ca đối tác
+  const tongHHAll = r.tongHH + partnerR.phuMoBonus;
   // Các ca có liên quan tới điều dưỡng này
   const myCases = surgeries.filter(s =>
     s.truc_dem_id === id || s.truc_dem_id_2 === id || s.phu_mo_1_id === id || s.phu_mo_2_id === id || s.phu_mo_3_id === id ||
     s.hau_phau_id === id || (s.additional_hau_phau_ids || []).includes(id));
+  const myPartnerCases = partner.filter(s => s.phu_mo_1_id === id || s.phu_mo_2_id === id || s.phu_mo_3_id === id);
 
   if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
 
@@ -115,8 +123,8 @@ const DieuDuongStaffKPI = () => {
         <Card icon={Smile} label="Tỉ lệ hài lòng" value="—" sub="Dữ liệu cập nhật sau" accent="emerald" />
         <div className="col-span-2 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-2xl p-4 shadow-md flex flex-col justify-center">
           <div className="text-[11px] font-bold uppercase tracking-wider text-white/90">Tổng hoa hồng ước tính</div>
-          <div className="text-3xl font-black mt-1">{fmtM(r.tongHH)}</div>
-          <div className="text-xs text-white/80 mt-1">Trực đêm {fmtM(r.thuongTrucDem)} + Phụ mổ {fmtM(r.thuongPhuMo)}</div>
+          <div className="text-3xl font-black mt-1">{fmtM(tongHHAll)}</div>
+          <div className="text-xs text-white/80 mt-1">Trực đêm {fmtM(r.thuongTrucDem)} + Phụ mổ {fmtM(r.thuongPhuMo)}{partnerR.phuMoBonus ? ` + Phụ mổ đối tác ${fmtM(partnerR.phuMoBonus)}` : ''}</div>
         </div>
       </div>
 
@@ -187,6 +195,30 @@ const DieuDuongStaffKPI = () => {
           </>
         )}
       </div>
+
+      {/* Ca mổ đối tác của tôi (phụ mổ) */}
+      {myPartnerCases.length > 0 && (
+        <div className="bg-white border border-amber-100 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-amber-50"><h3 className="font-bold text-amber-700">Ca mổ đối tác (phụ mổ)</h3></div>
+          <div className="divide-y divide-slate-50">
+            {myPartnerCases.map((s, i) => {
+              const major = s.surgery_type === 'Đại phẫu';
+              const role = s.phu_mo_1_id === id ? ['Phụ mổ 1', major ? 500000 : 300000]
+                : s.phu_mo_2_id === id ? ['Phụ mổ 2', major ? 250000 : 150000]
+                : ['Phụ mổ 3', major ? 150000 : 100000];
+              return (
+                <div key={i} className="p-4 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-800 truncate">{s.customer_name}{s.partner_name ? <span className="text-[11px] text-amber-600"> · {s.partner_name}</span> : ''}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{s.surgery_date} · {s.surgery_type || '—'} · {role[0]}</div>
+                  </div>
+                  <div className="text-sm font-bold text-teal-700 shrink-0">{fmtM(role[1])}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
