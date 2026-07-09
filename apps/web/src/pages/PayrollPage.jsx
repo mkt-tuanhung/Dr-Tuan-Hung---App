@@ -63,7 +63,7 @@ const PayrollPage = () => {
     const meNext = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
     const { data: staff } = await supabase.from('profiles')
-      .select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account')
+      .select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, fixed_salary, bank_name, bank_account')
       .eq('is_active', true).order('full_name');
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
@@ -101,7 +101,10 @@ const PayrollPage = () => {
     const computed = (staff || []).map(s => {
       const workingDays = workingDaysOf(s.id);
       const effectiveBase = Number(s.base_salary || 0) * (s.employment_status === 'probation' ? 0.85 : 1);
-      const luongCong = Math.round(effectiveBase / STANDARD_DAYS * workingDays);
+      // Lương cố định: nhận đủ lương tháng, KHÔNG trừ theo ngày công (không cần chấm công)
+      const luongCong = s.fixed_salary
+        ? Math.round(effectiveBase)
+        : Math.round(effectiveBase / STANDARD_DAYS * workingDays);
       const phuCap = Number(s.allowance || 0);
 
       // Hoa hồng theo từng vị trí — cộng dồn nếu kiêm nhiệm 2 vị trí
