@@ -61,8 +61,8 @@ const PayrollPage = () => {
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
       supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
       supabase.from('expenses').select('staff_id, amount').eq('is_advance', true).eq('status', 'approved').gte('date', ms).lte('date', meDay),
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
@@ -297,7 +297,7 @@ const PayrollPage = () => {
     // Chi tiết hoa hồng theo TỪNG khách/ca cho mọi vị trí — {n:tên, d:mô tả, a:tiền}
     const hhDetail = [];
     (r.saleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Sale · DT ${fmtM(c.revenue)}${c.upsale ? ` · Upsale ${fmtM(c.upsale)}` : ''}`, a: fmtM(c.hh) }));
-    (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}`, a: fmtM(c.hh) }));
+    (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}${c.half ? ` · ${c.source || 'Quen/CTV'} 50%` : ''}`, a: fmtM(c.hh) }));
     (r.ddOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `${c.surgeryType} · ${c.roles.join(', ')}`, a: fmtM(c.bonus) }));
     (r.bacSiOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `Công mổ ${c.surgeryType} · ${c.ratePct}%`, a: fmtM(c.cong) }));
     (r.commDetail || []).forEach(d => hhDetail.push({ n: d.label, d: '', a: fmtM(d.amount) }));
@@ -681,7 +681,7 @@ const PayrollPage = () => {
                       <tbody className="divide-y divide-slate-50">
                         {saleDetail.teleOff.perCustomer.map((c, i) => (
                           <tr key={i}>
-                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.share === 0.5 && <span className="text-[10px] text-amber-600"> ·½</span>}</td>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.share === 0.5 && <span className="text-[10px] text-amber-600"> ·½</span>}{c.half && <span className="text-[10px] text-rose-500"> ·{c.source || 'Quen/CTV'} 50%</span>}</td>
                             <td className="px-3 py-2 text-slate-500">{c.journey} · {c.dai ? 'Đại' : 'Tiểu'}</td>
                             <td className="text-right px-3 py-2 tabular-nums">{c.revenue ? fmtM(c.revenue) : '—'}</td>
                             <td className="text-right px-3 py-2 tabular-nums">{c.hhRev ? fmtM(c.hhRev) : '—'}</td>
