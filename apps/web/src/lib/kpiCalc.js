@@ -65,6 +65,24 @@ export const computeDieuDuong = (surgeries = [], nurseId) => {
   return { trucDem, pm1, pm2, pm3, hauPhau, thuongTrucDem, thuongPhuMo, tongHH: thuongTrucDem + thuongPhuMo, perCase };
 };
 
+// ===================== BÁC SĨ (công mổ) =====================
+// Công mổ theo doanh thu ca: Tiểu phẫu 10% · Đại phẫu 5%.
+// surgeries: ca phẫu thuật trong tháng; doctorId: bác sĩ mổ (bac_si_id).
+export const bacSiRate = (surgeryType) => (surgeryType === 'Đại phẫu' ? 0.05 : 0.10);
+export const computeBacSi = (surgeries = [], doctorId) => {
+  let tongHH = 0;
+  const perCase = [];
+  for (const s of surgeries) {
+    if (s.bac_si_id !== doctorId) continue;
+    const rate = bacSiRate(s.surgery_type);
+    const rev = Number(s.revenue || 0);
+    const cong = Math.round(rev * rate);
+    tongHH += cong;
+    perCase.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', revenue: rev, ratePct: rate * 100, cong });
+  }
+  return { tongHH, perCase };
+};
+
 // ===================== TELESALE =====================
 // Thưởng doanh thu telesale theo bậc tổng doanh thu: <500tr=0.5% | <1 tỷ=1% | ≥1 tỷ=1.5%
 export const telesaleRevRate = (rev) => {

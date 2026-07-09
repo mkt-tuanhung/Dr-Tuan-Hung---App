@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
-  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, isRecheck, SALE_HALF_SOURCES,
+  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, isRecheck, SALE_HALF_SOURCES,
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
@@ -63,7 +63,7 @@ const PayrollPage = () => {
     const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes] = await Promise.all([
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
       supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type').gte('bong_date', ms).lte('bong_date', meDay),
       supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
@@ -113,9 +113,10 @@ const PayrollPage = () => {
         : null;
       const ddOff = rolesArr.includes('dieu_duong') ? computeDieuDuong(surg, s.id) : null;
       const trucOff = rolesArr.includes('truc_page') ? computeTrucPage(pages.filter(p => p.staff_id === s.id)) : null;
+      const bacSiOff = rolesArr.includes('bac_si') ? computeBacSi(surg, s.id) : null;
       const wins = winBonusOf(s.id);
 
-      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + wins;
+      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + (bacSiOff?.tongHH || 0) + wins;
 
       // Thành phần cho Trực page / Editor (các vị trí không có bảng từng khách)
       const commDetail = [];
@@ -141,7 +142,7 @@ const PayrollPage = () => {
 
       const overtimeHours = overtimeHoursOf(s.id);
       const daysOff = Math.max(0, STANDARD_DAYS - workingDays);
-      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, commDetail, otDetail };
+      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, commDetail, otDetail };
     });
 
     setRows(computed);
@@ -278,6 +279,7 @@ const PayrollPage = () => {
     (r.saleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Sale · DT ${fmtM(c.revenue)}${c.upsale ? ` · Upsale ${fmtM(c.upsale)}` : ''}`, a: fmtM(c.hh) }));
     (r.teleOff?.perCustomer || []).forEach(c => hhDetail.push({ n: c.name, d: `Telesale · ${c.journey} · ${c.dai ? 'Đại' : 'Tiểu'}`, a: fmtM(c.hh) }));
     (r.ddOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `${c.surgeryType} · ${c.roles.join(', ')}`, a: fmtM(c.bonus) }));
+    (r.bacSiOff?.perCase || []).forEach(c => hhDetail.push({ n: c.name, d: `Công mổ ${c.surgeryType} · ${c.ratePct}%`, a: fmtM(c.cong) }));
     (r.commDetail || []).forEach(d => hhDetail.push({ n: d.label, d: '', a: fmtM(d.amount) }));
     const payload = {
       n: s.full_name,
@@ -664,7 +666,34 @@ const PayrollPage = () => {
                     </table>
                   </div>
                 )}
-                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && !saleDetail.teleOff?.perCustomer?.length && !saleDetail.ddOff?.perCase?.length && (
+                {saleDetail.bacSiOff?.perCase?.length > 0 && (
+                  <div className="overflow-auto border border-slate-100 rounded-xl mt-3">
+                    <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-500 border-b">Bác sĩ · công mổ (Tiểu 10% · Đại 5% doanh thu)</div>
+                    <table className="w-full text-sm whitespace-nowrap">
+                      <thead className="bg-slate-50 text-slate-500 border-b">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Khách</th>
+                          <th className="text-left px-3 py-2 font-medium">Loại PT</th>
+                          <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
+                          <th className="text-right px-3 py-2 font-medium">%</th>
+                          <th className="text-right px-3 py-2 font-medium">Công mổ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {saleDetail.bacSiOff.perCase.map((c, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
+                            <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.revenue)}</td>
+                            <td className="text-right px-3 py-2 tabular-nums text-slate-500">{c.ratePct}%</td>
+                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.cong)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && !saleDetail.teleOff?.perCustomer?.length && !saleDetail.ddOff?.perCase?.length && !saleDetail.bacSiOff?.perCase?.length && (
                   <div className="text-sm text-slate-400 italic">Không có hoa hồng/thưởng trong tháng.</div>
                 )}
               </div>
