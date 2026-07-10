@@ -9,5 +9,6 @@
 -- ============================================================
 
 alter table inventory_transactions add column if not exists amount bigint default 0;
-alter table inventory_transactions add column if not exists proof_url text;
+alter table inventory_transactions add column if not exists proof_url text;              -- (cũ) 1 ảnh
+alter table inventory_transactions add column if not exists proof_urls text[] default '{}'; -- nhiều ảnh hoá đơn/chứng từ
 alter table inventory_transactions add column if not exists supplier text;

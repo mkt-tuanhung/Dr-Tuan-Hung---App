@@ -11,7 +11,8 @@ const fmtM = (n) => fmt(n) + 'đ';
 const num = (v) => Number(String(v).replace(/\D/g, '')) || 0;
 const MONTHS = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
 
-const EMPTY = { name: '', unit: '', quantity: '', amount: '', date: new Date().toISOString().split('T')[0], supplier: '', notes: '', proof_url: '' };
+const EMPTY = { name: '', unit: '', quantity: '', amount: '', date: new Date().toISOString().split('T')[0], supplier: '', notes: '', proof_urls: [] };
+const proofsOf = (r) => (r.proof_urls?.length ? r.proof_urls : (r.proof_url ? [r.proof_url] : []));
 
 export default function NhapVatTuMoiPage() {
   const { profile } = useAuth();
@@ -60,16 +61,18 @@ export default function NhapVatTuMoiPage() {
   };
 
   const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setUploading(true);
     try {
-      const url = await uploadToR2(file, 'vat-tu');
-      setModal(m => ({ ...m, proof_url: url }));
-      toast.success('Đã tải chứng từ lên');
+      const urls = await Promise.all(files.map(f => uploadToR2(f, 'vat-tu')));
+      setModal(m => ({ ...m, proof_urls: [...(m.proof_urls || []), ...urls] }));
+      toast.success(`Đã tải ${urls.length} ảnh chứng từ`);
     } catch (err) { toast.error('Lỗi tải ảnh: ' + err.message); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   };
+
+  const removeProof = (url) => setModal(m => ({ ...m, proof_urls: (m.proof_urls || []).filter(u => u !== url) }));
 
   const save = async () => {
     const name = modal.name.trim();
@@ -90,7 +93,9 @@ export default function NhapVatTuMoiPage() {
       // 2) Ghi phiếu nhập (trigger tự cộng tồn kho)
       const { error: tErr } = await supabase.from('inventory_transactions').insert({
         item_id: item.id, type: 'import', quantity,
-        amount: num(modal.amount), proof_url: modal.proof_url || null, supplier: modal.supplier.trim() || null,
+        amount: num(modal.amount),
+        proof_urls: modal.proof_urls || [], proof_url: (modal.proof_urls && modal.proof_urls[0]) || null,
+        supplier: modal.supplier.trim() || null,
         date: modal.date, notes: modal.notes.trim() || null, created_by: profile.id,
       });
       if (tErr) throw tErr;
@@ -158,7 +163,7 @@ export default function NhapVatTuMoiPage() {
               </div>
               <div className="flex items-center justify-between mt-2 text-xs">
                 <span className="text-slate-400">{r.profiles?.full_name || '—'}</span>
-                {r.proof_url ? <a href={r.proof_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 font-semibold"><ReceiptText className="w-3.5 h-3.5" /> Chứng từ</a> : <span className="text-slate-300">Không có chứng từ</span>}
+                {proofsOf(r).length ? <a href={proofsOf(r)[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 font-semibold"><ReceiptText className="w-3.5 h-3.5" /> {proofsOf(r).length} chứng từ</a> : <span className="text-slate-300">Không có chứng từ</span>}
               </div>
             </div>
           ))}
@@ -192,7 +197,14 @@ export default function NhapVatTuMoiPage() {
                   <td className="px-4 py-3 text-slate-500">{r.supplier || r.notes || '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{r.profiles?.full_name || '—'}</td>
                   <td className="px-4 py-3 text-center">
-                    {r.proof_url ? <a href={r.proof_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs font-semibold"><ReceiptText className="w-3.5 h-3.5" /> Xem</a> : <span className="text-slate-300">—</span>}
+                    {proofsOf(r).length ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        {proofsOf(r).slice(0, 3).map((u, i) => (
+                          <a key={i} href={u} target="_blank" rel="noreferrer" className="w-8 h-8 rounded border border-slate-200 overflow-hidden inline-block hover:ring-2 hover:ring-teal-300"><img src={u} alt="" className="w-full h-full object-cover" /></a>
+                        ))}
+                        {proofsOf(r).length > 3 && <span className="text-[11px] text-slate-400">+{proofsOf(r).length - 3}</span>}
+                      </span>
+                    ) : <span className="text-slate-300">—</span>}
                   </td>
                 </tr>
               ))}
@@ -240,11 +252,21 @@ export default function NhapVatTuMoiPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Hoá đơn / Chứng từ / Bill CK</label>
-                <button type="button" onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-teal-400 transition-colors">
-                  {uploading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : modal.proof_url ? <img src={modal.proof_url} alt="chứng từ" className="max-h-28 mx-auto rounded-lg" /> : <span className="flex items-center justify-center gap-2 text-sm"><ImageIcon className="w-4 h-4" /> Tải ảnh hoá đơn / bill lên</span>}
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Hoá đơn / Chứng từ / Bill CK <span className="text-slate-400 font-normal">(nhiều ảnh)</span></label>
+                {modal.proof_urls?.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+                    {modal.proof_urls.map((u, i) => (
+                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 group">
+                        <img src={u} alt={`chứng từ ${i + 1}`} className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => removeProof(u)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500"><X className="w-3 h-3" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-teal-400 transition-colors disabled:opacity-60">
+                  {uploading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : <span className="flex items-center justify-center gap-2 text-sm"><ImageIcon className="w-4 h-4" /> {modal.proof_urls?.length ? 'Thêm ảnh khác' : 'Tải ảnh hoá đơn / bill lên'}</span>}
                 </button>
-                <input type="file" accept="image/*" className="hidden" ref={fileRef} onChange={handleUpload} />
+                <input type="file" accept="image/*" multiple className="hidden" ref={fileRef} onChange={handleUpload} />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1.5 text-slate-700">Ghi chú</label>
