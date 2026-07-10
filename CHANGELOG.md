@@ -55,3 +55,7 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 ## [v1.6.0] - Gộp Module Doanh Thu và Tài Chính
 - Bổ sung trường phân loại nhóm dịch vụ, nguồn khách, tệp khách.
 - Thay thế menu Kế toán bằng Doanh thu / Tài chính tích hợp.
+
+## [v1.7.0] - Thông báo Telegram cho Kế toán
+- **Thêm** `supabase/notify_accountant_telegram.sql`: trigger đẩy thông báo (in-app + Telegram) cho kế toán khi có: giao dịch thu/chi mới (finance_transactions), dòng tiền mới (cash_flows), viện phí vừa ghi nhận trên lịch hẹn, khoản chi/tạm ứng được duyệt (nhắc kế toán chi tiền).
+- **Bảo mật:** Edge Function `telegram-webhook` hỗ trợ xác thực secret (`TELEGRAM_WEBHOOK_SECRET` + `secret_token` khi setWebhook) để chặn request giả mạo duyệt/từ chối.

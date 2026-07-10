@@ -1,8 +1,12 @@
 // Telegram bot webhook — liên kết tài khoản (/start <nonce>) + duyệt/từ chối qua nút bấm.
 // Deploy với "Verify JWT" = OFF (Telegram không gửi JWT).
+// Bảo vệ giả mạo: đặt secret TELEGRAM_WEBHOOK_SECRET và đăng ký webhook với
+// setWebhook?...&secret_token=<secret> — Telegram sẽ gửi kèm header
+// x-telegram-bot-api-secret-token, request không có header đúng sẽ bị chặn.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
+const WEBHOOK_SECRET = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -19,6 +23,9 @@ const sendMessage = (chatId: number | string, text: string) =>
   api('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML' });
 
 Deno.serve(async (req) => {
+  if (WEBHOOK_SECRET && req.headers.get('x-telegram-bot-api-secret-token') !== WEBHOOK_SECRET) {
+    return new Response('unauthorized', { status: 401 });
+  }
   try {
     const update = await req.json();
 
