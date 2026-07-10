@@ -218,22 +218,22 @@ export default function ProfileMenu({ children, mobile = false }) {
 
       {/* Profile Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
-            <div className="flex bg-slate-50 border-b">
-              <button onClick={() => setActiveTab('profile')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-                Thông tin cá nhân
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="flex bg-slate-50 border-b shrink-0">
+              <button onClick={() => setActiveTab('profile')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                Cá nhân
               </button>
-              <button onClick={() => setActiveTab('password')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'password' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-                Đổi mật khẩu
+              <button onClick={() => setActiveTab('password')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'password' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                Mật khẩu
               </button>
-              <button onClick={() => setActiveTab('2fa')} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${activeTab === '2fa' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('2fa')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === '2fa' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Bảo mật
               </button>
-              <button onClick={() => setModalOpen(false)} className="px-4 text-slate-400 hover:text-slate-600"><X className="w-5 h-5"/></button>
+              <button onClick={() => setModalOpen(false)} className="px-3 sm:px-4 text-slate-400 hover:text-slate-600 shrink-0"><X className="w-5 h-5"/></button>
             </div>
 
-            <div className="p-6">
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1">
               {activeTab === 'profile' ? (
                 selectingBank ? (
                   <div className="flex flex-col h-[60vh]">
