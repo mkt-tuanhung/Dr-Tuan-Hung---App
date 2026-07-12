@@ -4,9 +4,31 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown } from 'lucide-react';
+import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
+import ImageLightbox from '@/components/ImageLightbox.jsx';
+
+// Lưới ảnh bấm được -> mở popup xem/zoom
+const Thumbs = ({ urls = [], size = 'h-20 w-20', wrapClass = 'mt-3 flex flex-wrap gap-2' }) => {
+  const [open, setOpen] = useState(null);
+  if (!urls.length) return null;
+  return (
+    <>
+      <div className={wrapClass}>
+        {urls.map((u, i) => (
+          <button key={i} type="button" onClick={() => setOpen(i)} className={`${size} rounded-xl overflow-hidden border border-slate-100 relative group hover:ring-2 hover:ring-teal-300 transition-shadow`}>
+            <img src={u} alt="" className="w-full h-full object-cover" />
+            <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/25 transition-colors">
+              <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </span>
+          </button>
+        ))}
+      </div>
+      {open !== null && <ImageLightbox images={urls} index={open} onClose={() => setOpen(null)} />}
+    </>
+  );
+};
 
 const ST = {
   scheduled: { label: 'Đã tiếp nhận', cls: 'bg-amber-100 text-amber-700' },
@@ -430,9 +452,9 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
     <Modal title="Hồ sơ tư vấn" onClose={onClose}>
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{app.customer_name}</b></p>
       <Field label="Ghi chú tư vấn"><textarea rows={3} value={note} onChange={e => setNote(e.target.value)} className={inp} placeholder="Nội dung tư vấn, nhu cầu khách…" /></Field>
-      <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh hồ sơ</label>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {existing.map((u, i) => <img key={i} src={u} alt="" className="h-16 w-16 object-cover rounded-lg border" />)}
+      <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh hồ sơ <span className="text-slate-400 font-normal">(bấm để xem/zoom)</span></label>
+      <div className="flex flex-wrap items-start gap-2 mb-4">
+        <Thumbs urls={existing} size="h-16 w-16" wrapClass="flex flex-wrap gap-2" />
         {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} alt="" className="h-16 w-16 object-cover rounded-lg border border-teal-300" />)}
         <button type="button" onClick={() => fileRef.current?.click()} className="h-16 w-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-teal-400"><ImagePlus className="w-5 h-5" /></button>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { setFiles(p => [...p, ...e.target.files]); e.target.value = ''; }} />
@@ -631,11 +653,8 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
     {r.service && <div className="mt-3 text-[15px] text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5">{r.service}</div>}
     {r.consult_note && <div className="mt-2 text-sm text-slate-500 leading-relaxed">{r.consult_note}</div>}
 
-    {(r.consult_image_urls || []).length > 0 && (
-      <div className="mt-3 flex flex-wrap gap-2">
-        {(r.consult_image_urls || []).map((u, i) => <img key={i} src={u} alt="" className="h-20 w-20 object-cover rounded-xl border border-slate-100" />)}
-      </div>
-    )}
+    <Thumbs urls={r.consult_image_urls || []} />
+
 
     {rs.length > 0 && (
       <div className="mt-4 space-y-2">
