@@ -64,6 +64,17 @@ const OFFICE_IPS = ['42.114.215.104'];
 
 const fmtTime = (t) => t ? t.slice(0, 5) : null;
 
+// Số giờ giữa 2 mốc "HH:MM" (hỗ trợ qua đêm)
+const rangeHours = (from, to) => {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let mins = (th * 60 + tm) - (fh * 60 + fm);
+  if (mins < 0) mins += 24 * 60;
+  return Math.round((mins / 60) * 100) / 100;
+};
+const sumRanges = (ranges) => (ranges || []).reduce((s, r) => s + rangeHours(r.from, r.to), 0);
+
 const AttendancePage = () => {
   const { profile } = useAuth();
   const today = new Date();
@@ -81,7 +92,7 @@ const AttendancePage = () => {
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [leaveForm, setLeaveForm] = useState({ type: 'late', date: todayStr, half_day_period: 'morning', reason: '' });
   const [showOtForm, setShowOtForm] = useState(false);
-  const [otForm, setOtForm] = useState({ date: todayStr, hours: '' });
+  const [otForm, setOtForm] = useState({ date: todayStr, ranges: [{ from: '', to: '' }] });
   const [locationInfo, setLocationInfo] = useState(null); // { lat, lng, distance, inOffice, ip }
 
   useEffect(() => {
@@ -221,17 +232,33 @@ const AttendancePage = () => {
     finally { setSaving(false); }
   };
 
+  // Lấy khoảng giờ tăng ca đã lưu của 1 ngày (để sửa lại)
+  const rangesForDate = (date) => {
+    const rec = (date === todayStr ? todayRecord : null) || history.find(a => a.date === date);
+    const rs = rec?.overtime_ranges;
+    if (Array.isArray(rs) && rs.length) return rs.map(r => ({ from: r.from || '', to: r.to || '' }));
+    return [{ from: '', to: '' }];
+  };
+  const openOtForm = () => { setOtForm({ date: todayStr, ranges: rangesForDate(todayStr) }); setShowOtForm(true); };
+  const setOtDate = (date) => setOtForm({ date, ranges: rangesForDate(date) });
+  const addRange = () => setOtForm(f => ({ ...f, ranges: [...f.ranges, { from: '', to: '' }] }));
+  const removeRange = (i) => setOtForm(f => ({ ...f, ranges: f.ranges.length > 1 ? f.ranges.filter((_, idx) => idx !== i) : f.ranges }));
+  const setRange = (i, key, val) => setOtForm(f => ({ ...f, ranges: f.ranges.map((r, idx) => idx === i ? { ...r, [key]: val } : r) }));
+
   const handleOtSubmit = async () => {
-    const hours = Number(otForm.hours);
     if (!otForm.date) { toast.error('Chọn ngày'); return; }
-    if (!hours || hours <= 0) { toast.error('Nhập số giờ tăng ca (chỉ số)'); return; }
+    const ranges = otForm.ranges.filter(r => r.from && r.to);
+    if (!ranges.length) { toast.error('Nhập ít nhất 1 khoảng giờ (từ … đến …)'); return; }
+    const hours = Math.round(sumRanges(ranges) * 100) / 100;
+    if (hours <= 0) { toast.error('Khoảng giờ không hợp lệ'); return; }
+    const withHours = ranges.map(r => ({ from: r.from, to: r.to, hours: rangeHours(r.from, r.to) }));
     setSaving(true);
     const { error } = await supabase.from('attendance')
-      .upsert({ staff_id: profile.id, date: otForm.date, overtime_hours: hours }, { onConflict: 'staff_id,date' });
+      .upsert({ staff_id: profile.id, date: otForm.date, overtime_hours: hours, overtime_ranges: withHours }, { onConflict: 'staff_id,date' });
     if (error) toast.error(error.message);
     else {
       toast.success(`Đã ghi ${hours} giờ tăng ca ngày ${new Date(otForm.date).toLocaleDateString('vi-VN')}`);
-      setShowOtForm(false); setOtForm({ date: todayStr, hours: '' });
+      setShowOtForm(false); setOtForm({ date: todayStr, ranges: [{ from: '', to: '' }] });
       loadData();
     }
     setSaving(false);
@@ -264,6 +291,9 @@ const AttendancePage = () => {
   const presentCount = history.filter(a => a.status === 'present' || a.status === 'late').length;
   const absentCount = history.filter(a => a.status === 'absent').length;
   const lateCount = history.filter(a => a.status === 'late').length;
+  // Tăng ca trong tháng
+  const otDays = history.filter(a => Number(a.overtime_hours) > 0).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const otTotal = Math.round(otDays.reduce((s, a) => s + Number(a.overtime_hours || 0), 0) * 100) / 100;
 
   // Build calendar
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -521,13 +551,44 @@ const AttendancePage = () => {
         );
       })()}
 
+      {/* Tăng ca tháng này */}
+      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-amber-50 bg-amber-50/40">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5"><Clock className="w-4 h-4 text-amber-500" /> Tăng ca {MONTHS[month - 1]}</h3>
+          <span className="text-sm font-bold text-amber-600">{otTotal} giờ</span>
+        </div>
+        {otDays.length === 0 ? (
+          <div className="text-center py-6 text-slate-400 text-sm">Chưa có giờ tăng ca trong tháng</div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {otDays.map(a => {
+              const d = new Date(a.date);
+              const ranges = Array.isArray(a.overtime_ranges) ? a.overtime_ranges : [];
+              return (
+                <div key={a.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-700">{DAYS_SHORT[d.getDay()]} {d.toLocaleDateString('vi-VN')}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {ranges.length
+                        ? ranges.map((r, i) => <span key={i}>{i > 0 && ', '}{r.from}–{r.to}</span>)
+                        : 'Không ghi khoảng giờ'}
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-amber-600 shrink-0">{Number(a.overtime_hours)}h</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Leave requests */}
       <div className="bg-white rounded-2xl border border-teal-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-teal-50">
           <h3 className="text-sm font-semibold text-slate-700">Đơn xin phép</h3>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setOtForm({ date: todayStr, hours: '' }); setShowOtForm(true); }}
+              onClick={openOtForm}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors"
             >
               <Clock className="w-3.5 h-3.5" /> Ghi tăng ca
@@ -615,7 +676,7 @@ const AttendancePage = () => {
       {/* Overtime form modal */}
       {showOtForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-800 flex items-center gap-2"><Clock className="w-5 h-5 text-amber-500" /> Ghi giờ tăng ca</h3>
               <button onClick={() => setShowOtForm(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><X className="w-4 h-4" /></button>
@@ -623,14 +684,32 @@ const AttendancePage = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Ngày</label>
-                <input type="date" value={otForm.date} onChange={e => setOtForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" />
+                <input type="date" value={otForm.date} onChange={e => setOtDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Số giờ tăng ca</label>
-                <input type="number" min="0" step="0.5" inputMode="decimal" value={otForm.hours}
-                  onChange={e => setOtForm(f => ({ ...f, hours: e.target.value.replace(/[^\d.]/g, '') }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" placeholder="VD: 2" />
-                <p className="text-[11px] text-slate-400 mt-1">Chỉ nhập số. Tăng ca CN tính 200%, ngày thường 150%.</p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-slate-700">Khoảng giờ tăng ca</label>
+                  <button type="button" onClick={addRange} className="text-xs font-semibold text-amber-600 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Thêm khoảng</button>
+                </div>
+                <div className="space-y-2">
+                  {otForm.ranges.map((r, i) => {
+                    const h = rangeHours(r.from, r.to);
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <input type="time" value={r.from} onChange={e => setRange(i, 'from', e.target.value)} className="flex-1 min-w-0 px-2 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" />
+                        <span className="text-slate-400 text-sm shrink-0">→</span>
+                        <input type="time" value={r.to} onChange={e => setRange(i, 'to', e.target.value)} className="flex-1 min-w-0 px-2 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400" />
+                        <span className="text-xs font-semibold text-amber-600 w-12 text-right shrink-0">{h ? h + 'h' : '—'}</span>
+                        {otForm.ranges.length > 1 && <button type="button" onClick={() => removeRange(i)} className="text-slate-300 hover:text-red-500 shrink-0"><X className="w-4 h-4" /></button>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                  <span className="text-xs text-slate-500">Tổng giờ tăng ca</span>
+                  <span className="text-sm font-bold text-amber-600">{Math.round(sumRanges(otForm.ranges) * 100) / 100} giờ</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">Có thể thêm nhiều khoảng (VD sáng + tối). Tăng ca CN 200%, ngày thường 150%.</p>
               </div>
             </div>
             <div className="flex gap-2 mt-5">
