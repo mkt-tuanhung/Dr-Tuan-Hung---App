@@ -280,6 +280,8 @@ const HauPhauPage = () => {
   const hauPhauCount = customers.filter(c => !isOldCase(c)).length;
   const cskhCount = customers.filter(c => isOldCase(c)).length;
 
+  const statusCountOf = (id) => id === 'all' ? mainTabCustomers.length : mainTabCustomers.filter(c => (c.post_op_status || 'Đang theo dõi') === id).length;
+
   let filteredCustomers = activeTab === 'all' ? mainTabCustomers : mainTabCustomers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
 
   if (searchQuery) {
@@ -467,114 +469,104 @@ const HauPhauPage = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
-      <div className="flex-1 min-w-0 space-y-6 w-full">
-        <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">{mainTab === 'cskh' ? 'Chăm sóc khách hàng (CSKH)' : 'Chăm sóc Hậu phẫu'}</h2>
-          <p className="text-slate-500 text-sm mt-1">{mainTab === 'cskh' ? 'Khách đã mổ trên 1 tháng — CSKH tiếp quản chăm sóc' : 'Khách mổ trong vòng 1 tháng — theo dõi sau mổ'}</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex-1 min-w-0 space-y-4 w-full">
+        {/* Header gọn: tiêu đề + nút Import nhỏ */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800 truncate">{mainTab === 'cskh' ? 'Chăm sóc khách hàng' : 'Chăm sóc Hậu phẫu'}</h2>
+            <p className="text-slate-400 text-xs sm:text-sm mt-0.5 truncate">{mainTab === 'cskh' ? 'Khách đã mổ trên 1 tháng' : 'Khách mổ trong vòng 1 tháng — theo dõi sau mổ'}</p>
+          </div>
           {canSeeAll && (
-            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
-              <Upload className="w-4 h-4" /> Import khách
+            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="shrink-0 flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-teal-600 text-white text-sm font-semibold shadow-sm shadow-teal-600/20 hover:bg-teal-700 active:scale-95 transition">
+              <Upload className="w-4 h-4" /> Import
             </button>
           )}
-          <div className="bg-teal-100 text-teal-700 px-4 py-2 rounded-xl font-bold">
-            {mainTabCustomers.length} Khách
-          </div>
         </div>
-      </div>
 
-      {/* Main tabs: Hậu phẫu / CSKH */}
-      <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-fit">
-        <button onClick={() => { setMainTab('hau_phau'); setActiveTab('all'); }}
-          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'hau_phau' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
-          Hậu phẫu (&lt;1 tháng) · {hauPhauCount}
-        </button>
-        <button onClick={() => { setMainTab('cskh'); setActiveTab('all'); }}
-          className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mainTab === 'cskh' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
-          CSKH (≥1 tháng) · {cskhCount}
-        </button>
-      </div>
-
-      {/* Tabs & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-2">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              {tab.label}
+        {/* Segmented Hậu phẫu / CSKH — 2 dòng, có đếm */}
+        <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl">
+          {[
+            { id: 'hau_phau', label: 'Hậu phẫu', sub: `<1 tháng · ${hauPhauCount}` },
+            { id: 'cskh', label: 'CSKH', sub: `≥1 tháng · ${cskhCount}` },
+          ].map(t => (
+            <button key={t.id} onClick={() => { setMainTab(t.id); setActiveTab('all'); }}
+              className={`py-2 rounded-xl text-center transition-all ${mainTab === t.id ? 'bg-white shadow-sm text-teal-700' : 'text-slate-500'}`}>
+              <div className="text-sm font-bold">{t.label}</div>
+              <div className={`text-[11px] ${mainTab === t.id ? 'text-teal-500' : 'text-slate-400'}`}>{t.sub}</div>
             </button>
           ))}
         </div>
-        <div className="relative w-full sm:w-72 shrink-0">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Tìm tên KH hoặc số điện thoại..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
-          />
-        </div>
-      </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
-      ) : filteredCustomers.length === 0 ? (
-         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
-            Không có khách hàng hậu phẫu nào trong mục này
-         </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedCustomers).map(([date, apps]) => (
-            <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                <Calendar className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-teal-800 text-lg">Mổ ngày: {date}</h3>
-                <span className="px-2.5 py-0.5 bg-teal-100 text-teal-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {apps.map(app => {
-                  const st = app.post_op_status || 'Đang theo dõi';
-                  const noteCount = app.post_op_notes ? app.post_op_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
-                  return (
-                  <button key={app.id} type="button" onClick={() => openCare(app)}
-                    className="text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-teal-400 hover:shadow-md transition-all">
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-slate-800 text-lg truncate">{app.customer_name}</h4>
-                        <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5" /> {app.phone}
+        {/* Search */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input type="text" placeholder="Tìm tên KH hoặc số điện thoại…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 pl-10 pr-4 h-11 rounded-2xl text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/15 transition-all" />
+        </div>
+
+        {/* Filter chips — 1 hàng cuộn ngang, có đếm */}
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+          {TABS.map(tab => {
+            const active = activeTab === tab.id;
+            const n = statusCountOf(tab.id);
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all inline-flex items-center gap-1.5 ${active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
+                {tab.label}
+                <span className={`text-[11px] font-bold px-1.5 rounded-full ${active ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
+            Không có khách hàng nào trong mục này
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {Object.entries(groupedCustomers).map(([date, apps]) => (
+              <div key={date} className="space-y-2.5">
+                <div className="flex items-center gap-2 px-1">
+                  <Calendar className="w-4 h-4 text-teal-500" />
+                  <h3 className="text-[13px] font-bold text-slate-500">Mổ ngày {date}</h3>
+                  <span className="text-xs font-semibold text-slate-300">· {apps.length}</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {apps.map(app => {
+                    const st = app.post_op_status || 'Đang theo dõi';
+                    const noteCount = app.post_op_notes ? app.post_op_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
+                    return (
+                    <button key={app.id} type="button" onClick={() => openCare(app)}
+                      className="text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm active:scale-[0.99] hover:border-teal-300 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-800 truncate leading-tight">{app.customer_name}</h4>
+                          <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone}</div>
                         </div>
+                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']}`}>{st}</span>
                       </div>
-                      <span className={`font-semibold px-2 py-1 rounded-lg text-xs border whitespace-nowrap shrink-0 ${STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']}`}>
-                        {st}
-                      </span>
-                    </div>
 
-                    {/* Compact Info Grid */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm bg-slate-50 p-3 rounded-xl">
-                      <div className="text-slate-500 text-xs">Dịch vụ:</div>
-                      <div className="font-semibold text-slate-800 text-right truncate">{app.service || 'Chưa rõ'}</div>
-                      <div className="text-slate-500 text-xs">Phụ trách:</div>
-                      <div className="text-slate-700 text-right truncate">{app.hau_phau?.full_name || 'N/A'}</div>
-                    </div>
+                      <div className="mt-3 flex items-center gap-2 text-xs min-w-0">
+                        <span className="px-2 py-1 rounded-lg bg-slate-50 text-slate-600 font-medium truncate max-w-[58%]">{app.service || 'Chưa rõ DV'}</span>
+                        <span className="text-slate-300 shrink-0">·</span>
+                        <span className="text-slate-500 truncate min-w-0">{app.hau_phau?.full_name || 'Chưa phân công'}</span>
+                      </div>
 
-                    <div className="mt-auto flex items-center justify-between pt-1 text-sm">
-                      <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {noteCount} mốc ghi chú</span>
-                      <span className="text-teal-600 font-semibold">Mở nhật ký →</span>
-                    </div>
-                  </button>
-                  );
-                })}
+                      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between text-xs">
+                        <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /> {noteCount} ghi chú</span>
+                        <span className="text-teal-600 font-bold inline-flex items-center gap-1">Mở nhật ký <span className="inline-block w-[7px] h-[7px] border-t-2 border-r-2 border-current rotate-45 -ml-0.5" /></span>
+                      </div>
+                    </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
       </div> {/* End main content */}
 
 
