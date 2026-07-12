@@ -280,22 +280,10 @@ const KhachTuVanPage = () => {
 
       {/* DETAIL — mobile: sheet trượt lên khi chạm 1 khách */}
       {sheetFor && (() => { const live = visible.find(x => x.id === sheetFor.id) || sheetFor; return (
-        <div className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end" onClick={() => setSheetFor(null)}>
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-          <div className="relative w-full flex flex-col max-h-[88vh] fx-shell rounded-t-3xl text-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
-            {/* Đầu sheet cố định: tay kéo + nút đóng (đủ cao để X không đè nội dung) */}
-            <div className="shrink-0 relative h-12">
-              <span className="absolute left-1/2 -translate-x-1/2 top-2.5 w-10 h-1.5 rounded-full bg-slate-300" />
-              <button onClick={() => setSheetFor(null)} aria-label="Đóng" className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 active:scale-95 transition"><X className="w-5 h-5" /></button>
-            </div>
-            {/* Vùng cuộn nội dung */}
-            <div className="overflow-y-auto overscroll-contain px-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-              <CustomerDetail r={live} rs={recsOf(live.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
-                onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
-                onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
-            </div>
-          </div>
-        </div>
+        <CustomerScreen r={live} rs={recsOf(live.id)} canWrite={canWrite} isAdmin={isAdmin} me={me}
+          onClose={() => setSheetFor(null)}
+          onConsult={setConsultFor} onRec={setRecFor} onEval={setEvalFor} onTranscript={setTranscriptView}
+          onReanalyze={reanalyze} onReqDelete={requestDelete} onSoftDelete={softDelete} onRejectDelete={rejectDelete} />
       ); })()}
 
       {evalFor && <EvalModal app={evalFor} onClose={() => setEvalFor(null)} onSaved={() => { setEvalFor(null); loadData(); }} />}
@@ -607,6 +595,173 @@ const RecordingItem = ({ rec, index, isAdmin, me, onTranscript, onReanalyze, onR
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// ---------- Icon thuần CSS cho tab (không dùng thư viện icon) ----------
+const CssIcon = ({ type }) => {
+  if (type === 'info') return (
+    <span className="relative inline-block w-[19px] h-[19px] rounded-full border-2 border-current">
+      <span className="absolute left-1/2 -translate-x-1/2 top-[2.5px] w-[2px] h-[2px] rounded-full bg-current" />
+      <span className="absolute left-1/2 -translate-x-1/2 top-[6.5px] w-[2px] h-[7px] rounded-[1px] bg-current" />
+    </span>
+  );
+  if (type === 'mic') return (
+    <span className="relative inline-block w-[19px] h-[19px]">
+      <span className="absolute top-[1px] left-1/2 -translate-x-1/2 w-[8px] h-[10px] rounded-full bg-current" />
+      <span className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[14px] h-[8px] border-2 border-current border-t-transparent rounded-b-[8px]" />
+      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[8px] h-[2px] bg-current rounded" />
+    </span>
+  );
+  // doc / hồ sơ
+  return (
+    <span className="relative inline-flex flex-col items-center justify-center gap-[2.5px] w-[15px] h-[19px] border-2 border-current rounded-[3px]">
+      <span className="w-[7px] h-[1.5px] bg-current rounded" />
+      <span className="w-[7px] h-[1.5px] bg-current rounded" />
+      <span className="w-[4px] h-[1.5px] bg-current rounded self-start ml-[2.5px]" />
+    </span>
+  );
+};
+
+// ---------- Trang FULL MÀN HÌNH 3 tab cho mobile ----------
+const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRec, onEval, onTranscript, onReanalyze, onReqDelete, onSoftDelete, onRejectDelete }) => {
+  const [tab, setTab] = useState('info');
+  const touch = useRef(null);
+  const order = ['info', 'rec', 'file'];
+
+  // Nút Back / vuốt-back của iPhone -> đóng trang (không rời khỏi app)
+  useEffect(() => {
+    window.history.pushState({ ktvScreen: true }, '');
+    const onPop = () => onClose();
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [onClose]);
+  const close = () => window.history.back();
+
+  const onTouchStart = (e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const onTouchEnd = (e) => {
+    if (!touch.current) return;
+    const dx = e.changedTouches[0].clientX - touch.current.x;
+    const dy = e.changedTouches[0].clientY - touch.current.y;
+    touch.current = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.4) return;   // phải là vuốt ngang rõ rệt
+    const i = order.indexOf(tab);
+    if (dx < 0 && i < order.length - 1) setTab(order[i + 1]);
+    else if (dx > 0 && i > 0) setTab(order[i - 1]);
+  };
+
+  const stats = r.status === 'phau_thuat'
+    ? [{ label: 'Doanh thu', value: money(r.revenue), accent: 'text-teal-600' }, { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-cyan-600' }, { label: 'Loại mổ', value: r.surgery_type || '—' }, { label: 'Ngày mổ', value: dOnly(r.surgery_date) }]
+    : r.status === 'coc'
+      ? [{ label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-cyan-600' }, { label: 'Ngày cọc', value: dOnly(r.deposit_date) }, { label: 'Mổ dự kiến', value: dOnly(r.expected_surgery_date) }, { label: 'Loại mổ', value: r.surgery_type || '—' }]
+      : [];
+  const TABS = [{ k: 'info', label: 'Thông tin', icon: 'info' }, { k: 'rec', label: 'Ghi âm', icon: 'mic' }, { k: 'file', label: 'Hồ sơ', icon: 'doc' }];
+  const hasFile = !!r.consult_note || (r.consult_image_urls || []).length > 0;
+
+  return (
+    <div className="lg:hidden fixed inset-0 z-40 bg-slate-50 flex flex-col">
+      {/* Header + tabs (cố định trên) */}
+      <div className="shrink-0 bg-white border-b border-slate-100" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="flex items-center gap-1 px-1.5 h-14">
+          <button onClick={close} aria-label="Quay lại" className="w-10 h-10 rounded-full flex items-center justify-center text-slate-600 active:bg-slate-100 transition">
+            <span className="block w-[11px] h-[11px] border-l-2 border-b-2 border-current rotate-45 ml-[3px]" />
+          </button>
+          <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm">{initials(r.customer_name)}</div>
+          <div className="min-w-0 flex-1 ml-1">
+            <div className="font-bold text-slate-800 truncate leading-tight">{r.customer_name}</div>
+            <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+              <span>{maskPhone(r.phone)}</span>
+              <span className={`px-1.5 py-px rounded-full font-bold ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
+            </div>
+          </div>
+        </div>
+        {/* Tab switcher — nút to, dễ nhìn, icon CSS */}
+        <div className="flex gap-1.5 px-2 pb-2">
+          {TABS.map(t => {
+            const active = tab === t.k;
+            return (
+              <button key={t.k} onClick={() => setTab(t.k)}
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${active ? 'bg-teal-500 text-white shadow-md shadow-teal-500/30' : 'bg-slate-100 text-slate-400 active:bg-slate-200'}`}>
+                <CssIcon type={t.icon} />
+                <span>{t.label}{t.k === 'rec' && rs.length ? ` (${rs.length})` : ''}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Nội dung tab (cuộn + vuốt ngang đổi tab) */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-[calc(2rem+env(safe-area-inset-bottom))]" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {tab === 'info' && (
+          <div className="space-y-3">
+            {stats.length > 0 && (
+              <div className="grid grid-cols-2 gap-2.5">
+                {stats.map(s => (
+                  <div key={s.label} className="rounded-2xl bg-white border border-slate-100 shadow-sm px-3.5 py-3">
+                    <div className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">{s.label}</div>
+                    <div className={`text-lg font-bold mt-0.5 leading-tight ${s.accent || 'text-slate-800'}`}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {r.status === 'bong' && r.notes && (
+              <div className="rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-wide text-rose-600 font-semibold">Lý do bong</div>
+                <div className="text-sm text-slate-700 mt-0.5">{r.notes}</div>
+              </div>
+            )}
+            {r.service && (
+              <div className="rounded-2xl bg-white border border-slate-100 shadow-sm px-4 py-3">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1">Dịch vụ</div>
+                <div className="text-[15px] text-slate-700">{r.service}</div>
+              </div>
+            )}
+            {r.status === 'scheduled' && canWrite && (
+              <button onClick={() => onEval(r)} className="w-full fx-btn-primary h-12 rounded-2xl text-white font-bold inline-flex items-center justify-center gap-2"><ClipboardCheck className="w-5 h-5" /> Đánh giá tư vấn</button>
+            )}
+            {stats.length === 0 && !r.service && <div className="text-center py-10 text-slate-400 text-sm">Chưa có thông tin chi tiết.</div>}
+          </div>
+        )}
+
+        {tab === 'rec' && (
+          <div className="space-y-3">
+            {canWrite && (
+              <button onClick={() => onRec(r)} className="w-full h-12 rounded-2xl bg-gradient-to-r from-rose-500 to-rose-600 text-white font-bold inline-flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30">
+                <span className="relative flex w-2.5 h-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/80" /><span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-white" /></span>
+                <Mic className="w-5 h-5" /> Ghi âm mới
+              </button>
+            )}
+            {rs.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-sm">Chưa có bản ghi âm nào.</div>
+            ) : rs.map((rec, i) => (
+              <RecordingItem key={rec.id} rec={rec} index={i} isAdmin={isAdmin} me={me}
+                onTranscript={onTranscript} onReanalyze={onReanalyze} onReqDelete={onReqDelete} onSoftDelete={onSoftDelete} onRejectDelete={onRejectDelete} />
+            ))}
+          </div>
+        )}
+
+        {tab === 'file' && (
+          <div className="space-y-3">
+            {canWrite && (
+              <button onClick={() => onConsult(r)} className="w-full h-12 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold inline-flex items-center justify-center gap-2 active:bg-slate-50"><FileText className="w-5 h-5" /> {hasFile ? 'Sửa hồ sơ tư vấn' : 'Thêm hồ sơ tư vấn'}</button>
+            )}
+            {r.consult_note && (
+              <div className="rounded-2xl bg-white border border-slate-100 shadow-sm px-4 py-3">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1">Ghi chú tư vấn</div>
+                <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{r.consult_note}</div>
+              </div>
+            )}
+            {(r.consult_image_urls || []).length > 0 && (
+              <div className="rounded-2xl bg-white border border-slate-100 shadow-sm px-4 py-3">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-2">Ảnh hồ sơ ({(r.consult_image_urls || []).length}) · bấm để zoom</div>
+                <Thumbs urls={r.consult_image_urls || []} wrapClass="flex flex-wrap gap-2" size="h-24 w-24" />
+              </div>
+            )}
+            {!hasFile && <div className="text-center py-10 text-slate-400 text-sm">Chưa có hồ sơ tư vấn.</div>}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
