@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RotateCcw, Download } from 'lucide-react';
 
 // Popup xem ảnh có zoom (cuộn / double-click / nút) + kéo di chuyển + prev/next.
@@ -52,8 +53,9 @@ export default function ImageLightbox({ images = [], index = 0, onClose }) {
   if (!images.length) return null;
   const src = images[i];
 
-  return (
-    <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center select-none animate-in fade-in duration-150"
+  // Portal ra body để KHÔNG bị "nhốt" trong modal/sheet có transform/backdrop-blur (fixed sẽ tính theo viewport)
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center select-none animate-in fade-in duration-150"
       onClick={onClose} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
 
       {/* Thanh trên */}
@@ -96,6 +98,7 @@ export default function ImageLightbox({ images = [], index = 0, onClose }) {
       <div className="absolute bottom-3 inset-x-0 text-center text-white/45 text-[11px] px-4" onClick={e => e.stopPropagation()}>
         Cuộn / chụm 2 ngón để zoom · kéo để di chuyển · double-click để phóng to
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
