@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn } from 'lucide-react';
+import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
@@ -72,6 +72,9 @@ const KhachTuVanPage = () => {
   const [trashOpen, setTrashOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);  // desktop: khách đang xem chi tiết
   const [sheetFor, setSheetFor] = useState(null);       // mobile: khách mở trong sheet
+  const _now = new Date();
+  const [statMonth, setStatMonth] = useState(_now.getMonth() + 1);
+  const [statYear, setStatYear] = useState(_now.getFullYear());
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -133,21 +136,27 @@ const KhachTuVanPage = () => {
   const trash = recs.filter(r => r.deleted_at);
   const apptName = (id) => rows.find(x => x.id === id)?.customer_name || 'Khách';
 
-  // Bảng xếp hạng chất lượng tư vấn (điểm AI TB theo sale)
-  const lb = Object.values(recs.filter(r => r.ai_score != null && !r.deleted_at).reduce((a, r) => {
+  // ---- Thống kê THEO THÁNG (statMonth/statYear) ----
+  const inStatMonth = (ds) => { if (!ds) return false; const d = new Date(ds); return d.getMonth() + 1 === statMonth && d.getFullYear() === statYear; };
+  const prevStatMonth = () => { if (statMonth === 1) { setStatMonth(12); setStatYear(y => y - 1); } else setStatMonth(m => m - 1); };
+  const nextStatMonth = () => { if (statMonth === 12) { setStatMonth(1); setStatYear(y => y + 1); } else setStatMonth(m => m + 1); };
+
+  const monthRecs = recs.filter(r => r.ai_score != null && !r.deleted_at && inStatMonth(r.created_at));
+  // Bảng xếp hạng chất lượng tư vấn (điểm AI TB theo sale) — trong tháng
+  const lb = Object.values(monthRecs.reduce((a, r) => {
     const id = r.created_by || 'x';
     a[id] = a[id] || { id, name: r.by?.full_name || 'Sale', n: 0, sum: 0 };
     a[id].n++; a[id].sum += Number(r.ai_score || 0); return a;
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
   const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-teal-100 text-teal-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
 
-  // Số liệu tổng quan cho hero
+  // Số liệu tổng quan cho hero — theo tháng
   const stat = {
-    total: visible.length,
-    coc: rows.filter(r => r.status === 'coc').length,
-    pt: rows.filter(r => r.status === 'phau_thuat').length,
+    total: rows.filter(r => inStatMonth(r.appointment_date || r.created_at)).length,   // khách tiếp nhận trong tháng
+    coc: rows.filter(r => r.status === 'coc' && inStatMonth(r.deposit_date || r.appointment_date || r.created_at)).length,
+    pt: rows.filter(r => r.status === 'phau_thuat' && inStatMonth(r.surgery_date || r.appointment_date || r.created_at)).length,
   };
-  const aiAvg = (() => { const a = recs.filter(r => r.ai_score != null && !r.deleted_at); return a.length ? a.reduce((s, r) => s + Number(r.ai_score || 0), 0) / a.length : null; })();
+  const aiAvg = monthRecs.length ? monthRecs.reduce((s, r) => s + Number(r.ai_score || 0), 0) / monthRecs.length : null;
 
   return (
     <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-700">
@@ -160,18 +169,26 @@ const KhachTuVanPage = () => {
               <p className="text-slate-500 text-sm">Tiếp nhận trực tiếp · hồ sơ · ghi âm · đánh giá AI</p>
             </div>
           </div>
-          {!loading && isAdmin && trash.length > 0 && (
-            <button onClick={() => setTrashOpen(true)} className="fx-glass text-sm font-semibold text-slate-600 px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Chọn tháng cho thống kê */}
+            <div className="fx-glass flex items-center gap-1 rounded-xl px-1.5 py-1">
+              <button onClick={prevStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
+              <span className="text-xs font-bold text-slate-700 min-w-[64px] text-center">Th{statMonth}/{statYear}</span>
+              <button onClick={nextStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronRight className="w-4 h-4" /></button>
+            </div>
+            {!loading && isAdmin && trash.length > 0 && (
+              <button onClick={() => setTrashOpen(true)} className="fx-glass text-sm font-semibold text-slate-600 px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>
+            )}
+          </div>
         </div>
 
         {!loading && (
           <div className="relative mt-5 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             {[
-              { label: 'Tổng khách', value: stat.total, sub: 'đang theo dõi', accent: 'text-slate-800' },
-              { label: 'Đã cọc', value: stat.coc, sub: 'chờ lên mổ', accent: 'text-cyan-600' },
-              { label: 'Phẫu thuật', value: stat.pt, sub: 'đã chốt', accent: 'text-teal-600' },
-              { label: 'Điểm tư vấn TB', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: aiAvg != null ? 'AI chấm · /10' : 'chưa có', accent: 'text-amber-600' },
+              { label: 'Tổng khách', value: stat.total, sub: `tiếp nhận Th${statMonth}`, accent: 'text-slate-800' },
+              { label: 'Đã cọc', value: stat.coc, sub: `cọc Th${statMonth}`, accent: 'text-cyan-600' },
+              { label: 'Phẫu thuật', value: stat.pt, sub: `mổ Th${statMonth}`, accent: 'text-teal-600' },
+              { label: 'Điểm tư vấn TB', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: aiAvg != null ? `AI · Th${statMonth} · /10` : 'chưa có', accent: 'text-amber-600' },
             ].map(t => (
               <div key={t.label} className="fx-glass rounded-2xl p-3.5">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{t.label}</div>
@@ -191,7 +208,7 @@ const KhachTuVanPage = () => {
 
       {lb.length > 0 && (
         <div className="fx-glass rounded-2xl p-4">
-          <h3 className="font-bold text-amber-600 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI)</h3>
+          <h3 className="font-bold text-amber-600 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI) · Th{statMonth}/{statYear}</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {lb.map((e, i) => (
               <div key={e.id} className="flex items-center gap-2.5 bg-white/60 rounded-xl px-3 py-2 border border-white/70">
