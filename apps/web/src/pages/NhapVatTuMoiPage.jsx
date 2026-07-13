@@ -101,7 +101,14 @@ export default function NhapVatTuMoiPage() {
       if (tErr) throw tErr;
       toast.success(`Đã nhập ${quantity} ${item.unit} "${item.name}" vào kho`);
       setModal(null);
-      loadData();
+      // Nhảy về đúng tháng của ngày nhập để phiếu vừa ghi luôn hiển thị.
+      // Nếu tháng/năm không đổi, gọi loadData() để làm mới ngay.
+      const [dy, dm] = (modal.date || '').split('-').map(Number);
+      if (dy && dm && (dy !== year || dm !== month)) {
+        setYear(dy); setMonth(dm); // effect [month, year] sẽ tự loadData
+      } else {
+        loadData();
+      }
     } catch (err) {
       toast.error('Lỗi: ' + err.message);
     } finally { setSaving(false); }
