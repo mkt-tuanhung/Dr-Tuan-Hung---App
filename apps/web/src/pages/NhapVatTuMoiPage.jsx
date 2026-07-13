@@ -222,12 +222,12 @@ export default function NhapVatTuMoiPage() {
 
       {modal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50 shrink-0">
               <h3 className="font-bold text-teal-800 flex items-center gap-2"><PackagePlus className="w-5 h-5" /> Nhập vật tư mới</h3>
               <button onClick={() => setModal(null)}><X className="w-5 h-5 text-teal-400" /></button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 min-h-0">
               <div>
                 <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tên vật tư *</label>
                 <input list="vattu-list" value={modal.name} onChange={e => onNameChange(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Gõ tên — chưa có sẽ tự tạo mới trong kho" />
