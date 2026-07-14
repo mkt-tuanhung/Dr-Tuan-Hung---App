@@ -71,10 +71,13 @@ const embedUrl = (url) => {
   return null;
 };
 const isVideoFile = (url) => /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url || '');
-const VideoPreview = ({ url }) => {
+const VIDEO_BASE = 'block w-full rounded-lg border border-slate-200 bg-black';
+// Mặc định: khung dọc 9:16, canh giữa, giới hạn chiều cao — hợp clip quảng cáo (quay dọc)
+// và tránh trình phát (Google Drive / YouTube) bị nhồi vào khung ngang gây lỗi giao diện trên mobile.
+const VideoPreview = ({ url, className = 'max-w-[300px] mx-auto aspect-[9/16] max-h-[75vh]' }) => {
   const emb = embedUrl(url);
-  if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className="w-full aspect-video rounded-lg border border-slate-200 bg-black" />;
-  if (isVideoFile(url)) return <video src={url} controls playsInline preload="metadata" className="w-full max-h-[68vh] rounded-lg border border-slate-200 bg-black" />;
+  if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className={`${VIDEO_BASE} ${className}`} />;
+  if (isVideoFile(url)) return <video src={url} controls playsInline preload="metadata" className={`${VIDEO_BASE} ${className}`} />;
   return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
 };
 const thumbSrc = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url; };
@@ -1060,7 +1063,7 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip' }) => {
             </div>
           )}
           <div ref={playerRef} className="mx-auto bg-black rounded-xl overflow-hidden w-full" style={{ width: VID_SIZES[zi].w, maxWidth: '100%' }}>
-            <VideoPreview url={cur} />
+            <VideoPreview url={cur} className="aspect-video" />
           </div>
           <div className="mt-3 space-y-2">
             <div className="hidden sm:flex items-center justify-center gap-2 flex-wrap">
