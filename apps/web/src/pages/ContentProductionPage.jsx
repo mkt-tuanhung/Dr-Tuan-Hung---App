@@ -1097,8 +1097,11 @@ const TikTokPlayer = ({ url, onLike }) => {
 // ---------- Modal "Xem lớn" kiểu TikTok: player + thả tim / bình luận / chấm điểm / chia sẻ ----------
 const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onScore }) => {
   const links = clip.clip_links || [];
-  const [ci, setCi] = useState(0);
+  // Nếu clip có cả link Drive lẫn file trực tiếp (R2) → ưu tiên mở file trực tiếp (player TikTok)
+  const firstDirect = links.findIndex(l => !embedUrl(l) && isVideoFile(l));
+  const [ci, setCi] = useState(firstDirect >= 0 ? firstDirect : 0);
   const cur = links[ci] || links[0];
+  const isDirect = (l) => !embedUrl(l) && isVideoFile(l);
   const socialId = clip.id; // chỉ clip thật có id (xem "source" thì không → ẩn tim/bình luận)
 
   const [likeCount, setLikeCount] = useState(0);
@@ -1179,7 +1182,12 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
 
           {links.length > 1 && (
             <div className="absolute left-2.5 bottom-24 sm:bottom-16 flex flex-col gap-1.5 z-20">
-              {links.map((_, i) => <button key={i} onClick={() => setCi(i)} className={`w-8 h-8 rounded-full text-[11px] font-bold ${i === ci ? 'bg-white text-black' : 'bg-black/40 text-white'}`}>{i + 1}</button>)}
+              {links.map((l, i) => (
+                <button key={i} onClick={() => setCi(i)} title={isDirect(l) ? 'Video trực tiếp (TikTok)' : 'Link Google Drive'}
+                  className={`w-8 h-8 rounded-full text-[11px] font-bold flex items-center justify-center ${i === ci ? 'bg-white text-black' : 'bg-black/40 text-white'} ${isDirect(l) ? 'ring-2 ring-rose-500' : ''}`}>
+                  {i + 1}
+                </button>
+              ))}
             </div>
           )}
         </div>
