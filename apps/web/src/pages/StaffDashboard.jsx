@@ -6,7 +6,7 @@ import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
-  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart
+  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -22,6 +22,7 @@ import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
 import KhachBongPage from '@/pages/KhachBongPage.jsx';
 import KhachPhauThuatPage from '@/pages/KhachPhauThuatPage.jsx';
+import MoDoiTacPage from '@/pages/MoDoiTacPage.jsx';
 import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
@@ -71,7 +72,8 @@ const FULL_MENU = [
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
 
   // Phẫu thuật
-  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity, roles: ['dieu_duong', 'cskh', 'bac_si'] },
+  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity, roles: ['dieu_duong', 'cskh', 'bac_si', 'accountant'] },
+  { id: 'mo_doi_tac',    label: 'Mổ Đối Tác',       icon: Handshake, roles: ['accountant', 'admin'] },
   { id: 'hau_phau',      label: 'Hậu phẫu / CSKH', icon: ClipboardList, roles: ['dieu_duong', 'cskh', 'bac_si'] },
 ];
 
@@ -362,6 +364,7 @@ const StaffDashboard = () => {
     if (activeTab === 'khach_coc') return <KhachCocPage setActiveTab={setActiveTab} />;
     if (activeTab === 'khach_bong') return <KhachBongPage setActiveTab={setActiveTab} />;
     if (activeTab === 'khach_phau_thuat') return <KhachPhauThuatPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'mo_doi_tac') return <MoDoiTacPage />;
     if (activeTab === 'hau_phau') return <HauPhauPage setActiveTab={setActiveTab} />;
     if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'cashflow') return <CashFlowPage />;
