@@ -101,9 +101,10 @@ const MoDoiTacPage = () => {
     ? rows.filter(r => (r.customer_name || '').toLowerCase().includes(search.toLowerCase()) || (r.partner_name || '').toLowerCase().includes(search.toLowerCase()))
     : rows;
 
-  const totalFee = filtered.reduce((s, r) => s + Number(r.partner_fee || 0), 0);
-  const totalSurgery = filtered.reduce((s, r) => s + Number(r.surgery_fee || 0), 0);
-  const paidSurgery = filtered.filter(r => r.partner_paid).reduce((s, r) => s + Number(r.surgery_fee || 0), 0);
+  // Tổng thu đối tác của 1 ca = partner_fee (tiền PT + vật tư). Công BS = tổng thu / 2.
+  const rowTotal = (r) => Number(r.partner_fee) || (Number(r.surgery_fee || 0) + Number(r.material_fee || 0));
+  const totalFee = filtered.reduce((s, r) => s + rowTotal(r), 0);
+  const paidTotal = filtered.filter(r => r.partner_paid).reduce((s, r) => s + rowTotal(r), 0);
   const grouped = filtered.reduce((acc, r) => {
     const d = r.surgery_date ? new Date(r.surgery_date).toLocaleDateString('vi-VN') : 'Không rõ';
     (acc[d] = acc[d] || []).push(r); return acc;
@@ -116,7 +117,7 @@ const MoDoiTacPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Handshake className="w-5 h-5 text-amber-600" /> Mổ Đối Tác</h3>
-          <p className="text-slate-500 text-sm mt-0.5">Khách của đối tác thuê phòng khám mổ · BS nhận 50% · phụ mổ tính như khách nội bộ</p>
+          <p className="text-slate-500 text-sm mt-0.5">Khách của đối tác thuê phòng khám mổ · BS nhận 50% tổng thu · phụ mổ tính như khách nội bộ</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -141,8 +142,8 @@ const MoDoiTacPage = () => {
         {canSeeDoctorPay && (
           <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
             <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (đã TT)</div>
-            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(paidSurgery * PARTNER_BACSI_RATE))}</div>
-            {paidSurgery < totalSurgery && <div className="text-[11px] text-amber-500 mt-0.5">Chưa TT: {fmtM(Math.round((totalSurgery - paidSurgery) * PARTNER_BACSI_RATE))}</div>}
+            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(paidTotal * PARTNER_BACSI_RATE))}</div>
+            {paidTotal < totalFee && <div className="text-[11px] text-amber-500 mt-0.5">Chưa TT: {fmtM(Math.round((totalFee - paidTotal) * PARTNER_BACSI_RATE))}</div>}
           </div>
         )}
       </div>
@@ -176,7 +177,7 @@ const MoDoiTacPage = () => {
                       </div>
                     </div>
                     <div className="text-xs space-y-1 text-slate-600">
-                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(Number(r.surgery_fee || 0) * PARTNER_BACSI_RATE))}</span>}</div>
+                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(rowTotal(r) * PARTNER_BACSI_RATE))}</span>}</div>
                       <div className="text-slate-500">Phụ mổ: {[nameOf(r, 'p1'), nameOf(r, 'p2'), nameOf(r, 'p3')].filter(Boolean).join(', ') || '—'}</div>
                     </div>
 
@@ -247,14 +248,14 @@ const MoDoiTacPage = () => {
                 <div>
                   <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền phẫu thuật (VNĐ)</label>
                   <input inputMode="numeric" value={modal.surgery_fee} onChange={e => setModal({ ...modal, surgery_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-teal-700" placeholder="15.000.000" />
-                  {canSeeDoctorPay && <p className="text-xs text-blue-500 mt-1">Công BS (50% tiền phẫu thuật): {fmtM(Math.round(num(modal.surgery_fee) * PARTNER_BACSI_RATE))}</p>}
+                  {canSeeDoctorPay && <p className="text-xs text-blue-500 mt-1">Công BS (50% tổng thu đối tác): {fmtM(Math.round((num(modal.surgery_fee) + num(modal.material_fee)) * PARTNER_BACSI_RATE))}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền vật tư (VNĐ)</label>
                   <input inputMode="numeric" value={modal.material_fee} onChange={e => setModal({ ...modal, material_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-slate-700" placeholder="0" />
-                  <p className="text-xs text-slate-400 mt-1">Không tính vào công BS</p>
+                  <p className="text-xs text-slate-400 mt-1">Đã gộp vào tổng thu đối tác (dùng tính công BS)</p>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tổng thu đối tác</label>
