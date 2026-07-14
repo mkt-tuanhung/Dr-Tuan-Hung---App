@@ -36,6 +36,28 @@ const QUICK_NOTES = [
   'Hẹn tái khám', 'Có dấu hiệu bất thường',
 ];
 
+// CSKH: phân loại khách hàng
+const CSKH_TABS = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'Hài lòng', label: 'Hài lòng' },
+  { id: 'Không hài lòng', label: 'Không hài lòng' },
+  { id: 'Bình thường', label: 'Bình thường' },
+  { id: 'Tiềm năng', label: 'Tiềm năng' },
+  { id: 'Gặp vấn đề', label: 'Gặp vấn đề' },
+];
+const CSKH_STATUS_STYLE = {
+  'Hài lòng': 'bg-teal-100 text-teal-700 border-teal-200',
+  'Không hài lòng': 'bg-red-100 text-red-700 border-red-200',
+  'Bình thường': 'bg-slate-100 text-slate-600 border-slate-200',
+  'Tiềm năng': 'bg-violet-100 text-violet-700 border-violet-200',
+  'Gặp vấn đề': 'bg-amber-100 text-amber-700 border-amber-200',
+};
+const CSKH_QUICK_NOTES = [
+  'Đã gọi hỏi thăm', 'Khách hài lòng kết quả', 'Nhắc lịch tái khám',
+  'Tư vấn dịch vụ mới', 'Khách phản hồi tốt', 'Cần theo dõi thêm',
+  'Đã gửi ưu đãi', 'Khách hẹn quay lại',
+];
+
 const HauPhauPage = () => {
   const { profile } = useAuth();
   const [customers, setCustomers] = useState([]);
@@ -48,7 +70,10 @@ const HauPhauPage = () => {
   const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
   const isAdmin = profile?.role === 'admin';
   const isCskh = profile?.role === 'cskh' || profile?.role_2 === 'cskh';
+  const isDieuDuong = profile?.role === 'dieu_duong' || profile?.role_2 === 'dieu_duong';
   const canSeeAll = isAdmin || isHeadNurse || isCskh;
+  const canEditHauPhau = isAdmin || isDieuDuong;   // ghi nhật ký Hậu phẫu
+  const canEditCskh = isAdmin || isCskh;            // ghi nhật ký CSKH
 
   // Trang chăm sóc riêng (full-page) + modal phân công
   const [careApp, setCareApp] = useState(null);
@@ -64,6 +89,11 @@ const HauPhauPage = () => {
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
+  // Nhật ký CSKH (riêng của bộ phận CSKH)
+  const [cskhForm, setCskhForm] = useState({ cskh_status: 'Bình thường', cskh_notes: '' });
+  const [savingCskh, setSavingCskh] = useState(false);
+  const [uploadingCskhImage, setUploadingCskhImage] = useState(false);
+  const cskhFileRef = React.useRef(null);
   // Bổ sung / sửa số điện thoại ngay trong chi tiết chăm sóc
   const [phoneEdit, setPhoneEdit] = useState(false);
   const [phoneVal, setPhoneVal] = useState('');
@@ -95,6 +125,21 @@ const HauPhauPage = () => {
     }
     setUploadingImage(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleCskhImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCskhImage(true);
+    try {
+      const url = await uploadToR2(file, 'cskh');
+      setCskhForm(prev => ({ ...prev, cskh_notes: prev.cskh_notes + (prev.cskh_notes ? '\n' : '') + `[Ảnh đính kèm: ${url}]` }));
+      toast.success('Đã tải ảnh lên!');
+    } catch (err) {
+      toast.error('Lỗi tải ảnh: ' + err.message);
+    }
+    setUploadingCskhImage(false);
+    if (cskhFileRef.current) cskhFileRef.current.value = '';
   };
 
   const loadData = useCallback(async () => {
@@ -143,6 +188,7 @@ const HauPhauPage = () => {
       recheck_date: new Date().toISOString().split('T')[0],
       recheck_time: '09:00'
     });
+    setCskhForm({ cskh_status: app.cskh_status || 'Bình thường', cskh_notes: '' });
   };
 
   useEffect(() => {
@@ -165,6 +211,26 @@ const HauPhauPage = () => {
   }, [customers]);
 
   const addQuickNote = (text) => setForm(f => ({ ...f, post_op_notes: f.post_op_notes + (f.post_op_notes ? '\n' : '') + text }));
+  const addCskhQuickNote = (text) => setCskhForm(f => ({ ...f, cskh_notes: f.cskh_notes + (f.cskh_notes ? '\n' : '') + text }));
+
+  // Lưu nhật ký CSKH (phân loại + ghi chú + ảnh) — riêng bộ phận CSKH
+  const handleSaveCskh = async () => {
+    if (!careApp) return;
+    setSavingCskh(true);
+    const newNote = cskhForm.cskh_notes ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${cskhForm.cskh_notes}` : '';
+    const updatedNotes = (careApp.cskh_notes || '') + newNote;
+    const { error } = await supabase.from('customer_appointments')
+      .update({ cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes })
+      .eq('id', careApp.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Đã lưu nhật ký CSKH!');
+      setCareApp(prev => prev ? { ...prev, cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes } : prev);
+      setCskhForm(f => ({ ...f, cskh_notes: '' }));
+      loadData();
+    }
+    setSavingCskh(false);
+  };
 
   // ----- Import khách hàng chăm sóc -----
   const handleImportFile = async (e) => {
@@ -218,6 +284,7 @@ const HauPhauPage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!canEditHauPhau) return; // CSKH chỉ xem nhật ký hậu phẫu, không ghi
     setSaving(true);
     const newNote = form.post_op_notes ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${form.post_op_notes}` : '';
     const updatedNotes = (selectedApp.post_op_notes || '') + newNote;
@@ -298,9 +365,13 @@ const HauPhauPage = () => {
   const hauPhauCount = customers.filter(c => !isOldCase(c)).length;
   const cskhCount = customers.filter(c => isOldCase(c)).length;
 
-  const statusCountOf = (id) => id === 'all' ? mainTabCustomers.length : mainTabCustomers.filter(c => (c.post_op_status || 'Đang theo dõi') === id).length;
+  // Tab lọc: Hậu phẫu theo trạng thái hậu phẫu; CSKH theo phân loại khách
+  const isCskhTab = mainTab === 'cskh';
+  const FILTER_TABS = isCskhTab ? CSKH_TABS : TABS;
+  const statusOf = (c) => isCskhTab ? (c.cskh_status || '') : (c.post_op_status || 'Đang theo dõi');
+  const statusCountOf = (id) => id === 'all' ? mainTabCustomers.length : mainTabCustomers.filter(c => statusOf(c) === id).length;
 
-  let filteredCustomers = activeTab === 'all' ? mainTabCustomers : mainTabCustomers.filter(c => (c.post_op_status || 'Đang theo dõi') === activeTab);
+  let filteredCustomers = activeTab === 'all' ? mainTabCustomers : mainTabCustomers.filter(c => statusOf(c) === activeTab);
 
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -389,9 +460,12 @@ const HauPhauPage = () => {
                 </div>
               )}
             </div>
-            <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>
-              {careApp.post_op_status || 'Đang theo dõi'}
-            </span>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>
+                {careApp.post_op_status || 'Đang theo dõi'}
+              </span>
+              {careApp.cskh_status && <span className={`px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${CSKH_STATUS_STYLE[careApp.cskh_status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>CSKH: {careApp.cskh_status}</span>}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm bg-slate-50 p-3 rounded-xl">
             <div className="text-slate-500 text-xs">Dịch vụ</div>
@@ -415,13 +489,14 @@ const HauPhauPage = () => {
 
         {/* Nhật ký theo dõi (thread) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký theo dõi</h3>
+          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký Hậu phẫu</h3>
           <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
             {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
           </div>
         </div>
 
-        {/* Thêm mốc mới */}
+        {/* Thêm mốc Hậu phẫu — chỉ điều dưỡng / admin (CSKH chỉ xem) */}
+        {canEditHauPhau && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
           <h3 className="font-bold text-slate-800">Thêm mốc chăm sóc</h3>
           <div>
@@ -466,6 +541,49 @@ const HauPhauPage = () => {
             <button type="submit" disabled={saving} className="px-6 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
           </div>
         </div>
+        )}
+
+        {/* Nhật ký CSKH (thread) — mọi người xem được */}
+        <div className="bg-white rounded-2xl border border-violet-200 shadow-sm p-5">
+          <h3 className="font-bold text-violet-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-violet-600" /> Nhật ký CSKH</h3>
+          <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+            {careApp.cskh_notes ? renderNotes(careApp.cskh_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú CSKH nào</div>}
+          </div>
+        </div>
+
+        {/* Thêm mốc CSKH — chỉ CSKH / admin */}
+        {canEditCskh && (
+        <div className="bg-white rounded-2xl border border-violet-200 shadow-sm p-5 space-y-3">
+          <h3 className="font-bold text-slate-800">Thêm mốc CSKH</h3>
+          <div>
+            <label className="block text-sm font-semibold mb-2 text-slate-600">Phân loại khách hàng</label>
+            <div className="flex flex-wrap gap-2">
+              {CSKH_TABS.filter(t => t.id !== 'all').map(t => (
+                <button key={t.id} type="button" onClick={() => setCskhForm({ ...cskhForm, cskh_status: t.id })}
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${cskhForm.cskh_status === t.id ? CSKH_STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {CSKH_QUICK_NOTES.map(q => (
+              <button key={q} type="button" onClick={() => addCskhQuickNote(q)}
+                className="px-3 py-1.5 rounded-full bg-violet-50 text-violet-700 text-xs font-medium border border-violet-100 hover:bg-violet-100">
+                + {q}
+              </button>
+            ))}
+          </div>
+          <textarea rows={3} value={cskhForm.cskh_notes} onChange={e => setCskhForm({ ...cskhForm, cskh_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-violet-500 resize-none text-sm" placeholder="Ghi chú chăm sóc CSKH, phản hồi của khách…" />
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => cskhFileRef.current?.click()} disabled={uploadingCskhImage} className="text-violet-600 hover:bg-violet-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-violet-100">
+              {uploadingCskhImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+            </button>
+            <input type="file" accept="image/*" className="hidden" ref={cskhFileRef} onChange={handleCskhImageUpload} />
+            <button type="button" onClick={handleSaveCskh} disabled={savingCskh} className="px-6 py-2.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700">{savingCskh ? 'Đang lưu...' : 'Lưu mốc CSKH'}</button>
+          </div>
+        </div>
+        )}
 
         {/* Modal phân công + xem ảnh dùng chung (render dưới) */}
         {showAssignModal && (
@@ -538,7 +656,7 @@ const HauPhauPage = () => {
 
         {/* Filter chips — 1 hàng cuộn ngang, có đếm */}
         <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
-          {TABS.map(tab => {
+          {FILTER_TABS.map(tab => {
             const active = activeTab === tab.id;
             const n = statusCountOf(tab.id);
             return (
@@ -568,8 +686,12 @@ const HauPhauPage = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                   {apps.map(app => {
-                    const st = app.post_op_status || 'Đang theo dõi';
-                    const noteCount = app.post_op_notes ? app.post_op_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
+                    const st = isCskhTab ? (app.cskh_status || 'Chưa phân loại') : (app.post_op_status || 'Đang theo dõi');
+                    const stCls = isCskhTab
+                      ? (CSKH_STATUS_STYLE[app.cskh_status] || 'bg-slate-100 text-slate-500 border-slate-200')
+                      : (STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']);
+                    const notesSrc = isCskhTab ? app.cskh_notes : app.post_op_notes;
+                    const noteCount = notesSrc ? notesSrc.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                     return (
                     <button key={app.id} type="button" onClick={() => openCare(app)}
                       className="text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm active:scale-[0.99] hover:border-teal-300 hover:shadow-md transition-all">
@@ -578,7 +700,7 @@ const HauPhauPage = () => {
                           <h4 className="font-bold text-slate-800 truncate leading-tight">{app.customer_name}</h4>
                           <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone || <span className="italic text-slate-300">Chưa có SĐT</span>}</div>
                         </div>
-                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']}`}>{st}</span>
+                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${stCls}`}>{st}</span>
                       </div>
 
                       <div className="mt-3 flex items-center gap-2 text-xs min-w-0">
