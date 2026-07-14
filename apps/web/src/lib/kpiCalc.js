@@ -75,12 +75,12 @@ export const computePartner = (partnerRows = [], staffId) => {
   const bacSiCases = [], phuMoCases = [];
   for (const s of partnerRows) {
     const tier = PHU_MO_BONUS[s.surgery_type] || PHU_MO_BONUS['Tiểu phẫu'];
-    // Công BS chỉ tính trên TIỀN PHẪU THUẬT (không gồm vật tư), và chỉ khi đối tác đã thanh toán
-    const surgeryFee = Number(s.surgery_fee || 0);
+    // Công BS = 50% TỔNG THU ĐỐI TÁC (partner_fee = tiền PT + vật tư), chỉ khi đối tác đã thanh toán
+    const partnerTotal = Number(s.partner_fee) || (Number(s.surgery_fee || 0) + Number(s.material_fee || 0));
     if (s.bac_si_id === staffId && s.partner_paid) {
-      const cong = Math.round(surgeryFee * PARTNER_BACSI_RATE);
+      const cong = Math.round(partnerTotal * PARTNER_BACSI_RATE);
       bacSiCong += cong;
-      bacSiCases.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', partner: s.partner_name || '', fee: surgeryFee, cong });
+      bacSiCases.push({ name: s.customer_name || '—', surgeryType: s.surgery_type || 'Tiểu phẫu', partner: s.partner_name || '', fee: partnerTotal, cong });
     }
     const roles = []; let bonus = 0;
     if (s.phu_mo_1_id === staffId) { roles.push('Phụ mổ 1'); bonus += tier[1]; }
