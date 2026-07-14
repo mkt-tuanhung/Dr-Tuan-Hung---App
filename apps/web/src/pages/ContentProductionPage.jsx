@@ -311,7 +311,7 @@ const ContentProductionPage = () => {
       {lb.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
           <h3 className="font-bold text-amber-600 mb-2 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4" /> Bảng điểm Editor tháng {now.getMonth() + 1}</h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {lb.map((e, i) => { const cat = scoreCat(e.avg, false); return (
               <div key={e.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 gap-2">
                 <span className="flex items-center gap-2 text-sm font-medium text-slate-700 min-w-0"><span className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span><span className="truncate">{e.name}</span></span>
@@ -372,7 +372,7 @@ const ContentProductionPage = () => {
             desc={canAddMedia ? 'Bấm “Thêm media” để up link nguồn và gắn với khách hàng.' : canEdit ? 'Khi Media up nguồn, bạn vào đây bấm “Dựng video” cho từng khách.' : 'Chưa có dữ liệu media.'}
             cta={canAddMedia ? { label: 'Thêm media', onClick: () => setAddOpen(true) } : null} />
         ) : khoView === 'card' ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
               <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
@@ -392,7 +392,7 @@ const ContentProductionPage = () => {
         reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds}
                 onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)}
@@ -631,7 +631,7 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
 const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView, onApproveRun }) => {
   const mine = c.editor_id === me?.id;
   return (
-    <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm flex flex-col">
+    <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm flex flex-col min-w-0">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="font-bold text-slate-800 text-sm truncate">{c.title || '(Chưa đặt tiêu đề)'}</div>

@@ -88,6 +88,11 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    /* Chặn cuộn ngang + hiệu ứng nảy ngang khiến app "lắc lư" */
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    /* Cho phép cuộn dọc/ngang trong element nhưng chặn pinch-zoom */
+    touch-action: pan-x pan-y;
   }
   body {
     @apply text-foreground antialiased;
@@ -95,6 +100,13 @@
     background: linear-gradient(145deg, hsl(var(--background)), hsl(160 50% 95%), hsl(var(--background)));
     background-attachment: fixed;
     min-height: 100vh;
+    overflow-x: hidden;
+    max-width: 100%;
+    overscroll-behavior-x: none;
+  }
+  #root {
+    overflow-x: hidden;
+    max-width: 100%;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight text-foreground font-semibold;

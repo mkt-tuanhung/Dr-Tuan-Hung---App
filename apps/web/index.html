@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png?v=2" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#0F766E" />
@@ -21,6 +21,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Chặn pinch-zoom (iOS Safari bỏ qua user-scalable=no) để app không bị "lắc lư"
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
+        document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
