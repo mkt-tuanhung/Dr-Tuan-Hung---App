@@ -64,6 +64,23 @@ const HauPhauPage = () => {
   const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
+  // Bổ sung / sửa số điện thoại ngay trong chi tiết chăm sóc
+  const [phoneEdit, setPhoneEdit] = useState(false);
+  const [phoneVal, setPhoneVal] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  const savePhone = async () => {
+    if (!careApp) return;
+    const val = phoneVal.trim();
+    setSavingPhone(true);
+    const { error } = await supabase.from('customer_appointments').update({ phone: val || null }).eq('id', careApp.id);
+    setSavingPhone(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã cập nhật số điện thoại');
+    setCareApp(prev => prev ? { ...prev, phone: val || null } : prev);
+    setPhoneEdit(false);
+    loadData();
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -119,6 +136,7 @@ const HauPhauPage = () => {
   const openCare = (app) => {
     setSelectedApp(app);
     setCareApp(app);
+    setPhoneEdit(false);
     setForm({
       post_op_status: app.post_op_status || 'Đang theo dõi',
       post_op_notes: '',
@@ -355,7 +373,21 @@ const HauPhauPage = () => {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
-              <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {careApp.phone}</div>
+              {phoneEdit ? (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input value={phoneVal} onChange={e => setPhoneVal(e.target.value)} inputMode="tel" autoFocus placeholder="Nhập số điện thoại"
+                    className="text-sm border rounded-lg px-2 py-1 outline-none focus:border-teal-500 w-40" />
+                  <button type="button" onClick={savePhone} disabled={savingPhone} className="text-xs font-semibold text-white bg-teal-600 px-2.5 py-1 rounded-lg disabled:opacity-50">{savingPhone ? '...' : 'Lưu'}</button>
+                  <button type="button" onClick={() => setPhoneEdit(false)} className="text-xs text-slate-400 px-1">Huỷ</button>
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
+                  <Phone className="w-4 h-4 shrink-0" />
+                  {careApp.phone ? <a href={`tel:${careApp.phone}`} className="text-teal-700 font-medium">{careApp.phone}</a> : <span className="text-slate-400 italic">Chưa có SĐT</span>}
+                  <button type="button" onClick={() => { setPhoneVal(careApp.phone || ''); setPhoneEdit(true); }} className="text-xs font-semibold text-teal-600 hover:underline ml-1">{careApp.phone ? 'Sửa' : '+ Thêm'}</button>
+                </div>
+              )}
             </div>
             <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>
               {careApp.post_op_status || 'Đang theo dõi'}
@@ -544,7 +576,7 @@ const HauPhauPage = () => {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <h4 className="font-bold text-slate-800 truncate leading-tight">{app.customer_name}</h4>
-                          <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone}</div>
+                          <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone || <span className="italic text-slate-300">Chưa có SĐT</span>}</div>
                         </div>
                         <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']}`}>{st}</span>
                       </div>
