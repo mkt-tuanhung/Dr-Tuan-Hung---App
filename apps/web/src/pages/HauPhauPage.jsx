@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, Upload, Download } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronDown, ChevronUp, Upload, Download } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -94,6 +94,8 @@ const HauPhauPage = () => {
   const [savingCskh, setSavingCskh] = useState(false);
   const [uploadingCskhImage, setUploadingCskhImage] = useState(false);
   const cskhFileRef = React.useRef(null);
+  // CSKH: mặc định ẩn Nhật ký Hậu phẫu, bấm để hiện
+  const [showHauPhauLog, setShowHauPhauLog] = useState(!isCskh);
   // Bổ sung / sửa số điện thoại ngay trong chi tiết chăm sóc
   const [phoneEdit, setPhoneEdit] = useState(false);
   const [phoneVal, setPhoneVal] = useState('');
@@ -487,12 +489,19 @@ const HauPhauPage = () => {
           </div>
         </div>
 
-        {/* Nhật ký theo dõi (thread) */}
+        {/* Nhật ký Hậu phẫu (thread) — CSKH mặc định ẩn, bấm để hiện */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký Hậu phẫu</h3>
-          <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
-            {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký Hậu phẫu</h3>
+            <button type="button" onClick={() => setShowHauPhauLog(v => !v)} className="shrink-0 text-xs font-semibold text-teal-600 hover:bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100 inline-flex items-center gap-1">
+              {showHauPhauLog ? <><ChevronUp className="w-3.5 h-3.5" /> Ẩn</> : <><ChevronDown className="w-3.5 h-3.5" /> Hiện</>}
+            </button>
           </div>
+          {showHauPhauLog && (
+            <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1 mt-3">
+              {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào</div>}
+            </div>
+          )}
         </div>
 
         {/* Thêm mốc Hậu phẫu — chỉ điều dưỡng / admin (CSKH chỉ xem) */}
