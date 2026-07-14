@@ -7,6 +7,7 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
   Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
+  Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -414,7 +415,7 @@ const ContentProductionPage = () => {
       {scoreFor && <SourceScoreModal store={scoreFor} onClose={() => setScoreFor(null)} onSaved={() => { setScoreFor(null); loadData(); }} />}
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
-      {videoFor && <VideoModal clip={videoFor} onClose={() => setVideoFor(null)} />}
+      {videoFor && <VideoModal clip={videoFor} me={me} canScore={canAds} onScore={() => { setReviewFor(videoFor); setVideoFor(null); }} onClose={() => setVideoFor(null)} />}
       {sourceFor && <VideoModal clip={{ clip_links: sourceFor.source_links }} title={`Xem source — ${sourceFor.customer_name || ''}`} onClose={() => setSourceFor(null)} />}
       {confirmState && <ConfirmDialog {...confirmState} onClose={() => setConfirmState(null)} />}
       <ImageLightbox />
@@ -1030,53 +1031,185 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
   );
 };
 
-// ---------- Trình phát video (phóng to/thu nhỏ + toàn màn hình) ----------
-const VID_SIZES = [{ name: 'Nhỏ', w: '480px' }, { name: 'Vừa', w: '720px' }, { name: 'Lớn', w: '960px' }, { name: 'Tối đa', w: '100%' }];
-const VideoModal = ({ clip, onClose, title = 'Xem video clip' }) => {
+// ---------- Player kiểu TikTok: file trực tiếp = điều khiển tùy biến; Drive/YouTube = iframe ----------
+const fmtT = (s) => {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+  return `${m}:${String(ss).padStart(2, '0')}`;
+};
+const TikTokPlayer = ({ url, onLike }) => {
+  const emb = embedUrl(url);
+  const direct = !emb && isVideoFile(url);
+  const vref = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [prog, setProg] = useState(0);
+  const [dur, setDur] = useState(0);
+  const [cur, setCur] = useState(0);
+  const [burst, setBurst] = useState(false);
+  const tapTimer = useRef(null);
+  const lastTap = useRef(0);
+
+  useEffect(() => {
+    const v = vref.current;
+    if (!v || !direct) return;
+    v.muted = true;
+    const p = v.play(); if (p?.catch) p.catch(() => {});
+  }, [url, direct]);
+
+  const togglePlay = () => { const v = vref.current; if (!v) return; if (v.paused) v.play(); else v.pause(); };
+  const heartBurst = () => { setBurst(true); setTimeout(() => setBurst(false), 700); onLike?.(); };
+  const onTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 280) { clearTimeout(tapTimer.current); lastTap.current = 0; heartBurst(); }
+    else { lastTap.current = now; tapTimer.current = setTimeout(togglePlay, 280); }
+  };
+
+  if (!direct) {
+    if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className="block w-full h-full bg-black" />;
+    return <div className="w-full h-full flex items-center justify-center"><a href={url} target="_blank" rel="noreferrer" className="text-violet-300 underline text-sm">Mở clip</a></div>;
+  }
+
+  return (
+    <div className="relative w-full h-full bg-black select-none" onClick={onTap}>
+      <video ref={vref} src={url} playsInline loop muted={muted}
+        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+        onTimeUpdate={e => { const v = e.target; setCur(v.currentTime); setProg(v.duration ? v.currentTime / v.duration : 0); }}
+        onLoadedMetadata={e => setDur(e.target.duration)}
+        className="w-full h-full object-contain" />
+
+      {burst && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><Heart className="w-24 h-24 text-rose-500 fill-rose-500 animate-ping" /></div>}
+      {!playing && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center"><Play className="w-8 h-8 text-white fill-white ml-1" /></div></div>}
+
+      <div className="absolute left-0 right-0 bottom-0 px-3 pb-3 pt-6 bg-gradient-to-t from-black/70 to-transparent" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 text-white text-[11px] mb-1.5">
+          <button onClick={() => { const v = vref.current; if (v) { v.muted = !v.muted; setMuted(v.muted); } }} className="p-1">{muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</button>
+          <span className="tabular-nums">{fmtT(cur)} / {fmtT(dur)}</span>
+        </div>
+        <input type="range" min={0} max={1000} value={Math.round(prog * 1000)}
+          onChange={e => { const v = vref.current; if (v && v.duration) v.currentTime = (Number(e.target.value) / 1000) * v.duration; }}
+          className="w-full h-1 accent-rose-500 cursor-pointer" />
+      </div>
+    </div>
+  );
+};
+
+// ---------- Modal "Xem lớn" kiểu TikTok: player + thả tim / bình luận / chấm điểm / chia sẻ ----------
+const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onScore }) => {
   const links = clip.clip_links || [];
   const [ci, setCi] = useState(0);
-  const [zi, setZi] = useState(1);
-  const playerRef = useRef(null);
   const cur = links[ci] || links[0];
-  const goFs = () => {
-    const host = playerRef.current;
-    const media = host?.querySelector('video, iframe') || host;
-    if (media?.requestFullscreen) media.requestFullscreen();
-    else if (media?.webkitRequestFullscreen) media.webkitRequestFullscreen();
-    else if (media?.webkitEnterFullscreen) media.webkitEnterFullscreen(); // iOS <video>
+  const socialId = clip.id; // chỉ clip thật có id (xem "source" thì không → ẩn tim/bình luận)
+
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [showComments, setShowComments] = useState(false);
+  const [cmt, setCmt] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const loadSocial = useCallback(async () => {
+    if (!socialId) return;
+    const [likesRes, cmtRes] = await Promise.all([
+      supabase.from('media_clip_likes').select('user_id').eq('clip_id', socialId),
+      supabase.from('media_clip_comments').select('*, user:profiles!user_id(full_name)').eq('clip_id', socialId).is('deleted_at', null).order('created_at', { ascending: true }),
+    ]);
+    const likes = likesRes.data || [];
+    setLikeCount(likes.length);
+    setLiked(me ? likes.some(l => l.user_id === me.id) : false);
+    setComments(cmtRes.data || []);
+  }, [socialId, me]);
+  useEffect(() => { loadSocial(); }, [loadSocial]);
+
+  const toggleLike = async () => {
+    if (!socialId || !me) return;
+    if (liked) {
+      setLiked(false); setLikeCount(c => Math.max(0, c - 1));
+      await supabase.from('media_clip_likes').delete().eq('clip_id', socialId).eq('user_id', me.id);
+    } else {
+      setLiked(true); setLikeCount(c => c + 1);
+      const { error } = await supabase.from('media_clip_likes').insert({ clip_id: socialId, user_id: me.id });
+      if (error && !String(error.message || '').toLowerCase().includes('duplicate')) { setLiked(false); setLikeCount(c => Math.max(0, c - 1)); toast.error('Lỗi thả tim: ' + error.message); }
+    }
   };
-  const IconBtn = ({ onClick, disabled, title, children }) => (
-    <button type="button" onClick={onClick} disabled={disabled} title={title}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40">{children}</button>
+  const doubleTapLike = () => { if (!liked) toggleLike(); };
+
+  const sendComment = async () => {
+    const text = cmt.trim();
+    if (!text || !socialId || !me) return;
+    setSending(true);
+    const { error } = await supabase.from('media_clip_comments').insert({ clip_id: socialId, user_id: me.id, content: text });
+    setSending(false);
+    if (error) { toast.error(error.message); return; }
+    setCmt(''); loadSocial();
+  };
+
+  const share = async () => {
+    if (!cur) return;
+    try {
+      if (navigator.share) await navigator.share({ title, url: cur });
+      else { await navigator.clipboard.writeText(cur); toast.success('Đã sao chép link clip'); }
+    } catch { /* người dùng huỷ chia sẻ */ }
+  };
+
+  const RailBtn = ({ icon, label, active, activeCls = 'text-rose-500', onClick }) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-1 text-white">
+      <span className={`w-11 h-11 rounded-full bg-black/40 backdrop-blur flex items-center justify-center ${active ? activeCls : ''}`}>{icon}</span>
+      <span className="text-[11px] font-semibold drop-shadow max-w-[52px] truncate">{label}</span>
+    </button>
   );
+
   return (
-    <div className="fixed inset-0 bg-slate-900/70 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-4xl shadow-xl max-h-[94vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="px-4 sm:px-5 py-3 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl sm:rounded-t-2xl z-10">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base min-w-0"><PlayCircle className="w-5 h-5 text-violet-600 shrink-0" /> <span className="truncate">{title}</span></h3>
-          <button onClick={onClose} className="w-9 h-9 -mr-1.5 flex items-center justify-center rounded-full hover:bg-slate-100 shrink-0"><X className="w-5 h-5 text-slate-500" /></button>
+    <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="relative w-full h-full sm:h-auto sm:max-w-sm sm:rounded-2xl overflow-hidden bg-black flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-3 bg-gradient-to-b from-black/60 to-transparent">
+          <h3 className="text-white font-semibold text-sm truncate pr-2">{title}</h3>
+          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full bg-black/40 text-white shrink-0"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-3 sm:p-4">
+
+        <div className="relative flex-1 sm:flex-none sm:aspect-[9/16] w-full min-h-0">
+          <TikTokPlayer key={cur} url={cur} onLike={doubleTapLike} />
+
+          <div className="absolute right-2.5 bottom-24 sm:bottom-16 flex flex-col items-center gap-4 z-20">
+            {socialId && <RailBtn onClick={toggleLike} active={liked} icon={<Heart className={`w-6 h-6 ${liked ? 'fill-rose-500' : ''}`} />} label={String(likeCount)} />}
+            {socialId && <RailBtn onClick={() => setShowComments(true)} icon={<MessageCircle className="w-6 h-6" />} label={String(comments.length)} />}
+            {canScore && onScore && <RailBtn onClick={onScore} active={!!(clip.win || clip.score)} activeCls="text-amber-400" icon={<Star className={`w-6 h-6 ${clip.win || clip.score ? 'fill-amber-400 text-amber-400' : ''}`} />} label={clip.win ? '10' : (clip.score ? String(clip.score) : 'Chấm')} />}
+            <RailBtn onClick={share} icon={<Share2 className="w-6 h-6" />} label="Chia sẻ" />
+          </div>
+
           {links.length > 1 && (
-            <div className="flex gap-1.5 mb-3 flex-wrap">
-              {links.map((_, i) => <button key={i} onClick={() => setCi(i)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${i === ci ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Video {i + 1}</button>)}
+            <div className="absolute left-2.5 bottom-24 sm:bottom-16 flex flex-col gap-1.5 z-20">
+              {links.map((_, i) => <button key={i} onClick={() => setCi(i)} className={`w-8 h-8 rounded-full text-[11px] font-bold ${i === ci ? 'bg-white text-black' : 'bg-black/40 text-white'}`}>{i + 1}</button>)}
             </div>
           )}
-          <div ref={playerRef} className="mx-auto bg-black rounded-xl overflow-hidden w-full" style={{ width: VID_SIZES[zi].w, maxWidth: '100%' }}>
-            <VideoPreview url={cur} className="aspect-video" />
-          </div>
-          <div className="mt-3 space-y-2">
-            <div className="hidden sm:flex items-center justify-center gap-2 flex-wrap">
-              <IconBtn onClick={() => setZi(z => Math.max(0, z - 1))} disabled={zi === 0} title="Thu nhỏ"><ZoomOut className="w-4 h-4" /></IconBtn>
-              <span className="text-xs font-semibold text-slate-500 w-12 text-center">{VID_SIZES[zi].name}</span>
-              <IconBtn onClick={() => setZi(z => Math.min(VID_SIZES.length - 1, z + 1))} disabled={zi === VID_SIZES.length - 1} title="Phóng to"><ZoomIn className="w-4 h-4" /></IconBtn>
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={goFs} className="flex-1 h-11 sm:h-9 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 inline-flex items-center justify-center gap-1.5"><Maximize2 className="w-4 h-4" /> Toàn màn hình</button>
-              <a href={cur} target="_blank" rel="noreferrer" className="flex-1 h-11 sm:h-9 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 inline-flex items-center justify-center gap-1.5"><ExternalLink className="w-4 h-4" /> Mở Drive</a>
-            </div>
-          </div>
         </div>
+
+        {showComments && (
+          <div className="absolute inset-0 z-30 flex flex-col justify-end" onClick={() => setShowComments(false)}>
+            <div className="bg-white rounded-t-2xl max-h-[70%] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <span className="font-bold text-slate-800 text-sm">{comments.length} bình luận</span>
+                <button onClick={() => setShowComments(false)}><X className="w-5 h-5 text-slate-400" /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                {comments.length === 0 ? <div className="text-center text-slate-400 text-sm py-8">Chưa có bình luận — hãy là người đầu tiên!</div>
+                  : comments.map(c => (
+                    <div key={c.id} className="flex gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">{(c.user?.full_name || '?').charAt(0)}</div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-700">{c.user?.full_name || 'Ẩn danh'}</div>
+                        <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">{c.content}</div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              <div className="p-3 border-t flex items-center gap-2">
+                <input value={cmt} onChange={e => setCmt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendComment(); }} placeholder="Thêm bình luận..." className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm outline-none" />
+                <button onClick={sendComment} disabled={sending || !cmt.trim()} className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 shrink-0"><Send className="w-4 h-4" /></button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1098,6 +1231,8 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
   const [uploading, setUploading] = useState(false);
   const timer = useRef(null);
   const fileRef = useRef(null);
+  const videoRef = useRef(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   const onSearch = (val) => {
     setQ(val);
@@ -1111,6 +1246,21 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
     try { for (const f of files) { if (!f.type.startsWith('image/')) { toast.error('Chỉ nhận file ảnh'); continue; } const url = await uploadToR2(f, 'ads-thumb'); setThumbs(p => [...p, url]); } }
     catch (err) { toast.error('Lỗi tải ảnh: ' + err.message); }
     setUploading(false);
+  };
+  // Tải video trực tiếp lên R2 -> link file trực tiếp -> dùng được player TikTok tùy biến
+  const onPickVideo = async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    if (!files.length) return;
+    setUploadingVideo(true);
+    try {
+      for (const f of files) {
+        if (!f.type.startsWith('video/')) { toast.error('Chỉ nhận file video'); continue; }
+        const url = await uploadToR2(f, 'ads-clip');
+        setClip(prev => (prev.trim() ? prev.trim() + '\n' : '') + url);
+      }
+      toast.success('Đã tải video lên');
+    } catch (err) { toast.error('Lỗi tải video: ' + err.message); }
+    setUploadingVideo(false);
   };
 
   const save = async () => {
@@ -1181,7 +1331,14 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
         <Field label="ID Source"><input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} /></Field>
       </div>
 
-      <Field label="Link clip đã dựng * (link riêng clip)"><textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
+      <Field label="Link clip đã dựng * (link riêng clip)">
+        <textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} />
+        <button type="button" onClick={() => videoRef.current?.click()} disabled={uploadingVideo} className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5 hover:bg-violet-100 disabled:opacity-50">
+          {uploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} {uploadingVideo ? 'Đang tải video…' : 'Tải video trực tiếp (bật player TikTok)'}
+        </button>
+        <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={onPickVideo} />
+        <p className="text-[11px] text-slate-400 mt-1">Dán link Google Drive để phát cơ bản, hoặc tải file video trực tiếp để dùng trình phát kiểu TikTok (double-tap thả tim, tua mượt).</p>
+      </Field>
 
       <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh thumbnail * (tải trực tiếp)</label>
       <div className="flex flex-wrap gap-2 mb-3">
