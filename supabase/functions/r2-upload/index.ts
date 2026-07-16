@@ -37,6 +37,11 @@ Deno.serve(async (req) => {
     const folder = (formData.get("folder") as string) || "avatars";
     if (!file) return json({ error: "Thiếu file" });
 
+    // Chỉ cho phép ảnh (trừ SVG) / video / PDF — chặn host nội dung tuỳ ý (HTML, SVG có script...)
+    const ctype = (file.type || "").toLowerCase();
+    const allowed = (ctype.startsWith("image/") && ctype !== "image/svg+xml") || ctype.startsWith("video/") || ctype === "application/pdf";
+    if (!allowed) return json({ error: "Loại file không được phép: " + (file.type || "unknown") });
+
     const accountId = Deno.env.get("R2_ACCOUNT_ID") || "";
     const bucket = Deno.env.get("R2_BUCKET_NAME") || "";
     const publicUrl = Deno.env.get("R2_PUBLIC_URL") || "";

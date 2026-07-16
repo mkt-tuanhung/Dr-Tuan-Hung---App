@@ -97,7 +97,11 @@ const sanitizeHtml = (html) => {
     [...el.attributes].forEach(a => {
       if (a.name === 'style') {
         const color = el.style.color; el.removeAttribute('style'); if (color) el.style.color = color;
-      } else if (a.name !== 'href') {
+      } else if (a.name === 'href') {
+        // Chỉ cho phép http(s)/mailto/nội bộ — chặn javascript:, data:, ...
+        const v = (el.getAttribute('href') || '').trim();
+        if (!/^(https?:\/\/|mailto:|\/|#)/i.test(v)) el.removeAttribute('href');
+      } else {
         el.removeAttribute(a.name);
       }
     });
@@ -259,7 +263,8 @@ const CommunityPage = () => {
 
   // Đổi token trong HTML bài viết thành chip nhân sự / link khách + bôi đỏ mốc thời gian
   const renderPostHtml = (html) => {
-    const withChips = (html || '')
+    // Sanitize ở ĐẦU RA: nội dung có thể được chèn thẳng qua API (bỏ qua sanitize lúc soạn)
+    const withChips = sanitizeHtml(html || '')
       .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#ccfbf1;color:#0f766e;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
       .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;cursor:pointer;margin:0 2px;font-family:inherit">👤 $1</button>');
     // Chỉ tô màu phần text (bỏ qua bên trong các thẻ <...>)

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronDown, ChevronUp, Upload, Download } from 'lucide-react';
-import { uploadToR2 } from '@/lib/r2Client';
+import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import MediaCustomerButton from '@/components/MediaCustomerButton.jsx';
@@ -416,9 +416,14 @@ const HauPhauPage = () => {
       const lineContent = parts.map((part, i) => {
         const imgMatch = part.match(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/);
         if (imgMatch) {
+          const url = imgMatch[1];
+          // Chỉ hiển thị ảnh từ domain R2 (tránh auto-load URL ngoài lạ)
+          if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) {
+            return <a key={i} href={url} target="_blank" rel="noreferrer noopener" className="text-xs text-slate-400 underline mx-1">[ảnh ngoài]</a>;
+          }
           return (
-            <div key={i} onClick={() => setViewImage(imgMatch[1])} className="inline-block mt-1.5 mb-2 cursor-pointer">
-              <img src={imgMatch[1]} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover hover:opacity-90 transition-opacity" />
+            <div key={i} onClick={() => setViewImage(url)} className="inline-block mt-1.5 mb-2 cursor-pointer">
+              <img src={url} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover hover:opacity-90 transition-opacity" />
             </div>
           );
         }
