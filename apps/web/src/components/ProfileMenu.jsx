@@ -218,8 +218,9 @@ export default function ProfileMenu({ children, mobile = false }) {
 
       {/* Profile Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] overflow-y-auto backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-2">
             <div className="flex bg-slate-50 border-b shrink-0">
               <button onClick={() => setActiveTab('profile')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Cá nhân
@@ -394,6 +395,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                   </div>
                 </form>
               )}
+            </div>
             </div>
           </div>
         </div>
