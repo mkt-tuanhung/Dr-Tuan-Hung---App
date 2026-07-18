@@ -337,22 +337,27 @@ const KhachTuVanPage = () => {
                     const active = selected?.id === r.id;
                     return (
                       <button key={r.id} onClick={() => { setSelectedId(r.id); setSheetFor(r); }}
-                        className={`w-full text-left rounded-2xl p-3 flex items-center gap-3 border shadow-sm transition ${active ? 'border-emerald-300 ring-1 ring-emerald-200 bg-white' : 'border-slate-100 bg-white hover:border-emerald-200'}`}>
+                        className={`w-full text-left rounded-2xl p-3.5 flex items-start gap-3 border shadow-sm transition ${active ? 'border-emerald-300 ring-1 ring-emerald-200 bg-white' : 'border-slate-100 bg-white hover:border-emerald-200'}`}>
                         <div className={`relative w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br ${avTone(r.customer_name)} text-white grid place-items-center font-extrabold text-base`}>
                           {initials(r.customer_name)}
                           <span className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-extrabold text-slate-800 text-[17px] leading-snug break-words">{r.customer_name}</div>
-                          <div className="flex items-center gap-2 mt-1 text-[13px] text-slate-400 flex-wrap">
+                          {/* Hàng 1: TÊN khách — riêng 1 hàng, nổi bật, đầy đủ */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-extrabold text-slate-800 text-[17px] leading-snug break-words flex-1">{r.customer_name}</div>
+                            <ChevronRight className="w-5 h-5 text-slate-300 shrink-0 mt-0.5" />
+                          </div>
+                          {/* Hàng 2: SĐT · thời lượng */}
+                          <div className="flex items-center gap-2 mt-1.5 text-[13px] text-slate-400 flex-wrap">
                             <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" strokeWidth={1.9} /> {maskPhone(r.phone)}</span>
                             {dur && <><span className="text-slate-300">·</span><span className="text-rose-500 font-semibold">{dur}</span></>}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2.5 shrink-0">
-                          <span className={`text-[12.5px] font-bold px-3 py-1.5 rounded-full ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
-                          {rs.length > 0 && <span className="text-rose-500 font-extrabold text-[15px] min-w-[18px] text-center">{rs.length}</span>}
-                          <ChevronRight className="w-5 h-5 text-slate-300" />
+                          {/* Hàng 3: trạng thái + số ghi âm */}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <span className={`text-[12.5px] font-bold px-3 py-1 rounded-full ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
+                            {rs.length > 0 && <span className="inline-flex items-center gap-1 text-[12px] font-bold text-rose-500 bg-rose-50 rounded-full px-2.5 py-1"><Mic className="w-3.5 h-3.5" /> {rs.length} ghi âm</span>}
+                          </div>
                         </div>
                       </button>
                     );
