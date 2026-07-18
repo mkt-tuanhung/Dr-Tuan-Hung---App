@@ -343,7 +343,7 @@ const KhachTuVanPage = () => {
                           <span className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-extrabold text-slate-800 text-[17px] leading-tight truncate">{r.customer_name}</div>
+                          <div className="font-extrabold text-slate-800 text-[17px] leading-snug break-words">{r.customer_name}</div>
                           <div className="flex items-center gap-2 mt-1 text-[13px] text-slate-400 flex-wrap">
                             <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" strokeWidth={1.9} /> {maskPhone(r.phone)}</span>
                             {dur && <><span className="text-slate-300">·</span><span className="text-rose-500 font-semibold">{dur}</span></>}
