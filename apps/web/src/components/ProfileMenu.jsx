@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -216,8 +217,8 @@ export default function ProfileMenu({ children, mobile = false }) {
         </>
       )}
 
-      {/* Profile Modal */}
-      {modalOpen && (
+      {/* Profile Modal — portal ra body để không kẹt trong containing block của header (backdrop-blur) */}
+      {modalOpen && createPortal((
         <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-start sm:items-center justify-center p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="flex bg-slate-50 border-b shrink-0">
@@ -397,7 +398,7 @@ export default function ProfileMenu({ children, mobile = false }) {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }
