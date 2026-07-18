@@ -7,7 +7,7 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
   Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
-  Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, Pencil,
+  Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, MoreVertical, Pencil, BarChart2,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -172,7 +172,7 @@ const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày qu
   );
 };
 
-const ContentProductionPage = () => {
+const ContentProductionPage = ({ setActiveTab }) => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const isAdmin = roles.includes('admin');
@@ -195,7 +195,7 @@ const ContentProductionPage = () => {
   const [khoService, setKhoService] = useState(''); // lọc dịch vụ
   const [khoFrom, setKhoFrom] = useState('');       // lọc ngày quay từ
   const [khoTo, setKhoTo] = useState('');           // lọc ngày quay đến
-  const [khoView, setKhoView] = useState('list');   // 'list' | 'card'
+  const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
@@ -230,6 +230,16 @@ const ContentProductionPage = () => {
 
   const clipsOf = (storeId) => clips.filter(c => c.media_customer_id === storeId);
   const storeOf = (id) => stores.find(s => s.id === id);
+  // Ảnh thumbnail đầu tiên từ clip (nếu có) để hiện preview thẻ media
+  const firstThumbOf = (storeId) => { for (const c of clipsOf(storeId)) { const t = (c.thumb_links || [])[0]; if (t) return t; } return null; };
+  // Tiến độ suy ra: Chưa dựng 0 → Đang dựng 50 → Có clip chờ duyệt 75 → Đã duyệt 100
+  const progressOf = (storeId, sourceStatus) => {
+    const cs = clipsOf(storeId);
+    if (cs.some(c => c.approved_to_run || c.stage === 'approved' || c.stage === 'done')) return 100;
+    if (cs.length) return 75;
+    if (sourceStatus === 'dang_dung') return 50;
+    return 0;
+  };
 
   const patchClip = async (id, payload, msg) => {
     setClips(prev => prev.map(c => c.id === id ? { ...c, ...payload } : c));
@@ -303,13 +313,12 @@ const ContentProductionPage = () => {
         )}
       </div>
 
-      {/* Tabs nội bộ */}
-      {tabs.length > 1 && (
-        <div className="flex gap-2">
-          {tabs.includes('kho') && <TabBtn active={tab === 'kho'} onClick={() => setTab('kho')} icon={FolderOpen} label="Kho media" />}
-          {tabs.includes('video') && <TabBtn active={tab === 'video'} onClick={() => setTab('video')} icon={PlayCircle} label="Video Ads" />}
-        </div>
-      )}
+      {/* Thẻ điều hướng lớn */}
+      <div className="grid grid-cols-3 gap-3">
+        {tabs.includes('kho') && <FeatureCard tone="teal" icon={FolderOpen} title="Kho media" sub="Xem tất cả" active={tab === 'kho'} onClick={() => setTab('kho')} />}
+        {tabs.includes('video') && <FeatureCard tone="violet" icon={PlayCircle} title="Video Ads" sub={tab === 'video' ? 'Đang xem' : 'Duyệt & chấm'} active={tab === 'video'} onClick={() => setTab('video')} />}
+        {canAds && setActiveTab && <FeatureCard tone="amber" icon={BarChart2} title="Chi phí Ads" sub="Xem báo cáo" onClick={() => setActiveTab('ads_report')} />}
+      </div>
 
       {/* Leaderboard */}
       {lb.length > 0 && (
@@ -378,7 +387,7 @@ const ContentProductionPage = () => {
         ) : khoView === 'card' ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
-              <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+              <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={firstThumbOf(s.id)} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
             ))}
@@ -444,6 +453,26 @@ const TabBtn = ({ active, onClick, icon: Icon, label }) => (
     <Icon className="w-4 h-4" /> {label}
   </button>
 );
+
+// Thẻ điều hướng lớn (Kho media / Video Ads / Chi phí Ads)
+const FEAT_TONE = {
+  teal:   { bg: 'bg-teal-50',   icon: 'bg-teal-500',   blob: 'bg-teal-200/50' },
+  violet: { bg: 'bg-violet-50', icon: 'bg-violet-500', blob: 'bg-violet-200/50' },
+  amber:  { bg: 'bg-amber-50',  icon: 'bg-amber-500',  blob: 'bg-amber-200/50' },
+};
+const FeatureCard = ({ tone, icon: Icon, title, sub, active, onClick }) => {
+  const t = FEAT_TONE[tone];
+  return (
+    <button onClick={onClick} className={`relative overflow-hidden rounded-3xl p-3.5 text-left min-h-[124px] flex flex-col transition ${t.bg} ${active ? 'ring-2 ring-offset-1 ring-teal-500' : 'active:scale-[0.98]'}`}>
+      <span className={`absolute -right-4 -bottom-3 w-20 h-20 rounded-full ${t.blob}`} />
+      <span className={`relative w-12 h-12 rounded-2xl grid place-items-center text-white shadow-sm ${t.icon}`}><Icon className="w-6 h-6" /></span>
+      <span className="relative mt-auto pt-5 block">
+        <span className="block font-extrabold text-slate-800 text-[15px] leading-tight">{title}</span>
+        <span className="block text-xs text-slate-500 font-medium mt-0.5">{sub}</span>
+      </span>
+    </button>
+  );
+};
 
 const Empty = ({ icon: Icon, title, desc, cta }) => (
   <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
@@ -526,14 +555,15 @@ const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk,
 );
 
 // ---------- Menu hành động phụ "⋯" (gọn, tránh rối) ----------
-const ActionMenu = ({ items }) => {
+const ActionMenu = ({ items, vertical = false }) => {
   const list = items.filter(Boolean);
   const [open, setOpen] = useState(false);
   if (!list.length) return null;
+  const Icon = vertical ? MoreVertical : MoreHorizontal;
   return (
     <div className="relative shrink-0">
       <button type="button" onClick={() => setOpen(o => !o)} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Thêm">
-        <MoreHorizontal className="w-4 h-4" />
+        <Icon className="w-4 h-4" />
       </button>
       {open && (
         <>
@@ -601,45 +631,64 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
 };
 
 // ---------- Thẻ Kho media (chế độ thẻ) ----------
-const StoreCard = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
+  const ss = SOURCE_STATUS[s.source_status || 'chua_dung'] || { label: s.source_status, cls: 'bg-slate-100 text-slate-600' };
+  const hasSrc = (s.source_links || []).length > 0;
+  const menuItems = [
+    canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
+    owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
+    (!s.appointment_id && owner) && { label: 'Kết nối hồ sơ khách', icon: <Link2 className="w-4 h-4" />, onClick: onLink },
+    owner && { label: 'Xoá media', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
+  ];
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-bold text-slate-800 text-sm truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
-          <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3.5">
+      <div className="flex gap-3">
+        {/* Thumbnail */}
+        <button onClick={hasSrc ? onViewSource : (canEdit ? onBuild : undefined)} className="relative w-[104px] h-[104px] rounded-2xl overflow-hidden shrink-0 bg-gradient-to-br from-teal-300 to-teal-600">
+          {thumb && <img src={thumb} alt="" className="w-full h-full object-cover" />}
+          <span className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-white/85 grid place-items-center text-slate-800"><Play className="w-4 h-4 fill-current ml-0.5" /></span>
+        </button>
+        {/* Body */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="font-bold text-slate-800 text-[15px] leading-tight truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
+              <div className="text-xs text-slate-400 truncate mt-0.5">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
+              {s.appointment_id
+                ? <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">LK</span>
+                : <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Chưa LK</span>}
+              <ActionMenu vertical items={menuItems} />
+            </div>
+          </div>
+          {s.source_id && <div className="font-mono text-violet-600 text-xs font-bold mt-1.5">#{s.source_id}</div>}
+          {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
+          {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            {hasSrc && <button onClick={onViewSource} className="text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full inline-flex items-center gap-1 hover:bg-blue-100">Nguồn <ExternalLink className="w-3 h-3" /></button>}
+            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${ss.cls}`}>{ss.label}</span>
+            <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-100 disabled:opacity-60">{clipCount} clip</button>
+            {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">★ {s.source_score}/10</span>}
+          </div>
         </div>
-        {s.appointment_id
-          ? <span className="shrink-0 text-[10px] font-semibold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">LK</span>
-          : <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Chưa LK</span>}
       </div>
-      {(s.source_id || s.service || s.shoot_date) && (
-        <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-x-2">
-          {s.source_id && <span className="font-mono text-violet-600">#{s.source_id}</span>}
-          {s.service && <span>{s.service}</span>}
-          {s.shoot_date && <span>📅 {new Date(s.shoot_date).toLocaleDateString('vi-VN')}</span>}
+      {s.source_feedback && <div className="text-[11px] text-slate-500 italic mt-2 truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
+      {progress > 0 && progress < 100 && (
+        <div className="flex items-center gap-2.5 mt-3">
+          <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-400" style={{ width: `${progress}%` }} /></div>
+          <span className="text-xs font-bold text-slate-600 tabular-nums">{progress}%</span>
         </div>
       )}
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <LinkList links={s.source_links} label="Nguồn" icon={Film} />
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
-        <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full hover:bg-violet-100 disabled:opacity-60">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
-        {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">★ {s.source_score}/10</span>}
-      </div>
-      {s.source_feedback && <div className="text-[11px] text-slate-500 italic mt-1 truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
-      <div className="mt-2.5 flex items-center gap-1.5 border-t border-slate-50 pt-2">
-        {canEdit
-          ? <button onClick={onBuild} className="flex-1 text-xs font-bold text-white px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center justify-center gap-1"><Scissors className="w-3.5 h-3.5" />Dựng video</button>
-          : (s.source_links || []).length > 0 && <button onClick={onViewSource} className="flex-1 text-xs font-bold text-violet-700 px-3 py-2 rounded-lg border border-violet-200 hover:bg-violet-50 inline-flex items-center justify-center gap-1"><PlayCircle className="w-3.5 h-3.5" />Xem source</button>}
-        {canEdit && (s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-semibold text-slate-600 px-2.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center gap-1"><PlayCircle className="w-3.5 h-3.5" />Source</button>}
-        <ActionMenu items={[
-          canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
-          owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
-          (!s.appointment_id && owner) && { label: 'Kết nối hồ sơ khách', icon: <Link2 className="w-4 h-4" />, onClick: onLink },
-          owner && { label: 'Xoá media', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
-        ]} />
-      </div>
+      {(canEdit || hasSrc) && (
+        <div className="mt-3 flex items-center gap-2">
+          {canEdit
+            ? <button onClick={onBuild} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-teal-50 text-teal-700 font-bold text-sm hover:bg-teal-100"><Scissors className="w-4 h-4" />{clipCount > 0 ? 'Tiếp tục dựng' : 'Dựng video'}</button>
+            : hasSrc && <button onClick={onViewSource} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-violet-50 text-violet-700 font-bold text-sm hover:bg-violet-100"><PlayCircle className="w-4 h-4" />Xem source</button>}
+          {canEdit && hasSrc && <button onClick={onViewSource} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><PlayCircle className="w-4 h-4" />Source</button>}
+        </div>
+      )}
     </div>
   );
 };

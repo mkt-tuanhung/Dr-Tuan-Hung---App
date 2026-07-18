@@ -370,7 +370,7 @@ const StaffDashboard = () => {
     if (activeTab === 'cashflow') return <CashFlowPage />;
     if (activeTab === 'payroll') return <PayrollPage />;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
-    if (activeTab === 'content') return <ContentProductionPage />;
+    if (activeTab === 'content') return <ContentProductionPage setActiveTab={setActiveTab} />;
     if (activeTab === 'data_kh') return <MarketingDataPage />;
     if (activeTab === 'khach_tu_van') return <KhachTuVanPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
