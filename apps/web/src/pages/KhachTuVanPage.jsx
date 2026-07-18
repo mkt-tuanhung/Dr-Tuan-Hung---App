@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
+import { UserCheck, UserPlus, CalendarDays, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
@@ -17,7 +17,7 @@ const Thumbs = ({ urls = [], size = 'h-20 w-20', wrapClass = 'mt-3 flex flex-wra
     <>
       <div className={wrapClass}>
         {urls.map((u, i) => (
-          <button key={i} type="button" onClick={() => setOpen(i)} className={`${size} rounded-xl overflow-hidden border border-slate-100 relative group hover:ring-2 hover:ring-teal-300 transition-shadow`}>
+          <button key={i} type="button" onClick={() => setOpen(i)} className={`${size} rounded-xl overflow-hidden border border-slate-100 relative group hover:ring-2 hover:ring-emerald-300 transition-shadow`}>
             <img src={u} alt="" className="w-full h-full object-cover" />
             <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/25 transition-colors">
               <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -37,15 +37,15 @@ const ST = {
   phau_thuat: { label: 'Phẫu thuật', cls: 'bg-emerald-50 text-emerald-600' },
 };
 // Vạch màu trạng thái bên trái mỗi thẻ
-const stripCls = { scheduled: 'from-amber-400 to-amber-500', coc: 'from-cyan-400 to-cyan-500', bong: 'from-rose-400 to-rose-500', phau_thuat: 'from-teal-400 to-teal-500' };
-const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition';
+const stripCls = { scheduled: 'from-amber-400 to-amber-500', coc: 'from-cyan-400 to-cyan-500', bong: 'from-rose-400 to-rose-500', phau_thuat: 'from-emerald-400 to-emerald-500' };
+const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition';
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
-const AV_TONES = ['from-emerald-500 to-teal-600', 'from-blue-500 to-blue-600', 'from-violet-500 to-violet-600', 'from-orange-400 to-orange-500', 'from-sky-400 to-sky-500', 'from-teal-500 to-emerald-600'];
+const AV_TONES = ['from-emerald-500 to-emerald-600', 'from-blue-500 to-blue-600', 'from-violet-500 to-violet-600', 'from-orange-400 to-orange-500', 'from-sky-400 to-sky-500', 'from-emerald-500 to-emerald-600'];
 const avTone = (name) => AV_TONES[[...(name || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_TONES.length];
 const fmtHrMin = (sec) => { const m = Math.round((sec || 0) / 60); if (m < 1) return null; if (m < 60) return `${m} phút`; return `${Math.floor(m / 60)} giờ ${String(m % 60).padStart(2, '0')} phút`; };
-const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-teal-600 border-teal-300 bg-teal-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
+const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-emerald-600 border-emerald-300 bg-emerald-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Bôi đỏ/đậm các câu AI thấy chưa phù hợp trong văn bản
 const Highlight = ({ text, quotes }) => {
@@ -74,6 +74,7 @@ const KhachTuVanPage = () => {
   const [confirm, setConfirm] = useState(null);
   const [trashOpen, setTrashOpen] = useState(false);
   const [statusTab, setStatusTab] = useState('all');   // lọc theo trạng thái (tab)
+  const [filterOpen, setFilterOpen] = useState(false); // dropdown "Bộ lọc"
   const [selectedId, setSelectedId] = useState(null);  // desktop: khách đang xem chi tiết
   const [sheetFor, setSheetFor] = useState(null);       // mobile: khách mở trong sheet
   const _now = new Date();
@@ -152,7 +153,7 @@ const KhachTuVanPage = () => {
     a[id] = a[id] || { id, name: r.by?.full_name || 'Sale', n: 0, sum: 0 };
     a[id].n++; a[id].sum += Number(r.ai_score || 0); return a;
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
-  const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-teal-100 text-teal-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+  const scoreCls = (s) => s == null ? 'bg-slate-100 text-slate-500' : s >= 8 ? 'bg-emerald-100 text-emerald-700' : s >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
 
   // Số liệu tổng quan cho hero — theo tháng
   const stat = {
@@ -185,22 +186,51 @@ const KhachTuVanPage = () => {
 
   return (
     <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-700">
-      {/* Hero banner */}
-      <div className="relative overflow-hidden rounded-3xl p-5 text-white bg-gradient-to-br from-teal-500 to-teal-700">
-        <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-36 h-36 rounded-full bg-white/10" />
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-white/15 grid place-items-center shrink-0"><UserCheck className="w-8 h-8 text-white" strokeWidth={1.75} /></div>
+      {/* Hero — xanh nhạt + minh hoạ hồ sơ/ghi âm */}
+      <div className="relative overflow-hidden rounded-3xl p-5 border border-emerald-100/70 shadow-sm" style={{ background: 'linear-gradient(120deg, #eafaf1 0%, #e2f5ec 55%, #d6f0e3 100%)' }}>
+        {/* minh hoạ hồ sơ + ghi âm */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 pointer-events-none">
+          <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" aria-hidden="true">
+            <defs><linearGradient id="ktvFolder" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#5ecfa8" /><stop offset="1" stopColor="#3bb98d" /></linearGradient></defs>
+            {/* thân sau + tab */}
+            <path d="M28 28h15l5 6h25a5 5 0 0 1 5 5v34a5 5 0 0 1-5 5H28a5 5 0 0 1-5-5V33a5 5 0 0 1 5-5z" fill="url(#ktvFolder)" />
+            {/* tài liệu */}
+            <g transform="rotate(-5 50 55)">
+              <rect x="31" y="33" width="41" height="41" rx="4" fill="#ffffff" />
+              <rect x="37" y="41" width="14" height="4.5" rx="2.25" fill="#bfe9d6" />
+              <rect x="37" y="50" width="29" height="3" rx="1.5" fill="#dbe4ea" />
+              <rect x="37" y="57" width="25" height="3" rx="1.5" fill="#dbe4ea" />
+              <rect x="37" y="64" width="19" height="3" rx="1.5" fill="#dbe4ea" />
+            </g>
+            {/* túi trước */}
+            <path d="M23 50h54v22a5 5 0 0 1-5 5H28a5 5 0 0 1-5-5z" fill="#6ad4ae" />
+            {/* badge nhỏ trái */}
+            <rect x="15" y="44" width="16" height="14" rx="4" fill="#e2f5ea" />
+            <circle cx="20" cy="49" r="1.3" fill="#3bb98d" /><circle cx="26" cy="49" r="1.3" fill="#3bb98d" /><circle cx="23" cy="53" r="1.3" fill="#3bb98d" />
+            {/* vòng ghi âm */}
+            <circle cx="74" cy="71" r="15" fill="#ffffff" stroke="#e6f6ee" strokeWidth="2" />
+            <g fill="#22b183">
+              <rect x="65.5" y="67" width="2.6" height="8" rx="1.3" /><rect x="69.7" y="63" width="2.6" height="16" rx="1.3" />
+              <rect x="73.9" y="59" width="2.6" height="24" rx="1.3" /><rect x="78.1" y="64" width="2.6" height="14" rx="1.3" /><rect x="82.3" y="68" width="2.6" height="6" rx="1.3" />
+            </g>
+            {/* sparkles */}
+            <path d="M89 27l1.3 3.4 3.4 1.3-3.4 1.3-1.3 3.4-1.3-3.4-3.4-1.3 3.4-1.3z" fill="#e9f4a6" />
+            <path d="M83 36l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="#d6efb0" opacity="0.9" />
+          </svg>
+        </div>
+        <div className="relative z-10 flex items-center gap-3.5 max-w-[62%]">
+          <span className="w-14 h-14 rounded-2xl bg-white/80 text-emerald-600 grid place-items-center shrink-0 shadow-sm"><UserPlus className="w-7 h-7" strokeWidth={1.9} /></span>
           <div className="min-w-0">
-            <h2 className="text-[26px] font-bold tracking-tight leading-tight">Khách tư vấn</h2>
-            <p className="text-teal-50 text-sm mt-1">Tiếp nhận • Hồ sơ • Ghi âm • Đánh giá AI</p>
+            <h2 className="text-[24px] font-bold tracking-tight leading-tight text-slate-800">Khách tư vấn</h2>
+            <p className="text-slate-500 text-sm mt-1">Tiếp nhận • Hồ sơ • Ghi âm • Đánh giá AI</p>
           </div>
         </div>
-        <div className="absolute right-4 bottom-4 w-14 h-14 rounded-full bg-white grid place-items-center shadow-lg"><Mic className="w-6 h-6 text-teal-600" /></div>
       </div>
 
       {/* Chọn tháng + thùng rác */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1.5 py-1 shadow-sm">
+        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 pl-3 pr-1.5 py-1 shadow-sm">
+          <CalendarDays className="w-4 h-4 text-emerald-500 shrink-0" />
           <button onClick={prevStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
           <span className="text-sm font-bold text-slate-700 min-w-[72px] text-center">Th{statMonth}/{statYear}</span>
           <button onClick={nextStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronRight className="w-4 h-4" /></button>
@@ -219,7 +249,7 @@ const KhachTuVanPage = () => {
             { key: 'pt', label: 'Phẫu thuật', icon: Activity, tone: 'green', value: stat.pt, sub: `mổ Th${statMonth}`, trend: pctTrend(stat.pt, prevStat.pt), num: 'text-slate-800' },
             { key: 'ai', label: 'Điểm tư vấn TB', icon: Star, tone: 'amber', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: `AI • Th${statMonth} /10`, delta: (aiAvg != null && prevAiAvg != null) ? (aiAvg - prevAiAvg) : null, num: 'text-orange-500' },
           ].map(t => {
-            const TT = { teal: 'bg-teal-50 text-teal-600', blue: 'bg-blue-50 text-blue-600', green: 'bg-green-50 text-green-600', amber: 'bg-amber-50 text-amber-500' }[t.tone];
+            const TT = { teal: 'bg-emerald-50 text-emerald-600', blue: 'bg-blue-50 text-blue-600', green: 'bg-green-50 text-green-600', amber: 'bg-amber-50 text-amber-500' }[t.tone];
             const up = t.delta != null ? t.delta >= 0 : (t.trend != null ? t.trend >= 0 : null);
             const trendTxt = t.delta != null ? `${t.delta >= 0 ? '↑' : '↓'} ${Math.abs(t.delta).toFixed(1)}` : (t.trend != null ? `${t.trend >= 0 ? '↑' : '↓'} ${Math.abs(t.trend)}%` : null);
             return (
@@ -235,11 +265,30 @@ const KhachTuVanPage = () => {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.75} />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3.5 text-sm rounded-2xl bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition" />
-        {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+      {/* Search + Bộ lọc */}
+      <div className="flex items-center gap-2.5">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.75} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3.5 text-sm rounded-2xl bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+        </div>
+        <div className="relative shrink-0">
+          <button onClick={() => setFilterOpen(o => !o)} className="h-[50px] px-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-sm font-semibold text-slate-600 inline-flex items-center gap-2 hover:border-emerald-300 transition">
+            <SlidersHorizontal className="w-4 h-4 text-slate-500" /> Bộ lọc <ChevronDown className={`w-4 h-4 text-slate-400 transition ${filterOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {filterOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setFilterOpen(false)} />
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl border border-slate-100 shadow-xl p-1.5 z-30">
+                {STATUS_TABS.map(t => (
+                  <button key={t.id} onClick={() => { setStatusTab(t.id); setFilterOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-between transition ${statusTab === t.id ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                    {t.label} <span className="text-xs text-slate-400">{tabCount(t.id)}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {lb.length > 0 && (
@@ -266,7 +315,7 @@ const KhachTuVanPage = () => {
           {STATUS_TABS.map(t => {
             const on = statusTab === t.id;
             return (
-              <button key={t.id} onClick={() => setStatusTab(t.id)} className={`pb-3 pt-1 text-[15px] font-bold whitespace-nowrap border-b-2 -mb-px transition ${on ? 'text-teal-700 border-teal-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+              <button key={t.id} onClick={() => setStatusTab(t.id)} className={`pb-3 pt-1 text-[15px] font-bold whitespace-nowrap border-b-2 -mb-px transition ${on ? 'text-emerald-700 border-emerald-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
                 {t.label} ({tabCount(t.id)})
               </button>
             );
@@ -275,7 +324,7 @@ const KhachTuVanPage = () => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
       ) : listVisible.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400">Không có khách trong mục này.</div>
       ) : (
@@ -288,7 +337,7 @@ const KhachTuVanPage = () => {
                     const active = selected?.id === r.id;
                     return (
                       <button key={r.id} onClick={() => { setSelectedId(r.id); setSheetFor(r); }}
-                        className={`w-full text-left rounded-2xl p-3 flex items-center gap-3 border shadow-sm transition ${active ? 'border-teal-300 ring-1 ring-teal-200 bg-white' : 'border-slate-100 bg-white hover:border-teal-200'}`}>
+                        className={`w-full text-left rounded-2xl p-3 flex items-center gap-3 border shadow-sm transition ${active ? 'border-emerald-300 ring-1 ring-emerald-200 bg-white' : 'border-slate-100 bg-white hover:border-emerald-200'}`}>
                         <div className={`relative w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br ${avTone(r.customer_name)} text-white grid place-items-center font-extrabold text-base`}>
                           {initials(r.customer_name)}
                           <span className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
@@ -354,7 +403,7 @@ const KhachTuVanPage = () => {
               ))}
             </div>
           )}
-          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-teal-600 mb-1">Điểm mạnh</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
+          {(transcriptView.ai_analysis?.strengths || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-emerald-600 mb-1">Điểm mạnh</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.weaknesses || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-rose-600 mb-1">Điểm yếu</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.suggestions || []).length > 0 && <div className="mb-3"><div className="text-sm font-bold text-blue-600 mb-1">Gợi ý cải thiện</div><ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 leading-relaxed">{transcriptView.ai_analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}
           {(transcriptView.ai_analysis?.issues || []).length > 0 && (
@@ -376,7 +425,7 @@ const KhachTuVanPage = () => {
               {tl.length > 0
                 ? tl.map((b, i) => (
                   <div key={i}>
-                    <div className="text-xs font-bold text-teal-600">{fmtTime(b.from)} – {fmtTime(b.to)}</div>
+                    <div className="text-xs font-bold text-emerald-600">{fmtTime(b.from)} – {fmtTime(b.to)}</div>
                     <div className="text-sm text-slate-700 mt-0.5 leading-relaxed"><Highlight text={b.text} quotes={quotes} /></div>
                   </div>
                 ))
@@ -400,7 +449,7 @@ const KhachTuVanPage = () => {
                   </div>
                   <audio src={rec.audio_url} controls className="h-7 w-full mt-1.5" />
                   <div className="flex gap-2 mt-2">
-                    <button onClick={() => restore(rec)} className="flex-1 h-9 rounded-lg border border-teal-200 text-teal-700 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-teal-50"><RotateCcw className="w-3.5 h-3.5" /> Khôi phục</button>
+                    <button onClick={() => restore(rec)} className="flex-1 h-9 rounded-lg border border-emerald-200 text-emerald-700 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-emerald-50"><RotateCcw className="w-3.5 h-3.5" /> Khôi phục</button>
                     <button onClick={() => permanentDelete(rec)} className="flex-1 h-9 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" /> Xoá vĩnh viễn</button>
                   </div>
                 </div>
@@ -446,11 +495,11 @@ const EvalModal = ({ app, onClose, onSaved }) => {
       <div className="flex bg-slate-100 rounded-full p-1 mb-4">
         <STBtn k="bong" label="Bong" on="bg-orange-400 text-white shadow" />
         <STBtn k="coc" label="Cọc" on="bg-cyan-500 text-white shadow" />
-        <STBtn k="phau_thuat" label="Phẫu thuật" on="bg-teal-600 text-white shadow" />
+        <STBtn k="phau_thuat" label="Phẫu thuật" on="bg-emerald-600 text-white shadow" />
       </div>
       <label className="block text-sm font-bold text-slate-700 mb-1.5">Loại phẫu thuật</label>
       <div className="flex gap-2 mb-4">
-        {['Tiểu phẫu', 'Đại phẫu'].map(t => <button key={t} onClick={() => setF({ ...f, surgery_type: t })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-xl border transition ${f.surgery_type === t ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{t}</button>)}
+        {['Tiểu phẫu', 'Đại phẫu'].map(t => <button key={t} onClick={() => setF({ ...f, surgery_type: t })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-xl border transition ${f.surgery_type === t ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{t}</button>)}
       </div>
       {f.status === 'phau_thuat' && (<>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -503,8 +552,8 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
       <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh hồ sơ <span className="text-slate-400 font-normal">(bấm để xem/zoom)</span></label>
       <div className="flex flex-wrap items-start gap-2 mb-4">
         <Thumbs urls={existing} size="h-16 w-16" wrapClass="flex flex-wrap gap-2" />
-        {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} alt="" className="h-16 w-16 object-cover rounded-lg border border-teal-300" />)}
-        <button type="button" onClick={() => fileRef.current?.click()} className="h-16 w-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-teal-400"><ImagePlus className="w-5 h-5" /></button>
+        {files.map((f, i) => <img key={i} src={URL.createObjectURL(f)} alt="" className="h-16 w-16 object-cover rounded-lg border border-emerald-300" />)}
+        <button type="button" onClick={() => fileRef.current?.click()} className="h-16 w-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-emerald-400"><ImagePlus className="w-5 h-5" /></button>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { setFiles(p => [...p, ...e.target.files]); e.target.value = ''; }} />
       </div>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
@@ -524,7 +573,7 @@ const Modal = ({ title, onClose, children }) => (
 const ModalActions = ({ onClose, onSave, saving }) => (
   <div className="flex gap-2 mt-1 pt-2 border-t border-slate-50 sm:justify-end">
     <button onClick={onClose} className="flex-1 sm:flex-none px-5 h-11 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-[15px]">Hủy</button>
-    <button onClick={onSave} disabled={saving} className="flex-1 sm:flex-none px-6 h-11 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-[15px] inline-flex items-center justify-center">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button>
+    <button onClick={onSave} disabled={saving} className="flex-1 sm:flex-none px-6 h-11 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50 text-[15px] inline-flex items-center justify-center">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button>
   </div>
 );
 
@@ -536,7 +585,7 @@ const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk,
         <p className="text-sm text-slate-700 mb-4">{message}</p>
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Huỷ</button>
-          <button disabled={busy} onClick={async () => { setBusy(true); await onOk(); onClose(); }} className={`px-4 py-2 rounded-xl text-white font-semibold text-sm disabled:opacity-50 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : okLabel}</button>
+          <button disabled={busy} onClick={async () => { setBusy(true); await onOk(); onClose(); }} className={`px-4 py-2 rounded-xl text-white font-semibold text-sm disabled:opacity-50 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : okLabel}</button>
         </div>
       </div>
     </div>
@@ -547,7 +596,7 @@ const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk,
 const money = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ';
 const dOnly = (s) => s ? new Date(s).toLocaleDateString('vi-VN') : '—';
 const CRIT = { thien_cam: 'Thiện cảm', khai_thac_nhu_cau: 'Nhu cầu', tu_van_chuyen_mon: 'Chuyên môn', xu_ly_tu_choi: 'Xử lý từ chối', chot: 'Chốt', thai_do: 'Thái độ' };
-const critBar = (v) => v == null ? 'bg-slate-500' : v >= 8 ? 'bg-teal-400' : v >= 5 ? 'bg-amber-400' : 'bg-rose-400';
+const critBar = (v) => v == null ? 'bg-slate-500' : v >= 8 ? 'bg-emerald-400' : v >= 5 ? 'bg-amber-400' : 'bg-rose-400';
 
 const fmtDur = (s) => { s = Number(s) || 0; return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; };
 
@@ -617,8 +666,8 @@ const RecordingItem = ({ rec, index, isAdmin, me, onTranscript, onReanalyze, onR
           {(rec.ai_analysis?.strengths?.length > 0 || rec.ai_analysis?.weaknesses?.length > 0) && (
             <div className="mt-3 grid sm:grid-cols-2 gap-2">
               {rec.ai_analysis?.strengths?.length > 0 && (
-                <div className="rounded-lg bg-teal-50 border border-teal-100 p-2.5">
-                  <div className="text-[11px] font-bold text-teal-700 mb-1">Điểm mạnh</div>
+                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-2.5">
+                  <div className="text-[11px] font-bold text-emerald-700 mb-1">Điểm mạnh</div>
                   <ul className="text-[13px] text-slate-600 list-disc pl-4 space-y-0.5 leading-snug">{rec.ai_analysis.strengths.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}</ul>
                 </div>
               )}
@@ -633,7 +682,7 @@ const RecordingItem = ({ rec, index, isAdmin, me, onTranscript, onReanalyze, onR
 
           {rec.ai_analysis?.summary && <div className="text-sm text-slate-500 mt-2.5 leading-relaxed">{rec.ai_analysis.summary}</div>}
           <div className="flex gap-4 mt-2.5">
-            {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-teal-600 hover:text-teal-700">Xem timeline đầy đủ →</button>}
+            {rec.transcript && <button onClick={() => onTranscript(rec)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700">Xem timeline đầy đủ →</button>}
             {rec.status !== 'processing' && <button onClick={() => onReanalyze(rec.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">Phân tích lại</button>}
           </div>
         </div>
@@ -695,7 +744,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
   };
 
   const stats = r.status === 'phau_thuat'
-    ? [{ label: 'Doanh thu', value: money(r.revenue), accent: 'text-teal-600' }, { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-cyan-600' }, { label: 'Loại mổ', value: r.surgery_type || '—' }, { label: 'Ngày mổ', value: dOnly(r.surgery_date) }]
+    ? [{ label: 'Doanh thu', value: money(r.revenue), accent: 'text-emerald-600' }, { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-cyan-600' }, { label: 'Loại mổ', value: r.surgery_type || '—' }, { label: 'Ngày mổ', value: dOnly(r.surgery_date) }]
     : r.status === 'coc'
       ? [{ label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-cyan-600' }, { label: 'Ngày cọc', value: dOnly(r.deposit_date) }, { label: 'Mổ dự kiến', value: dOnly(r.expected_surgery_date) }, { label: 'Loại mổ', value: r.surgery_type || '—' }]
       : [];
@@ -710,7 +759,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
           <button onClick={close} aria-label="Quay lại" className="w-10 h-10 rounded-full flex items-center justify-center text-slate-600 active:bg-slate-100 transition">
             <span className="block w-[11px] h-[11px] border-l-2 border-b-2 border-current rotate-45 ml-[3px]" />
           </button>
-          <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm">{initials(r.customer_name)}</div>
+          <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold text-sm">{initials(r.customer_name)}</div>
           <div className="min-w-0 flex-1 ml-1">
             <div className="font-bold text-slate-800 truncate leading-tight">{r.customer_name}</div>
             <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -725,7 +774,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
             const active = tab === t.k;
             return (
               <button key={t.k} onClick={() => setTab(t.k)}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${active ? 'bg-teal-500 text-white shadow-md shadow-teal-500/30' : 'bg-slate-100 text-slate-400 active:bg-slate-200'}`}>
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${active ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' : 'bg-slate-100 text-slate-400 active:bg-slate-200'}`}>
                 <CssIcon type={t.icon} />
                 <span>{t.label}{t.k === 'rec' && rs.length ? ` (${rs.length})` : ''}</span>
               </button>
@@ -812,7 +861,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
 const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval, onTranscript, onReanalyze, onReqDelete, onSoftDelete, onRejectDelete }) => {
   const stats = r.status === 'phau_thuat'
     ? [
-      { label: 'Doanh thu', value: money(r.revenue), accent: 'text-teal-600' },
+      { label: 'Doanh thu', value: money(r.revenue), accent: 'text-emerald-600' },
       { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-cyan-600' },
       { label: 'Loại mổ', value: r.surgery_type || '—' },
       { label: 'Ngày mổ', value: dOnly(r.surgery_date) },
@@ -829,7 +878,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
   <div className="fx-glass relative overflow-hidden rounded-3xl p-5">
     <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${stripCls[r.status] || 'from-slate-300 to-slate-400'}`} />
     <div className="flex items-start gap-3.5 flex-wrap">
-      <div className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-lg">{initials(r.customer_name)}</div>
+      <div className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold text-lg">{initials(r.customer_name)}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="font-bold text-slate-800 text-lg leading-tight">{r.customer_name}</h3>
