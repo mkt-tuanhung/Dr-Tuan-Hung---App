@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserCheck, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
@@ -32,9 +32,9 @@ const Thumbs = ({ urls = [], size = 'h-20 w-20', wrapClass = 'mt-3 flex flex-wra
 
 const ST = {
   scheduled: { label: 'Đã tiếp nhận', cls: 'bg-amber-100 text-amber-700' },
-  coc: { label: 'Cọc', cls: 'bg-cyan-100 text-cyan-700' },
-  bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' },
-  phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' },
+  coc: { label: 'Cọc', cls: 'bg-blue-50 text-blue-600' },
+  bong: { label: 'Bong', cls: 'bg-rose-50 text-rose-600' },
+  phau_thuat: { label: 'Phẫu thuật', cls: 'bg-emerald-50 text-emerald-600' },
 };
 // Vạch màu trạng thái bên trái mỗi thẻ
 const stripCls = { scheduled: 'from-amber-400 to-amber-500', coc: 'from-cyan-400 to-cyan-500', bong: 'from-rose-400 to-rose-500', phau_thuat: 'from-teal-400 to-teal-500' };
@@ -42,6 +42,9 @@ const inp = 'w-full min-w-0 px-3.5 py-2.5 text-[15px] rounded-xl border border-s
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const maskPhone = (p) => { const s = (p || '').trim(); return s.length <= 4 ? s : s.slice(0, -4) + '••••'; };
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+const AV_TONES = ['from-emerald-500 to-teal-600', 'from-blue-500 to-blue-600', 'from-violet-500 to-violet-600', 'from-orange-400 to-orange-500', 'from-sky-400 to-sky-500', 'from-teal-500 to-emerald-600'];
+const avTone = (name) => AV_TONES[[...(name || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_TONES.length];
+const fmtHrMin = (sec) => { const m = Math.round((sec || 0) / 60); if (m < 1) return null; if (m < 60) return `${m} phút`; return `${Math.floor(m / 60)} giờ ${String(m % 60).padStart(2, '0')} phút`; };
 const scoreRing = (s) => s == null ? 'text-slate-400 border-slate-200 bg-white' : s >= 8 ? 'text-teal-600 border-teal-300 bg-teal-50' : s >= 5 ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-rose-600 border-rose-300 bg-rose-50';
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Bôi đỏ/đậm các câu AI thấy chưa phù hợp trong văn bản
@@ -70,6 +73,7 @@ const KhachTuVanPage = () => {
   const [transcriptView, setTranscriptView] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [statusTab, setStatusTab] = useState('all');   // lọc theo trạng thái (tab)
   const [selectedId, setSelectedId] = useState(null);  // desktop: khách đang xem chi tiết
   const [sheetFor, setSheetFor] = useState(null);       // mobile: khách mở trong sheet
   const _now = new Date();
@@ -158,113 +162,152 @@ const KhachTuVanPage = () => {
   };
   const aiAvg = monthRecs.length ? monthRecs.reduce((s, r) => s + Number(r.ai_score || 0), 0) / monthRecs.length : null;
 
+  // Xu hướng so tháng trước
+  const pmonth = statMonth === 1 ? 12 : statMonth - 1;
+  const pyear = statMonth === 1 ? statYear - 1 : statYear;
+  const inPrev = (ds) => { if (!ds) return false; const d = new Date(ds); return d.getMonth() + 1 === pmonth && d.getFullYear() === pyear; };
+  const prevStat = {
+    total: rows.filter(r => inPrev(r.appointment_date || r.created_at)).length,
+    coc: rows.filter(r => r.status === 'coc' && inPrev(r.deposit_date || r.appointment_date || r.created_at)).length,
+    pt: rows.filter(r => r.status === 'phau_thuat' && inPrev(r.surgery_date || r.appointment_date || r.created_at)).length,
+  };
+  const prevRecs = recs.filter(r => r.ai_score != null && !r.deleted_at && inPrev(r.created_at));
+  const prevAiAvg = prevRecs.length ? prevRecs.reduce((s, r) => s + Number(r.ai_score || 0), 0) / prevRecs.length : null;
+  const pctTrend = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : (cur > 0 ? 100 : null);
+
+  // Tabs trạng thái + danh sách đã lọc (Bỏ lỡ = bong)
+  const STATUS_TABS = [
+    { id: 'all', label: 'Tất cả' }, { id: 'coc', label: 'Đã cọc' },
+    { id: 'phau_thuat', label: 'Phẫu thuật' }, { id: 'bong', label: 'Bỏ lỡ' },
+  ];
+  const tabCount = (id) => id === 'all' ? visible.length : visible.filter(r => r.status === id).length;
+  const listVisible = statusTab === 'all' ? visible : visible.filter(r => r.status === statusTab);
+
   return (
     <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-700">
-      <div className="relative">
-        <div className="relative flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center"><UserCheck className="w-6 h-6 text-teal-600" strokeWidth={1.75} /></div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800 leading-tight tracking-tight">Khách tư vấn</h2>
-              <p className="text-slate-500 text-sm">Tiếp nhận trực tiếp · hồ sơ · ghi âm · đánh giá AI</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Chọn tháng cho thống kê */}
-            <div className="fx-glass flex items-center gap-1 rounded-xl px-1.5 py-1">
-              <button onClick={prevStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
-              <span className="text-xs font-bold text-slate-700 min-w-[64px] text-center">Th{statMonth}/{statYear}</span>
-              <button onClick={nextStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronRight className="w-4 h-4" /></button>
-            </div>
-            {!loading && isAdmin && trash.length > 0 && (
-              <button onClick={() => setTrashOpen(true)} className="fx-glass text-sm font-semibold text-slate-600 px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Thùng rác {trash.length}</button>
-            )}
+      {/* Hero banner */}
+      <div className="relative overflow-hidden rounded-3xl p-5 text-white bg-gradient-to-br from-teal-500 to-teal-700">
+        <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-36 h-36 rounded-full bg-white/10" />
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-white/15 grid place-items-center shrink-0"><UserCheck className="w-8 h-8 text-white" strokeWidth={1.75} /></div>
+          <div className="min-w-0">
+            <h2 className="text-[26px] font-bold tracking-tight leading-tight">Khách tư vấn</h2>
+            <p className="text-teal-50 text-sm mt-1">Tiếp nhận • Hồ sơ • Ghi âm • Đánh giá AI</p>
           </div>
         </div>
+        <div className="absolute right-4 bottom-4 w-14 h-14 rounded-full bg-white grid place-items-center shadow-lg"><Mic className="w-6 h-6 text-teal-600" /></div>
+      </div>
 
-        {!loading && (
-          <div className="relative mt-5 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {[
-              { label: 'Tổng khách', value: stat.total, sub: `tiếp nhận Th${statMonth}`, accent: 'text-slate-800' },
-              { label: 'Đã cọc', value: stat.coc, sub: `cọc Th${statMonth}`, accent: 'text-cyan-600' },
-              { label: 'Phẫu thuật', value: stat.pt, sub: `mổ Th${statMonth}`, accent: 'text-teal-600' },
-              { label: 'Điểm tư vấn TB', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: aiAvg != null ? `AI · Th${statMonth} · /10` : 'chưa có', accent: 'text-amber-600' },
-            ].map(t => (
-              <div key={t.label} className="fx-glass rounded-2xl p-3.5">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{t.label}</div>
-                <div className={`fx-num text-2xl font-bold mt-1 ${t.accent}`}>{t.value}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">{t.sub}</div>
-              </div>
-            ))}
-          </div>
+      {/* Chọn tháng + thùng rác */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1.5 py-1 shadow-sm">
+          <button onClick={prevStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
+          <span className="text-sm font-bold text-slate-700 min-w-[72px] text-center">Th{statMonth}/{statYear}</span>
+          <button onClick={nextStatMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronRight className="w-4 h-4" /></button>
+        </div>
+        {!loading && isAdmin && trash.length > 0 && (
+          <button onClick={() => setTrashOpen(true)} className="bg-white rounded-xl border border-slate-200 shadow-sm text-sm font-semibold text-slate-600 px-3.5 py-2.5 inline-flex items-center gap-2"><Trash2 className="w-4 h-4" /> Thùng rác <span className="bg-rose-50 text-rose-600 font-bold text-xs rounded-full min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center">{trash.length}</span></button>
         )}
+      </div>
 
-        <div className="relative mt-4">
-          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.75} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3 text-sm rounded-2xl bg-white/80 border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none backdrop-blur transition" />
-          {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+      {/* Stat cards */}
+      {!loading && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {[
+            { key: 'total', label: 'Tổng khách', icon: Users, tone: 'teal', value: stat.total, sub: `tiếp nhận Th${statMonth}`, trend: pctTrend(stat.total, prevStat.total), num: 'text-slate-800' },
+            { key: 'coc', label: 'Đã cọc', icon: CreditCard, tone: 'blue', value: stat.coc, sub: `cọc Th${statMonth}`, trend: pctTrend(stat.coc, prevStat.coc), num: 'text-slate-800' },
+            { key: 'pt', label: 'Phẫu thuật', icon: Activity, tone: 'green', value: stat.pt, sub: `mổ Th${statMonth}`, trend: pctTrend(stat.pt, prevStat.pt), num: 'text-slate-800' },
+            { key: 'ai', label: 'Điểm tư vấn TB', icon: Star, tone: 'amber', value: aiAvg != null ? aiAvg.toFixed(1) : '—', sub: `AI • Th${statMonth} /10`, delta: (aiAvg != null && prevAiAvg != null) ? (aiAvg - prevAiAvg) : null, num: 'text-orange-500' },
+          ].map(t => {
+            const TT = { teal: 'bg-teal-50 text-teal-600', blue: 'bg-blue-50 text-blue-600', green: 'bg-green-50 text-green-600', amber: 'bg-amber-50 text-amber-500' }[t.tone];
+            const up = t.delta != null ? t.delta >= 0 : (t.trend != null ? t.trend >= 0 : null);
+            const trendTxt = t.delta != null ? `${t.delta >= 0 ? '↑' : '↓'} ${Math.abs(t.delta).toFixed(1)}` : (t.trend != null ? `${t.trend >= 0 ? '↑' : '↓'} ${Math.abs(t.trend)}%` : null);
+            return (
+              <div key={t.key} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                <div className={`w-10 h-10 rounded-xl grid place-items-center mb-2 ${TT}`}><t.icon className="w-5 h-5" strokeWidth={1.9} /></div>
+                <div className="text-[11px] text-slate-500 font-semibold">{t.label}</div>
+                <div className={`text-2xl font-extrabold leading-none mt-0.5 ${t.num}`}>{t.value}</div>
+                <div className="text-[10.5px] text-slate-400 mt-0.5">{t.sub}</div>
+                {trendTxt && <span className={`inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2 py-0.5 mt-2 ${up ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>{trendTxt}</span>}
+              </div>
+            );
+          })}
         </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.75} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full pl-11 pr-10 py-3.5 text-sm rounded-2xl bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition" />
+        {search && <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
       </div>
 
       {lb.length > 0 && (
-        <div className="fx-glass rounded-2xl p-4">
-          <h3 className="font-bold text-amber-600 mb-3 flex items-center gap-2 text-sm"><span className="text-base">🏆</span> Xếp hạng chất lượng tư vấn (AI) · Th{statMonth}/{statYear}</h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <h3 className="font-bold text-slate-800 text-[15px] flex items-center gap-2 min-w-0"><Trophy className="w-5 h-5 text-amber-500 shrink-0" /> <span className="truncate">Xếp hạng chất lượng tư vấn (AI) · Th{statMonth}/{statYear}</span></h3>
+            <span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1 inline-flex items-center gap-1 shrink-0">Xem tất cả <ChevronRight className="w-3.5 h-3.5" /></span>
+          </div>
+          <div className="divide-y divide-slate-50">
             {lb.map((e, i) => (
-              <div key={e.id} className="flex items-center gap-2.5 bg-white/60 rounded-xl px-3 py-2 border border-white/70">
-                <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'bg-slate-100 text-slate-500'}`}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
-                <span className="text-sm font-semibold text-slate-700 truncate flex-1 min-w-0">{e.name}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreCls(e.avg)}`}>{e.avg.toFixed(1)}<span className="opacity-60">/10</span></span>
+              <div key={e.id} className="flex items-center gap-3 py-2">
+                <span className={`w-8 h-8 shrink-0 rounded-full grid place-items-center text-sm font-extrabold ${i === 0 ? 'text-white bg-gradient-to-br from-amber-400 to-amber-500' : i === 1 ? 'text-white bg-gradient-to-br from-slate-300 to-slate-400' : i === 2 ? 'text-white bg-gradient-to-br from-orange-300 to-orange-400' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</span>
+                <span className="flex-1 min-w-0 font-bold text-slate-700 truncate">{e.name}</span>
+                <span className={`text-[13px] font-extrabold px-3 py-1 rounded-full ${scoreCls(e.avg)}`}>{e.avg.toFixed(1)} / 10</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Tabs trạng thái */}
+      {!loading && (
+        <div className="flex gap-5 border-b border-slate-200 overflow-x-auto -mx-1 px-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+          {STATUS_TABS.map(t => {
+            const on = statusTab === t.id;
+            return (
+              <button key={t.id} onClick={() => setStatusTab(t.id)} className={`pb-3 pt-1 text-[15px] font-bold whitespace-nowrap border-b-2 -mb-px transition ${on ? 'text-teal-700 border-teal-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+                {t.label} ({tabCount(t.id)})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
-      ) : visible.length === 0 ? (
-        <div className="fx-glass rounded-2xl p-10 text-center text-slate-400">Chưa có khách tư vấn. Vào Lịch hẹn bấm “Tiếp nhận tư vấn”.</div>
+      ) : listVisible.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400">Không có khách trong mục này.</div>
       ) : (
-        <div className="lg:grid lg:grid-cols-[minmax(300px,360px)_1fr] lg:gap-5 lg:items-start">
-          {/* MASTER — danh sách gọn, scan nhanh */}
-          <div className="space-y-5 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
-            {groupedVisible.map(([date, items]) => (
-              <div key={date}>
-                <div className="flex items-center gap-2 mb-2.5 px-1">
-                  <h3 className="font-bold text-slate-400 text-[11px] uppercase tracking-wider">{date}</h3>
-                  <span className="h-px flex-1 bg-slate-100" />
-                  <span className="text-[11px] font-bold text-slate-400">{items.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {items.map(r => {
+        <div className="lg:grid lg:grid-cols-[minmax(300px,380px)_1fr] lg:gap-5 lg:items-start">
+          {/* MASTER — danh sách phẳng */}
+          <div className="space-y-3 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
+            {listVisible.map(r => {
                     const rs = recsOf(r.id);
-                    const best = rs.find(x => x.ai_score != null);
+                    const dur = fmtHrMin(rs.reduce((s, x) => s + (x.duration_sec || 0), 0));
                     const active = selected?.id === r.id;
                     return (
                       <button key={r.id} onClick={() => { setSelectedId(r.id); setSheetFor(r); }}
-                        className={`w-full text-left relative overflow-hidden rounded-2xl p-3 pl-4 flex items-center gap-3 ${active
-                          ? 'fx-glass-active'
-                          : 'fx-glass fx-glass-hover'}`}>
-                        <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${stripCls[r.status] || 'from-slate-300 to-slate-400'}`} />
-                        <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm">{initials(r.customer_name)}</div>
+                        className={`w-full text-left rounded-2xl p-3 flex items-center gap-3 border shadow-sm transition ${active ? 'border-teal-300 ring-1 ring-teal-200 bg-white' : 'border-slate-100 bg-white hover:border-teal-200'}`}>
+                        <div className={`relative w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br ${avTone(r.customer_name)} text-white grid place-items-center font-extrabold text-base`}>
+                          {initials(r.customer_name)}
+                          <span className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
+                        </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800 text-[15px] truncate flex-1">{r.customer_name}</span>
-                            <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
-                          </div>
-                          <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                            <span className="flex items-center gap-1"><Phone className="w-3 h-3" strokeWidth={1.75} /> {maskPhone(r.phone)}</span>
-                            {rs.length > 0 && <span className="text-rose-400 font-semibold">{rs.length} ghi âm</span>}
+                          <div className="font-extrabold text-slate-800 text-[17px] leading-tight truncate">{r.customer_name}</div>
+                          <div className="flex items-center gap-2 mt-1 text-[13px] text-slate-400 flex-wrap">
+                            <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" strokeWidth={1.9} /> {maskPhone(r.phone)}</span>
+                            {dur && <><span className="text-slate-300">·</span><span className="text-rose-500 font-semibold">{dur}</span></>}
                           </div>
                         </div>
-                        {best?.ai_score != null && <span className={`shrink-0 fx-num text-xs font-bold w-8 h-8 rounded-full flex items-center justify-center ${scoreCls(best.ai_score)}`}>{best.ai_score}</span>}
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className={`text-[12.5px] font-bold px-3 py-1.5 rounded-full ${ST[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{ST[r.status]?.label || r.status}</span>
+                          {rs.length > 0 && <span className="text-rose-500 font-extrabold text-[15px] min-w-[18px] text-center">{rs.length}</span>}
+                          <ChevronRight className="w-5 h-5 text-slate-300" />
+                        </div>
                       </button>
                     );
                   })}
-                </div>
-              </div>
-            ))}
           </div>
 
           {/* DETAIL — desktop: khung chi tiết dính cạnh phải */}
