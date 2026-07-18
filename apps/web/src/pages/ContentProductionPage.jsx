@@ -24,6 +24,13 @@ const suggestSourceId = (name, date) => {
 };
 const SOURCE_TYPES = ['Before/After', 'Feedback', 'Hậu phẫu', 'Quá trình làm', 'Tư vấn bác sĩ', 'Khác'];
 const SERVICE_GROUPS = ['Hàm mặt', 'Body', 'Tiểu phẫu'];
+// Lọc nhanh theo giai đoạn (suy từ tiến độ dựng clip)
+const KHO_PHASES = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'dang_dung', label: 'Đang dựng' },
+  { id: 'cho_duyet', label: 'Chờ duyệt' },
+  { id: 'da_duyet', label: 'Đã duyệt' },
+];
 const SOURCE_STATUS = {
   chua_dung: { label: 'Chưa dựng', cls: 'bg-slate-100 text-slate-600' },
   dang_dung: { label: 'Đang dựng', cls: 'bg-blue-100 text-blue-700' },
@@ -191,6 +198,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
   const [search, setSearch] = useState('');
+  const [khoPhase, setKhoPhase] = useState('all');  // lọc nhanh theo giai đoạn (chip)
   const [khoStatus, setKhoStatus] = useState('');   // lọc trạng thái source
   const [khoService, setKhoService] = useState(''); // lọc dịch vụ
   const [khoFrom, setKhoFrom] = useState('');       // lọc ngày quay từ
@@ -274,12 +282,16 @@ const ContentProductionPage = ({ setActiveTab }) => {
   }, {})).map(e => ({ ...e, avg: e.n ? e.sum / e.n : 0 })).sort((x, y) => y.avg - x.avg).slice(0, 5);
 
   const q = search.trim().toLowerCase();
-  const visStores = stores.filter(s =>
+  // Giai đoạn của 1 media (suy từ tiến độ): đã duyệt / chờ duyệt / đang dựng
+  const phaseOf = (s) => { const p = progressOf(s.id, s.source_status); return p === 100 ? 'da_duyet' : p >= 75 ? 'cho_duyet' : 'dang_dung'; };
+  const phaseBase = stores.filter(s =>
     (!q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q)) &&
     (!khoStatus || (s.source_status || 'chua_dung') === khoStatus) &&
     (!khoService || (s.service || '').includes(khoService)) &&
     (!khoFrom || (s.shoot_date && s.shoot_date >= khoFrom)) &&
     (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)));
+  const phaseCount = (id) => id === 'all' ? phaseBase.length : phaseBase.filter(s => phaseOf(s) === id).length;
+  const visStores = khoPhase === 'all' ? phaseBase : phaseBase.filter(s => phaseOf(s) === khoPhase);
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
@@ -376,6 +388,21 @@ const ContentProductionPage = ({ setActiveTab }) => {
           </>
         )}
       </div>
+
+      {/* Chip lọc theo giai đoạn — Kho media */}
+      {tab === 'kho' && (
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+          {KHO_PHASES.map(p => {
+            const active = khoPhase === p.id;
+            return (
+              <button key={p.id} onClick={() => setKhoPhase(p.id)}
+                className={`shrink-0 whitespace-nowrap h-9 px-4 rounded-full text-[13.5px] font-bold transition ${active ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/25' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
+                {p.label} ({phaseCount(p.id)})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
