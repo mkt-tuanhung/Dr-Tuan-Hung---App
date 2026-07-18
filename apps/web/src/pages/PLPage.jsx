@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
-import { TrendingUp, TrendingDown, DollarSign, Megaphone, Banknote, Package, Users, PieChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Megaphone, Banknote, Package, Users, PieChart, Wallet } from 'lucide-react';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0)) + 'đ';
 const lastDay = (y, m) => `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
@@ -11,18 +11,20 @@ export default function PLPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [loading, setLoading] = useState(true);
-  const [d, setD] = useState({ revenue: 0, ads: 0, hospitalFee: 0, expenses: 0, labor: 0, cases: 0 });
+  const [d, setD] = useState({ revenue: 0, ads: 0, hospitalFee: 0, expenses: 0, materials: 0, labor: 0, cases: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = lastDay(year, month);
-    const [apptRes, adsRes, expRes, prRes, partnerRes] = await Promise.all([
+    const [apptRes, adsRes, expRes, prRes, partnerRes, matRes] = await Promise.all([
       supabase.from('customer_appointments').select('revenue, hospital_fee, surgery_date, hospital_fee_date').eq('status', 'phau_thuat'),
       supabase.from('marketing_ads_performance').select('amount_spent, date').gte('date', startDate).lte('date', endDate),
       supabase.from('expenses').select('amount, date, status').eq('status', 'paid').gte('date', startDate).lte('date', endDate),
       supabase.from('payroll').select('net_salary, unpaid_advance').eq('month', month).eq('year', year),
       supabase.from('partner_surgeries').select('partner_fee, surgery_date').eq('partner_paid', true).gte('surgery_date', startDate).lte('surgery_date', endDate),
+      // Vật tư nhập mới trong tháng = khoản chi (phiếu nhập kho)
+      supabase.from('inventory_transactions').select('amount, date').eq('type', 'import').gte('date', startDate).lte('date', endDate),
     ]);
     let revenue = 0, hospitalFee = 0, cases = 0;
     (apptRes.data || []).forEach(a => {
@@ -33,14 +35,15 @@ export default function PLPage() {
     (partnerRes.data || []).forEach(p => { revenue += Number(p.partner_fee || 0); cases++; });
     const ads = (adsRes.data || []).reduce((s, x) => s + Number(x.amount_spent || 0), 0);
     const expenses = (expRes.data || []).reduce((s, x) => s + Number(x.amount || 0), 0);
+    const materials = (matRes.data || []).reduce((s, x) => s + Number(x.amount || 0), 0);
     const labor = (prRes.data || []).reduce((s, x) => s + (Number(x.net_salary || 0) - Number(x.unpaid_advance || 0)), 0);
-    setD({ revenue, ads, hospitalFee, expenses, labor, cases });
+    setD({ revenue, ads, hospitalFee, expenses, materials, labor, cases });
     setLoading(false);
   }, [month, year]);
   useEffect(() => { load(); }, [load]);
-  useRealtimeReload('customer_appointments,marketing_ads_performance,expenses,payroll', load);
+  useRealtimeReload('customer_appointments,marketing_ads_performance,expenses,payroll,inventory_transactions', load);
 
-  const totalCost = d.ads + d.hospitalFee + d.expenses + d.labor;
+  const totalCost = d.ads + d.hospitalFee + d.expenses + d.materials + d.labor;
   const profit = d.revenue - totalCost;
   const margin = d.revenue > 0 ? (profit / d.revenue * 100) : 0;
   const perCase = d.cases > 0 ? profit / d.cases : 0;
@@ -48,7 +51,8 @@ export default function PLPage() {
   const costRows = [
     { label: 'Chi phí quảng cáo', value: d.ads, icon: Megaphone, cls: 'text-rose-600 bg-rose-50' },
     { label: 'Viện phí', value: d.hospitalFee, icon: Banknote, cls: 'text-orange-600 bg-orange-50' },
-    { label: 'Vật tư & chi khác', value: d.expenses, icon: Package, cls: 'text-purple-600 bg-purple-50' },
+    { label: 'Vật tư nhập kho', value: d.materials, icon: Package, cls: 'text-emerald-600 bg-emerald-50' },
+    { label: 'Chi khác (phiếu chi)', value: d.expenses, icon: Wallet, cls: 'text-purple-600 bg-purple-50' },
     { label: 'Lương + hoa hồng', value: d.labor, icon: Users, cls: 'text-blue-600 bg-blue-50' },
   ];
   const pct = (v) => totalCost > 0 ? Math.round(v / totalCost * 100) : 0;
@@ -117,7 +121,7 @@ export default function PLPage() {
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed bg-slate-50 rounded-xl p-3">
-            <b>Cách tính:</b> Doanh thu = tổng doanh thu các ca đã mổ trong tháng (đã gồm upsale). Chi phí gồm: quảng cáo (đã tiêu) + viện phí + vật tư/chi khác (phiếu chi đã duyệt) + lương &amp; hoa hồng (đã trừ phần hoàn tạm ứng chi hộ để không trùng). <b>Lợi nhuận = Doanh thu − Tổng chi phí.</b> Tạm ứng chi hộ &amp; ứng lương (khoản cho vay) không tính là chi phí. Nếu số nào lệch thực tế, báo tôi tinh chỉnh công thức.
+            <b>Cách tính:</b> Doanh thu = tổng doanh thu các ca đã mổ trong tháng (đã gồm upsale). Chi phí gồm: quảng cáo (đã tiêu) + viện phí + <b>vật tư nhập kho</b> (phiếu nhập vật tư mới trong tháng) + chi khác (phiếu chi đã duyệt) + lương &amp; hoa hồng (đã trừ phần hoàn tạm ứng chi hộ để không trùng). <b>Lợi nhuận = Doanh thu − Tổng chi phí.</b> Tạm ứng chi hộ &amp; ứng lương (khoản cho vay) không tính là chi phí. Nếu số nào lệch thực tế, báo tôi tinh chỉnh công thức.
           </p>
         </>
       )}
