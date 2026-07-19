@@ -20,35 +20,34 @@ khách bằng dữ liệu giả**. Kết quả: demo trông đầy đủ, số l
 - Vào https://supabase.com → **New project** (đặt tên `dr-tuan-hung-DEMO`).
 - Lưu lại `Project URL` và `anon key` (dùng cho web demo ở bước 5).
 
-### 2. Nhân bản CẤU TRÚC + DỮ LIỆU từ project thật sang demo
-Dùng connection string (Database → Settings → Connection string → URI) của **cả 2** project.
+### 2 + 3. Clone dữ liệu và ẩn danh — CHẠY 1 LỆNH
+Đã gói sẵn thành script [`demo_clone.sh`](./demo_clone.sh): nó tự dump cấu trúc + dữ liệu từ
+project thật, nạp sang demo, rồi chạy ẩn danh. Cần cài Postgres client (`pg_dump`, `psql`).
 
 ```bash
-# Cần cài Postgres client (pg_dump/psql). Thay <PROD_URI> và <DEMO_URI> bằng chuỗi thật.
+# Lấy 2 chuỗi kết nối ở: Supabase → Project Settings → Database → Connection string → URI
+export PROD_URI='postgresql://postgres:...@db.xxx.supabase.co:5432/postgres'   # project THẬT
+export DEMO_URI='postgresql://postgres:...@db.yyy.supabase.co:5432/postgres'   # project DEMO (trống)
 
-# a) Dump toàn bộ (cả schema auth + public + dữ liệu). Bao gồm cả bảng đăng nhập.
-pg_dump "<PROD_URI>" \
-  --schema=public --schema=auth \
-  --no-owner --no-privileges \
-  -f dump_full.sql
-
-# b) Nạp vào project DEMO
-psql "<DEMO_URI>" -f dump_full.sql
+bash supabase/demo_clone.sh
 ```
-> Nếu `psql` báo lỗi vài dòng về extension/owner có sẵn của Supabase → bỏ qua, không sao.
-> Có thể thêm `--exclude-schema=storage` nếu không muốn kéo metadata file.
+> Script tự: (1) nạp cấu trúc, (2) gỡ ràng buộc khoá ngoại `profiles→auth.users` để nạp
+> được dữ liệu nhân sự mà **không cần copy tài khoản đăng nhập thật**, (3) nạp dữ liệu,
+> (4) chạy [`demo_anonymize.sql`](./demo_anonymize.sql) thay **mọi** tên/SĐT/ghi chú/
+> transcript/ảnh/ghi âm bằng dữ liệu giả. Vài cảnh báo "already exists" khi nạp là bình thường.
 
-### 3. ⭐ ẨN DANH dữ liệu khách (bắt buộc, làm ngay)
-Mở **SQL Editor của project DEMO** → dán toàn bộ file [`demo_anonymize.sql`](./demo_anonymize.sql) → Run.
+Chạy tay (nếu không dùng script): nạp `pg_dump --schema=public` (schema rồi data) vào demo,
+chạy `ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;`, rồi mở
+**SQL Editor** dán [`demo_anonymize.sql`](./demo_anonymize.sql) → Run.
 
-Script này thay **mọi** tên/SĐT/ghi chú/transcript/ảnh/ghi âm bằng dữ liệu giả, và đổi cả
-email đăng nhập của nhân viên. Nó có kiểm tra tồn tại bảng/cột nên an toàn.
-
-Kiểm tra lại:
+Kiểm tra lại (phải là tên/SĐT giả):
 ```sql
-select customer_name, phone from customer_appointments limit 20;  -- phải là tên/SĐT giả
-select full_name, phone from profiles limit 20;                    -- phải là tên/SĐT giả
+select customer_name, phone from customer_appointments limit 20;
+select full_name, phone from profiles limit 20;
 ```
+
+> Vì không copy tài khoản đăng nhập thật, các nhân sự chỉ còn là **dòng dữ liệu** (đủ để hiển
+> thị tên trong app), không ai đăng nhập được — đúng ý: chỉ 1 admin demo bạn tạo ở bước 4 mới vào được.
 
 ### 4. Tạo tài khoản ADMIN demo (làm SAU bước 3)
 - Supabase DEMO → **Authentication → Add user**: email `admin@demo.local`, đặt mật khẩu.
