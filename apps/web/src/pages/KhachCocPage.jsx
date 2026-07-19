@@ -4,13 +4,15 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft } from 'lucide-react';
+import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft, ChevronRight, Users, Wallet, CalendarDays, Clock } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
 const CAN_ADD_ROLES = ['sale_offline', 'telesale', 'admin', 'accountant'];
 const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
 const todayStr = () => new Date().toISOString().split('T')[0];
+const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+const fmtTy = (n) => n >= 1e9 ? (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + ' Tỷ' : n >= 1e6 ? Math.round(n / 1e6) + ' Tr' : new Intl.NumberFormat('vi-VN').format(n || 0) + 'đ';
 const EMPTY_COC = {
   customer_name: '', phone: '', deposit_amount: '', deposit_date: todayStr(),
   expected_surgery_date: '', service: '', telesale_id: '', sale_id: '', notes: '',
@@ -245,6 +247,13 @@ const KhachCocPage = ({ isNested = false }) => {
     return acc;
   }, {});
 
+  const cocStats = {
+    count: customers.length,
+    total: customers.reduce((s, c) => s + Number(c.deposit_amount || 0), 0),
+    waitDr: customers.filter(c => (c.care_status || 'Đang chăm sóc') === 'Chờ lịch bác sĩ').length,
+    postpone: customers.filter(c => (c.care_status || 'Đang chăm sóc') === 'Khách xin hoãn').length,
+  };
+
   const renderNotes = (notesString) => {
     if (!notesString) return null;
     const lines = notesString.split('\n').filter(l => l.trim() !== '');
@@ -357,6 +366,22 @@ const KhachCocPage = ({ isNested = false }) => {
             </div>
           )}
 
+          {/* Thẻ số liệu */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { icon: Users, color: '#14b8a6', label: 'Khách giữ cọc', value: cocStats.count },
+              { icon: Wallet, color: '#3b82f6', label: 'Tổng tiền cọc', value: fmtTy(cocStats.total) },
+              { icon: CalendarDays, color: '#8b5cf6', label: 'Chờ lịch bác sĩ', value: cocStats.waitDr },
+              { icon: Clock, color: '#f59e0b', label: 'Khách xin hoãn', value: cocStats.postpone },
+            ].map((c, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
+                <div className="text-xl font-bold text-slate-800">{c.value}</div>
+                <div className="text-xs text-slate-500 mt-0.5">{c.label}</div>
+              </div>
+            ))}
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
               {CARE_TABS.map(tab => (
@@ -394,29 +419,29 @@ const KhachCocPage = ({ isNested = false }) => {
                     <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                     {apps.map(app => {
                       const st = app.care_status || 'Đang chăm sóc';
                       const noteCount = app.care_notes ? app.care_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                       return (
                         <button key={app.id} type="button" onClick={() => openCare(app)}
-                          className="text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-blue-400 hover:shadow-md transition-all">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-slate-800 text-lg truncate">{app.customer_name}</h4>
-                              <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</div>
+                          className="w-full text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center gap-3 hover:border-teal-300 hover:shadow-md transition">
+                          <div className="relative shrink-0">
+                            <span className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center font-bold">{initials(app.customer_name)}</span>
+                            <span className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-bold text-slate-800 truncate">{app.customer_name}</h4>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLE[st]}`}>{st}</span>
                             </div>
-                            <span className={`font-semibold px-2 py-1 rounded-lg text-xs border whitespace-nowrap shrink-0 ${STATUS_STYLE[st]}`}>{st}</span>
+                            <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {app.phone}</div>
+                            <div className="text-xs text-slate-500 mt-1 truncate"><span className="text-slate-400">Dịch vụ:</span> <span className="text-slate-700 font-medium">{app.service || 'Chưa chọn'}</span></div>
+                            <div className="text-xs text-slate-500"><span className="text-slate-400">Đặt cọc:</span> <span className="text-teal-600 font-bold">{Number(app.deposit_amount || 0).toLocaleString('vi-VN')}đ</span></div>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm bg-slate-50 p-3 rounded-xl">
-                            <div className="text-slate-500 text-xs">Dịch vụ:</div>
-                            <div className="font-semibold text-slate-800 text-right truncate">{app.service || 'Chưa chọn'}</div>
-                            <div className="text-slate-500 text-xs">Đã cọc:</div>
-                            <div className="font-bold text-blue-600 text-right">{Number(app.deposit_amount || 0).toLocaleString('vi-VN')}đ</div>
-                          </div>
-                          <div className="mt-auto flex items-center justify-between pt-1 text-sm">
-                            <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {noteCount} mốc</span>
-                            <span className="text-blue-600 font-semibold">Mở nhật ký →</span>
+                          <div className="shrink-0 flex flex-col items-end justify-between self-stretch">
+                            <ChevronRight className="w-5 h-5 text-slate-300" />
+                            <span className="text-slate-400 text-[11px] flex items-center gap-1 whitespace-nowrap"><Clock className="w-3.5 h-3.5" /> {noteCount} mốc</span>
                           </div>
                         </button>
                       );
