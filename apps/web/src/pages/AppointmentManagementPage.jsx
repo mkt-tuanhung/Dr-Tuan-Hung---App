@@ -415,8 +415,21 @@ const AppointmentManagementPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — MOBILE (xanh tối) */}
+      <div className="lg:hidden relative overflow-hidden rounded-3xl p-5 text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 grid place-items-center text-[10px] font-bold">DT</span>
+            <div className="leading-tight"><div className="text-xs font-bold">DR TUẤN HƯNG</div><div className="text-[8px] tracking-[0.2em] text-white/60">INTERNAL SYSTEM</div></div>
+          </div>
+          <h2 className="text-2xl font-bold">Lịch hẹn</h2>
+          <p className="text-white/70 text-sm mt-0.5">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
+        </div>
+      </div>
+
+      {/* Header — DESKTOP */}
+      <div className="hidden lg:flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Lịch hẹn</h2>
           <p className="text-slate-500 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
@@ -452,6 +465,12 @@ const AppointmentManagementPage = () => {
           )}
         </div>
       </div>
+
+      {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
+        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới' }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition">
+          <Plus className="w-7 h-7" strokeWidth={2.5} />
+        </button>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" /></div>
