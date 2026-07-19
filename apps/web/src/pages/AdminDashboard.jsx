@@ -230,24 +230,26 @@ const Overview = ({ profile, setActiveTab }) => {
               <div className="leading-tight"><div className="text-xs font-bold tracking-wide">DR TUẤN HƯNG</div><div className="text-[8px] tracking-[0.22em] text-white/60">COSMETIC SURGERY</div></div>
             </div>
           </div>
-          <div className="mt-6">
-            <p className="text-white/80 text-sm">Xin chào 👋</p>
-            <h2 className="text-3xl font-bold text-white mt-0.5">{profile?.full_name || 'Admin'}</h2>
-            <p className="text-white/70 text-xs mt-1">Chúc bạn một ngày làm việc hiệu quả!</p>
-            <div className="mt-3 inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-3 py-1"><span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" /><span className="text-[11px] font-medium text-white">Hệ thống đang hoạt động tốt</span></div>
-          </div>
-          {/* Thẻ kính: lịch hẹn hôm nay | doanh thu hôm nay */}
-          <div className="mt-5 grid grid-cols-2 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/15">
-            <button onClick={() => setActiveTab('appointments')} className="p-4 text-left border-r border-white/10 hover:bg-white/5 transition">
-              <div className="text-white/70 text-[11px]">Lịch hẹn hôm nay</div>
-              <div className="text-white text-2xl font-bold mt-0.5">{d.appointmentsToday}<span className="text-xs font-medium text-white/60"> cuộc hẹn</span></div>
-              {d.apptTrend != null && <div className="text-[11px] mt-1 font-semibold text-emerald-300">{d.apptTrend >= 0 ? '↑' : '↓'} {Math.abs(d.apptTrend)}% <span className="text-white/50 font-normal">so với hôm qua</span></div>}
-            </button>
-            <button onClick={() => setActiveTab('finance')} className="p-4 text-left hover:bg-white/5 transition">
-              <div className="text-white/70 text-[11px]">Doanh thu hôm nay</div>
-              <div className="text-white text-lg font-bold mt-0.5">{todayFull}</div>
-              {d.revTrend != null && <div className="text-[11px] mt-1 font-semibold text-emerald-300">{d.revTrend >= 0 ? '↑' : '↓'} {Math.abs(d.revTrend)}% <span className="text-white/50 font-normal">so với hôm qua</span></div>}
-            </button>
+          <div className="mt-6 lg:mt-4 lg:flex lg:items-end lg:justify-between lg:gap-6">
+            <div className="min-w-0">
+              <p className="text-white/80 text-sm">Xin chào 👋</p>
+              <h2 className="text-3xl font-bold text-white mt-0.5">{profile?.full_name || 'Admin'}</h2>
+              <p className="text-white/70 text-xs mt-1">Chúc bạn một ngày làm việc hiệu quả!</p>
+              <div className="mt-3 inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-3 py-1"><span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" /><span className="text-[11px] font-medium text-white">Hệ thống đang hoạt động tốt</span></div>
+            </div>
+            {/* Thẻ kính: lịch hẹn hôm nay | doanh thu hôm nay */}
+            <div className="mt-5 lg:mt-0 lg:shrink-0 lg:w-[460px] grid grid-cols-2 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/15">
+              <button onClick={() => setActiveTab('appointments')} className="p-4 text-left border-r border-white/10 hover:bg-white/5 transition">
+                <div className="text-white/70 text-[11px]">Lịch hẹn hôm nay</div>
+                <div className="text-white text-2xl font-bold mt-0.5">{d.appointmentsToday}<span className="text-xs font-medium text-white/60"> cuộc hẹn</span></div>
+                {d.apptTrend != null && <div className="text-[11px] mt-1 font-semibold text-emerald-300">{d.apptTrend >= 0 ? '↑' : '↓'} {Math.abs(d.apptTrend)}% <span className="text-white/50 font-normal">so với hôm qua</span></div>}
+              </button>
+              <button onClick={() => setActiveTab('finance')} className="p-4 text-left hover:bg-white/5 transition">
+                <div className="text-white/70 text-[11px]">Doanh thu hôm nay</div>
+                <div className="text-white text-lg font-bold mt-0.5">{todayFull}</div>
+                {d.revTrend != null && <div className="text-[11px] mt-1 font-semibold text-emerald-300">{d.revTrend >= 0 ? '↑' : '↓'} {Math.abs(d.revTrend)}% <span className="text-white/50 font-normal">so với hôm qua</span></div>}
+              </button>
+            </div>
           </div>
         </div>
       </div>
