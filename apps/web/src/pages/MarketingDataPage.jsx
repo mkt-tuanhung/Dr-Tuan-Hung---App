@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -41,6 +41,8 @@ const MarketingDataPage = () => {
   const [fTruc, setFTruc] = useState('');
   const [edit, setEdit] = useState(null);     // row đang sửa / {} khi thêm mới
   const [importOpen, setImportOpen] = useState(false);
+  const [chip, setChip] = useState('all');
+  const [page, setPage] = useState(1);
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -70,14 +72,47 @@ const MarketingDataPage = () => {
   };
 
   const q = search.trim().toLowerCase();
+  const apptOf = (r) => apptMap[phoneKey(r.phone)];
+  const matchChip = (r) => {
+    const a = apptOf(r);
+    switch (chip) {
+      case 'nong': return r.status === 'nong';
+      case 'mat': return r.status === 'mat';
+      case 'da_lam_dv': return r.status === 'da_lam_dv' || a?.status === 'phau_thuat';
+      case 'cskh': return !!a?.post_op_status;
+      default: return true;
+    }
+  };
   const visible = rows.filter(r =>
     (!q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q)) &&
     (!fStatus || r.status === fStatus) &&
-    (!fTruc || r.truc_page_id === fTruc));
+    (!fTruc || r.truc_page_id === fTruc) && matchChip(r));
+  const stat = {
+    total: rows.length,
+    nong: rows.filter(r => r.status === 'nong').length,
+    daDV: rows.filter(r => r.status === 'da_lam_dv' || apptOf(r)?.status === 'phau_thuat' || apptOf(r)?.post_op_status).length,
+    cskh: rows.filter(r => apptOf(r)?.post_op_status).length,
+    mat: rows.filter(r => r.status === 'mat').length,
+  };
+  const totalPages = Math.max(1, Math.ceil(visible.length / 10));
+  const curPage = Math.min(page, totalPages);
+  const paged = visible.slice((curPage - 1) * 10, curPage * 10);
+  const CHIPS = [{ k: 'all', label: 'Tất cả' }, { k: 'nong', label: 'Nóng' }, { k: 'mat', label: 'Mất' }, { k: 'da_lam_dv', label: 'Đã làm DV' }, { k: 'cskh', label: 'CSKH' }];
+  const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* Header — MOBILE (xanh tối) */}
+      <div className="lg:hidden relative overflow-hidden rounded-3xl p-5 text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-4"><span className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 grid place-items-center text-[10px] font-bold">DT</span><div className="leading-tight"><div className="text-xs font-bold">DR TUẤN HƯNG</div><div className="text-[8px] tracking-[0.2em] text-white/60">INTERNAL SYSTEM</div></div></div>
+          <h2 className="text-2xl font-bold">Data khách hàng</h2>
+        </div>
+      </div>
+
+      {/* Header — DESKTOP */}
+      <div className="hidden lg:flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Database className="w-6 h-6 text-teal-600" /> Data khách hàng</h2>
           <p className="text-slate-400 text-sm mt-0.5">Data Marketing → Lịch hẹn → Cọc/Bong → Phẫu → Hậu phẫu → CSKH (hợp nhất theo SĐT)</p>
@@ -88,6 +123,23 @@ const MarketingDataPage = () => {
             <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
           </div>
         )}
+      </div>
+
+      {/* Thẻ số liệu */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {[
+          { icon: Users, color: '#14b8a6', label: 'Tổng khách', value: stat.total },
+          { icon: Flame, color: '#f43f5e', label: 'Khách nóng', value: stat.nong },
+          { icon: CheckCircle2, color: '#3b82f6', label: 'Đã làm dịch vụ', value: stat.daDV },
+          { icon: Headphones, color: '#f59e0b', label: 'Cần CSKH', value: stat.cskh },
+          { icon: UserX, color: '#64748b', label: 'Khách mất', value: stat.mat },
+        ].map((c, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
+            <div className="text-xl font-bold text-slate-800">{c.value.toLocaleString('vi-VN')}</div>
+            <div className="text-xs text-slate-500 mt-0.5">{c.label}</div>
+          </div>
+        ))}
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -105,7 +157,15 @@ const MarketingDataPage = () => {
         </select>
       </div>
 
-      <div className="text-xs text-slate-400">{visible.length} khách</div>
+      {/* Chips lọc nhanh */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {CHIPS.map(c => (
+            <button key={c.k} onClick={() => { setChip(c.k); setPage(1); }} className={`shrink-0 px-4 h-9 rounded-full text-sm font-semibold border transition ${chip === c.k ? 'bg-teal-600 text-white border-teal-600 shadow' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{c.label}</button>
+          ))}
+        </div>
+        <span className="text-xs text-slate-400 shrink-0">{visible.length} khách</span>
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
@@ -126,13 +186,18 @@ const MarketingDataPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {visible.length === 0 ? <tr><td colSpan={canWrite ? 7 : 6} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
-                  visible.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
+                {paged.length === 0 ? <tr><td colSpan={canWrite ? 7 : 6} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
+                  paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
                     <tr key={r.id} className="hover:bg-slate-50/60">
-                      <td className="px-4 py-3"><div className="font-semibold text-slate-800">{r.customer_name || '—'}</div>{r.description && <div className="text-[11px] text-slate-400 truncate max-w-[200px]">{r.description}</div>}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
+                          <div className="min-w-0"><div className="font-semibold text-slate-800 truncate">{r.customer_name || '—'}</div>{r.description && <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{r.description}</div>}</div>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-slate-600 tabular-nums">{r.phone}</td>
                       <td className="px-4 py-3 text-slate-500">{r.truc_page?.full_name || '—'}</td>
-                      <td className="px-4 py-3"><span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span></td>
+                      <td className="px-4 py-3"><span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span></td>
                       <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.last_exchange}>{r.last_exchange || '—'}</td>
                       <td className="px-4 py-3">{st ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span> : <span className="text-[11px] text-slate-300">Chưa có</span>}</td>
                       {canWrite && <td className="px-4 py-3 text-right"><div className="flex justify-end gap-1.5"><button onClick={() => setEdit(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Sửa</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
@@ -142,16 +207,32 @@ const MarketingDataPage = () => {
           </div>
           {/* Mobile */}
           <div className="md:hidden divide-y divide-slate-50">
-            {visible.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); return (
-              <div key={r.id} className="p-3" onClick={() => canWrite && setEdit(r)}>
-                <div className="flex justify-between gap-2">
-                  <div className="min-w-0"><div className="font-semibold text-slate-800 truncate">{r.customer_name || '—'}</div><div className="text-xs text-slate-400">{r.phone}</div></div>
-                  <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full h-fit ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span>
+            {paged.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); return (
+              <div key={r.id} className="p-3.5 flex items-center gap-3" onClick={() => canWrite && setEdit(r)}>
+                <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2"><div className="font-bold text-slate-800 truncate">{r.customer_name || '—'}</div><span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span></div>
+                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone}{r.truc_page?.full_name && <span className="text-slate-300">· {r.truc_page.full_name}</span>}</div>
+                  {r.last_exchange && <div className="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 shrink-0" /> {r.last_exchange}</div>}
+                  {st && <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
                 </div>
-                <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-400">{r.truc_page?.full_name && <span>{r.truc_page.full_name}</span>}{st && <span className={`font-semibold px-1.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}</div>
               </div>); })}
           </div>
+          {/* Phân trang */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-slate-400 text-xs">Trang {curPage}/{totalPages} · {visible.length} khách</span>
+              <div className="flex items-center gap-1">
+                <button disabled={curPage <= 1} onClick={() => setPage(curPage - 1)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 disabled:opacity-40 hover:bg-slate-50"><ChevronLeft className="w-4 h-4" /></button>
+                <button disabled={curPage >= totalPages} onClick={() => setPage(curPage + 1)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 disabled:opacity-40 hover:bg-slate-50"><ChevronRight className="w-4 h-4" /></button>
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {canWrite && (
+        <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
       )}
 
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
