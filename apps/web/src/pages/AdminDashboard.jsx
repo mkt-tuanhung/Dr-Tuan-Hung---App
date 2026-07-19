@@ -765,18 +765,18 @@ const AdminDashboard = () => {
         </header>
 
         {/* Mobile top bar */}
-        <header className="lg:hidden flex items-center justify-between bg-white border-b border-teal-100 px-4 py-3 sticky top-0 z-10">
-          <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1">
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 sticky top-0 z-10 text-white" style={{ background: 'linear-gradient(120deg,#0b3b34 0%,#0f5148 60%,#136b5e 100%)' }}>
+          <button onClick={() => setSidebarOpen(true)} className="text-white/80 p-1">
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
-            <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
+            <span className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 grid place-items-center text-[9px] font-bold">DT</span>
+            <div className="leading-tight text-left"><div className="text-[13px] font-bold">DR TUẤN HÙNG</div><div className="text-[7px] tracking-[0.22em] text-white/60">INTERNAL SYSTEM</div></div>
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell />
             <ProfileMenu mobile={true}>
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white text-xs font-bold cursor-pointer">
                 {profile?.full_name?.charAt(0) || 'A'}
               </div>
             </ProfileMenu>
