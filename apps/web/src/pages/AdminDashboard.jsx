@@ -79,8 +79,19 @@ const GROUP_STYLE = {
 
 const BOTTOM_NAV = ['overview', 'hr', 'appointments', 'kpi'];
 
-// Bảng màu cho donut cơ cấu dịch vụ
-const PIE_COLORS = ['#10b981', '#14b8a6', '#8b5cf6', '#f59e0b', '#3b82f6', '#cbd5e1'];
+// Bảng màu cho donut cơ cấu dịch vụ (xanh → xanh dương → tím, giống mockup)
+const PIE_COLORS = ['#22c55e', '#10b981', '#14b8a6', '#3b82f6', '#8b5cf6', '#cbd5e1'];
+const SUBTABS = [
+  { id: 'tong_quan', label: 'Tổng quan' },
+  { id: 'phan_tich', label: 'Phân tích' },
+  { id: 'van_hanh', label: 'Vận hành' },
+];
+const RANGES = [
+  { id: '7d', label: '7 ngày', unit: 'ngày', note: '7 ngày gần nhất' },
+  { id: '30d', label: '30 ngày', unit: 'ngày', note: 'so với 30 ngày trước' },
+  { id: '6m', label: '6 tháng', unit: 'tháng', note: 'so với 6 tháng trước' },
+  { id: '12m', label: '12 tháng', unit: 'tháng', note: '12 tháng gần nhất' },
+];
 const APPT_ST = {
   scheduled: { label: 'Chờ', cls: 'bg-amber-100 text-amber-700' },
   coc: { label: 'Đã cọc', cls: 'bg-sky-100 text-sky-700' },
@@ -97,11 +108,14 @@ const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).
 
 const Overview = ({ profile, setActiveTab }) => {
   const [loading, setLoading] = useState(true);
+  const [sub, setSub] = useState('tong_quan');
+  const [rangeKey, setRangeKey] = useState('30d');
   const [d, setD] = useState({
     totalStaff: 0, presentToday: 0, appointmentsToday: 0, pendingExpenses: 0, pendingLeaves: 0,
     monthRevenue: 0, todayRevenue: 0, closeRate: 0, newCustomers: 0, scTotal: 0,
     newStaffMonth: 0, apptTrend: null, revTrend: null, revMonthTrend: null, closeTrend: null, newCustTrend: null, rev6mTrend: null,
     revenue6m: [], services: [], todayList: [], weekly: [], newCust6w: [], topConsultants: [],
+    ranges: { '7d': [], '30d': [], '6m': [], '12m': [] },
   });
 
   useEffect(() => {
@@ -113,6 +127,7 @@ const Overview = ({ profile, setActiveTab }) => {
       const todayStr = iso(now);
       const monthKey = `${y}-${pad(mo + 1)}`;
       const sixStart = iso(new Date(y, mo - 5, 1));
+      const twelveStart = iso(new Date(y, mo - 11, 1));
       const dow = (now.getDay() + 6) % 7;                 // 0 = Thứ 2
       const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow);
 
@@ -123,8 +138,8 @@ const Overview = ({ profile, setActiveTab }) => {
         supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('customer_appointments')
           .select('id, customer_name, service, status, appointment_date, surgery_date, revenue, telesale_id, created_at')
-          .or(`appointment_date.gte.${sixStart},surgery_date.gte.${sixStart},created_at.gte.${sixStart}`)
-          .limit(5000),
+          .or(`appointment_date.gte.${twelveStart},surgery_date.gte.${twelveStart},created_at.gte.${twelveStart}`)
+          .limit(8000),
       ]);
 
       const staff = pf.data || [];
@@ -174,6 +189,11 @@ const Overview = ({ profile, setActiveTab }) => {
         return { d: lbl, v: appts.filter(a => a.appointment_date === iso(dt)).length };
       });
 
+      // Chuỗi doanh thu theo khoảng thời gian (cho tab Phân tích)
+      const revByDay = (n) => Array.from({ length: n }, (_, i) => { const dt = new Date(now); dt.setDate(now.getDate() - (n - 1 - i)); const ds = iso(dt); return { label: `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}`, value: appts.filter(a => a.status === 'phau_thuat' && a.surgery_date === ds).reduce((s, a) => s + Number(a.revenue || 0), 0) }; });
+      const revByMon = (n) => Array.from({ length: n }, (_, i) => { const dt = new Date(y, mo - (n - 1) + i, 1); const key = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`; return { label: `T${dt.getMonth() + 1}`, value: appts.filter(a => a.status === 'phau_thuat' && a.surgery_date && a.surgery_date.slice(0, 7) === key).reduce((s, a) => s + Number(a.revenue || 0), 0) }; });
+      const ranges = { '7d': revByDay(7), '30d': revByDay(30), '6m': revByMon(6), '12m': revByMon(12) };
+
       const tcMap = {};
       leadsM.forEach(a => { if (a.telesale_id) tcMap[a.telesale_id] = (tcMap[a.telesale_id] || 0) + 1; });
       const topConsultants = Object.entries(tcMap).map(([id, count]) => ({ name: nameOf[id] || 'Nhân viên', count })).sort((a, b) => b.count - a.count).slice(0, 3);
@@ -190,7 +210,7 @@ const Overview = ({ profile, setActiveTab }) => {
         newCustTrend: pctT(leadsM.length, prevLeads.length),
         rev6mTrend: pctT(revenue6m[5]?.revenue || 0, revenue6m[0]?.revenue || 0),
         revenue6m, services: services.map(s => ({ ...s, pct: scTotal ? Math.round(s.value / scTotal * 100) : 0 })),
-        todayList: todayAppts.slice(0, 6), weekly, newCust6w, topConsultants,
+        todayList: todayAppts.slice(0, 6), weekly, newCust6w, topConsultants, ranges,
       });
       setLoading(false);
     };
@@ -232,6 +252,14 @@ const Overview = ({ profile, setActiveTab }) => {
 
   return (
     <div className="space-y-4 lg:space-y-5">
+      {/* Sub-tabs trong Tổng quan */}
+      <div className="flex gap-1.5 bg-white rounded-2xl p-1.5 shadow-sm border border-slate-100 lg:w-fit">
+        {SUBTABS.map(t => (
+          <button key={t.id} onClick={() => setSub(t.id)} className={`flex-1 lg:flex-none lg:px-8 px-3 py-2 rounded-xl text-sm font-semibold transition ${sub === t.id ? 'bg-teal-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>{t.label}</button>
+        ))}
+      </div>
+
+      {sub === 'tong_quan' && <>
       {/* Hero — MOBILE: ảnh phòng khám làm nền */}
       <div className="lg:hidden relative overflow-hidden rounded-3xl shadow-lg">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/clinic-hero.png')" }} />
@@ -453,6 +481,104 @@ const Overview = ({ profile, setActiveTab }) => {
           </div>
         </div>
       </div>
+      </>}
+
+      {sub === 'phan_tich' && (
+        <div className="space-y-4">
+          <div className="flex gap-1.5 bg-white rounded-2xl p-1.5 shadow-sm border border-slate-100">
+            {RANGES.map(r => (
+              <button key={r.id} onClick={() => setRangeKey(r.id)} className={`flex-1 px-2 py-2 rounded-xl text-[13px] font-semibold transition ${rangeKey === r.id ? 'bg-teal-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>{r.label}</button>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between"><h3 className="font-bold text-slate-800">Doanh thu</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">Theo {RANGES.find(r => r.id === rangeKey)?.unit}</span></div>
+            <div className="text-2xl font-bold text-slate-800 mt-1">{fmtVND((d.ranges[rangeKey] || []).reduce((s, x) => s + x.value, 0))}</div>
+            <div className="text-[11px] text-slate-400">{RANGES.find(r => r.id === rangeKey)?.note}</div>
+            <ResponsiveContainer width="100%" height={230}>
+              <AreaChart data={d.ranges[rangeKey] || []} margin={{ top: 14, right: 8, left: -6, bottom: 0 }}>
+                <defs><linearGradient id="paA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.35} /><stop offset="100%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} width={44} tickFormatter={(v) => v >= 1e9 ? (v / 1e9).toFixed(0) + 'T' : v >= 1e6 ? Math.round(v / 1e6) + 'Tr' : v} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} formatter={(v) => [fmtVND(v), 'Doanh thu']} />
+                <Area type="monotone" dataKey="value" stroke="#059669" strokeWidth={2.5} fill="url(#paA)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 className="font-bold text-slate-800 mb-3">Cơ cấu dịch vụ</h3>
+            {d.services.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu</div> : (
+            <div className="flex items-center gap-4">
+              <div className="relative w-[130px] h-[130px] shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RPieChart><Pie data={d.services} dataKey="value" nameKey="name" innerRadius={44} outerRadius={62} paddingAngle={2} stroke="none">{d.services.map((s, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}</Pie></RPieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center"><div className="text-xl font-bold text-slate-800">{d.scTotal}</div><div className="text-[10px] text-slate-400">Khách hàng</div></div>
+              </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                {d.services.map((s, i) => (
+                  <div key={s.name} className="flex items-center gap-2 text-[13px]"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} /><span className="flex-1 min-w-0 truncate text-slate-600">{s.name}</span><span className="font-bold text-slate-700">{s.pct}%</span><span className="text-slate-400 w-9 text-right">{s.value}</span></div>
+                ))}
+              </div>
+            </div>)}
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 className="font-bold text-slate-800 mb-1">Lịch hẹn theo tuần</h3>
+            <div className="text-2xl font-bold text-slate-800">{d.weekly.reduce((s, x) => s + x.v, 0)}</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={d.weekly} margin={{ top: 12, right: 0, left: -28, bottom: 0 }}>
+                <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <YAxis hide /><Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: 10, border: 'none', fontSize: 12 }} formatter={(v) => [v, 'Lịch hẹn']} />
+                <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#14b8a6" barSize={22} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {sub === 'van_hanh' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-2"><h3 className="font-bold text-slate-800">Lịch hẹn hôm nay</h3><button onClick={() => setActiveTab('appointments')} className="text-xs text-teal-600 font-semibold inline-flex items-center gap-1">Xem tất cả <ChevronRight className="w-3 h-3" /></button></div>
+            <div className="flex items-center gap-2 mb-3"><span className="text-xl font-bold text-slate-800">{d.appointmentsToday}</span><span className="text-sm text-slate-400">cuộc hẹn</span>{d.apptTrend != null && <span className={`text-[11px] font-bold ${d.apptTrend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{d.apptTrend >= 0 ? '↑' : '↓'} {Math.abs(d.apptTrend)}% <span className="text-slate-400 font-normal">so với hôm qua</span></span>}</div>
+            {d.todayList.length === 0 ? <div className="text-sm text-slate-400 py-6 text-center">Chưa có lịch hẹn</div> : (
+            <div className="divide-y divide-slate-50">
+              {d.todayList.map(a => (
+                <div key={a.id} className="flex items-center gap-3 py-2.5">
+                  <span className="w-9 h-9 rounded-full bg-teal-100 text-teal-700 grid place-items-center text-xs font-bold shrink-0">{initials(a.customer_name)}</span>
+                  <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-slate-800 truncate">{a.customer_name}</div><div className="text-[11px] text-slate-400 truncate">{a.service || '—'}</div></div>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${APPT_ST[a.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{APPT_ST[a.status]?.label || a.status}</span>
+                </div>
+              ))}
+            </div>)}
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 className="font-bold text-slate-800 mb-3">Nhắc việc / Phê duyệt</h3>
+            <div className="space-y-1">
+              {reminders.map(r => (
+                <button key={r.label} onClick={() => setActiveTab(r.tab)} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition text-left">
+                  <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${r.cls}`}><AlertCircle className="w-4 h-4" /></span>
+                  <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-slate-700 truncate">{r.label}</div><div className="text-[11px] text-slate-400 truncate">{r.sub}</div></div>
+                  <span className="text-sm font-bold text-slate-700 shrink-0">{r.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-800">Top tư vấn viên</h3><button onClick={() => setActiveTab('khach_tu_van')} className="text-xs text-teal-600 font-semibold">Xem tất cả</button></div>
+            {d.topConsultants.length === 0 ? <div className="text-sm text-slate-400 py-4 text-center">Chưa có dữ liệu</div> : (
+            <div className="space-y-3">
+              {d.topConsultants.map((t, i) => (
+                <div key={t.name} className="flex items-center gap-3">
+                  <span className={`w-8 h-8 rounded-full grid place-items-center text-sm font-extrabold shrink-0 text-white ${i === 0 ? 'bg-amber-400' : i === 1 ? 'bg-slate-300' : 'bg-orange-300'}`}>{i + 1}</span>
+                  <span className="flex-1 min-w-0 truncate text-sm font-semibold text-slate-700">{t.name}</span>
+                  <span className="text-sm font-bold text-teal-600 shrink-0">{t.count} khách</span>
+                </div>
+              ))}
+            </div>)}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
