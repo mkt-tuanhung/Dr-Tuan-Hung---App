@@ -20,14 +20,10 @@ export default function DepositManagementPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header — MOBILE (xanh tối) */}
-      <div className="lg:hidden relative overflow-hidden rounded-3xl p-5 text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
+      {/* Header — MOBILE (xanh tối, tràn viền) */}
+      <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
         <div className="relative">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 grid place-items-center text-[10px] font-bold">DT</span>
-            <div className="leading-tight"><div className="text-xs font-bold">DR TUẤN HƯNG</div><div className="text-[8px] tracking-[0.2em] text-white/60">INTERNAL SYSTEM</div></div>
-          </div>
           <h2 className="text-2xl font-bold">Quản lý Đặt cọc</h2>
           <p className="text-white/70 text-sm mt-0.5 mb-4">Theo dõi và quản lý thông tin đặt cọc khách hàng</p>
           <Tabs dark />
