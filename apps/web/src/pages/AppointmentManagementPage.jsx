@@ -150,7 +150,7 @@ const AppointmentManagementPage = () => {
   useRealtimeReload('customer_appointments', loadData);
 
   // Derived state
-  const { groupedByDate, recheckAppointments, stats, chartData, pieData } = useMemo(() => {
+  const { groupedByDate, recheckAppointments, stats, chartData, pieData, trends } = useMemo(() => {
     const groups = {};
     const rechecks = [];
     const st = { total: 0, pt: 0, coc: 0, bong: 0, expected_bill: 0, total_deposit: 0 };
@@ -196,13 +196,34 @@ const AppointmentManagementPage = () => {
     });
 
     const pd = [
-      { name: 'Chờ tư vấn', value: st.total - st.pt - st.coc - st.bong, color: '#f59e0b' },
-      { name: 'Cọc', value: st.coc, color: '#3b82f6' },
       { name: 'Phẫu thuật', value: st.pt, color: '#14b8a6' },
+      { name: 'Cọc', value: st.coc, color: '#3b82f6' },
+      { name: 'Chờ tư vấn', value: st.total - st.pt - st.coc - st.bong, color: '#f59e0b' },
       { name: 'Bong', value: st.bong, color: '#ef4444' }
     ].filter(i => i.value > 0);
 
-    return { groupedByDate: groups, recheckAppointments: rechecks, stats: st, chartData: cd, pieData: pd };
+    // Xu hướng so với tháng trước
+    const _now = new Date();
+    const ymKey = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
+    const _pm = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
+    const pmKey = `${_pm.getFullYear()}-${String(_pm.getMonth() + 1).padStart(2, '0')}`;
+    const cur = { total: 0, pt: 0, coc: 0, bong: 0, bill: 0, deposit: 0 };
+    const prev = { total: 0, pt: 0, coc: 0, bong: 0, bill: 0, deposit: 0 };
+    filteredApps.forEach(app => {
+      if (app.service && app.service.startsWith('[Tái khám]')) return;
+      const mk = (app.appointment_date || '').slice(0, 7);
+      const b = mk === ymKey ? cur : mk === pmKey ? prev : null;
+      if (!b) return;
+      b.total++;
+      if (app.status === 'phau_thuat') b.pt++;
+      if (app.status === 'coc') { b.coc++; b.deposit += Number(app.deposit_amount || 0); }
+      if (app.status === 'bong') b.bong++;
+      b.bill += Number(app.expected_bill || 0);
+    });
+    const _pct = (c, p) => p > 0 ? Math.round((c - p) / p * 1000) / 10 : null;
+    const tr = { total: _pct(cur.total, prev.total), pt: _pct(cur.pt, prev.pt), coc: _pct(cur.coc, prev.coc), bong: _pct(cur.bong, prev.bong), bill: _pct(cur.bill, prev.bill), deposit: _pct(cur.deposit, prev.deposit) };
+
+    return { groupedByDate: groups, recheckAppointments: rechecks, stats: st, chartData: cd, pieData: pd, trends: tr };
   }, [appointments, searchQuery]);
 
   // Actions
@@ -397,8 +418,8 @@ const AppointmentManagementPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-teal-800">Lịch Hẹn</h2>
-          <p className="text-teal-600 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
+          <h2 className="text-2xl font-bold text-slate-800">Lịch hẹn</h2>
+          <p className="text-slate-500 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
         </div>
         <div className="flex gap-2">
           {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
@@ -438,68 +459,61 @@ const AppointmentManagementPage = () => {
         <>
           {/* Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <CalendarDays className="w-6 h-6 text-blue-500 mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
-              <div className="text-xs text-slate-500 font-medium uppercase mt-1">Tổng lịch hẹn</div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Stethoscope className="w-6 h-6 text-teal-500 mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{stats.pt}</div>
-              <div className="text-xs text-slate-500 font-medium uppercase mt-1">Phẫu thuật</div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Wallet className="w-6 h-6 text-blue-500 mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{stats.coc}</div>
-              <div className="text-xs text-slate-500 font-medium uppercase mt-1">Đã cọc</div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Ban className="w-6 h-6 text-red-500 mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{stats.bong}</div>
-              <div className="text-xs text-slate-500 font-medium uppercase mt-1">Khách bong</div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Activity className="w-6 h-6 text-orange-500 mb-2" />
-              <div className="text-xl font-bold text-slate-800">{stats.expected_bill.toLocaleString('vi-VN')}đ</div>
-              <div className="text-xs text-slate-500 font-medium uppercase mt-1">Tổng bill dự kiến</div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-              <Activity className="w-6 h-6 text-teal-500 mb-2" />
-              <div className="text-xl font-bold text-slate-800">{stats.total_deposit.toLocaleString('vi-VN')}đ</div>
-              <div className="text-xs text-slate-500 font-medium uppercase mt-1">Tổng đã cọc</div>
-            </div>
+            {[
+              { icon: CalendarDays, color: '#3b82f6', label: 'Tổng lịch hẹn', value: stats.total, trend: trends.total },
+              { icon: Stethoscope, color: '#14b8a6', label: 'Phẫu thuật', value: stats.pt, trend: trends.pt },
+              { icon: Wallet, color: '#3b82f6', label: 'Đã cọc', value: stats.coc, trend: trends.coc },
+              { icon: Ban, color: '#ef4444', label: 'Khách bong', value: stats.bong, trend: trends.bong },
+              { icon: Activity, color: '#f59e0b', label: 'Tổng bill dự kiến', value: stats.expected_bill.toLocaleString('vi-VN') + 'đ', trend: trends.bill },
+              { icon: Activity, color: '#14b8a6', label: 'Tổng đã cọc', value: stats.total_deposit.toLocaleString('vi-VN') + 'đ', trend: trends.deposit },
+            ].map((c, i) => (
+              <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
+                <div className="text-xl font-bold text-slate-800">{c.value}</div>
+                <div className="text-xs text-slate-500 font-medium mt-0.5">{c.label}</div>
+                {c.trend != null
+                  ? <div className={`text-[11px] font-semibold mt-2 ${c.trend >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{c.trend >= 0 ? '↑' : '↓'} {Math.abs(c.trend)}% <span className="text-slate-400 font-normal">so với tháng trước</span></div>
+                  : <div className="text-[11px] text-slate-300 mt-2">— so với tháng trước</div>}
+              </div>
+            ))}
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <h3 className="text-slate-700 font-bold mb-4">Tỷ lệ trạng thái</h3>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <h3 className="text-slate-700 font-bold mb-4">Biểu đồ lịch hẹn theo ngày</h3>
-              <div className="h-[200px]">
+              <h3 className="text-slate-700 font-bold mb-3">Tỷ lệ trạng thái</h3>
+              {pieData.length === 0 ? <div className="text-sm text-slate-400 py-12 text-center">Chưa có dữ liệu</div> : (
+              <div className="flex items-center gap-4">
+                <div className="relative w-[150px] h-[150px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} innerRadius={54} outerRadius={74} paddingAngle={3} dataKey="value" stroke="none">
+                        {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                      </Pie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center"><div className="text-2xl font-bold text-slate-800">{stats.total}</div><div className="text-[10px] text-slate-400">Tổng lịch hẹn</div></div>
+                </div>
+                <div className="flex-1 min-w-0 space-y-2.5">
+                  {pieData.map((e, i) => { const tot = pieData.reduce((s, x) => s + x.value, 0); const p = tot ? Math.round(e.value / tot * 1000) / 10 : 0; return (
+                    <div key={i} className="flex items-center gap-2 text-sm"><span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: e.color }} /><span className="flex-1 min-w-0 text-slate-600">{e.name}</span><span className="font-bold text-slate-700">{e.value}</span><span className="text-slate-400 text-xs">({p}%)</span></div>
+                  ); })}
+                </div>
+              </div>)}
+            </div>
+            <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3"><h3 className="text-slate-700 font-bold">Biểu đồ lịch hẹn theo ngày</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">7 ngày qua</span></div>
+              <div className="h-[210px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} />
                     <Legend />
-                    <Line type="monotone" dataKey="Tổng lịch" stroke="#3b82f6" strokeWidth={3} />
-                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#14b8a6" strokeWidth={3} />
+                    <Line type="monotone" dataKey="Tổng lịch" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#14b8a6" strokeWidth={3} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
