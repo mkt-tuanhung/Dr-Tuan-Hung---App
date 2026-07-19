@@ -81,6 +81,15 @@ begin
   perform _demo_set('public.surgical_assignments', 'customer_name', NAME_EXPR);
   perform _demo_set('public.surgical_assignments', 'notes',         'null');
 
+  -- 7b) DATA KHÁCH HÀNG (marketing_data) + CONTENT TASKS
+  perform _demo_set('public.marketing_data', 'customer_name', NAME_EXPR);
+  perform _demo_set('public.marketing_data', 'phone',         PHONE_EXPR);
+  perform _demo_set('public.marketing_data', 'description',   'null');
+  perform _demo_set('public.marketing_data', 'last_exchange', 'null');
+  perform _demo_set('public.marketing_data', 'reached_info',  'null');
+  perform _demo_set('public.content_tasks', 'customer_name', NAME_EXPR);
+  perform _demo_set('public.content_tasks', 'phone',         PHONE_EXPR);
+
   -- 8) MEDIA / NGUỒN KHÁCH
   perform _demo_set('public.media_customers', 'customer_name',   NAME_EXPR);
   perform _demo_set('public.media_customers', 'customer_phone',  PHONE_EXPR);
