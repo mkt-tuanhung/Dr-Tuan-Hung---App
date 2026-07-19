@@ -203,6 +203,19 @@ const Overview = ({ profile, setActiveTab }) => {
 
   const todayFull = new Intl.NumberFormat('vi-VN').format(Math.round(d.todayRevenue)) + ' đ';
   const trendPct = (v) => v == null ? null : { up: v >= 0, txt: `${v >= 0 ? '↑' : '↓'} ${Math.abs(v)}%` };
+  const hd = new Date();
+  const heroWeekday = hd.toLocaleDateString('vi-VN', { weekday: 'long' });
+  const heroDay = hd.getDate();
+  const heroMonthYear = `Tháng ${hd.getMonth() + 1}, ${hd.getFullYear()}`;
+  const presentPct = d.totalStaff ? Math.round(d.presentToday / d.totalStaff * 100) : 0;
+  const statsDesktop = [
+    { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#14b8a6', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
+    { label: 'Có mặt hôm nay', value: d.presentToday, icon: UserCheck, color: '#3b82f6', tab: 'hr', bar: presentPct, sub: `${presentPct}% có mặt` },
+    { label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, icon: CalendarDays, color: '#8b5cf6', tab: 'appointments', trend: trendPct(d.apptTrend), sub: 'so với hôm qua' },
+    { label: 'Chờ duyệt', value: d.pendingExpenses, icon: AlertCircle, color: '#f59e0b', tab: 'advances', sub: 'Hồ sơ / yêu cầu' },
+    { label: 'Doanh thu tháng', value: fmtVND(d.monthRevenue), icon: DollarSign, color: '#10b981', tab: 'finance', trend: trendPct(d.revMonthTrend), sub: 'so với tháng trước' },
+    { label: 'Tỷ lệ chốt khách', value: d.closeRate + '%', icon: Target, color: '#6366f1', tab: 'khach_tu_van', trend: d.closeTrend != null ? { up: d.closeTrend >= 0, txt: `${d.closeTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.closeTrend)}%` } : null, sub: 'so với tháng trước' },
+  ];
   const stats = [
     { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#14b8a6', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
     { label: 'Lịch hẹn', value: d.appointmentsToday, icon: CalendarDays, color: '#3b82f6', tab: 'appointments', trend: trendPct(d.apptTrend), sub: 'Hôm nay' },
@@ -219,8 +232,8 @@ const Overview = ({ profile, setActiveTab }) => {
 
   return (
     <div className="space-y-4 lg:space-y-5">
-      {/* Hero — ảnh phòng khám làm nền */}
-      <div className="relative overflow-hidden rounded-3xl shadow-lg">
+      {/* Hero — MOBILE: ảnh phòng khám làm nền */}
+      <div className="lg:hidden relative overflow-hidden rounded-3xl shadow-lg">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/clinic-hero.png')" }} />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(7,32,30,0.55) 0%, rgba(7,28,27,0.3) 38%, rgba(6,22,22,0.9) 100%)' }} />
         <div className="relative p-5 lg:p-6">
@@ -254,16 +267,61 @@ const Overview = ({ profile, setActiveTab }) => {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-2.5 lg:gap-3">
+      {/* Hero — DESKTOP: gradient xanh + ảnh phải */}
+      <div className="hidden lg:block relative overflow-hidden rounded-3xl text-white shadow-lg" style={{ background: 'linear-gradient(120deg,#0f766e 0%,#0d9488 55%,#14b8a6 100%)' }}>
+        <div className="absolute inset-y-0 right-0 w-[32%]">
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/clinic-hero.png')" }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg,#0f9488 0%, rgba(20,184,166,0.55) 35%, rgba(20,184,166,0) 100%)' }} />
+        </div>
+        <div className="relative p-6 pr-[34%] flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-white/80 text-sm">Xin chào 👋</p>
+            <h2 className="text-3xl font-bold mt-0.5">{profile?.full_name || 'Admin'}</h2>
+            <p className="text-white/70 text-xs mt-1">Chúc bạn một ngày làm việc hiệu quả!</p>
+            <div className="mt-3 inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1.5"><span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" /><span className="text-xs font-medium">Hệ thống đang hoạt động tốt</span></div>
+          </div>
+          <div className="shrink-0 bg-white/12 rounded-2xl px-4 py-3 text-center border border-white/15">
+            <div className="flex items-center justify-center gap-1 text-white/70 text-[11px] capitalize">{heroWeekday} <CalendarDays className="w-3 h-3" /></div>
+            <div className="text-3xl font-bold leading-none mt-1">{heroDay}</div>
+            <div className="text-white/70 text-[11px] mt-1">{heroMonthYear}</div>
+          </div>
+          <div className="shrink-0">
+            <div className="text-white/70 text-[11px]">Doanh thu hôm nay</div>
+            <div className="flex items-center gap-2 mt-0.5"><div className="text-2xl font-bold">{todayFull}</div>{d.revTrend != null && <span className="text-[11px] font-bold text-emerald-200">{d.revTrend >= 0 ? '↑' : '↓'} {Math.abs(d.revTrend)}%</span>}</div>
+            <div className="text-white/60 text-[11px] mt-0.5">So với hôm qua</div>
+          </div>
+          <div className="shrink-0 flex flex-col gap-2">
+            <button onClick={() => setActiveTab('appointments')} className="inline-flex items-center gap-2 bg-white text-teal-700 rounded-xl px-4 py-2 text-sm font-semibold hover:bg-teal-50 transition"><Plus className="w-4 h-4" /> Tạo lịch hẹn</button>
+            <button onClick={() => setActiveTab('appointments')} className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2 text-sm font-semibold hover:bg-white/25 transition"><Plus className="w-4 h-4" /> Thêm khách hàng</button>
+            <button onClick={() => setActiveTab('pl')} className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2 text-sm font-semibold hover:bg-white/25 transition"><BarChart2 className="w-4 h-4" /> Báo cáo nhanh</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stat cards — MOBILE (3 cột) */}
+      <div className="lg:hidden grid grid-cols-3 gap-2.5">
         {stats.map(c => (
-          <button key={c.label} onClick={() => setActiveTab(c.tab)} className="bg-white rounded-2xl p-3 lg:p-4 text-left shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition">
-            <span className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-4 h-4 lg:w-4.5 lg:h-4.5" style={{ color: c.color }} /></span>
+          <button key={c.label} onClick={() => setActiveTab(c.tab)} className="bg-white rounded-2xl p-3 text-left shadow-sm border border-slate-100 hover:shadow-md transition">
+            <span className="w-8 h-8 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-4 h-4" style={{ color: c.color }} /></span>
             <div className="text-[10.5px] text-slate-400 font-semibold leading-tight">{c.label}</div>
-            <div className="text-lg lg:text-2xl font-bold text-slate-800 mt-0.5">{c.value}</div>
+            <div className="text-lg font-bold text-slate-800 mt-0.5">{c.value}</div>
             {c.trend
               ? <div className={`text-[10.5px] font-bold mt-0.5 ${c.trend.up ? 'text-emerald-500' : 'text-rose-500'}`}>{c.trend.txt}</div>
               : <div className="text-[10.5px] text-slate-400 mt-0.5">{c.sub}</div>}
+          </button>
+        ))}
+      </div>
+
+      {/* Stat cards — DESKTOP (6 thẻ lớn) */}
+      <div className="hidden lg:grid grid-cols-6 gap-3">
+        {statsDesktop.map(c => (
+          <button key={c.label} onClick={() => setActiveTab(c.tab)} className="bg-white rounded-2xl p-4 text-left shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition">
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
+            <div className="text-xs text-slate-400 font-semibold">{c.label}</div>
+            <div className="text-2xl font-bold text-slate-800 mt-0.5">{c.value}</div>
+            {c.bar != null
+              ? <><div className="text-[11px] text-slate-400 mt-1">{c.sub}</div><div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${c.bar}%`, backgroundColor: c.color }} /></div></>
+              : <><div className={`text-[11px] font-bold mt-1 ${c.trend ? (c.trend.up ? 'text-emerald-500' : 'text-rose-500') : 'text-transparent'}`}>{c.trend ? c.trend.txt : '·'}</div><div className="text-[11px] text-slate-400">{c.sub}</div></>}
           </button>
         ))}
       </div>
@@ -291,8 +349,8 @@ const Overview = ({ profile, setActiveTab }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Thao tác nhanh */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      {/* Thao tác nhanh — mobile */}
+      <div className="lg:hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
         <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-800">Thao tác nhanh</h3><span className="text-xs text-teal-600 font-semibold">Tùy chỉnh</span></div>
         <div className="grid grid-cols-4 gap-2">
           {[
