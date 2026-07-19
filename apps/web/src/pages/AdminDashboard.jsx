@@ -100,6 +100,7 @@ const Overview = ({ profile, setActiveTab }) => {
   const [d, setD] = useState({
     totalStaff: 0, presentToday: 0, appointmentsToday: 0, pendingExpenses: 0, pendingLeaves: 0,
     monthRevenue: 0, todayRevenue: 0, closeRate: 0, newCustomers: 0, scTotal: 0,
+    newStaffMonth: 0, apptTrend: null, revTrend: null, revMonthTrend: null, closeTrend: null, newCustTrend: null, rev6mTrend: null,
     revenue6m: [], services: [], todayList: [], weekly: [], newCust6w: [], topConsultants: [],
   });
 
@@ -116,7 +117,7 @@ const Overview = ({ profile, setActiveTab }) => {
       const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow);
 
       const [pf, at, ex, lv, ap] = await Promise.all([
-        supabase.from('profiles').select('id, full_name').eq('is_active', true),
+        supabase.from('profiles').select('id, full_name, created_at').eq('is_active', true),
         supabase.from('attendance').select('id', { count: 'exact', head: true }).eq('date', todayStr).eq('status', 'present'),
         supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -138,6 +139,17 @@ const Overview = ({ profile, setActiveTab }) => {
       const leadsM = appts.filter(a => inMonth(a.appointment_date));
       const closedM = leadsM.filter(a => a.status === 'coc' || a.status === 'phau_thuat');
       const closeRate = leadsM.length ? Math.round(closedM.length / leadsM.length * 100) : 0;
+
+      // --- So sánh kỳ trước (xu hướng) ---
+      const pctT = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 1000) / 10 : null;
+      const prevDt = new Date(y, mo - 1, 1); const prevKey = `${prevDt.getFullYear()}-${pad(prevDt.getMonth() + 1)}`;
+      const prevRevenue = appts.filter(a => a.status === 'phau_thuat' && a.surgery_date && a.surgery_date.slice(0, 7) === prevKey).reduce((s, a) => s + Number(a.revenue || 0), 0);
+      const prevLeads = appts.filter(a => a.appointment_date && a.appointment_date.slice(0, 7) === prevKey);
+      const prevClose = prevLeads.length ? Math.round(prevLeads.filter(a => a.status === 'coc' || a.status === 'phau_thuat').length / prevLeads.length * 100) : 0;
+      const ydayStr = iso(new Date(y, mo, now.getDate() - 1));
+      const apptYday = appts.filter(a => a.appointment_date === ydayStr).length;
+      const revYday = appts.filter(a => a.status === 'phau_thuat' && a.surgery_date === ydayStr).reduce((s, a) => s + Number(a.revenue || 0), 0);
+      const newStaffMonth = staff.filter(s => s.created_at && s.created_at.slice(0, 7) === monthKey).length;
 
       const revenue6m = Array.from({ length: 6 }, (_, i) => {
         const dt = new Date(y, mo - 5 + i, 1); const key = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`;
@@ -170,6 +182,13 @@ const Overview = ({ profile, setActiveTab }) => {
         totalStaff: staff.length, presentToday: at.count || 0, appointmentsToday: todayAppts.length,
         pendingExpenses: ex.count || 0, pendingLeaves: lv.count || 0,
         monthRevenue, todayRevenue, closeRate, newCustomers: leadsM.length, scTotal,
+        newStaffMonth,
+        apptTrend: pctT(todayAppts.length, apptYday),
+        revTrend: pctT(todayRevenue, revYday),
+        revMonthTrend: pctT(monthRevenue, prevRevenue),
+        closeTrend: (leadsM.length && prevLeads.length) ? (closeRate - prevClose) : null,
+        newCustTrend: pctT(leadsM.length, prevLeads.length),
+        rev6mTrend: pctT(revenue6m[5]?.revenue || 0, revenue6m[0]?.revenue || 0),
         revenue6m, services: services.map(s => ({ ...s, pct: scTotal ? Math.round(s.value / scTotal * 100) : 0 })),
         todayList: todayAppts.slice(0, 6), weekly, newCust6w, topConsultants,
       });
@@ -182,14 +201,15 @@ const Overview = ({ profile, setActiveTab }) => {
     <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-[3px] border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
   );
 
-  const presentPct = d.totalStaff ? Math.round(d.presentToday / d.totalStaff * 100) : 0;
+  const todayFull = new Intl.NumberFormat('vi-VN').format(Math.round(d.todayRevenue)) + ' đ';
+  const trendPct = (v) => v == null ? null : { up: v >= 0, txt: `${v >= 0 ? '↑' : '↓'} ${Math.abs(v)}%` };
   const stats = [
-    { label: 'Nhân sự', value: d.totalStaff, sub: 'Tổng nhân sự', icon: Users, color: '#14b8a6', tab: 'hr' },
-    { label: 'Có mặt hôm nay', value: d.presentToday, sub: `${presentPct}% có mặt`, icon: UserCheck, color: '#3b82f6', tab: 'hr', bar: presentPct },
-    { label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, sub: 'Khách trong ngày', icon: CalendarDays, color: '#8b5cf6', tab: 'appointments' },
-    { label: 'Chờ duyệt', value: d.pendingExpenses, sub: 'Phiếu chi / yêu cầu', icon: AlertCircle, color: '#f59e0b', tab: 'advances' },
-    { label: 'Doanh thu tháng', value: fmtVND(d.monthRevenue), sub: 'Ca mổ trong tháng', icon: DollarSign, color: '#10b981', tab: 'finance' },
-    { label: 'Tỷ lệ chốt khách', value: d.closeRate + '%', sub: 'Cọc + mổ / tổng', icon: Target, color: '#6366f1', tab: 'khach_tu_van' },
+    { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#14b8a6', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
+    { label: 'Lịch hẹn', value: d.appointmentsToday, icon: CalendarDays, color: '#3b82f6', tab: 'appointments', trend: trendPct(d.apptTrend), sub: 'Hôm nay' },
+    { label: 'Chờ duyệt', value: d.pendingExpenses, icon: AlertCircle, color: '#f59e0b', tab: 'advances', sub: 'Hồ sơ' },
+    { label: 'Doanh thu tháng', value: fmtVND(d.monthRevenue), icon: DollarSign, color: '#10b981', tab: 'finance', trend: trendPct(d.revMonthTrend), sub: 'Ca mổ' },
+    { label: 'Tỷ lệ chốt Khách', value: d.closeRate + '%', icon: Target, color: '#6366f1', tab: 'khach_tu_van', trend: d.closeTrend != null ? { up: d.closeTrend >= 0, txt: `${d.closeTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.closeTrend)}%` } : null, sub: 'Cọc + mổ' },
+    { label: 'Khách hàng mới', value: d.newCustomers, icon: UserCheck, color: '#8b5cf6', tab: 'khach_tu_van', trend: trendPct(d.newCustTrend), sub: 'Tháng này' },
   ];
   const reminders = [
     { label: 'Phiếu chi chờ duyệt', sub: 'Cần xử lý sớm', count: d.pendingExpenses, tab: 'advances', cls: 'bg-rose-50 text-rose-600' },
@@ -199,61 +219,97 @@ const Overview = ({ profile, setActiveTab }) => {
 
   return (
     <div className="space-y-4 lg:space-y-5">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl p-5 lg:p-6 text-white shadow-lg" style={{ background: 'linear-gradient(120deg,#0f766e 0%,#0d9488 55%,#14b8a6 100%)' }}>
-        <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative flex flex-col lg:flex-row lg:items-center gap-5">
-          <div className="min-w-0">
-            <p className="text-white/80 text-sm">Xin chào 👋</p>
-            <h2 className="text-2xl lg:text-3xl font-bold mt-0.5">{profile?.full_name || 'Admin'}</h2>
-            <p className="text-white/70 text-xs mt-1 capitalize">{new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            <div className="mt-3 inline-flex items-center gap-2 bg-white/15 rounded-full px-3.5 py-1.5"><span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" /><span className="text-xs font-medium">Hệ thống đang hoạt động tốt</span></div>
+      {/* Hero — ảnh phòng khám làm nền */}
+      <div className="relative overflow-hidden rounded-3xl shadow-lg">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/clinic-hero.png')" }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(7,32,30,0.55) 0%, rgba(7,28,27,0.3) 38%, rgba(6,22,22,0.9) 100%)' }} />
+        <div className="relative p-5 lg:p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/25 grid place-items-center text-[11px] font-bold tracking-wide">DT</span>
+              <div className="leading-tight"><div className="text-xs font-bold tracking-wide">DR TUẤN HƯNG</div><div className="text-[8px] tracking-[0.22em] text-white/60">COSMETIC SURGERY</div></div>
+            </div>
           </div>
-          <div className="lg:ml-auto flex flex-wrap items-center gap-3">
-            <div className="bg-white/12 rounded-2xl px-4 py-3">
+          <div className="mt-6">
+            <p className="text-white/80 text-sm">Xin chào 👋</p>
+            <h2 className="text-3xl font-bold text-white mt-0.5">{profile?.full_name || 'Admin'}</h2>
+            <p className="text-white/70 text-xs mt-1">Chúc bạn một ngày làm việc hiệu quả!</p>
+            <div className="mt-3 inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-3 py-1"><span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" /><span className="text-[11px] font-medium text-white">Hệ thống đang hoạt động tốt</span></div>
+          </div>
+          {/* Thẻ kính: lịch hẹn hôm nay | doanh thu hôm nay */}
+          <div className="mt-5 grid grid-cols-2 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/15">
+            <button onClick={() => setActiveTab('appointments')} className="p-4 text-left border-r border-white/10 hover:bg-white/5 transition">
+              <div className="text-white/70 text-[11px]">Lịch hẹn hôm nay</div>
+              <div className="text-white text-2xl font-bold mt-0.5">{d.appointmentsToday}<span className="text-xs font-medium text-white/60"> cuộc hẹn</span></div>
+              {d.apptTrend != null && <div className="text-[11px] mt-1 font-semibold text-emerald-300">{d.apptTrend >= 0 ? '↑' : '↓'} {Math.abs(d.apptTrend)}% <span className="text-white/50 font-normal">so với hôm qua</span></div>}
+            </button>
+            <button onClick={() => setActiveTab('finance')} className="p-4 text-left hover:bg-white/5 transition">
               <div className="text-white/70 text-[11px]">Doanh thu hôm nay</div>
-              <div className="text-xl font-bold mt-0.5">{fmtVND(d.todayRevenue)}</div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button onClick={() => setActiveTab('appointments')} className="inline-flex items-center gap-2 bg-white text-teal-700 rounded-xl px-3.5 py-2 text-sm font-semibold hover:bg-teal-50 transition"><Plus className="w-4 h-4" /> Tạo lịch hẹn</button>
-              <button onClick={() => setActiveTab('pl')} className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3.5 py-2 text-sm font-semibold hover:bg-white/25 transition"><BarChart2 className="w-4 h-4" /> Báo cáo nhanh</button>
-            </div>
+              <div className="text-white text-lg font-bold mt-0.5">{todayFull}</div>
+              {d.revTrend != null && <div className="text-[11px] mt-1 font-semibold text-emerald-300">{d.revTrend >= 0 ? '↑' : '↓'} {Math.abs(d.revTrend)}% <span className="text-white/50 font-normal">so với hôm qua</span></div>}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-2.5 lg:gap-3">
         {stats.map(c => (
-          <button key={c.label} onClick={() => setActiveTab(c.tab)} className="bg-white rounded-2xl p-4 text-left shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition">
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-4.5 h-4.5" style={{ color: c.color }} /></span>
-            <div className="text-[11px] text-slate-400 font-semibold">{c.label}</div>
-            <div className="text-2xl font-bold text-slate-800 mt-0.5">{c.value}</div>
-            {c.bar != null
-              ? <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${c.bar}%`, backgroundColor: c.color }} /></div>
-              : <div className="text-[11px] text-slate-400 mt-0.5">{c.sub}</div>}
+          <button key={c.label} onClick={() => setActiveTab(c.tab)} className="bg-white rounded-2xl p-3 lg:p-4 text-left shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition">
+            <span className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-4 h-4 lg:w-4.5 lg:h-4.5" style={{ color: c.color }} /></span>
+            <div className="text-[10.5px] text-slate-400 font-semibold leading-tight">{c.label}</div>
+            <div className="text-lg lg:text-2xl font-bold text-slate-800 mt-0.5">{c.value}</div>
+            {c.trend
+              ? <div className={`text-[10.5px] font-bold mt-0.5 ${c.trend.up ? 'text-emerald-500' : 'text-rose-500'}`}>{c.trend.txt}</div>
+              : <div className="text-[10.5px] text-slate-400 mt-0.5">{c.sub}</div>}
           </button>
         ))}
       </div>
 
-      {/* Hàng giữa */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-5 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-1"><h3 className="font-bold text-slate-800">Doanh thu 6 tháng gần đây</h3><button onClick={() => setActiveTab('finance')} className="text-xs text-teal-600 font-semibold inline-flex items-center gap-1">Xem thêm <ChevronRight className="w-3 h-3" /></button></div>
-          <div className="text-2xl font-bold text-slate-800">{fmtVND(d.revenue6m.reduce((s, x) => s + x.revenue, 0) * 1000000)}</div>
-          <ResponsiveContainer width="100%" height={190}>
-            <AreaChart data={d.revenue6m} margin={{ top: 12, right: 6, left: -18, bottom: 0 }}>
-              <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} /><stop offset="100%" stopColor="#14b8a6" stopOpacity={0} /></linearGradient></defs>
-              <CartesianGrid vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={40} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} formatter={(v) => [`${v} Tr`, 'Doanh thu']} />
-              <Area type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2.5} fill="url(#revA)" />
-            </AreaChart>
-          </ResponsiveContainer>
+      {/* Doanh thu 6 tháng — full width */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-slate-800">Doanh thu 6 tháng gần đây</h3>
+          <span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">6 tháng</span>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="text-2xl font-bold text-slate-800">{fmtVND(d.revenue6m.reduce((s, x) => s + x.revenue, 0) * 1000000)}</div>
+          {d.rev6mTrend != null && <span className={`text-xs font-bold ${d.rev6mTrend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{d.rev6mTrend >= 0 ? '↑' : '↓'} {Math.abs(d.rev6mTrend)}%</span>}
+        </div>
+        <div className="text-[11px] text-slate-400">so với 6 tháng trước</div>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={d.revenue6m} margin={{ top: 12, right: 6, left: -18, bottom: 0 }}>
+            <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} /><stop offset="100%" stopColor="#14b8a6" stopOpacity={0} /></linearGradient></defs>
+            <CartesianGrid vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={40} />
+            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} formatter={(v) => [`${v} Tr`, 'Doanh thu']} />
+            <Area type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2.5} fill="url(#revA)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
 
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      {/* Thao tác nhanh */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-800">Thao tác nhanh</h3><span className="text-xs text-teal-600 font-semibold">Tùy chỉnh</span></div>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'Thêm lịch hẹn', icon: CalendarDays, tab: 'appointments', color: '#14b8a6' },
+            { label: 'Thêm khách hàng', icon: Users, tab: 'appointments', color: '#3b82f6' },
+            { label: 'Báo cáo nhanh', icon: BarChart2, tab: 'pl', color: '#8b5cf6' },
+            { label: 'Phiếu thu / CSKH', icon: ClipboardList, tab: 'hau_phau', color: '#f59e0b' },
+          ].map(q => (
+            <button key={q.label} onClick={() => setActiveTab(q.tab)} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-slate-50 transition">
+              <span className="w-11 h-11 rounded-2xl grid place-items-center" style={{ backgroundColor: q.color + '1a' }}><q.icon className="w-5 h-5" style={{ color: q.color }} /></span>
+              <span className="text-[11px] text-slate-600 font-medium text-center leading-tight">{q.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Phân tích thêm — desktop */}
+      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-7 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
           <h3 className="font-bold text-slate-800 mb-2">Cơ cấu dịch vụ</h3>
           {d.services.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu</div> : (
           <div className="flex items-center gap-3">
@@ -271,7 +327,7 @@ const Overview = ({ profile, setActiveTab }) => {
           </div>)}
         </div>
 
-        <div className="lg:col-span-3 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div className="lg:col-span-5 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-2"><h3 className="font-bold text-slate-800">Lịch hẹn hôm nay</h3><button onClick={() => setActiveTab('appointments')} className="text-xs text-teal-600 font-semibold">Tất cả</button></div>
           {d.todayList.length === 0 ? <div className="text-sm text-slate-400 py-6 text-center">Chưa có lịch hẹn</div> : (
           <div className="space-y-2.5">
@@ -286,8 +342,8 @@ const Overview = ({ profile, setActiveTab }) => {
         </div>
       </div>
 
-      {/* Hàng dưới */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {/* Hàng dưới — desktop */}
+      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
           <h3 className="font-bold text-slate-800 mb-1">Lịch hẹn theo tuần</h3>
           <div className="text-2xl font-bold text-slate-800">{d.weekly.reduce((s, x) => s + x.v, 0)}</div>
