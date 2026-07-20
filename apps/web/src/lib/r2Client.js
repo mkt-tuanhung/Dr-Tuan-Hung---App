@@ -7,12 +7,41 @@ import { supabase } from '@/lib/supabaseClient';
 
 export const R2_PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL;
 
-export const uploadToR2 = async (file, folder = 'avatars') => {
-  const form = new FormData();
-  form.append('file', file);
-  form.append('folder', folder);
+// Nén/thu nhỏ ảnh trước khi upload (ảnh chụp điện thoại rất nặng -> đẩy qua Edge Function dễ lỗi).
+// Trả về File JPEG nhỏ gọn; nếu không nén được thì giữ nguyên file gốc.
+export const compressImage = async (file, { maxDim = 1600, quality = 0.82 } = {}) => {
+  const t = (file?.type || '').toLowerCase();
+  if (!t.startsWith('image/') || t === 'image/svg+xml' || t === 'image/gif') return file;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    let { width, height } = bmp;
+    if (Math.max(width, height) > maxDim) {
+      const s = maxDim / Math.max(width, height);
+      width = Math.round(width * s); height = Math.round(height * s);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, width, height);
+    bmp.close?.();
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+    if (!blob || blob.size >= file.size) return file; // không nhỏ hơn thì giữ nguyên
+    return new File([blob], (file.name || 'image').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return file; // trình duyệt cũ / lỗi -> giữ nguyên
+  }
+};
 
-  const { data, error } = await supabase.functions.invoke('r2-upload', { body: form });
+export const uploadToR2 = async (file, folder = 'avatars') => {
+  const toSend = await compressImage(file);
+  const attempt = () => {
+    const form = new FormData();
+    form.append('file', toSend);
+    form.append('folder', folder);
+    return supabase.functions.invoke('r2-upload', { body: form });
+  };
+  let res = await attempt();
+  if (res.error) res = await attempt();   // thử lại 1 lần nếu lỗi mạng/tạm thời
+  const { data, error } = res;
   if (error) throw new Error('Upload thất bại: ' + error.message);
   if (data?.error) throw new Error(data.error);
 
