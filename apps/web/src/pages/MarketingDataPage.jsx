@@ -106,7 +106,7 @@ const MarketingDataPage = () => {
       <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
         <div className="relative">
-          <h2 className="text-2xl font-bold">Data khách hàng</h2>
+          <h2 className="text-2xl font-bold text-white">Data khách hàng</h2>
           <div className="relative mt-3">
             <Search className="w-4 h-4 text-white/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm khách hàng, SĐT, link hệ thống…" className="w-full pl-10 pr-3 h-12 rounded-2xl bg-white/15 border border-white/20 text-white placeholder-white/60 text-sm outline-none focus:bg-white/20 transition" />
