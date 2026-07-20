@@ -304,7 +304,7 @@ const Overview = ({ profile, setActiveTab }) => {
         <div className="relative p-6 pr-[34%] flex items-center gap-6">
           <div className="flex-1 min-w-0">
             <p className="text-white/80 text-sm">Xin chào 👋</p>
-            <h2 className="text-3xl font-bold mt-0.5">{profile?.full_name || 'Admin'}</h2>
+            <h2 className="text-3xl font-bold mt-0.5 text-white">{profile?.full_name || 'Admin'}</h2>
             <p className="text-white/70 text-xs mt-1">Chúc bạn một ngày làm việc hiệu quả!</p>
             <div className="mt-3 inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1.5"><span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" /><span className="text-xs font-medium">Hệ thống đang hoạt động tốt</span></div>
           </div>

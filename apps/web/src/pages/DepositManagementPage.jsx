@@ -24,7 +24,7 @@ export default function DepositManagementPage() {
       <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
         <div className="relative">
-          <h2 className="text-2xl font-bold">Quản lý Đặt cọc</h2>
+          <h2 className="text-2xl font-bold text-white">Quản lý Đặt cọc</h2>
           <p className="text-white/70 text-sm mt-0.5 mb-4">Theo dõi và quản lý thông tin đặt cọc khách hàng</p>
           <Tabs dark />
         </div>
