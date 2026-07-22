@@ -101,7 +101,7 @@ const ContentProductionPage = () => {
 
   const tabs = [];
   if (canAddMedia || canEdit || isManager) tabs.push('kho');
-  if (canEdit || canAds || isManager) tabs.push('video');
+  if (canEdit || canAds || isManager || canAddMedia) tabs.push('video');
   const [tab, setTab] = useState(tabs[0] || 'kho');
 
   const [stores, setStores] = useState([]);
