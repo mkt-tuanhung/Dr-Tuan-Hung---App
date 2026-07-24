@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2 } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check } from 'lucide-react';
 import QRCode from 'qrcode';
 import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
@@ -59,6 +59,58 @@ const CSKH_QUICK_NOTES = [
   'Đã gửi ưu đãi', 'Khách hẹn quay lại',
 ];
 
+// Các mốc hồi phục sau phẫu thuật
+const MILESTONE_DEFS = [
+  { key: 'd0', label: 'Ngày phẫu thuật', off: 0, desc: 'Phẫu thuật, theo dõi sinh hiệu' },
+  { key: 'd1', label: 'Ngày 1', off: 1, desc: 'Theo dõi đau, chảy máu' },
+  { key: 'd2', label: 'Ngày 2', off: 2, desc: 'Thay băng, vệ sinh vết mổ' },
+  { key: 'd7', label: 'Ngày 7', off: 7, desc: 'Cắt chỉ, đánh giá tổng quan' },
+  { key: 'd14', label: 'Ngày 14', off: 14, desc: 'Tái khám, đánh giá hồi phục' },
+  { key: 'd30', label: 'Ngày 30', off: 30, desc: 'Đánh giá kết quả & lưu hồ sơ' },
+];
+
+// Dấu hiệu cần lưu ý (tick nhiều → nguy cơ cao)
+const WARNING_SIGNS = ['Sốt ≥ 38°C', 'Chảy máu kéo dài', 'Sưng đau tăng dần', 'Chảy dịch/mủ', 'Tê bì kéo dài'];
+
+const RISK_STYLE = {
+  'Thấp': { c: 'text-emerald-600', bg: 'bg-emerald-50', ring: '#10b981', dot: 'bg-emerald-500' },
+  'Trung bình': { c: 'text-amber-600', bg: 'bg-amber-50', ring: '#f59e0b', dot: 'bg-amber-500' },
+  'Cao': { c: 'text-rose-600', bg: 'bg-rose-50', ring: '#f43f5e', dot: 'bg-rose-500' },
+};
+
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const initialsOf = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+
+// Dựng danh sách mốc (kết hợp mốc đã lưu + tính ngày theo ngày mổ)
+const buildMilestones = (app) => {
+  const saved = Array.isArray(app?.care_milestones) ? app.care_milestones : [];
+  const savedMap = {}; saved.forEach(m => { if (m?.key) savedMap[m.key] = m; });
+  const surg = app?.surgery_date ? startOfDay(app.surgery_date) : null;
+  const today = startOfDay(new Date());
+  return MILESTONE_DEFS.map(def => {
+    const s = savedMap[def.key] || {};
+    const date = surg ? new Date(surg.getTime() + def.off * 86400000) : null;
+    let status = 'pending';
+    if (s.done) status = 'done';
+    else if (date && startOfDay(date) <= today) status = 'active'; // đến hạn / đang tới
+    return { ...def, date, status, done: !!s.done, nurse_id: s.nurse_id || null, note: s.note || '', done_at: s.done_at || null };
+  });
+};
+
+// Chỉ số tự tính từ mốc + dấu hiệu + đánh giá
+const computeMetrics = (app, ms, satisfaction) => {
+  const total = ms.length;
+  const reached = ms.filter(m => m.status !== 'pending');
+  const done = ms.filter(m => m.done);
+  const progress = total ? Math.round((reached.length / total) * 100) : 0;
+  const careScore = reached.length ? Math.round((done.length / reached.length) * 100) : 0;
+  const signs = Array.isArray(app?.warning_signs) ? app.warning_signs.length : 0;
+  let risk = 'Thấp';
+  if (app?.post_op_status === 'Có biến chứng' || signs >= 3) risk = 'Cao';
+  else if (signs >= 1) risk = 'Trung bình';
+  return { progress, careScore, risk, reached: reached.length, total, satisfaction };
+};
+
 const HauPhauPage = () => {
   const { profile } = useAuth();
   const [customers, setCustomers] = useState([]);
@@ -89,7 +141,9 @@ const HauPhauPage = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewImage, setViewImage] = useState(null);
-  const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00' });
+  const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00', warning_signs: [], next_recheck: '' });
+  const [milestoneEdit, setMilestoneEdit] = useState(null); // { key, label, ... } đang sửa
+  const [savingMilestone, setSavingMilestone] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef(null);
   // Nhật ký CSKH (riêng của bộ phận CSKH)
@@ -147,9 +201,11 @@ const HauPhauPage = () => {
     if (cskhFileRef.current) cskhFileRef.current.value = '';
   };
 
+  const [satByAppt, setSatByAppt] = useState({}); // appointment_id -> điểm hài lòng (1-5)
+
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [appointmentsRes, nursesRes] = await Promise.all([
+    const [appointmentsRes, nursesRes, reviewRes] = await Promise.all([
       supabase
         .from('customer_appointments')
         .select('*, hau_phau:profiles!hau_phau_id(full_name)')
@@ -157,8 +213,21 @@ const HauPhauPage = () => {
         .order('surgery_date', { ascending: false }),
       supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select('id, full_name, role'),
+      supabase
+        .from('service_review_responses')
+        .select('overall_score, invitation:service_review_invitations(appointment_id, is_resurvey)')
+        .limit(5000),
     ]);
+
+    // Điểm hài lòng theo ca (lấy phản hồi mới nhất, bỏ khảo sát lại)
+    const sat = {};
+    (reviewRes?.data || []).forEach(r => {
+      const aid = r.invitation?.appointment_id;
+      if (!aid || r.invitation?.is_resurvey || r.overall_score == null) return;
+      if (sat[aid] == null) sat[aid] = Number(r.overall_score);
+    });
+    setSatByAppt(sat);
 
     if (appointmentsRes.error) {
       toast.error('Lỗi tải dữ liệu: ' + appointmentsRes.error.message);
@@ -261,7 +330,9 @@ const HauPhauPage = () => {
       post_op_status: app.post_op_status || 'Đang theo dõi',
       post_op_notes: '',
       recheck_date: new Date().toISOString().split('T')[0],
-      recheck_time: '09:00'
+      recheck_time: '09:00',
+      warning_signs: Array.isArray(app.warning_signs) ? app.warning_signs : [],
+      next_recheck: app.next_recheck_at ? new Date(app.next_recheck_at).toISOString().slice(0, 16) : '',
     });
     setCskhForm({ cskh_status: app.cskh_status || 'Bình thường', cskh_notes: '' });
   };
@@ -365,9 +436,14 @@ const HauPhauPage = () => {
     const updatedNotes = (selectedApp.post_op_notes || '') + newNote;
 
     const { error } = await supabase.from('customer_appointments')
-      .update({ post_op_status: form.post_op_status, post_op_notes: updatedNotes })
+      .update({
+        post_op_status: form.post_op_status,
+        post_op_notes: updatedNotes,
+        warning_signs: form.warning_signs || [],
+        next_recheck_at: form.next_recheck ? new Date(form.next_recheck).toISOString() : null,
+      })
       .eq('id', selectedApp.id);
-      
+
     if (error) toast.error(error.message);
     else { 
       if (form.post_op_status === 'Tái khám') {
@@ -401,6 +477,28 @@ const HauPhauPage = () => {
     }
     setSaving(false);
   };
+
+  // Lưu 1 mốc hồi phục (hoàn thành / điều dưỡng / ghi chú) vào care_milestones
+  const saveMilestone = async (key, patch) => {
+    if (!careApp) return;
+    setSavingMilestone(true);
+    const existing = Array.isArray(careApp.care_milestones) ? careApp.care_milestones : [];
+    const map = {}; existing.forEach(m => { if (m?.key) map[m.key] = m; });
+    map[key] = { ...(map[key] || {}), key, ...patch };
+    if (patch.done && !map[key].done_at) map[key].done_at = new Date().toISOString();
+    if (patch.done === false) map[key].done_at = null;
+    const arr = MILESTONE_DEFS.map(d => map[d.key]).filter(Boolean);
+    const { error } = await supabase.from('customer_appointments').update({ care_milestones: arr }).eq('id', careApp.id);
+    setSavingMilestone(false);
+    if (error) { toast.error(error.message); return; }
+    setCareApp(prev => prev ? { ...prev, care_milestones: arr } : prev);
+    setMilestoneEdit(null);
+    loadData();
+  };
+
+  const toggleWarning = (sign) => setForm(f => ({
+    ...f, warning_signs: f.warning_signs.includes(sign) ? f.warning_signs.filter(s => s !== sign) : [...f.warning_signs, sign],
+  }));
 
   const handleAssignMoreSubmit = async (e) => {
     e.preventDefault();
@@ -513,126 +611,239 @@ const HauPhauPage = () => {
   if (careApp) {
     const st = form.post_op_status;
     const addNurses = (careApp.additional_hau_phau_ids || []).map(id => nurses.find(n => n.id === id)?.full_name || id);
-    return (
-      <form onSubmit={handleSave} className="max-w-3xl mx-auto space-y-4 pb-32">
-        <button type="button" onClick={() => setCareApp(null)} className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-semibold">
-          <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
+    const ms = buildMilestones(careApp);
+    const metrics = computeMetrics(careApp, ms, satByAppt[careApp.id]);
+    const rk = RISK_STYLE[metrics.risk];
+    const surgStr = careApp.surgery_date ? new Date(careApp.surgery_date).toLocaleDateString('vi-VN') : '—';
+    const nextRecheckM = ms.find(m => !m.done && m.date && startOfDay(m.date) >= startOfDay(new Date())) || ms.find(m => !m.done);
+    const nurseName = (id) => nurses.find(n => n.id === id)?.full_name || null;
+    const PhoneLine = phoneEdit ? (
+      <div className="flex items-center gap-1.5 mt-1">
+        <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+        <input value={phoneVal} onChange={e => setPhoneVal(e.target.value)} inputMode="tel" autoFocus placeholder="Nhập số điện thoại"
+          className="text-sm border rounded-lg px-2 py-1 outline-none focus:border-teal-500 w-40" />
+        <button type="button" onClick={savePhone} disabled={savingPhone} className="text-xs font-semibold text-white bg-teal-600 px-2.5 py-1 rounded-lg disabled:opacity-50">{savingPhone ? '...' : 'Lưu'}</button>
+        <button type="button" onClick={() => setPhoneEdit(false)} className="text-xs text-slate-400 px-1">Huỷ</button>
+      </div>
+    ) : (
+      <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
+        <Phone className="w-4 h-4 shrink-0" />
+        {careApp.phone ? <a href={`tel:${careApp.phone}`} className="text-teal-700 font-medium">{careApp.phone}</a> : <span className="text-slate-400 italic">Chưa có SĐT</span>}
+        <button type="button" onClick={() => { setPhoneVal(careApp.phone || ''); setPhoneEdit(true); }} className="text-xs font-semibold text-teal-600 hover:underline ml-1">{careApp.phone ? 'Sửa' : '+ Thêm'}</button>
+      </div>
+    );
+    const actionBtns = (
+      <>
+        {canSeeAll && (
+          <button type="button" onClick={() => { setAssignForm({ id: careApp.id, additional_hau_phau_ids: careApp.additional_hau_phau_ids || [] }); setSelectedNurseId(''); setShowAssignModal(true); }}
+            className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3.5 py-2 rounded-xl border border-blue-200">
+            <UserPlus className="w-4 h-4" /> Phân công điều dưỡng
+          </button>
+        )}
+        <MediaCustomerButton appointment={careApp} me={profile}
+          canAdd={['media', 'dieu_duong', 'cskh', 'marketing', 'admin'].some(r => [profile?.role, profile?.role_2].includes(r))} />
+        <button type="button" onClick={() => createReview(careApp)} disabled={creatingReview}
+          className="inline-flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 px-3.5 py-2 rounded-xl shadow-sm disabled:opacity-60">
+          {creatingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Tạo phiếu đánh giá
         </button>
-
-        {/* Thông tin khách */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
-              {phoneEdit ? (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input value={phoneVal} onChange={e => setPhoneVal(e.target.value)} inputMode="tel" autoFocus placeholder="Nhập số điện thoại"
-                    className="text-sm border rounded-lg px-2 py-1 outline-none focus:border-teal-500 w-40" />
-                  <button type="button" onClick={savePhone} disabled={savingPhone} className="text-xs font-semibold text-white bg-teal-600 px-2.5 py-1 rounded-lg disabled:opacity-50">{savingPhone ? '...' : 'Lưu'}</button>
-                  <button type="button" onClick={() => setPhoneEdit(false)} className="text-xs text-slate-400 px-1">Huỷ</button>
-                </div>
-              ) : (
-                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
-                  <Phone className="w-4 h-4 shrink-0" />
-                  {careApp.phone ? <a href={`tel:${careApp.phone}`} className="text-teal-700 font-medium">{careApp.phone}</a> : <span className="text-slate-400 italic">Chưa có SĐT</span>}
-                  <button type="button" onClick={() => { setPhoneVal(careApp.phone || ''); setPhoneEdit(true); }} className="text-xs font-semibold text-teal-600 hover:underline ml-1">{careApp.phone ? 'Sửa' : '+ Thêm'}</button>
-                </div>
-              )}
+      </>
+    );
+    return (
+      <form onSubmit={handleSave} className="space-y-4 lg:space-y-5 pb-36">
+        {/* Header mobile — full-bleed xanh đậm */}
+        <div className="lg:hidden -mx-4 -mt-4 px-4 pt-4 pb-16 bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-600 rounded-b-[28px] text-white">
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => setCareApp(null)} className="w-10 h-10 rounded-full bg-white/15 grid place-items-center hover:bg-white/25"><ChevronLeft className="w-5 h-5" /></button>
+            <div className="text-center min-w-0 px-2">
+              <div className="font-bold text-lg text-white truncate">{careApp.customer_name}</div>
+              <div className="inline-flex items-center gap-1.5 text-xs text-white/90 mt-0.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-300" /> {careApp.post_op_status || 'Đang theo dõi'}</div>
             </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-              <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>
-                {careApp.post_op_status || 'Đang theo dõi'}
-              </span>
-              {careApp.cskh_status && <span className={`px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${CSKH_STATUS_STYLE[careApp.cskh_status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>CSKH: {careApp.cskh_status}</span>}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm bg-slate-50 p-3 rounded-xl">
-            <div className="text-slate-500 text-xs">Dịch vụ</div>
-            <div className="font-semibold text-slate-800 text-right">{careApp.service || '—'}</div>
-            <div className="text-slate-500 text-xs">Ngày mổ</div>
-            <div className="text-slate-700 text-right">{careApp.surgery_date ? new Date(careApp.surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
-            <div className="text-slate-500 text-xs">Phụ trách</div>
-            <div className="text-slate-700 text-right">{careApp.hau_phau?.full_name || 'N/A'}{addNurses.length > 0 && <span className="text-xs text-slate-400"> + {addNurses.join(', ')}</span>}</div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {canSeeAll && (
-              <button type="button" onClick={() => { setAssignForm({ id: careApp.id, additional_hau_phau_ids: careApp.additional_hau_phau_ids || [] }); setSelectedNurseId(''); setShowAssignModal(true); }}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
-                <UserPlus className="w-4 h-4" /> Phân công thêm điều dưỡng
-              </button>
-            )}
-            <MediaCustomerButton appointment={careApp} me={profile}
-              canAdd={['media', 'dieu_duong', 'cskh', 'marketing', 'admin'].some(r => [profile?.role, profile?.role_2].includes(r))} />
-            <button type="button" onClick={() => createReview(careApp)} disabled={creatingReview}
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 px-3.5 py-1.5 rounded-lg shadow-sm disabled:opacity-60">
-              {creatingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Tạo phiếu đánh giá
-            </button>
+            <span className="w-10 h-10 rounded-full bg-white/15 grid place-items-center shrink-0"><Heart className="w-5 h-5" /></span>
           </div>
         </div>
 
-        {/* Nhật ký Hậu phẫu (thread) — CSKH mặc định ẩn, bấm để hiện */}
+        {/* Back desktop */}
+        <button type="button" onClick={() => setCareApp(null)} className="hidden lg:flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-semibold">
+          <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
+        </button>
+
+        {/* Thẻ thông tin khách */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 -mt-14 lg:mt-0 relative">
+          <div className="flex items-start gap-4 flex-wrap">
+            <span className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-xl font-bold shrink-0">{initialsOf(careApp.customer_name)}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>{careApp.post_op_status || 'Đang theo dõi'}</span>
+                {careApp.cskh_status && <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${CSKH_STATUS_STYLE[careApp.cskh_status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>CSKH: {careApp.cskh_status}</span>}
+              </div>
+              {PhoneLine}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 mt-3 text-sm">
+                <div><div className="text-xs text-slate-400">Dịch vụ</div><div className="font-semibold text-slate-700">{careApp.service || '—'}</div></div>
+                <div><div className="text-xs text-slate-400">Ngày phẫu thuật</div><div className="font-semibold text-slate-700">{surgStr}</div></div>
+                <div><div className="text-xs text-slate-400">Điều dưỡng phụ trách</div><div className="font-semibold text-slate-700 truncate">{careApp.hau_phau?.full_name || '—'}{addNurses.length > 0 && <span className="text-slate-400"> +{addNurses.length}</span>}</div></div>
+              </div>
+            </div>
+            <div className="hidden lg:flex flex-col gap-2 shrink-0 w-52">{actionBtns}</div>
+          </div>
+        </div>
+
+        {/* Chỉ số — desktop */}
+        <div className="hidden lg:grid grid-cols-5 gap-3">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center justify-center">
+            <div className="relative w-20 h-20">
+              <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#14b8a6" strokeWidth="3.5" strokeLinecap="round" strokeDasharray={`${metrics.progress * 0.974} 100`} />
+              </svg>
+              <div className="absolute inset-0 grid place-items-center"><span className="text-lg font-bold text-slate-800">{metrics.progress}%</span></div>
+            </div>
+            <div className="text-xs text-slate-400 mt-1">Tiến độ hồi phục</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400"><CalendarClock className="w-4 h-4" /> Tái khám tiếp theo</div>
+            <div className="text-base font-bold text-slate-800 mt-2">{careApp.next_recheck_at ? new Date(careApp.next_recheck_at).toLocaleDateString('vi-VN') : (nextRecheckM?.date ? nextRecheckM.date.toLocaleDateString('vi-VN') : '—')}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{careApp.next_recheck_at ? new Date(careApp.next_recheck_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : (nextRecheckM?.label || '')}</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck className="w-4 h-4" /> Điểm hoàn thành chăm sóc</div>
+            <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{metrics.careScore}<span className="text-sm text-slate-400">/100</span></div>
+            <div className="text-xs text-emerald-600 mt-0.5">{metrics.careScore >= 80 ? 'Tốt' : metrics.careScore >= 50 ? 'Khá' : 'Cần cải thiện'}</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400"><AlertTriangle className="w-4 h-4" /> Nguy cơ biến chứng</div>
+            <div className={`text-2xl font-bold mt-2 ${rk.c}`}>{metrics.risk}</div>
+            <div className="h-1.5 rounded-full bg-slate-100 mt-2 overflow-hidden"><div className="h-full rounded-full" style={{ width: metrics.risk === 'Cao' ? '100%' : metrics.risk === 'Trung bình' ? '55%' : '20%', backgroundColor: rk.ring }} /></div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400"><Heart className="w-4 h-4" /> Mức độ hài lòng</div>
+            <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{metrics.satisfaction != null ? metrics.satisfaction.toFixed(1) : '—'}<span className="text-sm text-slate-400">/5</span></div>
+            <div className="text-xs text-slate-400 mt-0.5">{metrics.satisfaction != null ? (metrics.satisfaction >= 4 ? 'Rất hài lòng' : metrics.satisfaction >= 3 ? 'Bình thường' : 'Chưa hài lòng') : 'Chưa đánh giá'}</div>
+          </div>
+        </div>
+
+        {/* Chỉ số — mobile (3 chip) */}
+        <div className="lg:hidden grid grid-cols-3 gap-2">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
+            <div className="text-xl font-bold text-teal-600 tabular-nums">{metrics.progress}%</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Hồi phục</div>
+          </div>
+          <div className={`rounded-2xl border shadow-sm p-3 text-center ${rk.bg} border-transparent`}>
+            <div className={`text-base font-bold ${rk.c} flex items-center justify-center gap-1`}><AlertTriangle className="w-4 h-4" /> {metrics.risk}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Rủi ro</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
+            <div className="text-xl font-bold text-slate-800 tabular-nums">{metrics.satisfaction != null ? metrics.satisfaction.toFixed(1) : '—'}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Hài lòng</div>
+          </div>
+        </div>
+
+        {/* Hành động — mobile (3 thẻ) */}
+        <div className="lg:hidden grid grid-cols-1 gap-2">{actionBtns}</div>
+
+        {/* Hành trình hồi phục + Cập nhật chăm sóc */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          {/* Hành trình hồi phục (mốc) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4"><Activity className="w-5 h-5 text-teal-600" /> Hành trình hồi phục</h3>
+            <div>
+              {ms.map((m, i) => {
+                const done = m.status === 'done';
+                const active = m.status === 'active';
+                return (
+                  <div key={m.key} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${done ? 'bg-emerald-500 text-white' : active ? 'bg-teal-100 text-teal-600 ring-2 ring-teal-400' : 'bg-slate-100 text-slate-400'}`}>
+                        {done ? <Check className="w-4 h-4" /> : <span className="text-[11px] font-bold">{i === 0 ? 'PT' : m.off}</span>}
+                      </span>
+                      {i < ms.length - 1 && <span className={`w-0.5 flex-1 my-1 ${done ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
+                    </div>
+                    <button type="button" onClick={() => canEditHauPhau && setMilestoneEdit(m)} className={`text-left flex-1 pb-4 ${canEditHauPhau ? 'cursor-pointer' : 'cursor-default'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-slate-800 text-sm">{m.label}</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold shrink-0 ${done ? 'bg-emerald-100 text-emerald-700' : active ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{done ? 'Hoàn thành' : active ? 'Đến hạn' : 'Chưa tới'}</span>
+                      </div>
+                      <div className="text-xs text-slate-400">{m.date ? m.date.toLocaleDateString('vi-VN') : '—'}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{m.note || m.desc}</div>
+                      {m.nurse_id && <div className="text-[11px] text-teal-600 mt-0.5">ĐD: {nurseName(m.nurse_id) || '—'}</div>}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Cập nhật chăm sóc hậu phẫu */}
+          {canEditHauPhau ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2"><ClipboardList className="w-5 h-5 text-teal-600" /> Cập nhật chăm sóc hậu phẫu</h3>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-slate-600">Trạng thái hiện tại</label>
+              <div className="flex flex-wrap gap-2">
+                {TABS.filter(t => t.id !== 'all').map(t => (
+                  <button key={t.id} type="button" onClick={() => setForm({ ...form, post_op_status: t.id })}
+                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${st === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{t.label}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-slate-600">Thẻ chăm sóc nhanh</label>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_NOTES.map(q => (
+                  <button key={q} type="button" onClick={() => addQuickNote(q)} className="px-3 py-1.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium border border-teal-100 hover:bg-teal-100">+ {q}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-slate-600">Dấu hiệu cần lưu ý</label>
+              <div className="flex flex-wrap gap-2">
+                {WARNING_SIGNS.map(w => {
+                  const on = form.warning_signs.includes(w);
+                  return <button key={w} type="button" onClick={() => toggleWarning(w)} className={`px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center gap-1 transition ${on ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-rose-600 border-rose-200 hover:bg-rose-50'}`}><AlertTriangle className="w-3 h-3" /> {w}</button>;
+                })}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-slate-600">Ghi chú cập nhật</label>
+              <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-slate-600">Lịch tái khám tiếp theo</label>
+              <input type="datetime-local" value={form.next_recheck} onChange={e => setForm({ ...form, next_recheck: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 text-sm" />
+            </div>
+            {st === 'Tái khám' && (
+              <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                <div><label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám (tạo lịch)</label><input type="date" value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1">
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-teal-100">
+                {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+              </button>
+              <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700">{saving ? 'Đang lưu...' : 'Lưu cập nhật'}</button>
+            </div>
+          </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 text-sm text-slate-400 grid place-items-center min-h-[120px]">Bạn chỉ có quyền xem hồ sơ hậu phẫu.</div>
+          )}
+        </div>
+
+        {/* Nhật ký chăm sóc hậu phẫu (thread) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký Hậu phẫu</h3>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký chăm sóc hậu phẫu</h3>
             <button type="button" onClick={() => setShowHauPhauLog(v => !v)} className="shrink-0 text-xs font-semibold text-teal-600 hover:bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100 inline-flex items-center gap-1">
               {showHauPhauLog ? <><ChevronUp className="w-3.5 h-3.5" /> Ẩn</> : <><ChevronDown className="w-3.5 h-3.5" /> Hiện</>}
             </button>
           </div>
           {showHauPhauLog && (
-            <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1 mt-3">
+            <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
               {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào</div>}
             </div>
           )}
         </div>
-
-        {/* Thêm mốc Hậu phẫu — chỉ điều dưỡng / admin (CSKH chỉ xem) */}
-        {canEditHauPhau && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <h3 className="font-bold text-slate-800">Thêm mốc chăm sóc</h3>
-          <div>
-            <label className="block text-sm font-semibold mb-2 text-slate-600">Cập nhật trạng thái</label>
-            <div className="flex flex-wrap gap-2">
-              {TABS.filter(t => t.id !== 'all').map(t => (
-                <button key={t.id} type="button" onClick={() => setForm({ ...form, post_op_status: t.id })}
-                  className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${st === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {st === 'Tái khám' && (
-            <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám</label>
-                <input type="date" required value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label>
-                <input type="time" required value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {QUICK_NOTES.map(q => (
-              <button key={q} type="button" onClick={() => addQuickNote(q)}
-                className="px-3 py-1.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium border border-teal-100 hover:bg-teal-100">
-                + {q}
-              </button>
-            ))}
-          </div>
-          <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
-          <div className="flex items-center justify-between">
-            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-teal-100">
-              {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
-            </button>
-            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
-          </div>
-        </div>
-        )}
 
         {/* Nhật ký CSKH (thread) — mọi người xem được */}
         <div className="bg-white rounded-2xl border border-violet-200 shadow-sm p-5">
@@ -729,6 +940,42 @@ const HauPhauPage = () => {
                   <button type="button" onClick={shareReview} className="py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-blue-100"><Share2 className="w-4 h-4" /> Chia sẻ</button>
                   <button type="button" onClick={printReview} className="py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-slate-200"><Printer className="w-4 h-4" /> In</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sửa 1 mốc hồi phục */}
+        {milestoneEdit && (
+          <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={() => setMilestoneEdit(null)}>
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="px-6 py-4 border-b flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800">{milestoneEdit.label}</h3>
+                  <p className="text-xs text-slate-400">{milestoneEdit.date ? milestoneEdit.date.toLocaleDateString('vi-VN') : ''} · {milestoneEdit.desc}</p>
+                </div>
+                <button type="button" onClick={() => setMilestoneEdit(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Điều dưỡng phụ trách mốc</label>
+                  <select value={milestoneEdit.nurse_id || ''} onChange={e => setMilestoneEdit(m => ({ ...m, nurse_id: e.target.value || null }))} className="w-full h-10 px-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-teal-400">
+                    <option value="">— Chọn điều dưỡng —</option>
+                    {nurses.filter(n => n.role === 'dieu_duong' || n.role === 'admin').map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Ghi chú mốc</label>
+                  <textarea rows={3} value={milestoneEdit.note || ''} onChange={e => setMilestoneEdit(m => ({ ...m, note: e.target.value }))} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm outline-none focus:border-teal-400 resize-none" placeholder="Ví dụ: Đã cắt chỉ, vết mổ khô…" />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t flex items-center gap-2">
+                <button type="button" onClick={() => saveMilestone(milestoneEdit.key, { done: !milestoneEdit.done, nurse_id: milestoneEdit.nurse_id || null, note: milestoneEdit.note || '' })} disabled={savingMilestone}
+                  className={`flex-1 py-2.5 font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 ${milestoneEdit.done ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
+                  {savingMilestone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {milestoneEdit.done ? 'Bỏ hoàn thành' : 'Đánh dấu hoàn thành'}
+                </button>
+                <button type="button" onClick={() => saveMilestone(milestoneEdit.key, { done: milestoneEdit.done, nurse_id: milestoneEdit.nurse_id || null, note: milestoneEdit.note || '' })} disabled={savingMilestone}
+                  className="py-2.5 px-4 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50">Lưu</button>
               </div>
             </div>
           </div>
