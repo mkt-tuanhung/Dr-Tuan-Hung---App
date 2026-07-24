@@ -12,40 +12,76 @@ import {
 } from 'lucide-react';
 
 // Màu biểu cảm chuyển dần đỏ → xanh theo mức hài lòng
-const FACE_COLORS = { 1: '#f43f5e', 2: '#fb923c', 3: '#f59e0b', 4: '#2dd4bf', 5: '#10b981' };
-const MOUTHS = {
-  1: 'M13 27.5 Q20 20 27 27.5',   // rất buồn
-  2: 'M13 26 Q20 22.5 27 26',     // buồn
-  3: 'M13 25 L27 25',             // bình thường
-  4: 'M13 24 Q20 29 27 24',       // vui
-  5: 'M13 23 Q20 31.5 27 23',     // rất vui
-};
+const FACE_COLORS = { 1: '#fb7185', 2: '#fb923c', 3: '#fbbf24', 4: '#34d399', 5: '#10b981' };
+const FACE_LIGHT = { 1: '#fecdd3', 2: '#fed7aa', 3: '#fde68a', 4: '#a7f3d0', 5: '#6ee7b7' };
 
-// Mặt biểu cảm tự vẽ bằng SVG — sắc nét & đồng nhất trên mọi thiết bị
+// Mặt biểu cảm kawaii tự vẽ bằng SVG — mềm mại & đồng nhất trên mọi thiết bị
 function FaceIcon({ level, active, className }) {
-  const stroke = active ? '#ffffff' : '#94a3b8';
-  const face = active ? FACE_COLORS[level] : '#e2e8f0';
+  const base = active ? FACE_COLORS[level] : '#cbd5e1';
+  const light = active ? FACE_LIGHT[level] : '#e8edf3';
+  const line = active ? '#ffffff' : '#94a3b8';   // miệng, mắt nhắm
+  const pupil = active ? '#3f3f46' : '#64748b';
+  const cheek = active ? 'rgba(255,255,255,0.38)' : 'rgba(148,163,184,0.22)';
+  const gid = `fg-${level}-${active ? 'a' : 'i'}`;
+  const eyeUp = level >= 3;                        // mắt nhìn lên (vui) hay xuống (buồn)
+  const py = eyeUp ? 20.4 : 22;
   return (
-    <svg viewBox="0 0 40 40" className={className} fill="none" aria-hidden="true">
-      <circle cx="20" cy="20" r="16" fill={face} />
+    <svg viewBox="0 0 48 48" className={className} fill="none" aria-hidden="true">
+      <defs>
+        <radialGradient id={gid} cx="36%" cy="28%" r="78%">
+          <stop offset="0%" stopColor={light} />
+          <stop offset="100%" stopColor={base} />
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="24" r="20" fill={`url(#${gid})`} />
+
+      {/* má hồng */}
+      <circle cx="14.5" cy="28.5" r="3.5" fill={cheek} />
+      <circle cx="33.5" cy="28.5" r="3.5" fill={cheek} />
+
+      {/* chân mày lo lắng cho mức 1 */}
+      {level === 1 && (
+        <>
+          <path d="M13.5 15.8 Q17 14.2 20 16.2" stroke={line} strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M34.5 15.8 Q31 14.2 28 16.2" stroke={line} strokeWidth="1.7" strokeLinecap="round" />
+        </>
+      )}
+
+      {/* mắt */}
       {level === 5 ? (
         <>
-          <path d="M11 18 Q14.5 14.5 18 18" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M22 18 Q25.5 14.5 29 18" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M13.5 21.5 Q17 17.8 20.5 21.5" stroke={line} strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M27.5 21.5 Q31 17.8 34.5 21.5" stroke={line} strokeWidth="2.6" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <circle cx="14.5" cy="17" r="1.9" fill={stroke} />
-          <circle cx="25.5" cy="17" r="1.9" fill={stroke} />
+          <circle cx="17" cy="21" r="3.7" fill="#ffffff" />
+          <circle cx="31" cy="21" r="3.7" fill="#ffffff" />
+          <circle cx="17.4" cy={py} r="2" fill={pupil} />
+          <circle cx="31.4" cy={py} r="2" fill={pupil} />
+          <circle cx="16.3" cy={py - 1} r="0.85" fill="#ffffff" />
+          <circle cx="30.3" cy={py - 1} r="0.85" fill="#ffffff" />
         </>
       )}
-      {level <= 2 && (
+
+      {/* giọt nước mắt cho mức 1 */}
+      {level === 1 && <path d="M13 24.5 Q10.8 28.5 13 30 Q15.2 28.5 13 24.5 Z" fill="#38bdf8" />}
+
+      {/* miệng */}
+      {level === 5 ? (
         <>
-          <path d={level === 1 ? 'M10.5 12.5 L17 14.2' : 'M11.5 13.2 L16.5 14.2'} stroke={stroke} strokeWidth="2" strokeLinecap="round" />
-          <path d={level === 1 ? 'M29.5 12.5 L23 14.2' : 'M28.5 13.2 L23.5 14.2'} stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M16.5 30 Q24 31.5 31.5 30 Q30 39.5 24 39.5 Q18 39.5 16.5 30 Z" fill={line} />
+          {active && <ellipse cx="24" cy="37.4" rx="3.5" ry="2.1" fill="#fb7185" />}
         </>
+      ) : level === 4 ? (
+        <path d="M17.5 30.5 Q24 37 30.5 30.5" stroke={line} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      ) : level === 3 ? (
+        <path d="M20 32 Q24 33.8 28 32" stroke={line} strokeWidth="3" strokeLinecap="round" />
+      ) : level === 2 ? (
+        <path d="M18.5 33.5 Q24 30 29.5 33.5" stroke={line} strokeWidth="3" strokeLinecap="round" />
+      ) : (
+        <path d="M18.5 34.5 Q24 29 29.5 34.5" stroke={line} strokeWidth="3" strokeLinecap="round" />
       )}
-      <path d={MOUTHS[level]} stroke={stroke} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -298,9 +334,9 @@ export default function ServiceReviewPublicPage() {
               const sel = answers[q.code] === n;
               return (
                 <button key={n} onClick={() => setAns(q.code, n)}
-                  style={sel ? { borderColor: FACE_COLORS[n], backgroundColor: FACE_COLORS[n] + '14' } : undefined}
-                  className={`flex-1 aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-200 ${sel ? 'scale-105 shadow-md' : 'border-slate-200 bg-white hover:border-slate-300 hover:-translate-y-0.5'}`}>
-                  <FaceIcon level={n} active={sel} className="w-9 h-9" />
+                  style={sel ? { borderColor: FACE_COLORS[n], backgroundColor: FACE_COLORS[n] + '16' } : undefined}
+                  className={`flex-1 aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-200 ${sel ? 'scale-110 shadow-lg -translate-y-1' : 'border-slate-200 bg-white hover:border-slate-300 hover:-translate-y-0.5'}`}>
+                  <FaceIcon level={n} active={sel} className={`transition-all ${sel ? 'w-11 h-11' : 'w-9 h-9'}`} />
                   <span className="text-xs font-bold" style={{ color: sel ? FACE_COLORS[n] : '#94a3b8' }}>{n}</span>
                 </button>
               );
