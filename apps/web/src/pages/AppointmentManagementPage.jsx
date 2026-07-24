@@ -4,8 +4,9 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck, QrCode, Copy, Printer, Star, Share2 } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import QRCode from 'qrcode';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
 const AppointmentManagementPage = () => {
@@ -42,6 +43,81 @@ const AppointmentManagementPage = () => {
     used_service: '', surgery_date: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [reviewModal, setReviewModal] = useState(null);   // { app, url, dataUrl }
+  const [creatingReview, setCreatingReview] = useState(null); // app.id đang tạo
+
+  // Tạo (hoặc lấy lại) phiếu đánh giá dịch vụ → hiện QR để gửi khách
+  const createReview = async (app) => {
+    setCreatingReview(app.id);
+    try {
+      const staffMap = {};
+      staffList.forEach(s => { staffMap[s.id] = s; });
+      const nm = (id) => (id && staffMap[id] ? { id, name: staffMap[id].full_name } : null);
+      const nurseIds = [app.phu_mo_1_id, app.phu_mo_2_id, app.phu_mo_3_id, app.hau_phau_id, app.truc_dem_id, app.truc_dem_id_2]
+        .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+      const consultantIds = [app.telesale_id, app.sale_id].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+      const staff_snapshot = {
+        doctor: nm(app.bac_si_id) || null,
+        nurses: nurseIds.map(nm).filter(Boolean),
+        consultants: consultantIds.map(nm).filter(Boolean),
+      };
+
+      // Dùng lại phiếu chưa hoàn thành nếu có; nếu không, tạo mới
+      let token;
+      const { data: existing } = await supabase.from('service_review_invitations')
+        .select('token').eq('appointment_id', app.id).in('status', ['pending', 'opened'])
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (existing?.token) {
+        token = existing.token;
+      } else {
+        const { data: created, error } = await supabase.from('service_review_invitations')
+          .insert({
+            appointment_id: app.id,
+            customer_name: app.customer_name,
+            phone: app.phone || null,
+            service: app.service || null,
+            surgery_date: app.surgery_date || null,
+            staff_snapshot,
+            channel: 'qr',
+            created_by: profile?.id || null,
+          })
+          .select('token').single();
+        if (error) throw error;
+        token = created.token;
+      }
+      const url = `${window.location.origin}/danh-gia/${token}`;
+      const dataUrl = await QRCode.toDataURL(url, { width: 480, margin: 2, errorCorrectionLevel: 'M' });
+      setReviewModal({ app, url, dataUrl });
+    } catch (err) {
+      toast.error('Lỗi tạo phiếu đánh giá: ' + (err.message || err));
+    }
+    setCreatingReview(null);
+  };
+
+  const copyReviewLink = () => {
+    if (!reviewModal) return;
+    navigator.clipboard?.writeText(reviewModal.url).then(() => toast.success('Đã sao chép link!'), () => {});
+  };
+  const printReview = () => {
+    if (!reviewModal) return;
+    const w = window.open('', '_blank');
+    if (!w) { toast.error('Trình duyệt chặn cửa sổ in.'); return; }
+    w.document.write(`<html><head><title>Phiếu đánh giá</title></head><body style="font-family:sans-serif;text-align:center;padding:32px">
+      <h2 style="margin:0 0 4px">Đánh giá dịch vụ</h2>
+      <p style="color:#555;margin:0 0 4px">${reviewModal.app.customer_name || ''}</p>
+      <p style="color:#888;margin:0 0 16px;font-size:13px">${reviewModal.app.service || ''}</p>
+      <img src="${reviewModal.dataUrl}" style="width:300px;height:300px" />
+      <p style="margin-top:16px;font-size:14px">Quét mã QR để đánh giá dịch vụ</p>
+      <p style="color:#0d9488;font-size:12px;word-break:break-all">${reviewModal.url}</p>
+    </body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+  };
+  const shareReview = async () => {
+    if (!reviewModal || !navigator.share) { copyReviewLink(); return; }
+    try {
+      await navigator.share({ title: 'Đánh giá dịch vụ', text: `Kính mời ${reviewModal.app.customer_name || 'quý khách'} đánh giá dịch vụ:`, url: reviewModal.url });
+    } catch { /* user cancelled */ }
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -740,6 +816,12 @@ const AppointmentManagementPage = () => {
                           {app.consult_received && app.status === 'scheduled' && (
                             <div className="w-full py-1.5 text-center text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
                           )}
+                          {app.status === 'phau_thuat' && (isAdmin || ['accountant', 'telesale', 'sale_offline', 'cskh', 'dieu_duong'].includes(profile?.role)) && (
+                            <button onClick={() => createReview(app)} disabled={creatingReview === app.id}
+                              className="w-full py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm rounded-xl hover:from-teal-600 hover:to-emerald-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                              {creatingReview === app.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Tạo phiếu đánh giá
+                            </button>
+                          )}
                           <div className="flex items-center gap-2 w-full">
                             {profile?.role === 'admin' && (
                               <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm py-2 rounded-xl hover:bg-teal-100 transition-colors">
@@ -1160,6 +1242,37 @@ const AppointmentManagementPage = () => {
       )}
 
       {/* Image Viewer Modal */}
+      {/* QR phiếu đánh giá dịch vụ */}
+      {reviewModal && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setReviewModal(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-teal-500 to-emerald-500 px-6 pt-6 pb-8 text-center relative">
+              <button onClick={() => setReviewModal(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20"><X className="w-4 h-4" /></button>
+              <div className="w-12 h-12 rounded-2xl bg-white/20 grid place-items-center mx-auto mb-2"><Star className="w-6 h-6 text-white" /></div>
+              <h3 className="font-bold text-white text-lg">Phiếu đánh giá dịch vụ</h3>
+              <p className="text-teal-50 text-sm mt-0.5">{reviewModal.app.customer_name}</p>
+            </div>
+            <div className="px-6 -mt-5">
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex flex-col items-center">
+                <img src={reviewModal.dataUrl} alt="QR đánh giá" className="w-56 h-56" />
+                <p className="text-xs text-slate-400 mt-2 text-center">Cho khách quét mã QR để đánh giá dịch vụ</p>
+              </div>
+            </div>
+            <div className="p-6 pt-4 space-y-2">
+              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                <span className="text-xs text-slate-500 truncate flex-1">{reviewModal.url}</span>
+                <button onClick={copyReviewLink} className="shrink-0 text-teal-600 hover:text-teal-700"><Copy className="w-4 h-4" /></button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={copyReviewLink} className="py-2.5 rounded-xl bg-teal-50 text-teal-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-teal-100"><Copy className="w-4 h-4" /> Sao chép</button>
+                <button onClick={shareReview} className="py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-blue-100"><Share2 className="w-4 h-4" /> Chia sẻ</button>
+                <button onClick={printReview} className="py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-slate-200"><Printer className="w-4 h-4" /> In</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewImage && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
           <div className="relative max-w-5xl w-full flex justify-center">
