@@ -192,11 +192,8 @@ const HauPhauPage = () => {
       nurses.forEach(s => { staffMap[s.id] = s; });
       const nm = (id) => (id && staffMap[id] ? { id, name: staffMap[id].full_name } : null);
       const uniq = (arr) => arr.filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
-      const nurseIds = uniq([
-        app.phu_mo_1_id, app.phu_mo_2_id, app.phu_mo_3_id,
-        app.hau_phau_id, ...(app.additional_hau_phau_ids || []),
-        app.truc_dem_id, app.truc_dem_id_2,
-      ]);
+      // Điều dưỡng chăm khách = điều dưỡng TRỰC ĐÊM (chỉ đánh giá đúng người này)
+      const nurseIds = uniq([app.truc_dem_id, app.truc_dem_id_2]);
       // Tách rõ Telesale (gọi điện) và Sale Offline (tiếp đón trực tiếp) — 2 bộ phận khác nhau
       const telesaleIds = uniq([app.telesale_id, app.telesale_id_2]);
       const saleIds = uniq([app.sale_id]);
