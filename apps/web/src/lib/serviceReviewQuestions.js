@@ -95,8 +95,9 @@ export const npsGroup = (n) => (n >= 9 ? 'promoter' : n >= 7 ? 'passive' : 'detr
 
 // Nhãn nhóm nhân sự cho câu 3
 export const STAFF_ROLE_LABELS = {
+  truc_page: 'Trực page (tư vấn online)',
+  consultant: 'Tư vấn viên',
   doctor: 'Bác sĩ',
   nurse: 'Điều dưỡng',
-  consultant: 'Tư vấn viên',
   cskh: 'Chăm sóc khách hàng',
 };
