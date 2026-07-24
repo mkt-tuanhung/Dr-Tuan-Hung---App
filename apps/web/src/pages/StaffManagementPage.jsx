@@ -32,6 +32,7 @@ const ROLES = [
   { value: 'media',        label: 'Media' },
   { value: 'editor',       label: 'Editor' },
   { value: 'marketing',    label: 'Marketing' },
+  { value: 'seeding',      label: 'Seeding' },
   { value: 'dieu_duong',   label: 'Điều dưỡng' },
   { value: 'bac_si',       label: 'Bác sĩ' },
   { value: 'accountant',   label: 'Kế toán' },
@@ -52,6 +53,7 @@ const ROLE_COLORS = {
   media:        'bg-cyan-100 text-cyan-700',
   editor:       'bg-teal-100 text-teal-700',
   marketing:    'bg-indigo-100 text-indigo-700',
+  seeding:      'bg-emerald-100 text-emerald-700',
   dieu_duong:   'bg-teal-100 text-teal-700',
   bac_si:       'bg-sky-100 text-sky-700',
 };

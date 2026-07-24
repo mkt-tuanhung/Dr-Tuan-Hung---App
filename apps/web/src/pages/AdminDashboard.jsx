@@ -18,6 +18,7 @@ import PLPage from '@/pages/PLPage.jsx';
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
+import SeedingRevenuePage from '@/pages/SeedingRevenuePage.jsx';
 import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
@@ -31,7 +32,7 @@ import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
@@ -55,6 +56,7 @@ const MENU_GROUPS = [
   { title: 'TÀI CHÍNH', color: 'amber', items: [
     { id: 'finance', label: 'Doanh thu / Tài chính', icon: Banknote },
     { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
+    { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout },
     { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
@@ -655,6 +657,7 @@ const AdminDashboard = () => {
       case 'khach_tu_van': return <KhachTuVanPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
+      case 'seeding_rev': return <SeedingRevenuePage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
