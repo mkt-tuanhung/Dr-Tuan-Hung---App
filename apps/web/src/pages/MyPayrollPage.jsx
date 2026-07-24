@@ -73,7 +73,11 @@ const MyPayrollPage = () => {
     // Ca PT có liên quan tới NV ở bất kỳ vị trí tính tiền nào (telesale/sale/phụ mổ/trực đêm)
     const orSurg = `${orSale},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid},truc_dem_id.eq.${tid},truc_dem_id_2.eq.${tid},hau_phau_id.eq.${tid}`;
 
-    const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes] = await Promise.all([
+    // Team seeding dùng chung 1 tài khoản → hoa hồng tính trên TẤT CẢ ca nguồn "Seeding" (không lọc theo nhân sự)
+    const roleGuess = (isManager ? staffList.find(s => s.id === tid) : profile);
+    const isSeedingTarget = roleGuess?.role === 'seeding' || roleGuess?.role_2 === 'seeding';
+
+    const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes, seedRes] = await Promise.all([
       supabase.from('profiles').select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
       supabase.from('payroll').select('*').eq('staff_id', tid),
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').eq('staff_id', tid).gte('date', ms).lte('date', meDay),
@@ -86,6 +90,9 @@ const MyPayrollPage = () => {
       supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
       supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').eq('editor_id', tid).gte('evaluated_at', ms).lt('evaluated_at', meNext),
       supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, surgery_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').or(`bac_si_id.eq.${tid},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid}`).gte('surgery_date', ms).lte('surgery_date', meDay),
+      isSeedingTarget
+        ? supabase.from('customer_appointments').select('customer_name, revenue, hospital_fee, surgery_date').eq('customer_source', 'Seeding').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay).limit(2000)
+        : Promise.resolve({ data: [] }),
     ]);
 
     if (profRes.data) setTargetProfile(profRes.data);
@@ -94,10 +101,10 @@ const MyPayrollPage = () => {
       att: attRes.data || [], appts: apptRes.data || [], surg: surgRes.data || [],
       bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
       adv: advRes.data || [], salAdv: salRes.data || [], contentWins: winRes.data || [],
-      partner: partnerRes.data || [],
+      partner: partnerRes.data || [], seeding: seedRes.data || [],
     });
     setLoading(false);
-  }, [targetId, month, year]);
+  }, [targetId, month, year, isManager, staffList, profile]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
