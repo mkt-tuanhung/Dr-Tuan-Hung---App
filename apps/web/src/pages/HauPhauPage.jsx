@@ -197,14 +197,17 @@ const HauPhauPage = () => {
         app.hau_phau_id, ...(app.additional_hau_phau_ids || []),
         app.truc_dem_id, app.truc_dem_id_2,
       ]);
-      const consultantIds = uniq([app.telesale_id, app.telesale_id_2, app.sale_id]);
+      // Tách rõ Telesale (gọi điện) và Sale Offline (tiếp đón trực tiếp) — 2 bộ phận khác nhau
+      const telesaleIds = uniq([app.telesale_id, app.telesale_id_2]);
+      const saleIds = uniq([app.sale_id]);
       // Trực page: chỉ có 1 nhân viên phụ trách 100% khách → tự động đưa vào mọi phiếu
       const trucPage = nurses.filter(s => s.role === 'truc_page').map(s => ({ id: s.id, name: s.full_name }));
       const staff_snapshot = {
         truc_page: trucPage,
+        telesale: telesaleIds.map(nm).filter(Boolean),
+        sale_offline: saleIds.map(nm).filter(Boolean),
         doctor: nm(app.bac_si_id) || null,
         nurses: nurseIds.map(nm).filter(Boolean),
-        consultants: consultantIds.map(nm).filter(Boolean),
       };
 
       // Tạo phiếu qua RPC SECURITY DEFINER (bỏ qua RLS an toàn)

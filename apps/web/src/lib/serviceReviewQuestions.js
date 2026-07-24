@@ -93,10 +93,12 @@ export const QUESTIONS = [
 // Nhóm NPS (PRD §6 câu 9)
 export const npsGroup = (n) => (n >= 9 ? 'promoter' : n >= 7 ? 'passive' : 'detractor');
 
-// Nhãn nhóm nhân sự cho câu 3
+// Nhãn nhóm nhân sự cho câu 3 (tách rõ từng bộ phận)
 export const STAFF_ROLE_LABELS = {
   truc_page: 'Trực page (tư vấn online)',
-  consultant: 'Tư vấn viên',
+  telesale: 'Telesale (tư vấn qua điện thoại)',
+  sale_offline: 'Sale Offline (tư vấn trực tiếp)',
+  consultant: 'Tư vấn viên',   // giữ tương thích dữ liệu cũ
   doctor: 'Bác sĩ',
   nurse: 'Điều dưỡng',
   cskh: 'Chăm sóc khách hàng',
