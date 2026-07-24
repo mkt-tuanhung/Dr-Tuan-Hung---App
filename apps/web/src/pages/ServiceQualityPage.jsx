@@ -6,12 +6,15 @@ import { toast } from 'sonner';
 import {
   Star, Smile, TrendingUp, AlertTriangle, ShieldAlert, PhoneCall, Users,
   Search, X, MessageSquare, ChevronRight, Loader2, Award, ThumbsUp,
-  Ticket, Clock, CheckCircle2, UserPlus, Send,
+  Ticket, Clock, CheckCircle2, UserPlus, Send, RefreshCw, Copy, Megaphone,
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
-import { QUESTIONS, STAFF_ROLE_LABELS, RATING_LABELS, npsGroup } from '@/lib/serviceReviewQuestions';
+import { QUESTIONS, STAFF_ROLE_LABELS, RATING_LABELS, npsGroup, SENTIMENT_STYLE } from '@/lib/serviceReviewQuestions';
+
+const SENTIMENTS = ['rất tích cực', 'tích cực', 'trung lập', 'tiêu cực', 'rất tiêu cực'];
 
 const PERIODS = [
   { key: '30', label: '30 ngày', days: 30 },
@@ -55,12 +58,13 @@ export default function ServiceQualityPage() {
   const [ticketDetail, setTicketDetail] = useState(null);
   const [onlyNegative, setOnlyNegative] = useState(false);
   const [ticketFilter, setTicketFilter] = useState('open'); // open | all
+  const [resurveyQR, setResurveyQR] = useState(null); // { url, dataUrl, name }
 
   const load = useCallback(async () => {
     const [{ data: iv }, { data: rp }, { data: tk }, { data: st }] = await Promise.all([
       supabase.from('service_review_invitations').select('id, status, created_at, milestone').order('created_at', { ascending: false }).limit(5000),
       supabase.from('service_review_responses')
-        .select('id, overall_score, csat_score, nps_score, staff_ratings, answers, selected_topics, wants_contact, comment, risk_level, fraud_status, fraud_score, verification_level, submitted_at, invitation:service_review_invitations(customer_name, service, surgery_date, milestone)')
+        .select('id, overall_score, csat_score, nps_score, staff_ratings, answers, selected_topics, wants_contact, comment, risk_level, fraud_status, fraud_score, verification_level, sentiment, submitted_at, invitation:service_review_invitations(customer_name, service, surgery_date, milestone, ticket_id, is_resurvey)')
         .order('submitted_at', { ascending: false }).limit(5000),
       supabase.from('service_review_tickets')
         .select('*, response:service_review_responses(comment, selected_topics, staff_ratings, invitation:service_review_invitations(service, phone))')
@@ -90,6 +94,16 @@ export default function ServiceQualityPage() {
     return true;
   };
 
+  // Tạo phiếu khảo sát lại sau khi xử lý (PRD §10) → QR gửi khách
+  const createResurveyQR = async (ticket) => {
+    const { data: tk, error } = await supabase.rpc('create_resurvey', { p_ticket_id: ticket.id, p_created_by: profile?.id || null });
+    if (error || !tk) { toast.error('Lỗi tạo phiếu khảo sát lại: ' + (error?.message || '')); return; }
+    const url = `${window.location.origin}/danh-gia/${tk}`;
+    const dataUrl = await QRCode.toDataURL(url, { width: 480, margin: 2, errorCorrectionLevel: 'M' });
+    setResurveyQR({ url, dataUrl, name: ticket.customer_name });
+  };
+  const copyResurvey = () => { if (resurveyQR) navigator.clipboard?.writeText(resurveyQR.url).then(() => toast.success('Đã sao chép link!'), () => {}); };
+
   const since = useMemo(() => {
     const p = PERIODS.find(x => x.key === period);
     if (!p?.days) return null;
@@ -102,8 +116,10 @@ export default function ServiceQualityPage() {
   const periodTickets = useMemo(() => tickets.filter(t => inPeriod(t.created_at)), [tickets, since]);
   const openTickets = useMemo(() => periodTickets.filter(t => OPEN_STATUSES.includes(t.status)), [periodTickets]);
   const overdueTickets = useMemo(() => periodTickets.filter(isOverdue), [periodTickets]);
-  // KPI chính thức: loại phản hồi nghi ngờ gian lận (PRD §13, §24)
-  const valid = useMemo(() => periodResps.filter(r => !FRAUD.includes(r.fraud_status)), [periodResps]);
+  // KPI chính thức: loại phản hồi nghi ngờ gian lận (PRD §13, §24) + loại phiếu khảo sát lại
+  const valid = useMemo(() => periodResps.filter(r => !FRAUD.includes(r.fraud_status) && !r.invitation?.is_resurvey), [periodResps]);
+  // Phản hồi khảo sát lại (đo hiệu quả xử lý — PRD §10)
+  const resurveyResps = useMemo(() => periodResps.filter(r => r.invitation?.is_resurvey), [periodResps]);
 
   // ---- Chỉ số tổng ----
   const stats = useMemo(() => {
@@ -120,6 +136,19 @@ export default function ServiceQualityPage() {
     const completeRate = periodInvs.length ? Math.round((completed / periodInvs.length) * 100) : 0;
     return { csat, nps, negative, wantContact, suspect, completed, completeRate, total: periodInvs.length, respCount: valid.length };
   }, [valid, periodResps, periodInvs]);
+
+  // ---- Tiếng nói khách hàng (Voice of Customer) ----
+  const voc = useMemo(() => {
+    const sentiment = SENTIMENTS.map(s => ({ s, n: valid.filter(r => r.sentiment === s).length }));
+    const closed = periodTickets.filter(t => ['resolved', 'closed'].includes(t.status));
+    const onTime = closed.filter(t => t.closed_at && t.sla_due_at && new Date(t.closed_at) <= new Date(t.sla_due_at)).length;
+    const onTimeRate = closed.length ? Math.round((onTime / closed.length) * 100) : null;
+    const rc = resurveyResps.length;
+    const sat = rc ? resurveyResps.reduce((s, r) => s + Number(r.overall_score || 0), 0) / rc : null;
+    const resolved = resurveyResps.filter(r => (r.answers?.rs_resolved || '') === 'Đã giải quyết').length;
+    const resolvedRate = rc ? Math.round((resolved / rc) * 100) : null;
+    return { sentiment, closedCount: closed.length, onTimeRate, resurveyCount: rc, satAfter: sat, resolvedRate };
+  }, [valid, periodTickets, resurveyResps]);
 
   // ---- Điểm trung bình từng nhân sự (giám sát) ----
   const staffScores = useMemo(() => {
@@ -293,6 +322,37 @@ export default function ServiceQualityPage() {
                   )}
                 </div>
               </div>
+
+              {/* Tiếng nói khách hàng */}
+              <div className="grid lg:grid-cols-2 gap-4">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <div className="flex items-center gap-2 mb-3"><Megaphone className="w-5 h-5 text-violet-500" /><h3 className="font-bold text-slate-800">Cảm xúc khách hàng</h3></div>
+                  <div className="space-y-2">
+                    {voc.sentiment.map(({ s, n }) => {
+                      const total = voc.sentiment.reduce((x, y) => x + y.n, 0) || 1;
+                      return (
+                        <div key={s} className="flex items-center gap-3">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-24 text-center ${SENTIMENT_STYLE[s]}`}>{s}</span>
+                          <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className={`h-full rounded-full ${s.includes('tiêu cực') ? 'bg-rose-400' : s === 'trung lập' ? 'bg-slate-300' : 'bg-emerald-400'}`} style={{ width: `${(n / total) * 100}%` }} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-500 w-6 text-right tabular-nums">{n}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <div className="flex items-center gap-2 mb-3"><RefreshCw className="w-5 h-5 text-teal-500" /><h3 className="font-bold text-slate-800">Hiệu quả xử lý phản hồi</h3></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{voc.closedCount}</div><div className="text-[11px] text-slate-400">Ticket đã xử lý</div></div>
+                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{voc.onTimeRate == null ? '—' : voc.onTimeRate + '%'}</div><div className="text-[11px] text-slate-400">Đúng hạn SLA</div></div>
+                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{voc.resolvedRate == null ? '—' : voc.resolvedRate + '%'}</div><div className="text-[11px] text-slate-400">Khách xác nhận đã giải quyết</div></div>
+                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{fmt1(voc.satAfter)}</div><div className="text-[11px] text-slate-400">Hài lòng sau xử lý ({voc.resurveyCount})</div></div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-3">Số liệu từ phiếu <b>khảo sát lại</b> gửi khách sau khi đóng ticket.</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -410,7 +470,35 @@ export default function ServiceQualityPage() {
 
       {/* Chi tiết & xử lý ticket */}
       {ticketDetail && (
-        <TicketDetailModal ticket={ticketDetail} staffList={staffList} onClose={() => setTicketDetail(null)} onSave={updateTicket} />
+        <TicketDetailModal ticket={ticketDetail} staffList={staffList} onClose={() => setTicketDetail(null)} onSave={updateTicket}
+          onResurvey={() => createResurveyQR(ticketDetail)}
+          resurveyResp={resurveyResps.find(r => r.invitation?.ticket_id === ticketDetail.id)} />
+      )}
+
+      {/* QR phiếu khảo sát lại */}
+      {resurveyQR && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setResurveyQR(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-teal-500 to-emerald-500 px-6 pt-6 pb-8 text-center relative">
+              <button onClick={() => setResurveyQR(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20"><X className="w-4 h-4" /></button>
+              <div className="w-12 h-12 rounded-2xl bg-white/20 grid place-items-center mx-auto mb-2"><RefreshCw className="w-6 h-6 text-white" /></div>
+              <h3 className="font-bold text-white text-lg">Phiếu khảo sát lại</h3>
+              <p className="text-teal-50 text-sm mt-0.5">{resurveyQR.name}</p>
+            </div>
+            <div className="px-6 -mt-5">
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex flex-col items-center">
+                <img src={resurveyQR.dataUrl} alt="QR khảo sát lại" className="w-56 h-56" />
+                <p className="text-xs text-slate-400 mt-2 text-center">Gửi khách quét để xác nhận đã hài lòng sau xử lý</p>
+              </div>
+            </div>
+            <div className="p-6 pt-4">
+              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                <span className="text-xs text-slate-500 truncate flex-1">{resurveyQR.url}</span>
+                <button onClick={copyResurvey} className="shrink-0 text-teal-600 hover:text-teal-700 flex items-center gap-1 text-sm font-semibold"><Copy className="w-4 h-4" /> Sao chép</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Chi tiết phản hồi */}
@@ -458,6 +546,10 @@ export default function ServiceQualityPage() {
                 </div>
               )}
 
+              {detail.sentiment && (
+                <div className="flex items-center gap-2 text-sm"><span className="text-slate-500">Cảm xúc:</span><span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${SENTIMENT_STYLE[detail.sentiment] || 'bg-slate-100 text-slate-600'}`}>{detail.sentiment}</span></div>
+              )}
+
               {detail.comment && (
                 <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-slate-700 flex gap-2"><MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" /><span className="italic">{detail.comment}</span></div>
               )}
@@ -478,7 +570,7 @@ export default function ServiceQualityPage() {
 }
 
 // ============ Chi tiết & xử lý một ticket phản hồi ============
-function TicketDetailModal({ ticket, staffList, onClose, onSave }) {
+function TicketDetailModal({ ticket, staffList, onClose, onSave, onResurvey, resurveyResp }) {
   const [status, setStatus] = useState(ticket.status);
   const [priority, setPriority] = useState(ticket.priority);
   const [assignedTo, setAssignedTo] = useState(ticket.assigned_to || '');
@@ -586,6 +678,23 @@ function TicketDetailModal({ ticket, staffList, onClose, onSave }) {
             <span className="text-xs font-semibold text-slate-500">Ghi chú xử lý (thêm vào nhật ký)</span>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="Ví dụ: Đã gọi khách lúc 15h, khách đồng ý tái khám…" className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm outline-none focus:border-teal-400 resize-none" />
           </label>
+
+          {/* Khảo sát lại sau xử lý (PRD §10) */}
+          <div className="border border-teal-100 bg-teal-50/50 rounded-xl p-3.5">
+            <div className="flex items-center gap-2 mb-1"><RefreshCw className="w-4 h-4 text-teal-600" /><span className="text-sm font-bold text-teal-700">Khảo sát lại sau xử lý</span></div>
+            {resurveyResp ? (
+              <div className="text-sm text-slate-700">
+                Khách đã phản hồi: <b>{resurveyResp.answers?.rs_resolved || '—'}</b> · hài lòng <b>{resurveyResp.overall_score ?? '—'}/5</b>
+                {resurveyResp.answers?.rs_need === 'Vẫn cần được hỗ trợ' && <span className="text-rose-600 font-semibold"> · vẫn cần hỗ trợ</span>}
+                {resurveyResp.comment && <div className="text-xs text-slate-500 italic mt-1">“{resurveyResp.comment}”</div>}
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500 mb-2">Sau khi liên hệ & khắc phục, tạo phiếu ngắn để khách xác nhận đã hài lòng chưa (tránh đóng ticket khi khách còn chưa ưng).</p>
+                <button type="button" onClick={onResurvey} className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 px-3.5 py-1.5 rounded-lg"><RefreshCw className="w-4 h-4" /> Tạo phiếu khảo sát lại</button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="px-6 py-4 border-t flex items-center gap-2">
