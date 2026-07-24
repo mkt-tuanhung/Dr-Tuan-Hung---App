@@ -984,66 +984,217 @@ const HauPhauPage = () => {
     );
   }
 
+  // ---- Số liệu tổng quan cho danh sách ----
+  const nowTs = new Date();
+  const riskOf = (c) => {
+    const s = Array.isArray(c.warning_signs) ? c.warning_signs.length : 0;
+    if (c.post_op_status === 'Có biến chứng' || s >= 3) return 'Cao';
+    if (s >= 1) return 'Trung bình';
+    return 'Thấp';
+  };
+  const isToday = (d) => d && startOfDay(d).getTime() === startOfDay(nowTs).getTime();
+  const listStats = (() => {
+    const arr = mainTabCustomers;
+    const need = arr.filter(c => c.next_recheck_at && isToday(new Date(c.next_recheck_at))).length;
+    const overdue = arr.filter(c => c.next_recheck_at && new Date(c.next_recheck_at) < nowTs && c.post_op_status !== 'Đã ổn định').length;
+    const stable = arr.filter(c => c.post_op_status === 'Đã ổn định').length;
+    const following = arr.filter(c => (c.post_op_status || 'Đang theo dõi') === 'Đang theo dõi').length;
+    const recheck = arr.filter(c => c.post_op_status === 'Tái khám').length;
+    const complication = arr.filter(c => c.post_op_status === 'Có biến chứng').length;
+    const sats = arr.map(c => satByAppt[c.id]).filter(v => v != null);
+    const satScore = sats.length ? Math.round((sats.reduce((s, v) => s + v, 0) / sats.length) / 5 * 100) : null;
+    return { total: arr.length, need, overdue, stable, following, recheck, complication, satScore };
+  })();
+  const fmtCountdown = (dt) => {
+    const diff = new Date(dt) - nowTs;
+    if (diff < 0) { const d = Math.max(1, Math.ceil(-diff / 86400000)); return { txt: `Quá hạn ${d} ngày`, over: true }; }
+    const h = Math.floor(diff / 3600000);
+    if (h < 24) return { txt: `Hẹn trong ${Math.max(1, h)}h`, over: false, soon: true };
+    return { txt: `${Math.round(h / 24)} ngày nữa`, over: false };
+  };
+  const priority = mainTabCustomers
+    .filter(c => c.next_recheck_at)
+    .map(c => ({ c, cd: fmtCountdown(c.next_recheck_at), t: new Date(c.next_recheck_at) }))
+    .filter(p => p.cd.over || (p.t - nowTs) < 3 * 86400000)
+    .sort((a, b) => a.t - b.t)
+    .slice(0, 8);
+  const lastNoteOf = (c) => {
+    const src = isCskhTab ? c.cskh_notes : c.post_op_notes;
+    if (!src) return null;
+    const lines = src.split('\n').filter(l => /^\[\d/.test(l.trim()));
+    const m = lines.length ? lines[lines.length - 1].match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})/) : null;
+    return m ? `${m[1]} ${m[2]}` : null;
+  };
+  const StatCard = ({ icon: Icon, label, value, sub, tone }) => (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-500">{label}</span>
+        <span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon className="w-4 h-4" /></span>
+      </div>
+      <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{value}</div>
+      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
-      <div className="flex-1 min-w-0 space-y-4 w-full">
-        {/* Header gọn: tiêu đề + nút Import nhỏ */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-800 truncate">{mainTab === 'cskh' ? 'Chăm sóc khách hàng' : 'Chăm sóc Hậu phẫu'}</h2>
-            <p className="text-slate-400 text-xs sm:text-sm mt-0.5 truncate">{mainTab === 'cskh' ? 'Khách đã mổ trên 1 tháng' : 'Khách mổ trong vòng 1 tháng — theo dõi sau mổ'}</p>
+    <div className="space-y-4 lg:space-y-5 w-full">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+            {mainTab === 'cskh' ? 'Chăm sóc khách hàng' : 'Chăm sóc Hậu phẫu'}
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full"><ShieldCheck className="w-3 h-3" /> Trung tâm chăm sóc sau phẫu thuật</span>
+          </h2>
+          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Theo dõi &amp; chăm sóc khách sau phẫu thuật để đảm bảo phục hồi tốt và trải nghiệm hài lòng.</p>
+        </div>
+        {canSeeAll && (
+          <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="shrink-0 flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-teal-600 text-white text-sm font-semibold shadow-sm shadow-teal-600/20 hover:bg-teal-700 active:scale-95 transition">
+            <Upload className="w-4 h-4" /> Import
+          </button>
+        )}
+      </div>
+
+      {/* Segmented Hậu phẫu / CSKH */}
+      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl max-w-md">
+        {[
+          { id: 'hau_phau', label: 'Hậu phẫu', sub: `<1 tháng · ${hauPhauCount}` },
+          { id: 'cskh', label: 'CSKH', sub: `≥1 tháng · ${cskhCount}` },
+        ].map(t => (
+          <button key={t.id} onClick={() => { setMainTab(t.id); setActiveTab('all'); }}
+            className={`py-2 rounded-xl text-center transition-all ${mainTab === t.id ? 'bg-white shadow-sm text-teal-700' : 'text-slate-500'}`}>
+            <div className="text-sm font-bold">{t.label}</div>
+            <div className={`text-[11px] ${mainTab === t.id ? 'text-teal-500' : 'text-slate-400'}`}>{t.sub}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Thẻ chỉ số */}
+      {!isCskhTab && (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          <StatCard icon={Users} label="Tổng bệnh nhân" value={listStats.total} sub="đang được theo dõi" tone="bg-teal-50 text-teal-600" />
+          <StatCard icon={CalendarClock} label="Cần theo dõi hôm nay" value={listStats.need} sub="có hẹn tái khám" tone="bg-amber-50 text-amber-600" />
+          <StatCard icon={Clock} label="Quá hạn follow-up" value={listStats.overdue} sub="cần liên hệ lại" tone="bg-rose-50 text-rose-600" />
+          <StatCard icon={ShieldCheck} label="Ổn định tốt" value={listStats.stable} sub={`${listStats.total ? Math.round(listStats.stable / listStats.total * 100) : 0}% tổng BN`} tone="bg-emerald-50 text-emerald-600" />
+          <StatCard icon={AlertTriangle} label="Nguy cơ biến chứng" value={listStats.complication} sub="cần theo dõi sát" tone="bg-orange-50 text-orange-600" />
+          <StatCard icon={Heart} label="Hài lòng (Đánh giá)" value={listStats.satScore == null ? '—' : listStats.satScore} sub="điểm trung bình /100" tone="bg-violet-50 text-violet-600" />
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <input type="text" placeholder="Tìm tên KH hoặc số điện thoại…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-white border border-slate-200 pl-10 pr-4 h-11 rounded-2xl text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/15 transition-all" />
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+        {FILTER_TABS.map(tab => {
+          const active = activeTab === tab.id;
+          const n = statusCountOf(tab.id);
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all inline-flex items-center gap-1.5 ${active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
+              {tab.label}
+              <span className={`text-[11px] font-bold px-1.5 rounded-full ${active ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Cần ưu tiên theo dõi */}
+      {priority.length > 0 && (
+        <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
+            <h3 className="text-sm font-bold text-rose-700">Cần ưu tiên theo dõi</h3>
+            <span className="text-xs font-semibold text-rose-400">{priority.length}</span>
           </div>
-          {canSeeAll && (
-            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="shrink-0 flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-teal-600 text-white text-sm font-semibold shadow-sm shadow-teal-600/20 hover:bg-teal-700 active:scale-95 transition">
-              <Upload className="w-4 h-4" /> Import
-            </button>
-          )}
-        </div>
-
-        {/* Segmented Hậu phẫu / CSKH — 2 dòng, có đếm */}
-        <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl">
-          {[
-            { id: 'hau_phau', label: 'Hậu phẫu', sub: `<1 tháng · ${hauPhauCount}` },
-            { id: 'cskh', label: 'CSKH', sub: `≥1 tháng · ${cskhCount}` },
-          ].map(t => (
-            <button key={t.id} onClick={() => { setMainTab(t.id); setActiveTab('all'); }}
-              className={`py-2 rounded-xl text-center transition-all ${mainTab === t.id ? 'bg-white shadow-sm text-teal-700' : 'text-slate-500'}`}>
-              <div className="text-sm font-bold">{t.label}</div>
-              <div className={`text-[11px] ${mainTab === t.id ? 'text-teal-500' : 'text-slate-400'}`}>{t.sub}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input type="text" placeholder="Tìm tên KH hoặc số điện thoại…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-200 pl-10 pr-4 h-11 rounded-2xl text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/15 transition-all" />
-        </div>
-
-        {/* Filter chips — 1 hàng cuộn ngang, có đếm */}
-        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
-          {FILTER_TABS.map(tab => {
-            const active = activeTab === tab.id;
-            const n = statusCountOf(tab.id);
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all inline-flex items-center gap-1.5 ${active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
-                {tab.label}
-                <span className={`text-[11px] font-bold px-1.5 rounded-full ${active ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+          <div className="flex gap-2.5 overflow-x-auto -mx-1 px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+            {priority.map(({ c, cd }) => (
+              <button key={c.id} type="button" onClick={() => openCare(c)} className="shrink-0 w-60 text-left bg-white rounded-xl border border-slate-100 shadow-sm p-3 hover:border-rose-300 transition">
+                <div className="flex items-center gap-2">
+                  <span className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-xs font-bold shrink-0">{initialsOf(c.customer_name)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-slate-800 text-sm truncate">{c.customer_name}</div>
+                    <div className="text-[11px] text-slate-400 truncate">{c.phone || '—'}</div>
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${riskOf(c) === 'Cao' ? 'bg-rose-500 text-white' : riskOf(c) === 'Trung bình' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{riskOf(c)}</span>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs">
+                  <span className="text-slate-500 truncate">{c.service || '—'}</span>
+                  <span className={`font-semibold shrink-0 ${cd.over ? 'text-rose-600' : 'text-amber-600'}`}>{cd.txt}</span>
+                </div>
               </button>
-            );
-          })}
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
-        ) : filteredCustomers.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
-            Không có khách hàng nào trong mục này
+            ))}
           </div>
-        ) : (
-          <div className="space-y-5">
+        </div>
+      )}
+
+      {/* Danh sách */}
+      {loading ? (
+        <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+      ) : filteredCustomers.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">Không có khách hàng nào trong mục này</div>
+      ) : (
+        <>
+          {/* Bảng — desktop */}
+          <div className="hidden lg:block bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <th className="font-semibold px-4 py-3">Bệnh nhân</th>
+                  <th className="font-semibold px-3 py-3">Dịch vụ</th>
+                  <th className="font-semibold px-3 py-3">Điều dưỡng</th>
+                  <th className="font-semibold px-3 py-3">Liên hệ gần nhất</th>
+                  <th className="font-semibold px-3 py-3">Tái khám tiếp theo</th>
+                  <th className="font-semibold px-3 py-3">Nguy cơ</th>
+                  <th className="font-semibold px-3 py-3 text-center">Ghi chú</th>
+                  <th className="font-semibold px-4 py-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCustomers.map(app => {
+                  const st = isCskhTab ? (app.cskh_status || 'Chưa phân loại') : (app.post_op_status || 'Đang theo dõi');
+                  const stCls = isCskhTab ? (CSKH_STATUS_STYLE[app.cskh_status] || 'bg-slate-100 text-slate-500 border-slate-200') : (STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']);
+                  const notesSrc = isCskhTab ? app.cskh_notes : app.post_op_notes;
+                  const noteCount = notesSrc ? notesSrc.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
+                  const risk = riskOf(app);
+                  const nextR = app.next_recheck_at ? new Date(app.next_recheck_at) : null;
+                  return (
+                    <tr key={app.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
+                      <td className="px-4 py-3">
+                        <button type="button" onClick={() => openCare(app)} className="flex items-center gap-2.5 text-left">
+                          <span className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-xs font-bold shrink-0">{initialsOf(app.customer_name)}</span>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-800 truncate">{app.customer_name}</div>
+                            <div className="text-xs text-slate-400">{app.phone || '—'}</div>
+                          </div>
+                        </button>
+                      </td>
+                      <td className="px-3 py-3 text-slate-600">{app.service || '—'}</td>
+                      <td className="px-3 py-3 text-slate-600">{app.hau_phau?.full_name || <span className="text-slate-300">Chưa phân công</span>}</td>
+                      <td className="px-3 py-3 text-slate-500 text-xs">{lastNoteOf(app) || '—'}</td>
+                      <td className="px-3 py-3">
+                        {nextR ? <div><div className="font-semibold text-slate-700 text-xs">{nextR.toLocaleDateString('vi-VN')} {nextR.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div><div className={`text-[11px] ${fmtCountdown(nextR).over ? 'text-rose-500 font-semibold' : 'text-slate-400'}`}>{fmtCountdown(nextR).txt}</div></div> : <span className="text-slate-300 text-xs">—</span>}
+                      </td>
+                      <td className="px-3 py-3"><span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${risk === 'Cao' ? 'bg-rose-100 text-rose-700' : risk === 'Trung bình' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{risk}</span></td>
+                      <td className="px-3 py-3 text-center text-slate-400 text-xs"><span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" />{noteCount}</span></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {app.phone && <a href={`tel:${app.phone}`} className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-1.5 rounded-lg"><Phone className="w-3.5 h-3.5" /> Gọi</a>}
+                          <button type="button" onClick={() => openCare(app)} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg">Mở nhật ký</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Thẻ — mobile, gom theo ngày mổ */}
+          <div className="lg:hidden space-y-5">
             {Object.entries(groupedCustomers).map(([date, apps]) => (
               <div key={date} className="space-y-2.5">
                 <div className="flex items-center gap-2 px-1">
@@ -1051,44 +1202,47 @@ const HauPhauPage = () => {
                   <h3 className="text-[13px] font-bold text-slate-500">Mổ ngày {date}</h3>
                   <span className="text-xs font-semibold text-slate-300">· {apps.length}</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div className="space-y-3">
                   {apps.map(app => {
                     const st = isCskhTab ? (app.cskh_status || 'Chưa phân loại') : (app.post_op_status || 'Đang theo dõi');
-                    const stCls = isCskhTab
-                      ? (CSKH_STATUS_STYLE[app.cskh_status] || 'bg-slate-100 text-slate-500 border-slate-200')
-                      : (STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']);
+                    const stCls = isCskhTab ? (CSKH_STATUS_STYLE[app.cskh_status] || 'bg-slate-100 text-slate-500 border-slate-200') : (STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']);
                     const notesSrc = isCskhTab ? app.cskh_notes : app.post_op_notes;
                     const noteCount = notesSrc ? notesSrc.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                     return (
-                    <button key={app.id} type="button" onClick={() => openCare(app)}
-                      className="text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm active:scale-[0.99] hover:border-teal-300 hover:shadow-md transition-all">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-slate-800 truncate leading-tight">{app.customer_name}</h4>
-                          <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone || <span className="italic text-slate-300">Chưa có SĐT</span>}</div>
+                      <div key={app.id} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <span className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-sm font-bold shrink-0">{initialsOf(app.customer_name)}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-slate-800 truncate leading-tight">{app.customer_name}</h4>
+                                <div className="text-slate-400 text-xs mt-0.5 flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone || <span className="italic text-slate-300">Chưa có SĐT</span>}</div>
+                              </div>
+                              <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${stCls}`}>{st}</span>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2 text-xs min-w-0">
+                              <span className="px-2 py-1 rounded-lg bg-slate-50 text-slate-600 font-medium truncate max-w-[55%]">{app.service || 'Chưa rõ DV'}</span>
+                              <span className="text-slate-300 shrink-0">·</span>
+                              <span className="text-slate-500 truncate min-w-0">{app.hau_phau?.full_name || 'Chưa phân công'}</span>
+                            </div>
+                          </div>
                         </div>
-                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${stCls}`}>{st}</span>
+                        <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between text-xs">
+                          <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /> {noteCount} ghi chú</span>
+                          <div className="flex items-center gap-2">
+                            {app.phone && <a href={`tel:${app.phone}`} className="inline-flex items-center gap-1 text-teal-700 font-semibold bg-teal-50 px-2.5 py-1.5 rounded-lg"><Phone className="w-3.5 h-3.5" /> Gọi</a>}
+                            <button type="button" onClick={() => openCare(app)} className="text-teal-600 font-bold inline-flex items-center gap-1">Mở nhật ký <ChevronRight className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="mt-3 flex items-center gap-2 text-xs min-w-0">
-                        <span className="px-2 py-1 rounded-lg bg-slate-50 text-slate-600 font-medium truncate max-w-[58%]">{app.service || 'Chưa rõ DV'}</span>
-                        <span className="text-slate-300 shrink-0">·</span>
-                        <span className="text-slate-500 truncate min-w-0">{app.hau_phau?.full_name || 'Chưa phân công'}</span>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between text-xs">
-                        <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /> {noteCount} ghi chú</span>
-                        <span className="text-teal-600 font-bold inline-flex items-center gap-1">Mở nhật ký <span className="inline-block w-[7px] h-[7px] border-t-2 border-r-2 border-current rotate-45 -ml-0.5" /></span>
-                      </div>
-                    </button>
                     );
                   })}
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </div> {/* End main content */}
+        </>
+      )}
 
 
       {/* Modal Phân công thêm */}
