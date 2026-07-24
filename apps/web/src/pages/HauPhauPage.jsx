@@ -704,6 +704,35 @@ const HauPhauPage = () => {
             <img src={viewImage} alt="" className="max-w-full max-h-[88vh] rounded-2xl object-contain" onClick={e => e.stopPropagation()} />
           </div>
         )}
+        {reviewModal && (
+          <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setReviewModal(null)}>
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="bg-gradient-to-br from-teal-500 to-emerald-500 px-6 pt-6 pb-8 text-center relative">
+                <button type="button" onClick={() => setReviewModal(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20"><X className="w-4 h-4" /></button>
+                <div className="w-12 h-12 rounded-2xl bg-white/20 grid place-items-center mx-auto mb-2"><Star className="w-6 h-6 text-white" /></div>
+                <h3 className="font-bold text-white text-lg">Phiếu đánh giá dịch vụ</h3>
+                <p className="text-teal-50 text-sm mt-0.5">{reviewModal.app.customer_name}</p>
+              </div>
+              <div className="px-6 -mt-5">
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex flex-col items-center">
+                  <img src={reviewModal.dataUrl} alt="QR đánh giá" className="w-56 h-56" />
+                  <p className="text-xs text-slate-400 mt-2 text-center">Cho khách quét mã QR để đánh giá dịch vụ</p>
+                </div>
+              </div>
+              <div className="p-6 pt-4 space-y-2">
+                <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                  <span className="text-xs text-slate-500 truncate flex-1">{reviewModal.url}</span>
+                  <button type="button" onClick={copyReviewLink} className="shrink-0 text-teal-600 hover:text-teal-700"><Copy className="w-4 h-4" /></button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button type="button" onClick={copyReviewLink} className="py-2.5 rounded-xl bg-teal-50 text-teal-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-teal-100"><Copy className="w-4 h-4" /> Sao chép</button>
+                  <button type="button" onClick={shareReview} className="py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-blue-100"><Share2 className="w-4 h-4" /> Chia sẻ</button>
+                  <button type="button" onClick={printReview} className="py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-slate-200"><Printer className="w-4 h-4" /> In</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     );
   }
@@ -838,37 +867,6 @@ const HauPhauPage = () => {
               <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700">{saving ? 'Đang lưu...' : 'Lưu phân công'}</button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* QR phiếu đánh giá dịch vụ */}
-      {reviewModal && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setReviewModal(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-br from-teal-500 to-emerald-500 px-6 pt-6 pb-8 text-center relative">
-              <button onClick={() => setReviewModal(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20"><X className="w-4 h-4" /></button>
-              <div className="w-12 h-12 rounded-2xl bg-white/20 grid place-items-center mx-auto mb-2"><Star className="w-6 h-6 text-white" /></div>
-              <h3 className="font-bold text-white text-lg">Phiếu đánh giá dịch vụ</h3>
-              <p className="text-teal-50 text-sm mt-0.5">{reviewModal.app.customer_name}</p>
-            </div>
-            <div className="px-6 -mt-5">
-              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex flex-col items-center">
-                <img src={reviewModal.dataUrl} alt="QR đánh giá" className="w-56 h-56" />
-                <p className="text-xs text-slate-400 mt-2 text-center">Cho khách quét mã QR để đánh giá dịch vụ</p>
-              </div>
-            </div>
-            <div className="p-6 pt-4 space-y-2">
-              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
-                <span className="text-xs text-slate-500 truncate flex-1">{reviewModal.url}</span>
-                <button onClick={copyReviewLink} className="shrink-0 text-teal-600 hover:text-teal-700"><Copy className="w-4 h-4" /></button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={copyReviewLink} className="py-2.5 rounded-xl bg-teal-50 text-teal-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-teal-100"><Copy className="w-4 h-4" /> Sao chép</button>
-                <button onClick={shareReview} className="py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-blue-100"><Share2 className="w-4 h-4" /> Chia sẻ</button>
-                <button onClick={printReview} className="py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-slate-200"><Printer className="w-4 h-4" /> In</button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
