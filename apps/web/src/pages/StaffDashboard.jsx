@@ -66,7 +66,7 @@ const FULL_MENU = [
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong', 'shareholder'] },
 
   // CRM
-  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['accountant'] },
+  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
   { id: 'khach_tu_van', label: 'Khách tư vấn',    icon: UserCheck, roles: ['sale_offline', 'admin'] },
   { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
   { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
