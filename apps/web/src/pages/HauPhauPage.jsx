@@ -207,29 +207,18 @@ const HauPhauPage = () => {
         consultants: consultantIds.map(nm).filter(Boolean),
       };
 
-      let token;
-      const { data: existing } = await supabase.from('service_review_invitations')
-        .select('token').eq('appointment_id', app.id).in('status', ['pending', 'opened'])
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-      if (existing?.token) {
-        token = existing.token;
-      } else {
-        const { data: created, error } = await supabase.from('service_review_invitations')
-          .insert({
-            appointment_id: app.id,
-            customer_name: app.customer_name,
-            phone: app.phone || null,
-            service: app.service || null,
-            surgery_date: app.surgery_date || null,
-            staff_snapshot,
-            milestone: 'D14_30',
-            channel: 'qr',
-            created_by: profile?.id || null,
-          })
-          .select('token').single();
-        if (error) throw error;
-        token = created.token;
-      }
+      // Tạo phiếu qua RPC SECURITY DEFINER (bỏ qua RLS an toàn)
+      const { data: token, error } = await supabase.rpc('create_review_invitation', {
+        p_appointment_id: app.id,
+        p_customer_name: app.customer_name || null,
+        p_phone: app.phone || null,
+        p_service: app.service || null,
+        p_surgery_date: app.surgery_date || null,
+        p_staff: staff_snapshot,
+        p_created_by: profile?.id || null,
+      });
+      if (error) throw error;
+      if (!token) throw new Error('Không tạo được mã phiếu.');
       const url = `${window.location.origin}/danh-gia/${token}`;
       const dataUrl = await QRCode.toDataURL(url, { width: 480, margin: 2, errorCorrectionLevel: 'M' });
       setReviewModal({ app, url, dataUrl });
