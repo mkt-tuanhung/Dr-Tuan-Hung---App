@@ -403,6 +403,7 @@ const KhachBongPage = ({ isNested = false }) => {
                   <label className="block text-sm font-semibold mb-2">Nguồn khách</label>
                   <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
                     <option value="Ads">Ads</option>
+                    <option value="Seeding">Seeding</option>
                     <option value="CTV">CTV</option>
                     <option value="Người quen">Người quen</option>
                     <option value="CSKH">CSKH</option>
