@@ -6,7 +6,7 @@ import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
-  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake
+  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -29,6 +29,7 @@ import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
+import SeedingRevenuePage from '@/pages/SeedingRevenuePage.jsx';
 import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
 import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
 import { loadPayrollDetail } from '@/lib/payrollData';
@@ -40,6 +41,7 @@ import NotificationBell from '@/components/NotificationBell.jsx';
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
   truc_page: 'Trực Page', media: 'Media', marketing: 'Marketing', editor: 'Editor',
+  seeding: 'Seeding',
   dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin',
 };
 
@@ -57,7 +59,8 @@ const FULL_MENU = [
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
-  { id: 'content',    label: 'Sản xuất Ads',     icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
+  { id: 'content',    label: 'Kho media & Video Ads', icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
+  { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout, roles: ['seeding', 'admin', 'accountant', 'shareholder'] },
   { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
   { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
@@ -371,6 +374,7 @@ const StaffDashboard = () => {
     if (activeTab === 'payroll') return <PayrollPage />;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
     if (activeTab === 'content') return <ContentProductionPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'seeding_rev') return <SeedingRevenuePage />;
     if (activeTab === 'data_kh') return <MarketingDataPage />;
     if (activeTab === 'khach_tu_van') return <KhachTuVanPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
