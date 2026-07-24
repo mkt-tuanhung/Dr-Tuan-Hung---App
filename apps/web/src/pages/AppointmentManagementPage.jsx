@@ -277,7 +277,9 @@ const AppointmentManagementPage = () => {
   };
 
   const openEditModal = (app) => {
-    if (app.status !== 'scheduled') {
+    // Admin được sửa đầy đủ mọi thông tin ở bất kỳ trạng thái nào
+    // (cập nhật chỉ đổi các trường như tạo mới, giữ nguyên trạng thái/doanh thu/viện phí).
+    if (app.status !== 'scheduled' && profile?.role !== 'admin') {
       toast.error('Lịch hẹn đã đánh giá, không thể chỉnh sửa!');
       return;
     }
@@ -744,8 +746,8 @@ const AppointmentManagementPage = () => {
                                 <Edit className="w-4 h-4" /> Đánh giá
                               </button>
                             )}
-                            {['admin', 'telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled' && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Sửa lịch hẹn">
+                            {(profile?.role === 'admin' || (['telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled')) && (
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Sửa đầy đủ thông tin">
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
