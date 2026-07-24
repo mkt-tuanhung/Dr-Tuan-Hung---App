@@ -115,12 +115,13 @@ const sha256hex = async (s) => {
   } catch { return s; }
 };
 
-// Gom nhân sự trong ca thành các nhóm vai trò thực sự tham gia
+// Gom nhân sự trong ca thành các nhóm vai trò thực sự tham gia (theo trình tự tiếp xúc khách)
 const buildStaffGroups = (staff) => {
   const groups = [];
+  if (Array.isArray(staff?.truc_page) && staff.truc_page.length) groups.push({ role: 'truc_page', members: staff.truc_page });
+  if (Array.isArray(staff?.consultants) && staff.consultants.length) groups.push({ role: 'consultant', members: staff.consultants });
   if (staff?.doctor?.id) groups.push({ role: 'doctor', members: [staff.doctor] });
   if (Array.isArray(staff?.nurses) && staff.nurses.length) groups.push({ role: 'nurse', members: staff.nurses });
-  if (Array.isArray(staff?.consultants) && staff.consultants.length) groups.push({ role: 'consultant', members: staff.consultants });
   if (Array.isArray(staff?.cskh) && staff.cskh.length) groups.push({ role: 'cskh', members: staff.cskh });
   return groups;
 };
