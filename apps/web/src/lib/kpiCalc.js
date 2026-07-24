@@ -94,6 +94,21 @@ export const computePartner = (partnerRows = [], staffId) => {
   return { bacSiCong, phuMoBonus, tongHH: bacSiCong + phuMoBonus, bacSiCases, phuMoCases };
 };
 
+// ===================== SEEDING =====================
+// Team seeding dùng CHUNG 1 tài khoản (không tách theo người).
+// Hoa hồng = 20% × (Doanh thu − Viện phí) cho mỗi ca mổ nguồn "Seeding".
+export const SEEDING_RATE = 0.2;
+export const computeSeeding = (surgeries = []) => {
+  let tongHH = 0;
+  const perCase = [];
+  for (const s of surgeries) {
+    const cong = Math.max(0, Number(s.revenue || 0) - Number(s.hospital_fee || 0)) * SEEDING_RATE;
+    tongHH += cong;
+    perCase.push({ name: s.customer_name || '—', revenue: Number(s.revenue || 0), fee: Number(s.hospital_fee || 0), cong });
+  }
+  return { tongHH: Math.round(tongHH), perCase };
+};
+
 // ===================== BÁC SĨ (công mổ) =====================
 // Công mổ theo doanh thu ca: Tiểu phẫu 10% · Đại phẫu 5%.
 // surgeries: ca phẫu thuật trong tháng; doctorId: bác sĩ mổ (bac_si_id).
@@ -270,7 +285,7 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 export const PAYROLL_STANDARD_DAYS = 26;
 export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip được Ads duyệt chạy Ads
 
-export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], saved = null }) => {
+export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], seeding = [], saved = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
   // Số công = ngày CÓ MẶT (present/muộn/về sớm = 1) + nghỉ nửa ngày (0.5)
   const workingDays = att.filter(a => a.staff_id === staff.id)
@@ -291,6 +306,8 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
     }
     if (role === 'truc_page') return computeTrucPage(pages.filter(p => p.staff_id === staff.id)).hh;
     if (role === 'dieu_duong') return computeDieuDuong(surg, staff.id).tongHH;
+    // Team seeding dùng chung 1 tài khoản → hoa hồng tính trên TẤT CẢ ca nguồn Seeding
+    if (role === 'seeding') return computeSeeding(seeding).tongHH;
     return 0;
   };
   // Thưởng content cho editor: Win (win_amount) + Duyệt chạy Ads (500k/clip)

@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
-  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, isRecheck, SALE_HALF_SOURCES,
+  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, computeSeeding, isRecheck, SALE_HALF_SOURCES,
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
@@ -118,13 +118,16 @@ const PayrollPage = () => {
       const bacSiOff = rolesArr.includes('bac_si') ? computeBacSi(surg, s.id) : null;
       // Mổ đối tác: BS nhận 50% tiền đối tác, ĐD phụ mổ như khách nội bộ (áp dụng cho mọi nhân sự được phân)
       const partnerOff = computePartner(partner, s.id);
+      // Team seeding dùng chung 1 tài khoản → hoa hồng tính trên TẤT CẢ ca nguồn "Seeding"
+      const seedOff = rolesArr.includes('seeding') ? computeSeeding(surg.filter(a => a.customer_source === 'Seeding')) : null;
       const wins = winBonusOf(s.id);
 
-      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + (bacSiOff?.tongHH || 0) + (partnerOff?.tongHH || 0) + wins;
+      const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + (bacSiOff?.tongHH || 0) + (partnerOff?.tongHH || 0) + (seedOff?.tongHH || 0) + wins;
 
       // Thành phần cho Trực page / Editor (các vị trí không có bảng từng khách)
       const commDetail = [];
       if (trucOff?.hh) commDetail.push({ label: `SĐT quan tâm (${trucOff.interested} × 20.000đ)`, amount: trucOff.hh });
+      if (seedOff?.tongHH) commDetail.push({ label: `Hoa hồng Seeding (${seedOff.perCase.length} ca × 20% DT−viện phí)`, amount: seedOff.tongHH });
       if (wins) commDetail.push({ label: 'Thưởng clip (Media/Editor)', amount: wins });
 
       // Chi tiết tăng ca theo từng ngày
