@@ -645,6 +645,7 @@ const FinanceManagementPage = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
                   <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
                     <option value="Ads">Ads</option>
+                    <option value="Seeding">Seeding</option>
                     <option value="CTV">CTV</option>
                     <option value="Người quen">Người quen</option>
                     <option value="CSKH">CSKH</option>
