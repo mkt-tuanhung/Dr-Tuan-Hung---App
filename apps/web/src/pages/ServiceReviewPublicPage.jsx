@@ -35,8 +35,12 @@ function FaceIcon({ level, className }) {
       {/* mắt */}
       {level === 5 && (
         <>
-          <path d="M13.5 21 Q17.5 16.8 21.5 21" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />
-          <path d="M26.5 21 Q30.5 16.8 34.5 21" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M12.5 21.5 Q17.5 16.3 22.5 21.5" stroke={F_DARK} strokeWidth="2.8" strokeLinecap="round" />
+          <path d="M25.5 21.5 Q30.5 16.3 35.5 21.5" stroke={F_DARK} strokeWidth="2.8" strokeLinecap="round" />
+          {/* tia lấp lánh */}
+          <path d="M9 8.6 Q9.96 10.16 11.4 11 Q9.96 11.84 9 13.4 Q8.04 11.84 6.6 11 Q8.04 10.16 9 8.6 Z" fill="#fff59d" />
+          <path d="M39 10 Q39.8 11.3 41 12 Q39.8 12.7 39 14 Q38.2 12.7 37 12 Q38.2 11.3 39 10 Z" fill="#fff59d" />
+          <path d="M41 20.6 Q41.56 21.51 42.4 22 Q41.56 22.49 41 23.4 Q40.44 22.49 39.6 22 Q40.44 21.51 41 20.6 Z" fill="#fff59d" />
         </>
       )}
       {level === 1 && (
@@ -80,22 +84,21 @@ function FaceIcon({ level, className }) {
         </g>
       )}
 
-      {/* má hồng */}
-      <ellipse cx="13.8" cy="28.5" rx="3.6" ry="2.5" fill={F_CHEEK} />
-      <ellipse cx="34.2" cy="28.5" rx="3.6" ry="2.5" fill={F_CHEEK} />
+      {/* má hồng (mức 5 đậm hơn) */}
+      <ellipse cx="13.8" cy="28.8" rx={level === 5 ? 4 : 3.6} ry="2.6" fill={level === 5 ? 'rgba(255,120,133,0.7)' : F_CHEEK} />
+      <ellipse cx="34.2" cy="28.8" rx={level === 5 ? 4 : 3.6} ry="2.6" fill={level === 5 ? 'rgba(255,120,133,0.7)' : F_CHEEK} />
 
       {/* miệng */}
       {level === 4 && (
         <>
-          <path d="M15.5 28.5 Q24 31 32.5 28.5 Q31 40.5 24 40.5 Q17 40.5 15.5 28.5 Z" fill={F_MOUTH} />
-          <path d="M18.5 37 Q24 42 29.5 37 Q28.5 40 24 40.2 Q19.5 40 18.5 37 Z" fill={F_TONGUE} />
+          <path d="M17.5 29.5 Q24 31.5 30.5 29.5 Q29.5 38 24 38 Q18.5 38 17.5 29.5 Z" fill={F_MOUTH} />
+          <ellipse cx="24" cy="36" rx="3.1" ry="1.7" fill={F_TONGUE} />
         </>
       )}
       {level === 5 && (
         <>
-          <path d="M20 30.5 Q24 33.5 28 30.5" stroke={F_DARK} strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M24.5 32.6 Q28.5 33 28.5 36.6 Q28.5 39.2 26 39.2 Q24.5 37 24.5 32.6 Z" fill={F_TONGUE} />
-          <path d="M26.4 34.4 L26.6 38" stroke="#e26d6d" strokeWidth="1" strokeLinecap="round" />
+          <path d="M14.5 28 Q24 31.5 33.5 28 Q32 42 24 42 Q16 42 14.5 28 Z" fill={F_MOUTH} />
+          <path d="M18 38.5 Q24 44 30 38.5 Q29 41.7 24 42 Q19 41.7 18 38.5 Z" fill={F_TONGUE} />
         </>
       )}
       {level === 3 && <path d="M18.5 30.5 Q24 35 29.5 30.5" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />}
