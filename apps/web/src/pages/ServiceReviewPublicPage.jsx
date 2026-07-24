@@ -11,77 +11,96 @@ import {
   Star, Send, AlertCircle, Clock, XCircle,
 } from 'lucide-react';
 
-// Màu biểu cảm chuyển dần đỏ → xanh theo mức hài lòng
-const FACE_COLORS = { 1: '#fb7185', 2: '#fb923c', 3: '#fbbf24', 4: '#34d399', 5: '#10b981' };
-const FACE_LIGHT = { 1: '#fecdd3', 2: '#fed7aa', 3: '#fde68a', 4: '#a7f3d0', 5: '#6ee7b7' };
+// Màu viền/nhãn theo mức (đỏ → xanh) — chỉ dùng cho khung nút & số
+const FACE_COLORS = { 1: '#f43f5e', 2: '#fb923c', 3: '#f59e0b', 4: '#22c55e', 5: '#10b981' };
+const F_DARK = '#5b4a42';       // nét mắt/miệng
+const F_MOUTH = '#7a3f36';      // trong miệng mở
+const F_TONGUE = '#ff8f8f';
+const F_CHEEK = 'rgba(255,133,145,0.55)';
 
-// Mặt biểu cảm kawaii tự vẽ bằng SVG — mềm mại & đồng nhất trên mọi thiết bị
-function FaceIcon({ level, active, className }) {
-  const base = active ? FACE_COLORS[level] : '#cbd5e1';
-  const light = active ? FACE_LIGHT[level] : '#e8edf3';
-  const line = active ? '#ffffff' : '#94a3b8';   // miệng, mắt nhắm
-  const pupil = active ? '#3f3f46' : '#64748b';
-  const cheek = active ? 'rgba(255,255,255,0.38)' : 'rgba(148,163,184,0.22)';
-  const gid = `fg-${level}-${active ? 'a' : 'i'}`;
-  const eyeUp = level >= 3;                        // mắt nhìn lên (vui) hay xuống (buồn)
-  const py = eyeUp ? 20.4 : 22;
+// Mặt biểu cảm emoji vàng tự vẽ bằng SVG (theo mẫu khách yêu cầu)
+// 1 giận · 2 buồn · 3 bình thường · 4 vui · 5 rất vui (lè lưỡi)
+function FaceIcon({ level, className }) {
+  const gid = `emo-${level}`;
   return (
     <svg viewBox="0 0 48 48" className={className} fill="none" aria-hidden="true">
       <defs>
-        <radialGradient id={gid} cx="36%" cy="28%" r="78%">
-          <stop offset="0%" stopColor={light} />
-          <stop offset="100%" stopColor={base} />
+        <radialGradient id={gid} cx="36%" cy="30%" r="80%">
+          <stop offset="0%" stopColor="#FFE27A" />
+          <stop offset="100%" stopColor="#FBC02D" />
         </radialGradient>
       </defs>
-      <circle cx="24" cy="24" r="20" fill={`url(#${gid})`} />
-
-      {/* má hồng */}
-      <circle cx="14.5" cy="28.5" r="3.5" fill={cheek} />
-      <circle cx="33.5" cy="28.5" r="3.5" fill={cheek} />
-
-      {/* chân mày lo lắng cho mức 1 */}
-      {level === 1 && (
-        <>
-          <path d="M13.5 15.8 Q17 14.2 20 16.2" stroke={line} strokeWidth="1.7" strokeLinecap="round" />
-          <path d="M34.5 15.8 Q31 14.2 28 16.2" stroke={line} strokeWidth="1.7" strokeLinecap="round" />
-        </>
-      )}
+      <circle cx="24" cy="24" r="20" fill={`url(#${gid})`} stroke="#f0b429" strokeWidth="0.8" />
 
       {/* mắt */}
-      {level === 5 ? (
+      {level === 5 && (
         <>
-          <path d="M13.5 21.5 Q17 17.8 20.5 21.5" stroke={line} strokeWidth="2.6" strokeLinecap="round" />
-          <path d="M27.5 21.5 Q31 17.8 34.5 21.5" stroke={line} strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M13.5 21 Q17.5 16.8 21.5 21" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M26.5 21 Q30.5 16.8 34.5 21" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />
         </>
-      ) : (
+      )}
+      {level === 1 && (
         <>
-          <circle cx="17" cy="21" r="3.7" fill="#ffffff" />
-          <circle cx="31" cy="21" r="3.7" fill="#ffffff" />
-          <circle cx="17.4" cy={py} r="2" fill={pupil} />
-          <circle cx="31.4" cy={py} r="2" fill={pupil} />
-          <circle cx="16.3" cy={py - 1} r="0.85" fill="#ffffff" />
-          <circle cx="30.3" cy={py - 1} r="0.85" fill="#ffffff" />
+          <path d="M13.5 18 L18.5 20.4 L13.5 22.8" stroke={F_DARK} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M34.5 18 L29.5 20.4 L34.5 22.8" stroke={F_DARK} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+      {level === 4 && (
+        <>
+          <ellipse cx="17.5" cy="20" rx="2.8" ry="4.1" fill={F_DARK} />
+          <ellipse cx="30.5" cy="20" rx="2.8" ry="4.1" fill={F_DARK} />
+          <circle cx="16.4" cy="18.4" r="1.1" fill="#fff" />
+          <circle cx="29.4" cy="18.4" r="1.1" fill="#fff" />
+        </>
+      )}
+      {(level === 2 || level === 3) && (
+        <>
+          <ellipse cx="17.5" cy="20.6" rx="2.9" ry={level === 2 ? 3.1 : 3.6} fill={F_DARK} />
+          <ellipse cx="30.5" cy="20.6" rx="2.9" ry={level === 2 ? 3.1 : 3.6} fill={F_DARK} />
+          <circle cx="16.4" cy="19" r="1.05" fill="#fff" />
+          <circle cx="29.4" cy="19" r="1.05" fill="#fff" />
         </>
       )}
 
-      {/* giọt nước mắt cho mức 1 */}
-      {level === 1 && <path d="M13 24.5 Q10.8 28.5 13 30 Q15.2 28.5 13 24.5 Z" fill="#38bdf8" />}
+      {/* chân mày lo lắng (mức 2) */}
+      {level === 2 && (
+        <>
+          <path d="M14 16.6 Q17.5 15 20 16.8" stroke={F_DARK} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M34 16.6 Q30.5 15 28 16.8" stroke={F_DARK} strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      )}
+
+      {/* dấu tức giận 💢 (mức 1) */}
+      {level === 1 && (
+        <g stroke="#ef4444" strokeWidth="1.7" strokeLinecap="round">
+          <path d="M33.5 8.5 L33.5 13.5" />
+          <path d="M31 11 L36 11" />
+          <path d="M31.5 9 L35.5 13" />
+          <path d="M35.5 9 L31.5 13" />
+        </g>
+      )}
+
+      {/* má hồng */}
+      <ellipse cx="13.8" cy="28.5" rx="3.6" ry="2.5" fill={F_CHEEK} />
+      <ellipse cx="34.2" cy="28.5" rx="3.6" ry="2.5" fill={F_CHEEK} />
 
       {/* miệng */}
-      {level === 5 ? (
+      {level === 4 && (
         <>
-          <path d="M16.5 30 Q24 31.5 31.5 30 Q30 39.5 24 39.5 Q18 39.5 16.5 30 Z" fill={line} />
-          {active && <ellipse cx="24" cy="37.4" rx="3.5" ry="2.1" fill="#fb7185" />}
+          <path d="M15.5 28.5 Q24 31 32.5 28.5 Q31 40.5 24 40.5 Q17 40.5 15.5 28.5 Z" fill={F_MOUTH} />
+          <path d="M18.5 37 Q24 42 29.5 37 Q28.5 40 24 40.2 Q19.5 40 18.5 37 Z" fill={F_TONGUE} />
         </>
-      ) : level === 4 ? (
-        <path d="M17.5 30.5 Q24 37 30.5 30.5" stroke={line} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      ) : level === 3 ? (
-        <path d="M20 32 Q24 33.8 28 32" stroke={line} strokeWidth="3" strokeLinecap="round" />
-      ) : level === 2 ? (
-        <path d="M18.5 33.5 Q24 30 29.5 33.5" stroke={line} strokeWidth="3" strokeLinecap="round" />
-      ) : (
-        <path d="M18.5 34.5 Q24 29 29.5 34.5" stroke={line} strokeWidth="3" strokeLinecap="round" />
       )}
+      {level === 5 && (
+        <>
+          <path d="M20 30.5 Q24 33.5 28 30.5" stroke={F_DARK} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M24.5 32.6 Q28.5 33 28.5 36.6 Q28.5 39.2 26 39.2 Q24.5 37 24.5 32.6 Z" fill={F_TONGUE} />
+          <path d="M26.4 34.4 L26.6 38" stroke="#e26d6d" strokeWidth="1" strokeLinecap="round" />
+        </>
+      )}
+      {level === 3 && <path d="M18.5 30.5 Q24 35 29.5 30.5" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />}
+      {level === 2 && <path d="M19 33.5 Q24 29.8 29 33.5" stroke={F_DARK} strokeWidth="2.6" strokeLinecap="round" />}
+      {level === 1 && <path d="M21.5 32.5 Q24 30.8 26.5 32.5 Q26.5 36.5 24 36.8 Q21.5 36.5 21.5 32.5 Z" fill={F_MOUTH} />}
     </svg>
   );
 }
@@ -334,9 +353,9 @@ export default function ServiceReviewPublicPage() {
               const sel = answers[q.code] === n;
               return (
                 <button key={n} onClick={() => setAns(q.code, n)}
-                  style={sel ? { borderColor: FACE_COLORS[n], backgroundColor: FACE_COLORS[n] + '16' } : undefined}
+                  style={sel ? { borderColor: FACE_COLORS[n], backgroundColor: FACE_COLORS[n] + '14' } : undefined}
                   className={`flex-1 aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-200 ${sel ? 'scale-110 shadow-lg -translate-y-1' : 'border-slate-200 bg-white hover:border-slate-300 hover:-translate-y-0.5'}`}>
-                  <FaceIcon level={n} active={sel} className={`transition-all ${sel ? 'w-11 h-11' : 'w-9 h-9'}`} />
+                  <FaceIcon level={n} className={`transition-all ${sel ? 'w-11 h-11' : 'w-9 h-9 opacity-45 [filter:grayscale(45%)]'}`} />
                   <span className="text-xs font-bold" style={{ color: sel ? FACE_COLORS[n] : '#94a3b8' }}>{n}</span>
                 </button>
               );
