@@ -19,6 +19,7 @@ import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import VienPhiPage from '@/pages/VienPhiPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import SeedingRevenuePage from '@/pages/SeedingRevenuePage.jsx';
+import ServiceQualityPage from '@/pages/ServiceQualityPage.jsx';
 import HRManagementPage from '@/pages/HRManagementPage.jsx';
 import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx';
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
@@ -32,7 +33,7 @@ import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
@@ -47,6 +48,7 @@ const MENU_GROUPS = [
     { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
     { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
     { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
+    { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
     { id: 'hr', label: 'Quản lý Nhân sự', icon: Users },
@@ -658,6 +660,7 @@ const AdminDashboard = () => {
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;
       case 'seeding_rev': return <SeedingRevenuePage />;
+      case 'service_quality': return <ServiceQualityPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
