@@ -337,9 +337,51 @@ begin
 end;
 $$;
 
+-- Tạo phiếu (nhân sự đăng nhập) qua RPC SECURITY DEFINER — tránh vướng RLS/grant khi ghi.
+create or replace function create_review_invitation(
+  p_appointment_id uuid,
+  p_customer_name  text,
+  p_phone          text,
+  p_service        text,
+  p_surgery_date   date,
+  p_staff          jsonb,
+  p_created_by     uuid
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_token text;
+begin
+  select token into v_token
+    from service_review_invitations
+   where appointment_id = p_appointment_id and status in ('pending', 'opened')
+   order by created_at desc
+   limit 1;
+  if v_token is not null then return v_token; end if;
+
+  insert into service_review_invitations
+    (appointment_id, customer_name, phone, service, surgery_date, staff_snapshot, milestone, channel, created_by)
+  values
+    (p_appointment_id, p_customer_name, p_phone, p_service, p_surgery_date,
+     coalesce(p_staff, '{}'::jsonb), 'D14_30', 'qr', p_created_by)
+  returning token into v_token;
+  return v_token;
+end;
+$$;
+
+-- Cấp quyền bảng cho vai trò đăng nhập (phòng khi default privileges chưa áp)
+grant select, insert, update on service_review_invitations   to authenticated;
+grant select, insert, update on service_review_responses     to authenticated;
+grant select on service_review_templates    to authenticated;
+grant select on service_review_questions     to authenticated;
+grant select on service_review_fraud_signals to authenticated;
+
 grant execute on function get_review_invitation(text) to anon, authenticated;
 grant execute on function submit_review(text, jsonb, jsonb, jsonb, text, text, text, int) to anon, authenticated;
 grant execute on function request_review_otp(text) to anon, authenticated;
 grant execute on function verify_review_otp(text, text) to anon, authenticated;
+grant execute on function create_review_invitation(uuid, text, text, text, date, jsonb, uuid) to authenticated;
 
 notify pgrst, 'reload schema';
