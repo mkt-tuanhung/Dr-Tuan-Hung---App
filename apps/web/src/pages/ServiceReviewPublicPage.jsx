@@ -253,11 +253,13 @@ export default function ServiceReviewPublicPage() {
       const vals = Object.values(flat.q3).filter(Boolean).map(Number);
       flat.q3 = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : undefined;
     }
+    // Gộp "vấn đề chưa hài lòng" (điểm thấp) lên trước để ticket lấy đúng nhóm vấn đề
+    const allTopics = [...new Set([...issues, ...topics])];
     const { data, error } = await supabase.rpc('submit_review', {
       p_token: token,
       p_answers: flat,
       p_staff: staffRatings,
-      p_topics: topics,
+      p_topics: allTopics,
       p_wants: contact || null,
       p_comment: comment || null,
       p_device_hash: deviceHash,
@@ -272,7 +274,7 @@ export default function ServiceReviewPublicPage() {
     }
     localStorage.removeItem(lsKey);
     setPhase('done');
-  }, [answers, staffGroups, topics, contact, comment, token]);
+  }, [answers, staffGroups, issues, topics, contact, comment, token]);
 
   // ---------------- Render trạng thái đặc biệt ----------------
   if (phase === 'loading') {
