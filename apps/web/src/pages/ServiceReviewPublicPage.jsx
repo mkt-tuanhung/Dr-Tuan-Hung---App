@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { getDeviceId } from '@/lib/device';
+import { compressImage } from '@/lib/r2Client';
 import {
   QUESTIONS, RESURVEY_QUESTIONS, RATING_LABELS, QUICK_TOPICS, LOW_SCORE_ISSUES,
   CONTACT_OPTIONS, npsGroup, STAFF_ROLE_LABELS, detectTopics,
 } from '@/lib/serviceReviewQuestions';
 import {
   Heart, ChevronLeft, ChevronRight, Loader2, CheckCircle2, ShieldCheck,
-  Star, Send, AlertCircle, Clock, XCircle,
+  Star, Send, AlertCircle, Clock, XCircle, Image as ImageIcon, Mic, Square, X as XIcon,
 } from 'lucide-react';
 
 // Màu viền/nhãn theo mức (đỏ → xanh) — chỉ dùng cho khung nút & số
@@ -143,8 +144,59 @@ export default function ServiceReviewPublicPage() {
   const [otp, setOtp] = useState('');
   const [otpMsg, setOtpMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState([]); // [{type:'image'|'audio', url}]
+  const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
   const startRef = useRef(Date.now());
+  const mediaRef = useRef(null);
+  const chunksRef = useRef([]);
+  const recTimerRef = useRef(null);
+  const fileRef = useRef(null);
   const lsKey = `sr_draft_${token}`;
+
+  // Tải ảnh/ghi âm lên qua Edge Function công khai (gắn với token phiếu)
+  const uploadReviewFile = async (file) => {
+    const toSend = (file.type || '').startsWith('image') ? await compressImage(file) : file;
+    const form = new FormData();
+    form.append('file', toSend);
+    form.append('token', token);
+    const { data, error } = await supabase.functions.invoke('review-upload', { body: form });
+    if (error) throw new Error(error.message);
+    if (data?.error) throw new Error(data.error);
+    return data.publicUrl;
+  };
+  const addAttachment = async (file) => {
+    if (attachments.length >= 5) { alert('Chỉ đính kèm tối đa 5 tệp.'); return; }
+    setUploading(true);
+    try {
+      const url = await uploadReviewFile(file);
+      setAttachments(a => [...a, { type: (file.type || '').startsWith('audio') ? 'audio' : 'image', url }]);
+    } catch (e) { alert('Tải lên thất bại: ' + (e.message || e)); }
+    setUploading(false);
+  };
+  const onPickPhoto = (e) => { const f = e.target.files?.[0]; if (f) addAttachment(f); e.target.value = ''; };
+  const startRec = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (ev) => { if (ev.data?.size) chunksRef.current.push(ev.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
+        await addAttachment(new File([blob], 'ghi-am.webm', { type: blob.type }));
+      };
+      mr.start();
+      mediaRef.current = mr;
+      setRecording(true);
+      recTimerRef.current = setTimeout(() => stopRec(), 120000); // tự dừng sau 2 phút
+    } catch { alert('Không truy cập được micro. Vui lòng cho phép quyền ghi âm.'); }
+  };
+  const stopRec = () => {
+    clearTimeout(recTimerRef.current);
+    if (mediaRef.current && mediaRef.current.state !== 'inactive') mediaRef.current.stop();
+    setRecording(false);
+  };
 
   // Nạp phiếu
   useEffect(() => {
@@ -167,6 +219,7 @@ export default function ServiceReviewPublicPage() {
           setContact(saved.contact || '');
           setComment(saved.comment || '');
           setTopics(saved.topics || []);
+          setAttachments(saved.attachments || []);
         }
       } catch { /* ignore */ }
       setPhase('welcome');
@@ -177,8 +230,8 @@ export default function ServiceReviewPublicPage() {
   // Tự lưu nháp
   useEffect(() => {
     if (phase !== 'survey') return;
-    localStorage.setItem(lsKey, JSON.stringify({ answers, issues, contact, comment, topics }));
-  }, [answers, issues, contact, comment, topics, phase]);
+    localStorage.setItem(lsKey, JSON.stringify({ answers, issues, contact, comment, topics, attachments }));
+  }, [answers, issues, contact, comment, topics, attachments, phase]);
 
   const isResurvey = !!inv?.is_resurvey;
   const activeQuestions = isResurvey ? RESURVEY_QUESTIONS : QUESTIONS;
@@ -256,6 +309,7 @@ export default function ServiceReviewPublicPage() {
       const vals = Object.values(flat.q3).filter(Boolean).map(Number);
       flat.q3 = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : undefined;
     }
+    if (attachments.length) flat._attachments = attachments; // ảnh / ghi âm đính kèm
     // Gộp "vấn đề chưa hài lòng" + chủ đề tự nhận diện từ nhận xét → ticket lấy đúng nhóm vấn đề
     const allTopics = [...new Set([...issues, ...topics, ...detectTopics(comment)])];
     const wants = isResurvey
@@ -280,7 +334,7 @@ export default function ServiceReviewPublicPage() {
     }
     localStorage.removeItem(lsKey);
     setPhase('done');
-  }, [answers, staffGroups, issues, topics, contact, comment, token, isResurvey]);
+  }, [answers, staffGroups, issues, topics, contact, comment, token, isResurvey, attachments]);
 
   // ---------------- Render trạng thái đặc biệt ----------------
   if (phase === 'loading') {
@@ -349,6 +403,37 @@ export default function ServiceReviewPublicPage() {
   // ---------------- Khảo sát ----------------
   const q = activeQuestions.find(x => x.code === cur?.id);
   const overall = Number(answers.q1);
+
+  const attachmentBar = (
+    <div className="mt-3">
+      <div className="flex gap-2">
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading || recording}
+          className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 flex items-center justify-center gap-1.5 hover:bg-slate-50 disabled:opacity-50">
+          <ImageIcon className="w-4 h-4 text-teal-600" /> Thêm ảnh
+        </button>
+        <button type="button" onClick={recording ? stopRec : startRec} disabled={uploading}
+          className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          {recording ? <><Square className="w-4 h-4 fill-current" /> Dừng ghi</> : <><Mic className="w-4 h-4 text-teal-600" /> Ghi âm</>}
+        </button>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
+      {uploading && <div className="text-xs text-slate-400 mt-2 flex items-center gap-1"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải lên…</div>}
+      {recording && <div className="text-xs text-rose-500 mt-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" /> Đang ghi âm… (tối đa 2 phút)</div>}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          {attachments.map((a, i) => (
+            <div key={i} className="relative">
+              {a.type === 'image'
+                ? <img src={a.url} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
+                : <audio src={a.url} controls className="h-9 max-w-[180px]" />}
+              <button type="button" onClick={() => setAttachments(list => list.filter((_, j) => j !== i))}
+                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center shadow"><XIcon className="w-3 h-3" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return <Shell>
     {/* Thanh tiến độ */}
@@ -450,6 +535,7 @@ export default function ServiceReviewPublicPage() {
         <QuestionBlock q={{ title: 'Ý kiến thêm', text: 'Anh/chị muốn chia sẻ thêm điều gì với chúng tôi không?' }}>
           <textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} placeholder="Nhập ý kiến của anh/chị (không bắt buộc)…"
             className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm outline-none focus:border-teal-400 resize-none mt-4" />
+          {attachmentBar}
         </QuestionBlock>
       )}
 
@@ -493,6 +579,7 @@ export default function ServiceReviewPublicPage() {
           </div>
           <textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} placeholder="Nhập ý kiến của anh/chị (không bắt buộc)…"
             className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm outline-none focus:border-teal-400 resize-none" />
+          {attachmentBar}
         </QuestionBlock>
       )}
     </div>

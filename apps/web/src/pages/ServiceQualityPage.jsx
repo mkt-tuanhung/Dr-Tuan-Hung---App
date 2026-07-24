@@ -67,7 +67,7 @@ export default function ServiceQualityPage() {
         .select('id, overall_score, csat_score, nps_score, staff_ratings, answers, selected_topics, wants_contact, comment, risk_level, fraud_status, fraud_score, verification_level, sentiment, submitted_at, invitation:service_review_invitations(customer_name, service, surgery_date, milestone, ticket_id, is_resurvey)')
         .order('submitted_at', { ascending: false }).limit(5000),
       supabase.from('service_review_tickets')
-        .select('*, response:service_review_responses(comment, selected_topics, staff_ratings, invitation:service_review_invitations(service, phone))')
+        .select('*, response:service_review_responses(comment, selected_topics, staff_ratings, answers, invitation:service_review_invitations(service, phone))')
         .order('created_at', { ascending: false }).limit(3000),
       supabase.from('profiles').select('id, full_name, role').eq('is_active', true).order('full_name'),
     ]);
@@ -554,6 +554,17 @@ export default function ServiceQualityPage() {
                 <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-slate-700 flex gap-2"><MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" /><span className="italic">{detail.comment}</span></div>
               )}
 
+              {(detail.answers?._attachments || []).length > 0 && (
+                <div>
+                  <div className="text-xs font-bold text-slate-400 uppercase mb-1.5">Ảnh / ghi âm đính kèm</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {detail.answers._attachments.map((a, i) => a.type === 'image'
+                      ? <a key={i} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt="" className="w-20 h-20 rounded-xl object-cover border border-slate-200" /></a>
+                      : <audio key={i} src={a.url} controls className="h-9 max-w-[200px]" />)}
+                  </div>
+                </div>
+              )}
+
               {detail.wants_contact && detail.wants_contact !== 'none' && (
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-700 font-medium flex items-center gap-2"><PhoneCall className="w-4 h-4" /> Khách muốn được liên hệ {detail.wants_contact === 'urgent' ? 'sớm nhất' : 'trong giờ hành chính'}</div>
               )}
@@ -625,6 +636,13 @@ function TicketDetailModal({ ticket, staffList, onClose, onSave, onResurvey, res
           {resp.comment && <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-slate-700 italic flex gap-2"><MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />“{resp.comment}”</div>}
           {(resp.selected_topics || []).length > 0 && (
             <div className="flex flex-wrap gap-1.5">{resp.selected_topics.map(t => <span key={t} className="text-xs bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full">{t}</span>)}</div>
+          )}
+          {(resp.answers?._attachments || []).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {resp.answers._attachments.map((a, i) => a.type === 'image'
+                ? <a key={i} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" /></a>
+                : <audio key={i} src={a.url} controls className="h-9 max-w-[180px]" />)}
+            </div>
           )}
 
           {/* Giao việc + trạng thái + ưu tiên */}
