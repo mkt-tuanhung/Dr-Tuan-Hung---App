@@ -11,7 +11,44 @@ import {
   Star, Send, AlertCircle, Clock, XCircle,
 } from 'lucide-react';
 
-const FACES = { 1: '😣', 2: '🙁', 3: '😐', 4: '🙂', 5: '😄' };
+// Màu biểu cảm chuyển dần đỏ → xanh theo mức hài lòng
+const FACE_COLORS = { 1: '#f43f5e', 2: '#fb923c', 3: '#f59e0b', 4: '#2dd4bf', 5: '#10b981' };
+const MOUTHS = {
+  1: 'M13 27.5 Q20 20 27 27.5',   // rất buồn
+  2: 'M13 26 Q20 22.5 27 26',     // buồn
+  3: 'M13 25 L27 25',             // bình thường
+  4: 'M13 24 Q20 29 27 24',       // vui
+  5: 'M13 23 Q20 31.5 27 23',     // rất vui
+};
+
+// Mặt biểu cảm tự vẽ bằng SVG — sắc nét & đồng nhất trên mọi thiết bị
+function FaceIcon({ level, active, className }) {
+  const stroke = active ? '#ffffff' : '#94a3b8';
+  const face = active ? FACE_COLORS[level] : '#e2e8f0';
+  return (
+    <svg viewBox="0 0 40 40" className={className} fill="none" aria-hidden="true">
+      <circle cx="20" cy="20" r="16" fill={face} />
+      {level === 5 ? (
+        <>
+          <path d="M11 18 Q14.5 14.5 18 18" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M22 18 Q25.5 14.5 29 18" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <circle cx="14.5" cy="17" r="1.9" fill={stroke} />
+          <circle cx="25.5" cy="17" r="1.9" fill={stroke} />
+        </>
+      )}
+      {level <= 2 && (
+        <>
+          <path d={level === 1 ? 'M10.5 12.5 L17 14.2' : 'M11.5 13.2 L16.5 14.2'} stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d={level === 1 ? 'M29.5 12.5 L23 14.2' : 'M28.5 13.2 L23.5 14.2'} stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        </>
+      )}
+      <path d={MOUTHS[level]} stroke={stroke} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 const sha256hex = async (s) => {
   try {
@@ -257,15 +294,19 @@ export default function ServiceReviewPublicPage() {
       {q && q.type === 'rating5' && (
         <QuestionBlock q={q}>
           <div className="flex justify-between gap-1.5 mt-6">
-            {[1, 2, 3, 4, 5].map(n => (
-              <button key={n} onClick={() => setAns(q.code, n)}
-                className={`flex-1 aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition ${answers[q.code] === n ? 'border-teal-500 bg-teal-50 scale-105 shadow-md' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-                <span className="text-2xl">{FACES[n]}</span>
-                <span className={`text-xs font-bold ${answers[q.code] === n ? 'text-teal-600' : 'text-slate-400'}`}>{n}</span>
-              </button>
-            ))}
+            {[1, 2, 3, 4, 5].map(n => {
+              const sel = answers[q.code] === n;
+              return (
+                <button key={n} onClick={() => setAns(q.code, n)}
+                  style={sel ? { borderColor: FACE_COLORS[n], backgroundColor: FACE_COLORS[n] + '14' } : undefined}
+                  className={`flex-1 aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-200 ${sel ? 'scale-105 shadow-md' : 'border-slate-200 bg-white hover:border-slate-300 hover:-translate-y-0.5'}`}>
+                  <FaceIcon level={n} active={sel} className="w-9 h-9" />
+                  <span className="text-xs font-bold" style={{ color: sel ? FACE_COLORS[n] : '#94a3b8' }}>{n}</span>
+                </button>
+              );
+            })}
           </div>
-          <div className="text-center mt-4 h-5 text-sm font-semibold text-teal-600">{answers[q.code] ? RATING_LABELS[answers[q.code]] : ''}</div>
+          <div className="text-center mt-4 h-5 text-sm font-semibold" style={{ color: answers[q.code] && answers[q.code] !== 'na' ? FACE_COLORS[answers[q.code]] : '#14b8a6' }}>{answers[q.code] && answers[q.code] !== 'na' ? RATING_LABELS[answers[q.code]] : ''}</div>
           {q.na && (
             <button onClick={() => setAns(q.code, 'na')} className={`mt-2 w-full py-2.5 rounded-xl text-sm font-medium border transition ${answers[q.code] === 'na' ? 'border-slate-400 bg-slate-100 text-slate-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{q.naLabel}</button>
           )}
