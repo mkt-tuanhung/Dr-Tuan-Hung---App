@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { getDeviceId } from '@/lib/device';
 import {
-  QUESTIONS, RATING_LABELS, QUICK_TOPICS, LOW_SCORE_ISSUES,
-  CONTACT_OPTIONS, npsGroup, STAFF_ROLE_LABELS,
+  QUESTIONS, RESURVEY_QUESTIONS, RATING_LABELS, QUICK_TOPICS, LOW_SCORE_ISSUES,
+  CONTACT_OPTIONS, npsGroup, STAFF_ROLE_LABELS, detectTopics,
 } from '@/lib/serviceReviewQuestions';
 import {
   Heart, ChevronLeft, ChevronRight, Loader2, CheckCircle2, ShieldCheck,
@@ -180,10 +180,13 @@ export default function ServiceReviewPublicPage() {
     localStorage.setItem(lsKey, JSON.stringify({ answers, issues, contact, comment, topics }));
   }, [answers, issues, contact, comment, topics, phase]);
 
+  const isResurvey = !!inv?.is_resurvey;
+  const activeQuestions = isResurvey ? RESURVEY_QUESTIONS : QUESTIONS;
   const staffGroups = useMemo(() => buildStaffGroups(inv?.staff), [inv]);
 
   // Xây danh sách bước động theo câu trả lời (rẽ nhánh)
   const flow = useMemo(() => {
+    if (isResurvey) return [...RESURVEY_QUESTIONS.map(q => ({ id: q.code })), { id: 'rs_comment' }];
     const s = [];
     for (const q of QUESTIONS) {
       if (q.code === 'q3' && staffGroups.length === 0) continue; // không có nhân sự → bỏ câu 3
@@ -196,7 +199,7 @@ export default function ServiceReviewPublicPage() {
       }
     }
     return s;
-  }, [answers.q1, staffGroups.length]);
+  }, [isResurvey, answers.q1, staffGroups.length]);
 
   const cur = flow[step];
   const progress = Math.round(((step) / Math.max(flow.length, 1)) * 100);
@@ -206,7 +209,7 @@ export default function ServiceReviewPublicPage() {
   const canNext = () => {
     if (!cur) return false;
     if (cur.id === 'issues' || cur.id === 'contact') return true;
-    const q = QUESTIONS.find(x => x.code === cur.id);
+    const q = activeQuestions.find(x => x.code === cur.id);
     if (!q) return true;
     if (!q.required) return true;
     if (q.type === 'staff') {
@@ -253,14 +256,17 @@ export default function ServiceReviewPublicPage() {
       const vals = Object.values(flat.q3).filter(Boolean).map(Number);
       flat.q3 = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : undefined;
     }
-    // Gộp "vấn đề chưa hài lòng" (điểm thấp) lên trước để ticket lấy đúng nhóm vấn đề
-    const allTopics = [...new Set([...issues, ...topics])];
+    // Gộp "vấn đề chưa hài lòng" + chủ đề tự nhận diện từ nhận xét → ticket lấy đúng nhóm vấn đề
+    const allTopics = [...new Set([...issues, ...topics, ...detectTopics(comment)])];
+    const wants = isResurvey
+      ? (answers.rs_need === 'Vẫn cần được hỗ trợ' ? 'office_hours' : 'none')
+      : (contact || null);
     const { data, error } = await supabase.rpc('submit_review', {
       p_token: token,
       p_answers: flat,
       p_staff: staffRatings,
       p_topics: allTopics,
-      p_wants: contact || null,
+      p_wants: wants,
       p_comment: comment || null,
       p_device_hash: deviceHash,
       p_duration: duration,
@@ -274,7 +280,7 @@ export default function ServiceReviewPublicPage() {
     }
     localStorage.removeItem(lsKey);
     setPhase('done');
-  }, [answers, staffGroups, issues, topics, contact, comment, token]);
+  }, [answers, staffGroups, issues, topics, contact, comment, token, isResurvey]);
 
   // ---------------- Render trạng thái đặc biệt ----------------
   if (phase === 'loading') {
@@ -308,10 +314,10 @@ export default function ServiceReviewPublicPage() {
     return <Shell>
       <div className="flex flex-col items-center text-center gap-4 pt-10 pb-6 px-6">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 grid place-items-center shadow-lg shadow-teal-500/30"><Heart className="w-8 h-8 text-white" /></div>
-        <h1 className="text-2xl font-bold text-slate-800">Đánh giá dịch vụ</h1>
-        <p className="text-slate-500">Kính chào {inv?.customer_name ? <b className="text-slate-700">{inv.customer_name}</b> : 'anh/chị'}, cảm ơn anh/chị đã tin tưởng lựa chọn dịch vụ của chúng tôi.</p>
+        <h1 className="text-2xl font-bold text-slate-800">{isResurvey ? 'Xác nhận kết quả xử lý' : 'Đánh giá dịch vụ'}</h1>
+        <p className="text-slate-500">Kính chào {inv?.customer_name ? <b className="text-slate-700">{inv.customer_name}</b> : 'anh/chị'}, {isResurvey ? 'cảm ơn anh/chị đã cho chúng tôi cơ hội khắc phục. Xin dành 1 phút xác nhận anh/chị đã hài lòng chưa.' : 'cảm ơn anh/chị đã tin tưởng lựa chọn dịch vụ của chúng tôi.'}</p>
         {inv?.service && <div className="text-sm bg-teal-50 text-teal-700 rounded-xl px-4 py-2 font-medium">{inv.service}</div>}
-        <p className="text-slate-400 text-sm">Phiếu chỉ mất chưa tới 2 phút. Đánh giá của anh/chị được bảo mật.</p>
+        <p className="text-slate-400 text-sm">Phiếu chỉ mất chưa tới 2 phút. Ý kiến của anh/chị được bảo mật.</p>
       </div>
       <div className="px-6 pb-8 mt-auto">
         <button onClick={() => (inv?.otp_required ? setPhase('otp') : startSurvey())}
@@ -341,7 +347,7 @@ export default function ServiceReviewPublicPage() {
   }
 
   // ---------------- Khảo sát ----------------
-  const q = QUESTIONS.find(x => x.code === cur?.id);
+  const q = activeQuestions.find(x => x.code === cur?.id);
   const overall = Number(answers.q1);
 
   return <Shell>
@@ -424,6 +430,26 @@ export default function ServiceReviewPublicPage() {
             })}
           </div>
           <div className="flex justify-between text-[11px] text-slate-400 mt-2 px-1"><span>Không giới thiệu</span><span>Chắc chắn giới thiệu</span></div>
+        </QuestionBlock>
+      )}
+
+      {/* Câu chọn 1 đáp án (khảo sát lại) */}
+      {q && q.type === 'single' && (
+        <QuestionBlock q={q}>
+          <div className="space-y-2.5 mt-5">
+            {q.options.map(o => (
+              <button key={o} onClick={() => setAns(q.code, o)}
+                className={`w-full text-left px-4 py-3.5 rounded-2xl border-2 font-medium transition ${answers[q.code] === o ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-slate-200 text-slate-600'}`}>{o}</button>
+            ))}
+          </div>
+        </QuestionBlock>
+      )}
+
+      {/* Ý kiến thêm (khảo sát lại) */}
+      {cur?.id === 'rs_comment' && (
+        <QuestionBlock q={{ title: 'Ý kiến thêm', text: 'Anh/chị muốn chia sẻ thêm điều gì với chúng tôi không?' }}>
+          <textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} placeholder="Nhập ý kiến của anh/chị (không bắt buộc)…"
+            className="w-full rounded-2xl border border-slate-200 p-3.5 text-sm outline-none focus:border-teal-400 resize-none mt-4" />
         </QuestionBlock>
       )}
 

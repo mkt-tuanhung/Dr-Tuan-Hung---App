@@ -93,6 +93,52 @@ export const QUESTIONS = [
 // Nhóm NPS (PRD §6 câu 9)
 export const npsGroup = (n) => (n >= 9 ? 'promoter' : n >= 7 ? 'passive' : 'detractor');
 
+// ---- Khảo sát lại sau khi xử lý phản hồi (PRD §10) ----
+export const RESURVEY_QUESTIONS = [
+  {
+    code: 'rs_resolved', type: 'single', required: true,
+    title: 'Kết quả xử lý',
+    text: 'Vấn đề của anh/chị đã được giải quyết chưa?',
+    options: ['Đã giải quyết', 'Mới giải quyết một phần', 'Chưa giải quyết'],
+  },
+  {
+    code: 'q1', type: 'rating5', required: true,
+    title: 'Mức hài lòng với cách xử lý',
+    text: 'Anh/chị hài lòng như thế nào với cách chúng tôi tiếp nhận và xử lý phản hồi?',
+  },
+  {
+    code: 'rs_need', type: 'single', required: true,
+    title: 'Hỗ trợ thêm',
+    text: 'Anh/chị có cần chúng tôi tiếp tục hỗ trợ không?',
+    options: ['Không cần thêm', 'Vẫn cần được hỗ trợ'],
+  },
+];
+
+// ---- Nhận diện chủ đề từ nhận xét tự do (không cần AI ngoài) ----
+export const TOPIC_KEYWORDS = [
+  { topic: 'Thời gian chờ', re: /chờ|đợi|lâu|chậm trễ/i },
+  { topic: 'Thái độ nhân viên', re: /thái độ|cáu|quát|lạnh lùng|nhiệt tình|tận tâm|chu đáo|niềm nở/i },
+  { topic: 'Chất lượng tư vấn', re: /tư vấn|giải thích|thông tin|dặn dò/i },
+  { topic: 'Khả năng liên hệ', re: /liên hệ|gọi (điện|lại)|nghe máy|hotline|nhắn tin|zalo/i },
+  { topic: 'Chi phí', re: /giá|chi phí|tiền|đắt|phụ thu|báo giá/i },
+  { topic: 'Cơ sở vật chất', re: /phòng|sạch|bẩn|cơ sở|vệ sinh|máy lạnh|giường|nhà vệ sinh/i },
+  { topic: 'Chăm sóc sau phẫu thuật', re: /hậu phẫu|chăm sóc|thay băng|hướng dẫn|tái khám/i },
+  { topic: 'Kết quả cảm nhận', re: /kết quả|đẹp|sưng|đau|hồi phục|dáng|form/i },
+];
+export const detectTopics = (text) => {
+  if (!text) return [];
+  return TOPIC_KEYWORDS.filter(t => t.re.test(text)).map(t => t.topic);
+};
+
+// Màu badge cảm xúc
+export const SENTIMENT_STYLE = {
+  'rất tích cực': 'bg-emerald-100 text-emerald-700',
+  'tích cực': 'bg-teal-100 text-teal-700',
+  'trung lập': 'bg-slate-100 text-slate-600',
+  'tiêu cực': 'bg-orange-100 text-orange-700',
+  'rất tiêu cực': 'bg-rose-100 text-rose-700',
+};
+
 // Nhãn nhóm nhân sự cho câu 3 (tách rõ từng bộ phận)
 export const STAFF_ROLE_LABELS = {
   truc_page: 'Trực page (tư vấn online)',
