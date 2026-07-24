@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import {
   Star, Smile, TrendingUp, AlertTriangle, ShieldAlert, PhoneCall, Users,
   Search, X, MessageSquare, ChevronRight, Loader2, Award, ThumbsUp,
-  Ticket, Clock, CheckCircle2, UserPlus, Send, RefreshCw, Copy, Megaphone,
+  Ticket, Clock, CheckCircle2, UserPlus, Send, RefreshCw, Copy, Megaphone, Sparkles,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import {
@@ -59,12 +59,30 @@ export default function ServiceQualityPage() {
   const [onlyNegative, setOnlyNegative] = useState(false);
   const [ticketFilter, setTicketFilter] = useState('open'); // open | all
   const [resurveyQR, setResurveyQR] = useState(null); // { url, dataUrl, name }
+  const [analyzingId, setAnalyzingId] = useState(null);
+
+  // Tóm tắt & phân tích 1 phản hồi bằng AI (Gemini) — chỉ gửi nội dung nhận xét
+  const analyzeResponse = async (r) => {
+    if (!r?.comment) return;
+    setAnalyzingId(r.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-review', { body: { text: r.comment, score: r.overall_score } });
+      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Lỗi phân tích');
+      const patch = { ai_summary: data.summary || null };
+      if (data.sentiment) patch.sentiment = data.sentiment;
+      const { error: upErr } = await supabase.from('service_review_responses').update(patch).eq('id', r.id);
+      if (upErr) throw upErr;
+      setDetail(d => (d && d.id === r.id ? { ...d, ...patch } : d));
+      await load();
+    } catch (e) { toast.error('Phân tích AI: ' + (e.message || e)); }
+    setAnalyzingId(null);
+  };
 
   const load = useCallback(async () => {
     const [{ data: iv }, { data: rp }, { data: tk }, { data: st }] = await Promise.all([
       supabase.from('service_review_invitations').select('id, status, created_at, milestone').order('created_at', { ascending: false }).limit(5000),
       supabase.from('service_review_responses')
-        .select('id, overall_score, csat_score, nps_score, staff_ratings, answers, selected_topics, wants_contact, comment, risk_level, fraud_status, fraud_score, verification_level, sentiment, submitted_at, invitation:service_review_invitations(customer_name, service, surgery_date, milestone, ticket_id, is_resurvey)')
+        .select('id, overall_score, csat_score, nps_score, staff_ratings, answers, selected_topics, wants_contact, comment, risk_level, fraud_status, fraud_score, verification_level, sentiment, ai_summary, submitted_at, invitation:service_review_invitations(customer_name, service, surgery_date, milestone, ticket_id, is_resurvey)')
         .order('submitted_at', { ascending: false }).limit(5000),
       supabase.from('service_review_tickets')
         .select('*, response:service_review_responses(comment, selected_topics, staff_ratings, answers, invitation:service_review_invitations(service, phone))')
@@ -552,6 +570,21 @@ export default function ServiceQualityPage() {
 
               {detail.comment && (
                 <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-slate-700 flex gap-2"><MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" /><span className="italic">{detail.comment}</span></div>
+              )}
+
+              {detail.comment && (
+                detail.ai_summary ? (
+                  <div className="bg-violet-50 border border-violet-100 rounded-xl p-3.5 text-sm text-slate-700">
+                    <div className="text-xs font-bold text-violet-500 mb-1 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Tóm tắt AI</div>
+                    {detail.ai_summary}
+                    <button onClick={() => analyzeResponse(detail)} disabled={analyzingId === detail.id} className="ml-2 text-xs text-violet-500 hover:underline disabled:opacity-50">{analyzingId === detail.id ? 'Đang…' : 'Phân tích lại'}</button>
+                  </div>
+                ) : (
+                  <button onClick={() => analyzeResponse(detail)} disabled={analyzingId === detail.id}
+                    className="w-full py-2.5 rounded-xl border border-violet-200 text-violet-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-violet-50 disabled:opacity-50">
+                    {analyzingId === detail.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Tóm tắt & phân tích bằng AI
+                  </button>
+                )
               )}
 
               {(detail.answers?._attachments || []).length > 0 && (
