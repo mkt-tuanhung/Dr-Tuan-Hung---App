@@ -366,8 +366,27 @@ export default function ServiceReviewPublicPage() {
 
   if (phase === 'welcome') {
     return <Shell>
+      <style>{`
+        @keyframes dthWave { 0%{transform:scale(.5);opacity:.6} 70%{opacity:0} 100%{transform:scale(2);opacity:0} }
+        @keyframes dthBeat { 0%,100%{transform:scale(1)} 14%{transform:scale(1.13)} 28%{transform:scale(1)} 42%{transform:scale(1.08)} 56%{transform:scale(1)} }
+        @keyframes dthFloat { 0%{transform:translateY(6px);opacity:0} 60%{opacity:.9} 100%{transform:translateY(-34px);opacity:0} }
+        .dth-wave{position:absolute;width:7rem;height:7rem;border-radius:9999px;background:radial-gradient(circle,rgba(16,185,129,.38) 0%,rgba(20,184,166,.18) 45%,transparent 70%);animation:dthWave 3s ease-out infinite}
+        .dth-beat{animation:dthBeat 2.4s ease-in-out infinite}
+        .dth-spark{position:absolute;color:#5eead4;animation:dthFloat 2.8s ease-in infinite}
+        @media (prefers-reduced-motion: reduce){.dth-wave,.dth-beat,.dth-spark{animation:none;opacity:0}.dth-beat{opacity:1}}
+      `}</style>
       <div className="flex flex-col items-center text-center gap-4 pt-10 pb-6 px-6">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 grid place-items-center shadow-lg shadow-teal-500/30"><Heart className="w-8 h-8 text-white" /></div>
+        <div className="relative grid place-items-center h-28 w-28 mb-1">
+          <span className="dth-wave" style={{ animationDelay: '0s' }} />
+          <span className="dth-wave" style={{ animationDelay: '1s' }} />
+          <span className="dth-wave" style={{ animationDelay: '2s' }} />
+          <Heart className="dth-spark w-3 h-3" fill="currentColor" style={{ top: '4px', left: '18px', animationDelay: '.4s' }} />
+          <Heart className="dth-spark w-2.5 h-2.5" fill="currentColor" style={{ top: '10px', right: '14px', animationDelay: '1.3s' }} />
+          <Heart className="dth-spark w-2 h-2" fill="currentColor" style={{ top: '2px', right: '30px', animationDelay: '2.1s' }} />
+          <div className="dth-beat relative w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 grid place-items-center shadow-lg shadow-teal-500/40">
+            <Heart className="w-8 h-8 text-white" fill="currentColor" />
+          </div>
+        </div>
         <h1 className="text-2xl font-bold text-slate-800">{isResurvey ? 'Xác nhận kết quả xử lý' : 'Đánh giá dịch vụ'}</h1>
         <p className="text-slate-500">Kính chào {inv?.customer_name ? <b className="text-slate-700">{inv.customer_name}</b> : 'anh/chị'}, {isResurvey ? 'cảm ơn anh/chị đã cho chúng tôi cơ hội khắc phục. Xin dành 1 phút xác nhận anh/chị đã hài lòng chưa.' : 'cảm ơn anh/chị đã tin tưởng lựa chọn dịch vụ của chúng tôi.'}</p>
         {inv?.service && <div className="text-sm bg-teal-50 text-teal-700 rounded-xl px-4 py-2 font-medium">{inv.service}</div>}
