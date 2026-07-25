@@ -388,7 +388,7 @@ export default function ServiceReviewPublicPage() {
           </div>
         </div>
         <h1 className="text-2xl font-bold text-slate-800">{isResurvey ? 'Xác nhận kết quả xử lý' : 'Đánh giá dịch vụ'}</h1>
-        <p className="text-slate-500">Kính chào {inv?.customer_name ? <b className="text-slate-700">{inv.customer_name}</b> : 'anh/chị'}, {isResurvey ? 'cảm ơn anh/chị đã cho chúng tôi cơ hội khắc phục. Xin dành 1 phút xác nhận anh/chị đã hài lòng chưa.' : 'cảm ơn anh/chị đã tin tưởng lựa chọn dịch vụ của chúng tôi.'}</p>
+        <p className="text-slate-500">Kính chào quý khách{inv?.customer_name ? <>: <b className="text-slate-700">{inv.customer_name}</b></> : ''}, {isResurvey ? 'cảm ơn anh/chị đã cho chúng tôi cơ hội khắc phục. Xin dành 1 phút xác nhận anh/chị đã hài lòng chưa.' : 'cảm ơn anh/chị đã tin tưởng lựa chọn dịch vụ của chúng tôi.'}</p>
         {inv?.service && <div className="text-sm bg-teal-50 text-teal-700 rounded-xl px-4 py-2 font-medium">{inv.service}</div>}
         <p className="text-slate-400 text-sm">Phiếu chỉ mất chưa tới 2 phút. Ý kiến của anh/chị được bảo mật.</p>
       </div>
