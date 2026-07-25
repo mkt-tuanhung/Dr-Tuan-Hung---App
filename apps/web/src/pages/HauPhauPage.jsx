@@ -727,10 +727,12 @@ const HauPhauPage = () => {
         )}
         <MediaCustomerButton appointment={careApp} me={profile}
           canAdd={['media', 'dieu_duong', 'cskh', 'marketing', 'admin'].some(r => [profile?.role, profile?.role_2].includes(r))} />
-        <button type="button" onClick={() => createReview(careApp)} disabled={creatingReview}
-          className="inline-flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 px-3.5 py-2 rounded-xl shadow-sm disabled:opacity-60">
-          {creatingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Tạo phiếu đánh giá
-        </button>
+        {profile?.role === 'admin' && (
+          <button type="button" onClick={() => createReview(careApp)} disabled={creatingReview}
+            className="inline-flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 px-3.5 py-2 rounded-xl shadow-sm disabled:opacity-60">
+            {creatingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Tạo phiếu đánh giá
+          </button>
+        )}
       </>
     );
     return (
