@@ -690,35 +690,39 @@ const HauPhauPage = () => {
 
         {/* Chỉ số — desktop */}
         <div className="hidden lg:grid grid-cols-5 gap-3">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center justify-center">
-            <div className="relative w-20 h-20">
-              <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#14b8a6" strokeWidth="3.5" strokeLinecap="round" strokeDasharray={`${metrics.progress * 0.974} 100`} />
+          <div className="rounded-2xl border border-teal-100 shadow-sm p-4 flex flex-col items-center justify-center bg-gradient-to-br from-teal-50 to-white">
+            <div className="relative w-24 h-24">
+              <svg viewBox="0 0 36 36" className="w-24 h-24 -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#d1fae5" strokeWidth="4" />
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#14b8a6" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${metrics.progress * 0.974} 100`} />
               </svg>
-              <div className="absolute inset-0 grid place-items-center"><span className="text-lg font-bold text-slate-800">{metrics.progress}%</span></div>
+              <div className="absolute inset-0 grid place-items-center"><span className="text-xl font-extrabold text-teal-600">{metrics.progress}%</span></div>
             </div>
-            <div className="text-xs text-slate-400 mt-1">Tiến độ hồi phục</div>
+            <div className="text-xs font-semibold text-slate-500 mt-1">Tiến độ hồi phục</div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400"><CalendarClock className="w-4 h-4" /> Tái khám tiếp theo</div>
-            <div className="text-base font-bold text-slate-800 mt-2">{careApp.next_recheck_at ? new Date(careApp.next_recheck_at).toLocaleDateString('vi-VN') : (nextRecheckM?.date ? nextRecheckM.date.toLocaleDateString('vi-VN') : '—')}</div>
+          <div className="relative bg-white rounded-2xl border border-slate-100 shadow-sm p-4 pl-5 overflow-hidden">
+            <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-400" />
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Tái khám tiếp theo</span><span className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 grid place-items-center"><CalendarClock className="w-4 h-4" /></span></div>
+            <div className="text-lg font-bold text-slate-800 mt-2">{careApp.next_recheck_at ? new Date(careApp.next_recheck_at).toLocaleDateString('vi-VN') : (nextRecheckM?.date ? nextRecheckM.date.toLocaleDateString('vi-VN') : '—')}</div>
             <div className="text-xs text-slate-400 mt-0.5">{careApp.next_recheck_at ? new Date(careApp.next_recheck_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : (nextRecheckM?.label || '')}</div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck className="w-4 h-4" /> Điểm hoàn thành chăm sóc</div>
-            <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{metrics.careScore}<span className="text-sm text-slate-400">/100</span></div>
-            <div className="text-xs text-emerald-600 mt-0.5">{metrics.careScore >= 80 ? 'Tốt' : metrics.careScore >= 50 ? 'Khá' : 'Cần cải thiện'}</div>
+          <div className="relative bg-white rounded-2xl border border-slate-100 shadow-sm p-4 pl-5 overflow-hidden">
+            <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-400" />
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Hoàn thành chăm sóc</span><span className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 grid place-items-center"><ShieldCheck className="w-4 h-4" /></span></div>
+            <div className="text-[26px] leading-none font-extrabold text-slate-800 mt-2.5 tabular-nums">{metrics.careScore}<span className="text-sm text-slate-400 font-bold">/100</span></div>
+            <div className="text-xs text-emerald-600 mt-1.5 font-semibold">{metrics.careScore >= 80 ? 'Tốt' : metrics.careScore >= 50 ? 'Khá' : 'Cần cải thiện'}</div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400"><AlertTriangle className="w-4 h-4" /> Nguy cơ biến chứng</div>
-            <div className={`text-2xl font-bold mt-2 ${rk.c}`}>{metrics.risk}</div>
-            <div className="h-1.5 rounded-full bg-slate-100 mt-2 overflow-hidden"><div className="h-full rounded-full" style={{ width: metrics.risk === 'Cao' ? '100%' : metrics.risk === 'Trung bình' ? '55%' : '20%', backgroundColor: rk.ring }} /></div>
+          <div className="relative bg-white rounded-2xl border border-slate-100 shadow-sm p-4 pl-5 overflow-hidden">
+            <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: rk.ring }} />
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Nguy cơ biến chứng</span><span className={`w-9 h-9 rounded-xl grid place-items-center ${rk.bg} ${rk.c}`}><AlertTriangle className="w-4 h-4" /></span></div>
+            <div className={`text-[22px] leading-none font-extrabold mt-2.5 ${rk.c}`}>{metrics.risk}</div>
+            <div className="h-1.5 rounded-full bg-slate-100 mt-2.5 overflow-hidden"><div className="h-full rounded-full" style={{ width: metrics.risk === 'Cao' ? '100%' : metrics.risk === 'Trung bình' ? '55%' : '20%', backgroundColor: rk.ring }} /></div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400"><Heart className="w-4 h-4" /> Mức độ hài lòng</div>
-            <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{metrics.satisfaction != null ? metrics.satisfaction.toFixed(1) : '—'}<span className="text-sm text-slate-400">/5</span></div>
-            <div className="text-xs text-slate-400 mt-0.5">{metrics.satisfaction != null ? (metrics.satisfaction >= 4 ? 'Rất hài lòng' : metrics.satisfaction >= 3 ? 'Bình thường' : 'Chưa hài lòng') : 'Chưa đánh giá'}</div>
+          <div className="relative bg-white rounded-2xl border border-slate-100 shadow-sm p-4 pl-5 overflow-hidden">
+            <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-violet-400" />
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Mức độ hài lòng</span><span className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 grid place-items-center"><Heart className="w-4 h-4" /></span></div>
+            <div className="text-[26px] leading-none font-extrabold text-slate-800 mt-2.5 tabular-nums">{metrics.satisfaction != null ? metrics.satisfaction.toFixed(1) : '—'}<span className="text-sm text-slate-400 font-bold">/5</span></div>
+            <div className="text-xs text-slate-400 mt-1.5">{metrics.satisfaction != null ? (metrics.satisfaction >= 4 ? 'Rất hài lòng' : metrics.satisfaction >= 3 ? 'Bình thường' : 'Chưa hài lòng') : 'Chưa đánh giá'}</div>
           </div>
         </div>
 
@@ -758,14 +762,14 @@ const HauPhauPage = () => {
                       </span>
                       {i < ms.length - 1 && <span className={`w-0.5 flex-1 my-1 ${done ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
                     </div>
-                    <button type="button" onClick={() => canEditHauPhau && setMilestoneEdit(m)} className={`text-left flex-1 pb-4 ${canEditHauPhau ? 'cursor-pointer' : 'cursor-default'}`}>
+                    <button type="button" onClick={() => canEditHauPhau && setMilestoneEdit(m)} className={`text-left flex-1 mb-3 rounded-xl px-3 py-2 transition ${active ? 'bg-teal-50 border border-teal-200' : done ? 'bg-emerald-50/40' : 'hover:bg-slate-50'} ${canEditHauPhau ? 'cursor-pointer' : 'cursor-default'}`}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-800 text-sm">{m.label}</span>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold shrink-0 ${done ? 'bg-emerald-100 text-emerald-700' : active ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{done ? 'Hoàn thành' : active ? 'Đến hạn' : 'Chưa tới'}</span>
+                        <span className="font-bold text-slate-800 text-sm">{m.label}</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold shrink-0 ${done ? 'bg-emerald-500 text-white' : active ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{done ? '✓ Hoàn thành' : active ? 'Đến hạn' : 'Chưa tới'}</span>
                       </div>
-                      <div className="text-xs text-slate-400">{m.date ? m.date.toLocaleDateString('vi-VN') : '—'}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{m.date ? m.date.toLocaleDateString('vi-VN') : '—'}</div>
                       <div className="text-xs text-slate-500 mt-0.5">{m.note || m.desc}</div>
-                      {m.nurse_id && <div className="text-[11px] text-teal-600 mt-0.5">ĐD: {nurseName(m.nurse_id) || '—'}</div>}
+                      {m.nurse_id && <div className="text-[11px] font-semibold text-teal-600 mt-1 inline-flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-teal-100 text-teal-700 grid place-items-center text-[8px] font-bold">{initialsOf(nurseName(m.nurse_id))}</span> {nurseName(m.nurse_id) || '—'}</div>}
                     </button>
                   </div>
                 );
@@ -1013,10 +1017,19 @@ const HauPhauPage = () => {
     return { txt: `${Math.round(h / 24)} ngày nữa`, over: false };
   };
   const priority = mainTabCustomers
-    .filter(c => c.next_recheck_at)
-    .map(c => ({ c, cd: fmtCountdown(c.next_recheck_at), t: new Date(c.next_recheck_at) }))
-    .filter(p => p.cd.over || (p.t - nowTs) < 3 * 86400000)
-    .sort((a, b) => a.t - b.t)
+    .map(c => {
+      const t = c.next_recheck_at ? new Date(c.next_recheck_at) : null;
+      const cd = t ? fmtCountdown(t) : null;
+      const risk = riskOf(c);
+      const urgent = risk === 'Cao' || (cd && (cd.over || cd.soon)) || (t && (t - nowTs) < 3 * 86400000);
+      return { c, t, cd, risk, urgent };
+    })
+    .filter(p => p.urgent)
+    .sort((a, b) => {
+      const rank = (p) => (p.cd?.over ? 0 : p.risk === 'Cao' ? 1 : 2);
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
+      return (a.t ? a.t.getTime() : Infinity) - (b.t ? b.t.getTime() : Infinity);
+    })
     .slice(0, 8);
   const lastNoteOf = (c) => {
     const src = isCskhTab ? c.cskh_notes : c.post_op_notes;
@@ -1025,14 +1038,15 @@ const HauPhauPage = () => {
     const m = lines.length ? lines[lines.length - 1].match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})/) : null;
     return m ? `${m[1]} ${m[2]}` : null;
   };
-  const StatCard = ({ icon: Icon, label, value, sub, tone }) => (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-500">{label}</span>
-        <span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon className="w-4 h-4" /></span>
+  const StatCard = ({ icon: Icon, label, value, sub, tone, bar }) => (
+    <div className="relative bg-white rounded-2xl border border-slate-100 shadow-sm p-4 pl-5 overflow-hidden hover:shadow-md transition-shadow">
+      <span className={`absolute left-0 top-0 bottom-0 w-1.5 ${bar}`} />
+      <div className="flex items-start justify-between">
+        <span className="text-xs font-semibold text-slate-500 pt-1.5">{label}</span>
+        <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${tone}`}><Icon className="w-5 h-5" /></span>
       </div>
-      <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{value}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+      <div className="text-[26px] leading-none font-extrabold text-slate-800 mt-2.5 tabular-nums">{value}</div>
+      {sub && <div className="text-xs text-slate-400 mt-1.5">{sub}</div>}
     </div>
   );
 
@@ -1071,12 +1085,12 @@ const HauPhauPage = () => {
       {/* Thẻ chỉ số */}
       {!isCskhTab && (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          <StatCard icon={Users} label="Tổng bệnh nhân" value={listStats.total} sub="đang được theo dõi" tone="bg-teal-50 text-teal-600" />
-          <StatCard icon={CalendarClock} label="Cần theo dõi hôm nay" value={listStats.need} sub="có hẹn tái khám" tone="bg-amber-50 text-amber-600" />
-          <StatCard icon={Clock} label="Quá hạn follow-up" value={listStats.overdue} sub="cần liên hệ lại" tone="bg-rose-50 text-rose-600" />
-          <StatCard icon={ShieldCheck} label="Ổn định tốt" value={listStats.stable} sub={`${listStats.total ? Math.round(listStats.stable / listStats.total * 100) : 0}% tổng BN`} tone="bg-emerald-50 text-emerald-600" />
-          <StatCard icon={AlertTriangle} label="Nguy cơ biến chứng" value={listStats.complication} sub="cần theo dõi sát" tone="bg-orange-50 text-orange-600" />
-          <StatCard icon={Heart} label="Hài lòng (Đánh giá)" value={listStats.satScore == null ? '—' : listStats.satScore} sub="điểm trung bình /100" tone="bg-violet-50 text-violet-600" />
+          <StatCard icon={Users} label="Tổng bệnh nhân" value={listStats.total} sub="đang được theo dõi" tone="bg-teal-100 text-teal-600" bar="bg-teal-400" />
+          <StatCard icon={CalendarClock} label="Cần theo dõi hôm nay" value={listStats.need} sub="có hẹn tái khám" tone="bg-amber-100 text-amber-600" bar="bg-amber-400" />
+          <StatCard icon={Clock} label="Quá hạn follow-up" value={listStats.overdue} sub="cần liên hệ lại" tone="bg-rose-100 text-rose-600" bar="bg-rose-400" />
+          <StatCard icon={ShieldCheck} label="Ổn định tốt" value={listStats.stable} sub={`${listStats.total ? Math.round(listStats.stable / listStats.total * 100) : 0}% tổng BN`} tone="bg-emerald-100 text-emerald-600" bar="bg-emerald-400" />
+          <StatCard icon={AlertTriangle} label="Nguy cơ biến chứng" value={listStats.complication} sub="cần theo dõi sát" tone="bg-orange-100 text-orange-600" bar="bg-orange-400" />
+          <StatCard icon={Heart} label="Hài lòng (Đánh giá)" value={listStats.satScore == null ? '—' : listStats.satScore} sub="điểm trung bình /100" tone="bg-violet-100 text-violet-600" bar="bg-violet-400" />
         </div>
       )}
 
@@ -1111,7 +1125,7 @@ const HauPhauPage = () => {
             <span className="text-xs font-semibold text-rose-400">{priority.length}</span>
           </div>
           <div className="flex gap-2.5 overflow-x-auto -mx-1 px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
-            {priority.map(({ c, cd }) => (
+            {priority.map(({ c, cd, risk }) => (
               <button key={c.id} type="button" onClick={() => openCare(c)} className="shrink-0 w-60 text-left bg-white rounded-xl border border-slate-100 shadow-sm p-3 hover:border-rose-300 transition">
                 <div className="flex items-center gap-2">
                   <span className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-xs font-bold shrink-0">{initialsOf(c.customer_name)}</span>
@@ -1119,11 +1133,11 @@ const HauPhauPage = () => {
                     <div className="font-bold text-slate-800 text-sm truncate">{c.customer_name}</div>
                     <div className="text-[11px] text-slate-400 truncate">{c.phone || '—'}</div>
                   </div>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${riskOf(c) === 'Cao' ? 'bg-rose-500 text-white' : riskOf(c) === 'Trung bình' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{riskOf(c)}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${risk === 'Cao' ? 'bg-rose-500 text-white' : risk === 'Trung bình' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{risk}</span>
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs">
                   <span className="text-slate-500 truncate">{c.service || '—'}</span>
-                  <span className={`font-semibold shrink-0 ${cd.over ? 'text-rose-600' : 'text-amber-600'}`}>{cd.txt}</span>
+                  <span className={`font-semibold shrink-0 ${cd ? (cd.over ? 'text-rose-600' : 'text-amber-600') : 'text-rose-500'}`}>{cd ? cd.txt : 'Nguy cơ cao'}</span>
                 </div>
               </button>
             ))}
