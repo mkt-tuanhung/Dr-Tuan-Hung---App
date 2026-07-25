@@ -319,7 +319,7 @@ const HauPhauPage = () => {
       <p style="color:#888;margin:0 0 16px;font-size:13px">${reviewModal.app.service || ''}</p>
       <img src="${reviewModal.dataUrl}" style="width:300px;height:300px" />
       <p style="margin-top:16px;font-size:14px">Quét mã QR để đánh giá dịch vụ</p>
-      <p style="color:#0d9488;font-size:12px;word-break:break-all">${reviewModal.url}</p>
+      <p style="color:#0d9488;font-size:14px;font-weight:700;margin-top:8px">HOTLINE CSKH: 0886 222 678</p>
     </body></html>`);
     w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
   };
@@ -378,22 +378,18 @@ const HauPhauPage = () => {
       const pad = 34;
       ctx.drawImage(qrImg, bx + pad, by + pad, qrBox - pad * 2, qrBox - pad * 2);
 
-      // Hướng dẫn + link
-      let ty = by + qrBox + 58;
+      // Hướng dẫn + hotline CSKH
+      let ty = by + qrBox + 62;
       ctx.fillStyle = '#334155';
       ctx.font = '600 24px system-ui, sans-serif';
       ctx.fillText('Quét mã QR để đánh giá dịch vụ', W / 2, ty);
-      ty += 34;
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '400 18px system-ui, sans-serif';
-      ctx.fillText('hoặc mở đường link bên dưới', W / 2, ty);
-      ty += 40;
-      // link pill
-      ctx.font = '500 17px system-ui, sans-serif';
-      let link = reviewModal.url;
-      const lw = Math.min(ctx.measureText(link).width + 44, W - 80);
-      ctx.fillStyle = '#f0fdfa'; rr((W - lw) / 2, ty - 26, lw, 40, 20); ctx.fill();
-      ctx.fillStyle = '#0f766e'; ctx.fillText(link, W / 2, ty);
+      ty += 50;
+      // hotline pill
+      const hotline = 'HOTLINE CSKH: 0886 222 678';
+      ctx.font = '700 21px system-ui, sans-serif';
+      const hw = ctx.measureText(hotline).width + 56;
+      ctx.fillStyle = '#f0fdfa'; rr((W - hw) / 2, ty - 29, hw, 46, 23); ctx.fill();
+      ctx.fillStyle = '#0f766e'; ctx.fillText(hotline, W / 2, ty);
 
       // footer
       ctx.fillStyle = '#cbd5e1';
