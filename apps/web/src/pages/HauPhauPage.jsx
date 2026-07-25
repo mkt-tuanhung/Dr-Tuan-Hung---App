@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal, List, LayoutGrid } from 'lucide-react';
 import QRCode from 'qrcode';
 import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
@@ -119,6 +119,8 @@ const HauPhauPage = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [mainTab, setMainTab] = useState('hau_phau'); // 'hau_phau' (<1 tháng) | 'cskh' (≥1 tháng)
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('hp_view_mode') || 'list'); // 'list' | 'card'
+  useEffect(() => { localStorage.setItem('hp_view_mode', viewMode); }, [viewMode]);
 
   const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
   const isAdmin = profile?.role === 'admin';
@@ -1148,19 +1150,33 @@ const HauPhauPage = () => {
           className="w-full bg-white border border-slate-200 pl-10 pr-4 h-11 rounded-2xl text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/15 transition-all" />
       </div>
 
-      {/* Filter chips */}
-      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
-        {FILTER_TABS.map(tab => {
-          const active = activeTab === tab.id;
-          const n = statusCountOf(tab.id);
-          return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all inline-flex items-center gap-1.5 ${active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
-              {tab.label}
-              <span className={`text-[11px] font-bold px-1.5 rounded-full ${active ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+      {/* Filter chips + chọn chế độ xem */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0 flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+          {FILTER_TABS.map(tab => {
+            const active = activeTab === tab.id;
+            const n = statusCountOf(tab.id);
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all inline-flex items-center gap-1.5 ${active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
+                {tab.label}
+                <span className={`text-[11px] font-bold px-1.5 rounded-full ${active ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Toggle Danh sách / Thẻ — chỉ desktop */}
+        <div className="hidden lg:flex shrink-0 items-center gap-0.5 bg-slate-100 p-1 rounded-xl">
+          {[
+            { id: 'list', label: 'Danh sách', icon: List },
+            { id: 'card', label: 'Thẻ', icon: LayoutGrid },
+          ].map(v => (
+            <button key={v.id} onClick={() => setViewMode(v.id)} title={v.label}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-semibold transition-all ${viewMode === v.id ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+              <v.icon className="w-4 h-4" /> {v.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       {/* Cần ưu tiên theo dõi */}
@@ -1199,11 +1215,11 @@ const HauPhauPage = () => {
         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">Không có khách hàng nào trong mục này</div>
       ) : (
         <>
-          {/* Bảng — desktop */}
-          <div className="hidden lg:block bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          {/* Bảng — desktop (chế độ Danh sách) */}
+          <div className={`${viewMode === 'list' ? 'hidden lg:block' : 'hidden'} bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden`}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 bg-slate-50 border-b border-slate-100">
                   <th className="font-semibold px-4 py-3">Bệnh nhân</th>
                   <th className="font-semibold px-3 py-3">Dịch vụ</th>
                   <th className="font-semibold px-3 py-3">Điều dưỡng</th>
@@ -1229,7 +1245,8 @@ const HauPhauPage = () => {
                           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-xs font-bold shrink-0">{initialsOf(app.customer_name)}</span>
                           <div className="min-w-0">
                             <div className="font-bold text-slate-800 truncate">{app.customer_name}</div>
-                            <div className="text-xs text-slate-400">{app.phone || '—'}</div>
+                            <div className="text-xs text-slate-400 mb-1">{app.phone || '—'}</div>
+                            <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${stCls}`}>{st}</span>
                           </div>
                         </button>
                       </td>
@@ -1252,6 +1269,57 @@ const HauPhauPage = () => {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Lưới thẻ — desktop (chế độ Thẻ) */}
+          <div className={`${viewMode === 'card' ? 'hidden lg:grid' : 'hidden'} grid-cols-2 xl:grid-cols-3 gap-3`}>
+            {filteredCustomers.map(app => {
+              const st = isCskhTab ? (app.cskh_status || 'Chưa phân loại') : (app.post_op_status || 'Đang theo dõi');
+              const stCls = isCskhTab ? (CSKH_STATUS_STYLE[app.cskh_status] || 'bg-slate-100 text-slate-500 border-slate-200') : (STATUS_STYLE[st] || STATUS_STYLE['Đang theo dõi']);
+              const notesSrc = isCskhTab ? app.cskh_notes : app.post_op_notes;
+              const noteCount = notesSrc ? notesSrc.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
+              const risk = riskOf(app);
+              const nextR = app.next_recheck_at ? new Date(app.next_recheck_at) : null;
+              const riskCls = risk === 'Cao' ? 'bg-rose-100 text-rose-700' : risk === 'Trung bình' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+              return (
+                <div key={app.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-3 hover:border-teal-300 hover:shadow-md transition">
+                  <div className="flex items-start gap-3">
+                    <button type="button" onClick={() => openCare(app)} className="flex items-center gap-3 text-left min-w-0 flex-1">
+                      <span className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-200 to-violet-300 text-violet-700 grid place-items-center text-sm font-bold shrink-0">{initialsOf(app.customer_name)}</span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-800 truncate">{app.customer_name}</div>
+                        <div className="text-xs text-slate-400 truncate">{app.phone || '—'}</div>
+                      </div>
+                    </button>
+                    <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${riskCls}`}>{risk}</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${stCls}`}>{st}</span>
+                    {app.service && <span className="text-[11px] font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full truncate max-w-full">{app.service}</span>}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="min-w-0">
+                      <div className="text-slate-400 text-[10.5px]">Điều dưỡng</div>
+                      <div className="text-slate-600 font-medium truncate">{app.hau_phau?.full_name || <span className="text-slate-300">Chưa phân công</span>}</div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-slate-400 text-[10.5px]">Tái khám tiếp theo</div>
+                      {nextR ? <div className={`font-medium truncate ${fmtCountdown(nextR).over ? 'text-rose-600' : 'text-slate-600'}`}>{nextR.toLocaleDateString('vi-VN')} · {fmtCountdown(nextR).txt}</div> : <div className="text-slate-300">—</div>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-50">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><MessageCircle className="w-3.5 h-3.5" />{noteCount} ghi chú</span>
+                    <div className="flex items-center gap-1.5">
+                      {app.phone && <a href={`tel:${app.phone}`} className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-1.5 rounded-lg"><Phone className="w-3.5 h-3.5" /> Gọi</a>}
+                      <button type="button" onClick={() => openCare(app)} className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 px-2.5 py-1.5 rounded-lg">Mở nhật ký</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Thẻ — mobile, gom theo ngày mổ */}
