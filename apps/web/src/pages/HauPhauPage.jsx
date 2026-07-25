@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal } from 'lucide-react';
 import QRCode from 'qrcode';
 import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
@@ -849,16 +849,18 @@ const HauPhauPage = () => {
           )}
         </div>
 
-        {/* Nhật ký CSKH (thread) — mọi người xem được */}
+        {/* Nhật ký CSKH — chỉ hiện ở chế độ CSKH (Hậu phẫu không cần) */}
+        {isCskhTab && (
         <div className="bg-white rounded-2xl border border-violet-200 shadow-sm p-5">
           <h3 className="font-bold text-violet-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-violet-600" /> Nhật ký CSKH</h3>
           <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
             {careApp.cskh_notes ? renderNotes(careApp.cskh_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú CSKH nào</div>}
           </div>
         </div>
+        )}
 
-        {/* Thêm mốc CSKH — chỉ CSKH / admin */}
-        {canEditCskh && (
+        {/* Thêm mốc CSKH — chỉ chế độ CSKH + có quyền */}
+        {isCskhTab && canEditCskh && (
         <div className="bg-white rounded-2xl border border-violet-200 shadow-sm p-5 space-y-3">
           <h3 className="font-bold text-slate-800">Thêm mốc CSKH</h3>
           <div>
@@ -1052,14 +1054,42 @@ const HauPhauPage = () => {
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* ======= MOBILE: header xanh + tab nổi bật ======= */}
+      <div className="lg:hidden -mx-4 -mt-4 px-4 pt-5 pb-4 bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-600 rounded-b-[26px] text-white">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold leading-tight">Chăm sóc hậu phẫu</h2>
+            <p className="text-teal-50/90 text-xs mt-1 flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> Theo dõi &amp; chăm sóc khách sau phẫu thuật</p>
+          </div>
+          {canSeeAll && (
+            <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="shrink-0 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 grid place-items-center"><Plus className="w-5 h-5" /></button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 bg-white/15 p-1.5 rounded-2xl mt-4">
+          {[
+            { id: 'hau_phau', label: 'Hậu phẫu', icon: Users, sub: hauPhauCount },
+            { id: 'cskh', label: 'CSKH', icon: Headset, sub: cskhCount },
+          ].map(t => {
+            const on = mainTab === t.id;
+            return (
+              <button key={t.id} onClick={() => { setMainTab(t.id); setActiveTab('all'); }}
+                className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 font-bold text-sm transition-all ${on ? 'bg-white text-teal-700 shadow-md' : 'text-white/85'}`}>
+                <t.icon className="w-4 h-4" /> {t.label}
+                <span className={`text-[11px] px-1.5 rounded-full ${on ? 'bg-teal-100 text-teal-700' : 'bg-white/20 text-white'}`}>{t.sub}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ======= DESKTOP: header + tab ======= */}
+      <div className="hidden lg:flex items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 flex-wrap">
             {mainTab === 'cskh' ? 'Chăm sóc khách hàng' : 'Chăm sóc Hậu phẫu'}
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full"><ShieldCheck className="w-3 h-3" /> Trung tâm chăm sóc sau phẫu thuật</span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full"><ShieldCheck className="w-3 h-3" /> Trung tâm chăm sóc sau phẫu thuật</span>
           </h2>
-          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Theo dõi &amp; chăm sóc khách sau phẫu thuật để đảm bảo phục hồi tốt và trải nghiệm hài lòng.</p>
+          <p className="text-slate-400 text-sm mt-0.5">Theo dõi &amp; chăm sóc khách sau phẫu thuật để đảm bảo phục hồi tốt và trải nghiệm hài lòng.</p>
         </div>
         {canSeeAll && (
           <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="shrink-0 flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-teal-600 text-white text-sm font-semibold shadow-sm shadow-teal-600/20 hover:bg-teal-700 active:scale-95 transition">
@@ -1067,9 +1097,7 @@ const HauPhauPage = () => {
           </button>
         )}
       </div>
-
-      {/* Segmented Hậu phẫu / CSKH */}
-      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl max-w-md">
+      <div className="hidden lg:grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl max-w-md">
         {[
           { id: 'hau_phau', label: 'Hậu phẫu', sub: `<1 tháng · ${hauPhauCount}` },
           { id: 'cskh', label: 'CSKH', sub: `≥1 tháng · ${cskhCount}` },
@@ -1082,9 +1110,28 @@ const HauPhauPage = () => {
         ))}
       </div>
 
-      {/* Thẻ chỉ số */}
+      {/* Thẻ chỉ số — MOBILE (5 ô gọn) */}
       {!isCskhTab && (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div className="lg:hidden bg-white rounded-2xl border border-slate-100 shadow-sm px-1.5 py-3 grid grid-cols-5 divide-x divide-slate-100">
+          {[
+            { icon: Users, label: 'Tổng ca', value: listStats.total, color: 'text-teal-600' },
+            { icon: Activity, label: 'Theo dõi', value: listStats.following, color: 'text-blue-600' },
+            { icon: CalendarClock, label: 'Tái khám', value: listStats.recheck, color: 'text-amber-600' },
+            { icon: ShieldCheck, label: 'Ổn định', value: listStats.stable, color: 'text-emerald-600' },
+            { icon: AlertTriangle, label: 'Biến chứng', value: listStats.complication, color: 'text-rose-600' },
+          ].map((s, i) => (
+            <div key={i} className="flex flex-col items-center px-1">
+              <s.icon className={`w-4 h-4 ${s.color}`} />
+              <div className="text-lg font-extrabold text-slate-800 mt-1 tabular-nums leading-none">{s.value}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 text-center leading-tight">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Thẻ chỉ số — DESKTOP (6 thẻ) */}
+      {!isCskhTab && (
+        <div className="hidden lg:grid grid-cols-3 xl:grid-cols-6 gap-3">
           <StatCard icon={Users} label="Tổng bệnh nhân" value={listStats.total} sub="đang được theo dõi" tone="bg-teal-100 text-teal-600" bar="bg-teal-400" />
           <StatCard icon={CalendarClock} label="Cần theo dõi hôm nay" value={listStats.need} sub="có hẹn tái khám" tone="bg-amber-100 text-amber-600" bar="bg-amber-400" />
           <StatCard icon={Clock} label="Quá hạn follow-up" value={listStats.overdue} sub="cần liên hệ lại" tone="bg-rose-100 text-rose-600" bar="bg-rose-400" />
