@@ -264,10 +264,10 @@ export default function ServiceQualityPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[['overview', 'Tổng quan'], ['staff', 'Nhân sự'], ['responses', 'Phản hồi'], ['tickets', 'Xử lý phản hồi']].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition relative ${tab === k ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition relative ${tab === k ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
             {l}
             {k === 'tickets' && openTickets.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold align-middle">{openTickets.length}</span>}
           </button>
@@ -350,7 +350,7 @@ export default function ServiceQualityPage() {
                       const total = voc.sentiment.reduce((x, y) => x + y.n, 0) || 1;
                       return (
                         <div key={s} className="flex items-center gap-3">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-24 text-center ${SENTIMENT_STYLE[s]}`}>{s}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-24 text-center first-letter:uppercase ${SENTIMENT_STYLE[s]}`}>{s}</span>
                           <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
                             <div className={`h-full rounded-full ${s.includes('tiêu cực') ? 'bg-rose-400' : s === 'trung lập' ? 'bg-slate-300' : 'bg-emerald-400'}`} style={{ width: `${(n / total) * 100}%` }} />
                           </div>
@@ -424,8 +424,8 @@ export default function ServiceQualityPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-800 truncate">{r.invitation?.customer_name || 'Khách'}</span>
-                      {FRAUD.includes(r.fraud_status) && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold shrink-0">nghi ngờ</span>}
-                      {r.wants_contact && r.wants_contact !== 'none' && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold shrink-0">cần liên hệ</span>}
+                      {FRAUD.includes(r.fraud_status) && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold shrink-0">Nghi ngờ</span>}
+                      {r.wants_contact && r.wants_contact !== 'none' && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold shrink-0">Cần liên hệ</span>}
                     </div>
                     <div className="text-xs text-slate-400 truncate mt-0.5">{r.invitation?.service || '—'} · {dstr(r.submitted_at)}</div>
                     {r.comment && <div className="text-xs text-slate-500 truncate mt-0.5 italic">“{r.comment}”</div>}
@@ -451,8 +451,9 @@ export default function ServiceQualityPage() {
                 </div>
               </div>
 
-              <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 text-xs text-teal-700 flex items-start gap-2">
-                <Ticket className="w-4 h-4 shrink-0 mt-0.5" /> Phản hồi điểm thấp (1–2) hoặc khách yêu cầu liên hệ sẽ <b>tự động tạo ticket</b> để giao xử lý. Xử lý xong nhớ ghi nguyên nhân & cách khắc phục rồi đóng ticket.
+              <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 text-xs text-teal-700 flex items-start gap-2 leading-relaxed">
+                <Ticket className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Phản hồi điểm thấp (1–2) hoặc khách yêu cầu liên hệ sẽ <b>tự động tạo ticket</b> để giao xử lý. Xử lý xong nhớ ghi nguyên nhân &amp; cách khắc phục rồi đóng ticket.</span>
               </div>
 
               {listTickets.length === 0 ? (
@@ -565,7 +566,7 @@ export default function ServiceQualityPage() {
               )}
 
               {detail.sentiment && (
-                <div className="flex items-center gap-2 text-sm"><span className="text-slate-500">Cảm xúc:</span><span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${SENTIMENT_STYLE[detail.sentiment] || 'bg-slate-100 text-slate-600'}`}>{detail.sentiment}</span></div>
+                <div className="flex items-center gap-2 text-sm"><span className="text-slate-500">Cảm xúc:</span><span className={`text-xs font-semibold px-2.5 py-1 rounded-full first-letter:uppercase ${SENTIMENT_STYLE[detail.sentiment] || 'bg-slate-100 text-slate-600'}`}>{detail.sentiment}</span></div>
               )}
 
               {detail.comment && (
