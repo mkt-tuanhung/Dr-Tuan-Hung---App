@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { uploadToR2 } from '@/lib/r2Client';
+import { APP_URL } from '@/lib/appUrl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -242,7 +243,7 @@ const StaffManagementPage = ({ isNested = false }) => {
     if (!window.confirm(`Đăng nhập với tư cách "${s.full_name}"?\n\nLưu ý: nên mở ở CỬA SỔ ẨN DANH để không ảnh hưởng phiên đăng nhập Admin hiện tại.`)) return;
     const t = toast.loading('Đang tạo phiên đăng nhập...');
     const { data, error } = await supabase.functions.invoke('admin-impersonate', {
-      body: { targetUserId: s.id, redirectTo: window.location.origin },
+      body: { targetUserId: s.id, redirectTo: APP_URL },
     });
     toast.dismiss(t);
     if (error || data?.error) { toast.error(data?.error || error.message); return; }
