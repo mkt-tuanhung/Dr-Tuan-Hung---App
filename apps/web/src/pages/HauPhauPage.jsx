@@ -324,6 +324,93 @@ const HauPhauPage = () => {
     w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
   };
 
+  // Tạo ảnh "phiếu đánh giá" đẹp để tải về & gửi khách (Zalo/Messenger…)
+  const downloadReview = async () => {
+    if (!reviewModal) return;
+    try {
+      const W = 720, H = 1040;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
+
+      // Nền
+      ctx.fillStyle = '#ecfdf5'; ctx.fillRect(0, 0, W, H);
+      // Header gradient
+      const g = ctx.createLinearGradient(0, 0, W, 260);
+      g.addColorStop(0, '#0d9488'); g.addColorStop(1, '#10b981');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, 260);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = '600 22px system-ui, sans-serif';
+      ctx.fillText('THẨM MỸ DR TUẤN HÙNG', W / 2, 84);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 40px system-ui, sans-serif';
+      ctx.fillText('PHIẾU ĐÁNH GIÁ DỊCH VỤ', W / 2, 140);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '400 20px system-ui, sans-serif';
+      ctx.fillText('Ý kiến của quý khách giúp chúng tôi phục vụ tốt hơn', W / 2, 182);
+
+      // Tên khách + dịch vụ
+      let y = 322;
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 34px system-ui, sans-serif';
+      ctx.fillText(reviewModal.app.customer_name || 'Quý khách', W / 2, y);
+      if (reviewModal.app.service) {
+        y += 40;
+        ctx.fillStyle = '#0d9488';
+        ctx.font = '600 22px system-ui, sans-serif';
+        // cắt bớt nếu quá dài
+        let sv = reviewModal.app.service;
+        if (sv.length > 46) sv = sv.slice(0, 44) + '…';
+        ctx.fillText(sv, W / 2, y);
+      }
+
+      // Khung QR trắng
+      const qrBox = 380, bx = (W - qrBox) / 2, by = y + 40;
+      ctx.save();
+      ctx.shadowColor = 'rgba(15,23,42,0.12)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8;
+      ctx.fillStyle = '#ffffff'; rr(bx, by, qrBox, qrBox, 28); ctx.fill();
+      ctx.restore();
+
+      const qrImg = new Image();
+      await new Promise((res, rej) => { qrImg.onload = res; qrImg.onerror = rej; qrImg.src = reviewModal.dataUrl; });
+      const pad = 34;
+      ctx.drawImage(qrImg, bx + pad, by + pad, qrBox - pad * 2, qrBox - pad * 2);
+
+      // Hướng dẫn + link
+      let ty = by + qrBox + 58;
+      ctx.fillStyle = '#334155';
+      ctx.font = '600 24px system-ui, sans-serif';
+      ctx.fillText('Quét mã QR để đánh giá dịch vụ', W / 2, ty);
+      ty += 34;
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '400 18px system-ui, sans-serif';
+      ctx.fillText('hoặc mở đường link bên dưới', W / 2, ty);
+      ty += 40;
+      // link pill
+      ctx.font = '500 17px system-ui, sans-serif';
+      let link = reviewModal.url;
+      const lw = Math.min(ctx.measureText(link).width + 44, W - 80);
+      ctx.fillStyle = '#f0fdfa'; rr((W - lw) / 2, ty - 26, lw, 40, 20); ctx.fill();
+      ctx.fillStyle = '#0f766e'; ctx.fillText(link, W / 2, ty);
+
+      // footer
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '400 16px system-ui, sans-serif';
+      ctx.fillText('Chỉ mất chưa tới 2 phút · Ý kiến được bảo mật', W / 2, H - 34);
+
+      const safe = (reviewModal.app.customer_name || 'khach').replace(/[^\p{L}\p{N}]+/gu, '_');
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `phieu-danh-gia-${safe}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      toast.success('Đã tải phiếu đánh giá — gửi cho khách nhé!');
+    } catch (err) {
+      toast.error('Không tạo được ảnh phiếu: ' + (err.message || err));
+    }
+  };
+
   const openCare = (app) => {
     setSelectedApp(app);
     setCareApp(app);
@@ -943,6 +1030,9 @@ const HauPhauPage = () => {
                   <span className="text-xs text-slate-500 truncate flex-1">{reviewModal.url}</span>
                   <button type="button" onClick={copyReviewLink} className="shrink-0 text-teal-600 hover:text-teal-700"><Copy className="w-4 h-4" /></button>
                 </div>
+                <button type="button" onClick={downloadReview} className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-teal-700 shadow-sm shadow-teal-600/25 active:scale-[0.99] transition">
+                  <Download className="w-4 h-4" /> Tải phiếu đánh giá (gửi khách)
+                </button>
                 <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={copyReviewLink} className="py-2.5 rounded-xl bg-teal-50 text-teal-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-teal-100"><Copy className="w-4 h-4" /> Sao chép</button>
                   <button type="button" onClick={shareReview} className="py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-1.5 hover:bg-blue-100"><Share2 className="w-4 h-4" /> Chia sẻ</button>
