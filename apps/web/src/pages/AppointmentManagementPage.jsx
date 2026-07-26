@@ -153,30 +153,23 @@ const AppointmentManagementPage = () => {
   const { groupedByDate, recheckAppointments, stats, chartData, pieData, trends } = useMemo(() => {
     const groups = {};
     const rechecks = [];
-    const st = { total: 0, pt: 0, coc: 0, bong: 0, expected_bill: 0, total_deposit: 0 };
     const dates = [];
 
     let filteredApps = appointments;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filteredApps = filteredApps.filter(c => 
-        (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
+      filteredApps = filteredApps.filter(c =>
+        (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
         (c.phone && c.phone.toLowerCase().includes(q))
       );
     }
 
+    // Danh sách lịch hẹn: giữ TẤT CẢ để xem lịch sắp tới (không lọc theo tháng)
     filteredApps.forEach(app => {
       if (app.service && app.service.startsWith('[Tái khám]')) {
         rechecks.push(app);
         return;
       }
-      st.total++;
-      if (app.status === 'phau_thuat') st.pt++;
-      if (app.status === 'coc') st.coc++;
-      if (app.status === 'bong') st.bong++;
-      st.expected_bill += Number(app.expected_bill || 0);
-      if (app.status === 'coc') st.total_deposit += Number(app.deposit_amount || 0);
-
       const dateStr = app.appointment_date;
       if (!groups[dateStr]) {
         groups[dateStr] = [];
@@ -185,33 +178,21 @@ const AppointmentManagementPage = () => {
       groups[dateStr].push(app);
     });
 
-    const cd = dates.slice(0, 7).reverse().map(dateStr => {
-      const dayApps = groups[dateStr];
-      const d = new Date(dateStr);
-      return {
-        name: `${d.getDate()}/${d.getMonth()+1}`,
-        'Tổng lịch': dayApps.length,
-        'Phẫu thuật': dayApps.filter(a => a.status === 'phau_thuat').length
-      };
-    });
-
-    const pd = [
-      { name: 'Phẫu thuật', value: st.pt, color: '#14b8a6' },
-      { name: 'Cọc', value: st.coc, color: '#3b82f6' },
-      { name: 'Chờ tư vấn', value: st.total - st.pt - st.coc - st.bong, color: '#f59e0b' },
-      { name: 'Bong', value: st.bong, color: '#ef4444' }
-    ].filter(i => i.value > 0);
-
-    // Xu hướng so với tháng trước
+    // ---- Chỉ số & biểu đồ tính THEO THÁNG (không cộng gộp toàn bộ) ----
     const _now = new Date();
     const ymKey = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
     const _pm = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
     const pmKey = `${_pm.getFullYear()}-${String(_pm.getMonth() + 1).padStart(2, '0')}`;
     const cur = { total: 0, pt: 0, coc: 0, bong: 0, bill: 0, deposit: 0 };
     const prev = { total: 0, pt: 0, coc: 0, bong: 0, bill: 0, deposit: 0 };
+    const monthMap = {}; // 'YYYY-MM' -> { total, pt } cho biểu đồ kép
     filteredApps.forEach(app => {
       if (app.service && app.service.startsWith('[Tái khám]')) return;
       const mk = (app.appointment_date || '').slice(0, 7);
+      if (!mk) return;
+      if (!monthMap[mk]) monthMap[mk] = { total: 0, pt: 0 };
+      monthMap[mk].total++;
+      if (app.status === 'phau_thuat') monthMap[mk].pt++;
       const b = mk === ymKey ? cur : mk === pmKey ? prev : null;
       if (!b) return;
       b.total++;
@@ -220,6 +201,26 @@ const AppointmentManagementPage = () => {
       if (app.status === 'bong') b.bong++;
       b.bill += Number(app.expected_bill || 0);
     });
+
+    // Chỉ số hiển thị = THÁNG HIỆN TẠI
+    const st = { total: cur.total, pt: cur.pt, coc: cur.coc, bong: cur.bong, expected_bill: cur.bill, total_deposit: cur.deposit };
+
+    // Biểu đồ kép: so sánh 6 tháng gần nhất
+    const cd = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(_now.getFullYear(), _now.getMonth() - i, 1);
+      const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const m = monthMap[mk] || { total: 0, pt: 0 };
+      cd.push({ name: `Th${d.getMonth() + 1}`, 'Tổng lịch': m.total, 'Phẫu thuật': m.pt });
+    }
+
+    const pd = [
+      { name: 'Phẫu thuật', value: st.pt, color: '#14b8a6' },
+      { name: 'Cọc', value: st.coc, color: '#3b82f6' },
+      { name: 'Chờ tư vấn', value: Math.max(0, st.total - st.pt - st.coc - st.bong), color: '#f59e0b' },
+      { name: 'Bong', value: st.bong, color: '#ef4444' }
+    ].filter(i => i.value > 0);
+
     const _pct = (c, p) => p > 0 ? Math.round((c - p) / p * 1000) / 10 : null;
     const tr = { total: _pct(cur.total, prev.total), pt: _pct(cur.pt, prev.pt), coc: _pct(cur.coc, prev.coc), bong: _pct(cur.bong, prev.bong), bill: _pct(cur.bill, prev.bill), deposit: _pct(cur.deposit, prev.deposit) };
 
@@ -481,7 +482,11 @@ const AppointmentManagementPage = () => {
         <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : (
         <>
-          {/* Stats Row */}
+          {/* Stats Row — số liệu THÁNG HIỆN TẠI */}
+          <div className="flex items-center gap-2">
+            <h3 className="text-slate-700 font-bold">Số liệu tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</h3>
+            <span className="text-[11px] font-semibold text-teal-600 bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5">Tháng này</span>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { icon: CalendarDays, color: '#3b82f6', label: 'Tổng lịch hẹn', value: stats.total, trend: trends.total },
@@ -527,7 +532,7 @@ const AppointmentManagementPage = () => {
               </div>)}
             </div>
             <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <div className="flex items-center justify-between mb-3"><h3 className="text-slate-700 font-bold">Biểu đồ lịch hẹn theo ngày</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">7 ngày qua</span></div>
+              <div className="flex items-center justify-between mb-3"><h3 className="text-slate-700 font-bold">Biểu đồ lịch hẹn theo tháng</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">6 tháng gần nhất</span></div>
               <div className="h-[210px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
