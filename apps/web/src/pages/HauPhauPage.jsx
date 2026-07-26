@@ -532,27 +532,22 @@ const HauPhauPage = () => {
     if (error) toast.error(error.message);
     else { 
       if (form.post_op_status === 'Tái khám') {
-        const { error: insertError } = await supabase.from('customer_appointments').insert({
-          customer_name: selectedApp.customer_name,
-          phone: selectedApp.phone,
-          appointment_date: form.recheck_date,
-          appointment_time: form.recheck_time,
-          service: `[Tái khám] ${selectedApp.service || 'Hậu phẫu'}`,
-          test_status: 'Không cần',
-          expected_bill: 0,
-          deposit_amount: 0,
-          telesale_id: null,
-          sale_id: selectedApp.sale_id || selectedApp.hau_phau_id || null,
-          surgery_date: selectedApp.surgery_date,
-          customer_source: 'CSKH',
-          customer_type: 'Cũ',
-          status: 'scheduled',
-          notes: `[Lịch sử chăm sóc Hậu Phẫu]${updatedNotes}`,
-        });
-        if (insertError) {
-          toast.error('Lỗi khi tạo lịch hẹn tái khám: ' + insertError.message);
+        if (!form.recheck_date) {
+          toast.error('Vui lòng chọn ngày tái khám.');
         } else {
-          toast.success('Đã tự động tạo Lịch Tái Khám!');
+          // RPC SECURITY DEFINER: điều dưỡng được phân công tạo được lịch tái khám
+          // (INSERT trực tiếp bị RLS chặn với điều dưỡng thường).
+          const { error: insertError } = await supabase.rpc('create_recheck_appointment', {
+            p_parent_id: selectedApp.id,
+            p_recheck_date: form.recheck_date,
+            p_recheck_time: form.recheck_time || null,
+            p_notes: `[Lịch sử chăm sóc Hậu Phẫu]${updatedNotes}`,
+          });
+          if (insertError) {
+            toast.error('Lỗi khi tạo lịch hẹn tái khám: ' + insertError.message);
+          } else {
+            toast.success('Đã tự động tạo Lịch Tái Khám!');
+          }
         }
       }
       toast.success('Đã lưu mốc chăm sóc!');
