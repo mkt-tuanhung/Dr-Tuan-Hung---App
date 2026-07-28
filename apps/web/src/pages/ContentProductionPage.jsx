@@ -551,7 +551,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
         </>
       )}
 
-      {addOpen && <AddMediaModal me={me} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
+      {addOpen && <AddMediaModal me={me} stores={stores} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
       {addVideoOpen && <AddVideoModal me={me} onClose={() => setAddVideoOpen(false)} onSaved={() => { setAddVideoOpen(false); loadData(); }} />}
       {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
       {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
@@ -1093,7 +1093,7 @@ const inpCls = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focu
 const Field = ({ label, children }) => (
   <div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>
 );
-const AddMediaModal = ({ me, onClose, onSaved }) => {
+const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
   const [mode, setMode] = useState('existing'); // existing (tag khách) | new
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
@@ -1109,6 +1109,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   const [sourceStatus, setSourceStatus] = useState('chua_dung');
   const [noImage, setNoImage] = useState(false);
   const [hideFace, setHideFace] = useState(false);
+  const [dupAck, setDupAck] = useState(false);
   const [mediaStaff, setMediaStaff] = useState([]);
   const [links, setLinks] = useState('');
   const [note, setNote] = useState('');
@@ -1169,6 +1170,16 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
     } else {
       if (!name.trim()) { toast.error('Nhập tên khách hàng'); return; }
       payload = { ...payload, appointment_id: null, customer_name: name.trim(), customer_phone: phone.trim() || null, service: service.trim() || null };
+    }
+    // Cảnh báo trùng: cùng SĐT/tên khách, hoặc trùng link Drive
+    const nrm = (x) => (x || '').trim().toLowerCase();
+    const dupLink = stores.find(s => (s.source_links || []).some(l => arr.includes(l)));
+    const dupCust = stores.find(s => (payload.customer_phone && nrm(s.customer_phone) === nrm(payload.customer_phone)) || (nrm(s.customer_name) === nrm(payload.customer_name)));
+    if ((dupLink || dupCust) && !dupAck) {
+      const msg = dupLink ? `Link Drive này đã có ở "${dupLink.customer_name}".` : `Đã có source cho khách "${dupCust.customer_name}".`;
+      toast(msg + ' Bấm Lưu lần nữa nếu vẫn muốn thêm.', { icon: '⚠️', duration: 7000 });
+      setDupAck(true);
+      return;
     }
     setSaving(true);
     const { data: ins, error } = await supabase.from('media_customers').insert(payload).select('id').single();
