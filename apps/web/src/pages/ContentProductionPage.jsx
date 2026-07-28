@@ -298,6 +298,25 @@ const ContentProductionPage = ({ setActiveTab }) => {
     if (error) { toast.error('Lỗi: ' + error.message); loadData(); return; }
     if (msg) toast.success(msg);
   };
+  // Kéo chỉ số Facebook theo ID chiến dịch, lưu vào clip
+  const syncFbClip = async (clipId, campaignId) => {
+    const cid = (campaignId || '').replace(/\D/g, '');
+    if (!cid) { toast.error('Chưa có ID chiến dịch Facebook'); return; }
+    toast.loading('Đang kéo chỉ số Facebook…', { id: 'fb-' + clipId });
+    try {
+      const { data, error } = await supabase.functions.invoke('fb-ads-insights', { body: { campaign_id: cid } });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Lỗi Facebook');
+      const m = data.metrics || {};
+      const { error: upErr } = await supabase.from('media_clips').update({
+        fb_campaign_id: cid, fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
+        fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0, fb_synced_at: new Date().toISOString(),
+      }).eq('id', clipId);
+      if (upErr) throw upErr;
+      toast.success(`Đã cập nhật: ${m.messages || 0} tin nhắn · ${m.leads || 0} lead · CPA ${m.cpa != null ? fmtM(m.cpa) : '—'}`, { id: 'fb-' + clipId, duration: 6000 });
+      loadData();
+    } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
+  };
   const approveRun = (c) => {
     if (c.approved_to_run) return;
     ask('Duyệt cho clip này chạy Ads? Editor sẽ được thưởng 500.000đ.',
@@ -629,7 +648,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)}
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip}
                 onSetAd={(ad_status) => patchClip(c.id, { ad_status, ads_id: me.id }, 'Đã cập nhật trạng thái chạy')} />
             ))}
           </div>
@@ -644,7 +663,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       {buildFor && <BuildClipModal store={buildFor} me={me} onClose={() => setBuildFor(null)} onSaved={() => { setBuildFor(null); loadData(); }} />}
       {editClip && <BuildClipModal clip={editClip} store={storeOf(editClip.media_customer_id)} me={me} onClose={() => setEditClip(null)} onSaved={() => { setEditClip(null); loadData(); }} />}
       {scoreFor && <SourceScoreModal store={scoreFor} onClose={() => setScoreFor(null)} onSaved={() => { setScoreFor(null); loadData(); }} />}
-      {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
+      {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)} onSyncFb={syncFbClip}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
       {videoFor && <VideoModal clip={videoFor} me={me} canScore={canAds} onScore={() => { setReviewFor(videoFor); setVideoFor(null); }} onClose={() => setVideoFor(null)} />}
       {sourceFor && <VideoModal clip={{ clip_links: sourceFor.source_links }} title={`Xem source — ${sourceFor.customer_name || ''}`} onClose={() => setSourceFor(null)} />}
@@ -1155,7 +1174,7 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
 };
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView, onApproveRun }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
   const mine = c.editor_id === me?.id;
   return (
     <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm flex flex-col min-w-0">
@@ -1179,6 +1198,20 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
         {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full w-fit inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Đã duyệt chạy Ads</span>}
         {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
         {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
+        {c.fb_campaign_id && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold text-blue-700 inline-flex items-center gap-1"><BarChart2 className="w-3 h-3" />CHỈ SỐ FACEBOOK</span>
+              {canAds && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[10px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
+            </div>
+            <div className="grid grid-cols-4 gap-1 text-center">
+              <div><div className="text-sm font-bold text-slate-800">{c.fb_messages || 0}</div><div className="text-[9px] text-slate-400">Nhắn tin</div></div>
+              <div><div className="text-sm font-bold text-slate-800">{c.fb_leads || 0}</div><div className="text-[9px] text-slate-400">Lead</div></div>
+              <div><div className="text-sm font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[9px] text-slate-400">Chi</div></div>
+              <div><div className="text-sm font-bold text-teal-700">{(c.fb_messages + c.fb_leads) > 0 ? fmtM(Math.round(c.fb_spend / (c.fb_messages + c.fb_leads))) : '—'}</div><div className="text-[9px] text-slate-400">CPA</div></div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
         {(c.clip_links || []).length > 0 && <button onClick={onView} className="text-xs font-bold text-white px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 inline-flex items-center gap-1"><Play className="w-3.5 h-3.5 fill-white" /> Xem lớn</button>}
@@ -1593,12 +1626,13 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
 };
 
 // ---------- Modal: Ads đánh giá clip ----------
-const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
+const ReviewClipModal = ({ clip, store, me, onClose, onSaved, onSyncFb }) => {
   const [feedback, setFeedback] = useState(clip.ads_feedback || '');
   const [win, setWin] = useState(clip.win ?? false);
   const [amount, setAmount] = useState(clip.win_amount ? String(clip.win_amount) : '');
   const [score, setScore] = useState(clip.score ? String(clip.score) : '');
   const [note, setNote] = useState(clip.result_note || '');
+  const [campaignId, setCampaignId] = useState(clip.fb_campaign_id || '');
   const [saving, setSaving] = useState(false);
 
   const submit = async (stage) => {
@@ -1608,6 +1642,7 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       win: stage === 'revision' ? false : win,
       win_amount: stage !== 'revision' && win ? (Number(String(amount).replace(/\D/g, '')) || 0) : 0,
       score: Number(score) || 0, result_note: note || null,
+      fb_campaign_id: campaignId.replace(/\D/g, '') || null,
       evaluated_at: stage === 'revision' ? null : new Date().toISOString(),
     };
     await onSaved(payload);
@@ -1644,6 +1679,17 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       )}
       <label className="block text-sm font-semibold text-slate-700 mb-1">Nhận xét kết quả</label>
       <input value={note} onChange={e => setNote(e.target.value)} placeholder="VD: chuyển đổi tốt / cần đổi hook…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-4" />
+
+      {/* Gán ID chiến dịch Facebook để kéo chỉ số */}
+      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 mb-4">
+        <label className="block text-sm font-bold text-blue-700 mb-1 flex items-center gap-1"><BarChart2 className="w-4 h-4" />ID chiến dịch Facebook (chạy Ads xong dán vào)</label>
+        <div className="flex gap-2">
+          <input value={campaignId} onChange={e => setCampaignId(e.target.value)} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-blue-400 outline-none" />
+          <button type="button" onClick={async () => { const cid = campaignId.replace(/\D/g, ''); if (!cid) { toast.error('Nhập ID chiến dịch'); return; } await supabase.from('media_clips').update({ fb_campaign_id: cid }).eq('id', clip.id); onSyncFb?.(clip.id, cid); }} className="shrink-0 px-3.5 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><RotateCcw className="w-4 h-4" />Kéo chỉ số</button>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-1">Lấy ID trong Facebook Ads Manager (cột/URL chiến dịch). Chỉ số sẽ hiện trên clip.</p>
+      </div>
+
       <div className="flex justify-end gap-2">
         <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa</button>
         <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
