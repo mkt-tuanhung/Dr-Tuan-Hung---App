@@ -26,12 +26,13 @@ alter table image_folders enable row level security;
 alter table image_assets  enable row level security;
 
 -- Ai được GHI (tạo/sửa/xoá): designer, editor, media, marketing, admin — hoặc người tạo
+-- (role là enum user_role -> ép ::text để so sánh)
 create or replace function public.can_manage_images()
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from profiles p where p.id = auth.uid()
-      and (p.role = any(array['designer','editor','media','marketing','admin'])
-        or p.role_2 = any(array['designer','editor','media','marketing','admin']))
+      and (p.role::text = any(array['designer','editor','media','marketing','admin'])
+        or p.role_2::text = any(array['designer','editor','media','marketing','admin']))
   );
 $$;
 
