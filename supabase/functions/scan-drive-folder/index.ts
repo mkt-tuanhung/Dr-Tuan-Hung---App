@@ -114,10 +114,15 @@ Trả DUY NHẤT JSON {"types":[các key có mặt trong ${JSON.stringify(KEYS)}
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    const rawJson = Deno.env.get("GOOGLE_SA_JSON");
     const b64 = Deno.env.get("GOOGLE_SA_B64");
-    if (!b64) return json({ ok: false, error: "Chưa cấu hình GOOGLE_SA_B64 (service account)" });
     let sa: { client_email: string; private_key: string };
-    try { sa = JSON.parse(atob(b64.replace(/\s/g, ""))); } catch { return json({ ok: false, error: "GOOGLE_SA_B64 không hợp lệ" }); }
+    try {
+      if (rawJson) sa = JSON.parse(rawJson);
+      else if (b64) sa = JSON.parse(atob(b64.replace(/\s/g, "")));
+      else return json({ ok: false, error: "Chưa cấu hình GOOGLE_SA_JSON (service account)" });
+    } catch { return json({ ok: false, error: "Service account key không hợp lệ" }); }
+    if (!sa?.client_email || !sa?.private_key) return json({ ok: false, error: "Thiếu client_email/private_key trong service account" });
 
     const body = await req.json().catch(() => ({}));
     const rawLinks: string[] = Array.isArray(body.links) ? body.links : (body.link ? [body.link] : []);
