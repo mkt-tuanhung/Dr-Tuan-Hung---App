@@ -380,7 +380,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const approveRun = (c) => {
     if (c.approved_to_run) return;
     ask('Duyệt cho clip này chạy Ads? Editor sẽ được thưởng 500.000đ.',
-      () => patchClip(c.id, { approved_to_run: true, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ'),
+      () => patchClip(c.id, { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ'),
       { okLabel: 'Duyệt chạy Ads' });
   };
   // Mở thẳng link Google Drive nguồn (thư mục tổng) trong tab mới
@@ -481,7 +481,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
     // Sub-tab theo trạng thái
     const running = c.fb_status === 'ACTIVE' || (!c.fb_status && c.ad_status === 'dang_chay');
     const off = (c.fb_status && c.fb_status !== 'ACTIVE') || (!c.fb_status && c.ad_status === 'tam_dung');
-    if (videoTab === 'pending') return c.stage === 'submitted';
+    if (videoTab === 'pending') return c.stage === 'submitted' && !c.approved_to_run;
     if (videoTab === 'running') return c.approved_to_run && running;
     if (videoTab === 'off') return c.approved_to_run && off;
     if (!matchScoreFilter(c, videoScore)) return false;
@@ -496,7 +496,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const _run = (c) => c.fb_status === 'ACTIVE' || (!c.fb_status && c.ad_status === 'dang_chay');
   const _off = (c) => (c.fb_status && c.fb_status !== 'ACTIVE') || (!c.fb_status && c.ad_status === 'tam_dung');
   const videoCounts = {
-    pending: clips.filter(c => c.stage === 'submitted').length,
+    pending: clips.filter(c => c.stage === 'submitted' && !c.approved_to_run).length,
     running: clips.filter(c => c.approved_to_run && _run(c)).length,
     off: clips.filter(c => c.approved_to_run && _off(c)).length,
   };
@@ -539,7 +539,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       {(() => {
         const withSrc = stores.filter(s => (s.source_links || []).length > 0 && clipsOf(s.id).length === 0);
         const staleSrc = withSrc.filter(s => staleAgeDays(s) >= 14);
-        const pending = clips.filter(c => c.stage === 'submitted');
+        const pending = clips.filter(c => c.stage === 'submitted' && !c.approved_to_run);
         const revision = clips.filter(c => c.stage === 'revision');
         const TONE = { teal: 'text-teal-600', rose: 'text-rose-600', violet: 'text-violet-600', amber: 'text-amber-600' };
         const DOT = { teal: 'bg-teal-500', rose: 'bg-rose-500', violet: 'bg-violet-500', amber: 'bg-amber-500' };
@@ -1273,7 +1273,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
           <div className="text-[11px] text-slate-400 truncate">{store?.customer_name}{store?.customer_phone ? ` · ${store.customer_phone}` : ''} · {c.editor?.full_name || '—'}</div>
           <div className="mt-1"><PermissionBadges s={store} size="sm" /></div>
         </div>
-        <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}</span>
+        {(() => { const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; return <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[eff]?.cls || ''}`}>{STAGE[eff]?.label || eff}</span>; })()}
       </div>
       <div className="mt-2 flex flex-col gap-2">
         {(c.clip_links || []).length > 0 ? (c.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />) : <span className="text-xs text-slate-300">Chưa có clip</span>}
