@@ -446,7 +446,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
         const staleSrc = withSrc.filter(s => staleAgeDays(s) >= 14);
         const pending = clips.filter(c => c.stage === 'submitted');
         const revision = clips.filter(c => c.stage === 'revision');
-        const TONE = { teal: 'bg-teal-50 border-teal-200 text-teal-700', rose: 'bg-rose-50 border-rose-200 text-rose-700', violet: 'bg-violet-50 border-violet-200 text-violet-700', amber: 'bg-amber-50 border-amber-200 text-amber-700' };
+        const TONE = { teal: 'text-teal-600', rose: 'text-rose-600', violet: 'text-violet-600', amber: 'text-amber-600' };
+        const DOT = { teal: 'bg-teal-500', rose: 'bg-rose-500', violet: 'bg-violet-500', amber: 'bg-amber-500' };
         const tiles = [];
         const clearKho = () => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoTag(''); setKhoPhase('all'); };
         if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { setTab('kho'); clearKho(); setKhoStale(0); setKhoUndone(true); } });
@@ -456,13 +457,22 @@ const ContentProductionPage = ({ setActiveTab }) => {
         const shown = tiles.filter(t => t.n > 0);
         if (!shown.length) return null;
         return (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4 text-amber-500" /> Việc cần xử lý</div>
+          <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 shadow-sm p-4 ring-1 ring-amber-200/50">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="w-9 h-9 rounded-xl bg-amber-500 text-white grid place-items-center shadow-sm shrink-0"><AlertTriangle className="w-5 h-5" /></span>
+              <div className="min-w-0">
+                <div className="text-base font-extrabold text-slate-800 leading-tight">Việc cần xử lý</div>
+                <div className="text-[11px] font-medium text-amber-700/80">Bấm vào ô để mở danh sách đã lọc sẵn</div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {shown.map((t, i) => (
-                <button key={i} onClick={t.onClick} className={`text-left rounded-xl p-3 border transition hover:shadow-md ${TONE[t.tone]}`}>
-                  <div className="flex items-center justify-between"><t.icon className="w-5 h-5" /><span className="text-2xl font-bold tabular-nums">{t.n}</span></div>
-                  <div className="text-xs font-semibold mt-1">{t.label}</div>
+                <button key={i} onClick={t.onClick} className="text-left rounded-xl p-3 bg-white border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition">
+                  <div className="flex items-center justify-between">
+                    <span className={`w-8 h-8 rounded-lg grid place-items-center bg-slate-50 ${TONE[t.tone]}`}><t.icon className="w-4 h-4" /></span>
+                    <span className={`text-2xl font-extrabold tabular-nums ${TONE[t.tone]}`}>{t.n}</span>
+                  </div>
+                  <div className="text-xs font-semibold text-slate-600 mt-1.5 flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${DOT[t.tone]}`} />{t.label}</div>
                 </button>
               ))}
             </div>
