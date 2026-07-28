@@ -1283,6 +1283,12 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
   const fbInfo = fbStatusInfo(c.fb_status);
+  const [cidInput, setCidInput] = useState('');
+  const doAssign = () => {
+    const cid = cidInput.replace(/\D/g, '');
+    if (!cid) { toast.error('Nhập ID chiến dịch Facebook'); return; }
+    onSyncFb?.(c.id, cid);
+  };
   const phones = c.fb_leads || 0;
   const cpa = (c.fb_messages + phones) > 0 ? Math.round(c.fb_spend / (c.fb_messages + phones)) : null;
   const Row = ({ label, children }) => <div className="flex gap-1.5 text-sm"><span className="text-slate-400 shrink-0">{label}:</span><span className="text-slate-700 font-semibold min-w-0 truncate">{children}</span></div>;
@@ -1330,14 +1336,25 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
             {canAds && c.fb_campaign_id && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[11px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
           </div>
           {c.fb_campaign_id ? (
-            <div className="grid grid-cols-4 gap-2">
-              <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{c.fb_messages || 0}</div><div className="text-[10px] text-slate-400">Nhắn tin</div></div>
-              <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{phones}</div><div className="text-[10px] text-slate-400">SĐT</div></div>
-              <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400">Đã chi</div></div>
-              <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400">CPA</div></div>
+            <>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{c.fb_messages || 0}</div><div className="text-[10px] text-slate-400">Nhắn tin</div></div>
+                <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{phones}</div><div className="text-[10px] text-slate-400">SĐT</div></div>
+                <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400">Đã chi</div></div>
+                <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400">CPA</div></div>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-400"><LinkIcon className="w-3 h-3" />ID chiến dịch: <span className="font-mono text-slate-500">{c.fb_campaign_id}</span>{c.fb_synced_at && <span className="ml-auto">Cập nhật: {new Date(c.fb_synced_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}</div>
+            </>
+          ) : canAds ? (
+            <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 space-y-2">
+              <p className="text-xs text-slate-500">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> vào đây để kéo chỉ số về:</p>
+              <div className="flex gap-2">
+                <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
+                <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
+              </div>
             </div>
           ) : (
-            <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3">Chưa gán ID chiến dịch Facebook.{canAds ? ' Bấm "Đánh giá" để gán ID rồi kéo chỉ số.' : ''}</div>
+            <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3">Chưa gán ID chiến dịch Facebook.</div>
           )}
         </section>
 
