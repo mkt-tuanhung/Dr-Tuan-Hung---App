@@ -77,8 +77,15 @@ Deno.serve(async (req) => {
       const leads = sumActions(actions, LEAD_ACTIONS);
       const spend = Number(row.spend) || 0;
       const results = messages + leads;
+      // Lấy trạng thái chiến dịch (ACTIVE / PAUSED...)
+      let status: string | null = null;
+      try {
+        const sr = await fetch(`https://graph.facebook.com/${API}/${campaignId}?fields=effective_status&access_token=${token}`);
+        const sd = await sr.json().catch(() => ({}));
+        if (sr.ok && !sd.error) status = sd.effective_status || null;
+      } catch { /* bỏ qua */ }
       return json({ ok: true, metrics: {
-        campaign_name: row.campaign_name || null,
+        campaign_name: row.campaign_name || null, status,
         spend, messages, leads, results,
         impressions: Number(row.impressions) || 0,
         reach: Number(row.reach) || 0,

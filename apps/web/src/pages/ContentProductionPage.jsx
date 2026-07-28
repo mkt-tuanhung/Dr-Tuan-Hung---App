@@ -247,7 +247,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
   const [videoView, setVideoView] = useState('card'); // 'card' | 'grid' (xem lưới thumbnail)
-  const [videoPending, setVideoPending] = useState(false); // chỉ clip chờ Ads duyệt (stage submitted)
+  const [videoTab, setVideoTab] = useState('all'); // all | pending | running | off
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [addOpen, setAddOpen] = useState(false);
@@ -310,12 +310,40 @@ const ContentProductionPage = ({ setActiveTab }) => {
       const m = data.metrics || {};
       const { error: upErr } = await supabase.from('media_clips').update({
         fb_campaign_id: cid, fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
-        fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0, fb_synced_at: new Date().toISOString(),
+        fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
+        fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
       }).eq('id', clipId);
       if (upErr) throw upErr;
       toast.success(`Đã cập nhật: ${m.messages || 0} tin nhắn · ${m.leads || 0} lead · CPA ${m.cpa != null ? fmtM(m.cpa) : '—'}`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
     } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
+  };
+  // Đồng bộ chỉ số tất cả clip đã gán ID chiến dịch
+  const [syncingAll, setSyncingAll] = useState(false);
+  const syncAllFb = async () => {
+    const targets = clips.filter(c => c.fb_campaign_id);
+    if (!targets.length) { toast.error('Chưa có clip nào gán ID chiến dịch'); return; }
+    setSyncingAll(true);
+    let done = 0, ok = 0, fail = false;
+    toast.loading(`Đang cập nhật 0/${targets.length}…`, { id: 'fb-all' });
+    for (const c of targets) {
+      try {
+        const { data } = await supabase.functions.invoke('fb-ads-insights', { body: { campaign_id: c.fb_campaign_id } });
+        if (data?.ok) {
+          const m = data.metrics || {};
+          const { error } = await supabase.from('media_clips').update({
+            fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
+            fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
+            fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
+          }).eq('id', c.id);
+          if (error) fail = true; else ok++;
+        } else fail = true;
+      } catch { fail = true; }
+      done++; toast.loading(`Đang cập nhật ${done}/${targets.length}…`, { id: 'fb-all' });
+    }
+    setSyncingAll(false);
+    toast[fail && ok === 0 ? 'error' : 'success'](`Đã cập nhật ${ok}/${targets.length} clip`, { id: 'fb-all', duration: 6000 });
+    loadData();
   };
   const approveRun = (c) => {
     if (c.approved_to_run) return;
@@ -418,7 +446,12 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
     if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
-    if (videoPending) return c.stage === 'submitted'; // chỉ clip chờ Ads duyệt
+    // Sub-tab theo trạng thái
+    const running = c.fb_status === 'ACTIVE' || (!c.fb_status && c.ad_status === 'dang_chay');
+    const off = (c.fb_status && c.fb_status !== 'ACTIVE') || (!c.fb_status && c.ad_status === 'tam_dung');
+    if (videoTab === 'pending') return c.stage === 'submitted';
+    if (videoTab === 'running') return c.approved_to_run && running;
+    if (videoTab === 'off') return c.approved_to_run && off;
     if (!matchScoreFilter(c, videoScore)) return false;
     if (videoService && !((st?.service || '').includes(videoService))) return false;
     const day = (c.submitted_at || c.created_at || '').slice(0, 10);
@@ -428,6 +461,13 @@ const ContentProductionPage = ({ setActiveTab }) => {
     const d = new Date(c.submitted_at || c.created_at);
     return c.stage !== 'done' || (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
   });
+  const _run = (c) => c.fb_status === 'ACTIVE' || (!c.fb_status && c.ad_status === 'dang_chay');
+  const _off = (c) => (c.fb_status && c.fb_status !== 'ACTIVE') || (!c.fb_status && c.ad_status === 'tam_dung');
+  const videoCounts = {
+    pending: clips.filter(c => c.stage === 'submitted').length,
+    running: clips.filter(c => c.approved_to_run && _run(c)).length,
+    off: clips.filter(c => c.approved_to_run && _off(c)).length,
+  };
 
   return (
     <div className="space-y-5">
@@ -475,8 +515,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
         const clearKho = () => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoTag(''); setKhoPhase('all'); };
         if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { setTab('kho'); clearKho(); setKhoStale(0); setKhoUndone(true); } });
         if (canEdit || isManager) tiles.push({ n: staleSrc.length, label: 'Nguồn tồn đọng > 14 ngày', tone: 'rose', icon: AlertTriangle, onClick: () => { setTab('kho'); clearKho(); setKhoUndone(false); setKhoStale(14); } });
-        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { setTab('video'); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoPending(true); } });
-        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { setTab('video'); setVideoPending(false); setVideoScore(''); } });
+        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { setTab('video'); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoTab('pending'); } });
+        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { setTab('video'); setVideoTab('all'); setVideoScore(''); } });
         const shown = tiles.filter(t => t.n > 0);
         if (!shown.length) return null;
         return (
@@ -568,8 +608,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <DateRangeFilter from={videoFrom} to={videoTo} headerLabel="Lọc theo ngày dựng" onApply={(f, t) => { setVideoFrom(f); setVideoTo(t); }} />
-            {videoPending && <span className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-violet-600 text-white font-semibold">Chờ duyệt<button onClick={() => setVideoPending(false)}><X className="w-3.5 h-3.5" /></button></span>}
-            {(videoScore || videoService || videoFrom || videoTo || videoPending) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoPending(false); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            {(videoScore || videoService || videoFrom || videoTo) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden ml-auto">
               <button onClick={() => setVideoView('card')} title="Xem thẻ" className={`px-3 py-2 ${videoView === 'card' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
               <button onClick={() => setVideoView('grid')} title="Xem lưới" className={`px-3 py-2 ${videoView === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
@@ -622,6 +661,17 @@ const ContentProductionPage = ({ setActiveTab }) => {
       ) : (
         <>
           {(canAds || isManager) && <FbAdsPanel />}
+          {/* Sub-tab trạng thái + cập nhật chỉ số */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {[['all', 'Tất cả', null], ['pending', 'Chờ duyệt', videoCounts.pending], ['running', 'Đang chạy', videoCounts.running], ['off', 'Đã tắt', videoCounts.off]].map(([k, l, n]) => (
+                <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold transition ${videoTab === k ? (k === 'running' ? 'bg-emerald-600 text-white' : k === 'off' ? 'bg-slate-600 text-white' : 'bg-violet-600 text-white') : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
+                  {l}{n != null && n > 0 ? ` (${n})` : ''}
+                </button>
+              ))}
+            </div>
+            {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
+          </div>
           {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : videoView === 'grid' ? (
@@ -1201,7 +1251,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
         {c.fb_campaign_id && (
           <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold text-blue-700 inline-flex items-center gap-1"><BarChart2 className="w-3 h-3" />CHỈ SỐ FACEBOOK</span>
+              <span className="text-[10px] font-bold text-blue-700 inline-flex items-center gap-1"><BarChart2 className="w-3 h-3" />CHỈ SỐ FACEBOOK
+                {c.fb_status && <span className={`ml-1 px-1.5 py-0.5 rounded-full ${c.fb_status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{c.fb_status === 'ACTIVE' ? '● Đang chạy' : '● Đã tắt'}</span>}
+              </span>
               {canAds && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[10px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
             </div>
             <div className="grid grid-cols-4 gap-1 text-center">
