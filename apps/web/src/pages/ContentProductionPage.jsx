@@ -31,6 +31,25 @@ const SOURCE_CHECKLIST = [
   { key: 'feedback', label: 'Feedback' },
   { key: 'tai_kham', label: 'Tái khám' },
 ];
+const SRC_LABEL = Object.fromEntries(SOURCE_CHECKLIST.map(t => [t.key, t.label]));
+// Gọi edge function tự soi thư mục trong link Google Drive
+async function scanDrive(links) {
+  const { data, error } = await supabase.functions.invoke('scan-drive-folder', { body: { links } });
+  if (error) throw new Error(error.message || 'Lỗi gọi soi Drive');
+  return data; // { ok, types[], folders[], readableLinks, privateLinks, error }
+}
+// Soi rồi tự cập nhật source_types cho 1 store (chạy nền, không chặn lưu)
+async function scanDriveAndUpdate(id, links) {
+  try {
+    const d = await scanDrive(links);
+    if (d?.ok && d.types?.length) {
+      await supabase.from('media_customers').update({ source_types: d.types }).eq('id', id);
+      toast.success('Tự nhận diện source: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
+    } else if (d?.ok && d.privateLinks > 0 && !d.readableLinks) {
+      toast('Link Drive để riêng tư nên không soi được — hãy chỉnh tay hoặc chia sẻ "Bất kỳ ai có link".', { icon: '🔒' });
+    }
+  } catch { /* im lặng để không chặn thao tác lưu */ }
+}
 const SERVICE_GROUPS = ['Hàm mặt', 'Body', 'Tiểu phẫu'];
 // Lọc nhanh theo giai đoạn (suy từ tiến độ dựng clip)
 const KHO_PHASES = [
@@ -273,6 +292,23 @@ const ContentProductionPage = ({ setActiveTab }) => {
     setStores(prev => prev.filter(x => x.id !== s.id));
     await supabase.from('media_customers').delete().eq('id', s.id);
   }, { okLabel: 'Xoá', danger: true });
+  const rescanStore = async (s) => {
+    const links = s.source_links || [];
+    if (!links.length) { toast.error('Khách này chưa có link Drive'); return; }
+    toast.loading('Đang soi Drive…', { id: 'scan-' + s.id });
+    try {
+      const d = await scanDrive(links);
+      if (d?.ok && d.types?.length) {
+        await supabase.from('media_customers').update({ source_types: d.types }).eq('id', s.id);
+        toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '), { id: 'scan-' + s.id });
+        loadData();
+      } else if (d?.ok && d.privateLinks && !d.readableLinks) {
+        toast('Link riêng tư — không soi được. Chia sẻ "Bất kỳ ai có link" hoặc chỉnh tay.', { id: 'scan-' + s.id, icon: '🔒' });
+      } else {
+        toast('Không thấy thư mục khớp tên loại source', { id: 'scan-' + s.id, icon: 'ℹ️' });
+      }
+    } catch (e) { toast.error('Soi lỗi: ' + e.message, { id: 'scan-' + s.id }); }
+  };
   const delClip = (id) => ask('Xoá clip này?', async () => {
     setClips(prev => prev.filter(c => c.id !== id));
     const { error } = await supabase.from('media_clips').delete().eq('id', id);
@@ -424,7 +460,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
             {visStores.map(s => (
               <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={firstThumbOf(s.id)} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
-                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
         ) : (
@@ -432,7 +468,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
             {visStores.map(s => (
               <StoreRow key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
-                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onDelete={() => delStore(s)} />
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
         )
@@ -654,7 +690,7 @@ const SourceTypeBadges = ({ types = [], showMissing = true }) => {
 };
 
 // ---------- Hàng Kho media (danh sách) ----------
-const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onRescan, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
     <div className="p-3 hover:bg-slate-50/60 flex flex-col lg:flex-row lg:items-center gap-3">
@@ -694,6 +730,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
         <ActionMenu items={[
           canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
           owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
+          (owner && (s.source_links || []).length > 0) && { label: 'Soi lại Drive (tự nhận diện source)', icon: <Search className="w-4 h-4" />, onClick: onRescan },
           (!s.appointment_id && owner) && { label: 'Kết nối hồ sơ khách', icon: <Link2 className="w-4 h-4" />, onClick: onLink },
           owner && { label: 'Xoá media', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
         ]} />
@@ -703,13 +740,14 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
 };
 
 // ---------- Thẻ Kho media (chế độ thẻ) ----------
-const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
+const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onRescan, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   const ss = SOURCE_STATUS[s.source_status || 'chua_dung'] || { label: s.source_status, cls: 'bg-slate-100 text-slate-600' };
   const hasSrc = (s.source_links || []).length > 0;
   const menuItems = [
     canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
     owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
+    (owner && hasSrc) && { label: 'Soi lại Drive (tự nhận diện source)', icon: <Search className="w-4 h-4" />, onClick: onRescan },
     (!s.appointment_id && owner) && { label: 'Kết nối hồ sơ khách', icon: <Link2 className="w-4 h-4" />, onClick: onLink },
     owner && { label: 'Xoá media', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
   ];
@@ -859,7 +897,24 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   const [links, setLinks] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const timer = useRef(null);
+
+  const doScan = async () => {
+    const arr = parseLinks(links);
+    if (!arr.length) { toast.error('Dán link Google Drive trước đã'); return; }
+    setScanning(true);
+    try {
+      const d = await scanDrive(arr);
+      if (d?.ok) {
+        setSourceTypes(d.types || []);
+        if (d.types?.length) toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
+        else if (d.privateLinks) toast('Link riêng tư — không đọc được, chỉnh tay nhé', { icon: '🔒' });
+        else toast('Không thấy thư mục khớp tên loại source', { icon: 'ℹ️' });
+      } else toast.error(d?.error || 'Soi thất bại');
+    } catch (e) { toast.error('Soi lỗi: ' + e.message); }
+    setScanning(false);
+  };
 
   const onSearch = (val) => {
     setQ(val); setPicked(null);
@@ -900,10 +955,13 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
       payload = { ...payload, appointment_id: null, customer_name: name.trim(), customer_phone: phone.trim() || null, service: service.trim() || null };
     }
     setSaving(true);
-    const { error } = await supabase.from('media_customers').insert(payload);
+    const { data: ins, error } = await supabase.from('media_customers').insert(payload).select('id').single();
     setSaving(false);
     if (error) { toast.error('Lỗi: ' + error.message); return; }
-    toast.success('Đã thêm vào kho media'); onSaved();
+    toast.success('Đã thêm vào kho media');
+    // Chưa có loại source → tự soi Drive điền giúp (chạy nền)
+    if (ins?.id && sourceTypes.length === 0) scanDriveAndUpdate(ins.id, arr);
+    onSaved();
   };
 
   return (
@@ -984,8 +1042,12 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
           </div>
           <Field label="Link Google Drive (mỗi dòng 1 link)"><textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
           <Field label="Trong link đã có những source nào?">
+            <button type="button" onClick={doScan} disabled={scanning}
+              className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
+              {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi Drive tự động
+            </button>
             <SourceTypePicker value={sourceTypes} onChange={setSourceTypes} />
-            <p className="text-[11px] text-slate-400 mt-1.5">Tick các loại đã có trong thư mục Drive để nhân sự khác biết còn thiếu gì.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">Bấm để hệ thống tự đọc thư mục trong link. Bỏ trống cũng được — sẽ tự soi khi lưu. (Có thể chỉnh tay nếu link riêng tư.)</p>
           </Field>
           <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
         </>
@@ -1004,12 +1066,31 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const [sourceTypes, setSourceTypes] = useState(store.source_types || []);
   const [sourceStatus, setSourceStatus] = useState(store.source_status || 'chua_dung');
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const doScan = async () => {
+    const arr = parseLinks(links);
+    if (!arr.length) { toast.error('Dán link Google Drive trước đã'); return; }
+    setScanning(true);
+    try {
+      const d = await scanDrive(arr);
+      if (d?.ok) {
+        setSourceTypes(d.types || []);
+        if (d.types?.length) toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
+        else if (d.privateLinks) toast('Link riêng tư — không đọc được, chỉnh tay nhé', { icon: '🔒' });
+        else toast('Không thấy thư mục khớp tên loại source', { icon: 'ℹ️' });
+      } else toast.error(d?.error || 'Soi thất bại');
+    } catch (e) { toast.error('Soi lỗi: ' + e.message); }
+    setScanning(false);
+  };
   const save = async () => {
     setSaving(true);
-    const { error } = await supabase.from('media_customers').update({ source_links: parseLinks(links), note: note || null, source_type: sourceType || null, source_types: sourceTypes, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
+    const arr = parseLinks(links);
+    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_types: sourceTypes, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success('Đã cập nhật nguồn'); onSaved();
+    toast.success('Đã cập nhật nguồn');
+    if (sourceTypes.length === 0) scanDriveAndUpdate(store.id, arr);
+    onSaved();
   };
   return (
     <Modal title="Sửa nguồn media" onClose={onClose}>
@@ -1029,6 +1110,10 @@ const SourceModal = ({ store, onClose, onSaved }) => {
       </div>
       <Field label="Link nguồn (mỗi dòng 1 link)"><textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className={inpCls} /></Field>
       <Field label="Trong link đã có những source nào?">
+        <button type="button" onClick={doScan} disabled={scanning}
+          className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
+          {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi Drive tự động
+        </button>
         <SourceTypePicker value={sourceTypes} onChange={setSourceTypes} />
       </Field>
       <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
