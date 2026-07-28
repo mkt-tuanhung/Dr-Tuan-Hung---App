@@ -7,7 +7,7 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
   Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
-  Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, MoreVertical, Pencil, BarChart2,
+  Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, MoreVertical, Pencil, BarChart2, Ban, EyeOff,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 
@@ -754,6 +754,18 @@ const SourceTypeBadges = ({ types = [], showMissing = true }) => {
   );
 };
 
+// Cảnh báo quyền dùng source (Media set; Designer/Editor thấy)
+const PermissionBadges = ({ s, size = 'md' }) => {
+  if (!s?.no_image && !s?.hide_face) return null;
+  const cls = size === 'sm' ? 'text-[10px] px-2 py-0.5' : 'text-[11px] px-2.5 py-1';
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {s.no_image && <span className={`font-bold bg-rose-100 text-rose-700 rounded-md inline-flex items-center gap-1 ${cls}`}><Ban className="w-3 h-3" />KHÔNG DÙNG HÌNH ẢNH</span>}
+      {s.hide_face && <span className={`font-bold bg-amber-100 text-amber-800 rounded-md inline-flex items-center gap-1 ${cls}`}><EyeOff className="w-3 h-3" />CHE MẶT</span>}
+    </div>
+  );
+};
+
 // Hiện đúng TÊN các thư mục con đọc được trong link Drive
 const FolderChips = ({ folders = [], max = 12 }) => {
   const list = folders || [];
@@ -899,6 +911,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
         <LinkList links={s.source_links} label="Nguồn" icon={Film} />
         <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
         {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
+        <PermissionBadges s={s} size="sm" />
         <FolderChips folders={s.source_folders} max={6} />
         {(s.source_video_count > 0 || s.source_image_count > 0) && (
           <span className="text-[11px] font-semibold text-slate-500 inline-flex items-center gap-2">
@@ -967,6 +980,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
           {s.source_id && <div className="font-mono text-violet-600 text-xs font-bold mt-1.5">#{s.source_id}</div>}
           {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
           {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
+          <div className="mt-2"><PermissionBadges s={s} /></div>
           <div className="mt-2"><FolderChips folders={s.source_folders} /></div>
           {(s.source_video_count > 0 || s.source_image_count > 0) && (
             <div className="flex items-center gap-3 mt-2 text-xs font-semibold">
@@ -1033,6 +1047,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
         <div className="min-w-0">
           <div className="font-bold text-slate-800 text-sm truncate">{c.title || '(Chưa đặt tiêu đề)'}</div>
           <div className="text-[11px] text-slate-400 truncate">{store?.customer_name}{store?.customer_phone ? ` · ${store.customer_phone}` : ''} · {c.editor?.full_name || '—'}</div>
+          <div className="mt-1"><PermissionBadges s={store} size="sm" /></div>
         </div>
         <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[c.stage]?.cls || ''}`}>{STAGE[c.stage]?.label || c.stage}</span>
       </div>
@@ -1091,6 +1106,8 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   const [sourceType, setSourceType] = useState('');
   const [sourceTypes, setSourceTypes] = useState([]);
   const [sourceStatus, setSourceStatus] = useState('chua_dung');
+  const [noImage, setNoImage] = useState(false);
+  const [hideFace, setHideFace] = useState(false);
   const [mediaStaff, setMediaStaff] = useState([]);
   const [links, setLinks] = useState('');
   const [note, setNote] = useState('');
@@ -1143,6 +1160,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
       source_id: sourceId.trim() || null, shoot_date: shootDate || null,
       media_in_charge_id: mediaChargeId || null, media_in_charge: chargeName,
       source_type: sourceType || null, source_status: sourceStatus || 'chua_dung',
+      no_image: noImage, hide_face: hideFace,
     };
     if (mode === 'existing') {
       if (!picked) { toast.error('Hãy TAG (chọn) khách hàng'); return; }
@@ -1238,6 +1256,12 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
             </Field>
           </div>
           <Field label="Link Google Drive (mỗi dòng 1 link)"><textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
+          <Field label="Cảnh báo quyền sử dụng (Designer/Editor sẽ thấy)">
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setNoImage(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${noImage ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><Ban className="w-4 h-4" />Không dùng hình ảnh</button>
+              <button type="button" onClick={() => setHideFace(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${hideFace ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><EyeOff className="w-4 h-4" />Che mặt</button>
+            </div>
+          </Field>
           <Field label="Trong link đã có những source nào?">
             <button type="button" onClick={doScan} disabled={scanning}
               className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
@@ -1262,6 +1286,8 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const [sourceType, setSourceType] = useState(store.source_type || '');
   const [sourceTypes, setSourceTypes] = useState(store.source_types || []);
   const [sourceStatus, setSourceStatus] = useState(store.source_status || 'chua_dung');
+  const [noImage, setNoImage] = useState(!!store.no_image);
+  const [hideFace, setHideFace] = useState(!!store.hide_face);
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const doScan = async () => {
@@ -1282,7 +1308,7 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const save = async () => {
     setSaving(true);
     const arr = parseLinks(links);
-    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
+    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung', no_image: noImage, hide_face: hideFace }).eq('id', store.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Đã cập nhật nguồn');
@@ -1306,6 +1332,12 @@ const SourceModal = ({ store, onClose, onSaved }) => {
         </Field>
       </div>
       <Field label="Link nguồn (mỗi dòng 1 link)"><textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className={inpCls} /></Field>
+      <Field label="Cảnh báo quyền sử dụng (Designer/Editor sẽ thấy)">
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setNoImage(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${noImage ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><Ban className="w-4 h-4" />Không dùng hình ảnh</button>
+          <button type="button" onClick={() => setHideFace(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${hideFace ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><EyeOff className="w-4 h-4" />Che mặt</button>
+        </div>
+      </Field>
       <Field label="Trong link đã có những source nào?">
         <button type="button" onClick={doScan} disabled={scanning}
           className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
@@ -1393,6 +1425,12 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
   return (
     <Modal title={editing ? 'Sửa video' : 'Dựng video'} onClose={onClose}>
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b></p>
+      {(store?.no_image || store?.hide_face) && (
+        <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
+          <div className="text-xs font-bold text-rose-700 mb-1.5 flex items-center gap-1"><AlertTriangle className="w-4 h-4" />LƯU Ý QUYỀN SỬ DỤNG</div>
+          <PermissionBadges s={store} />
+        </div>
+      )}
       {store?.source_links?.length > 0 && <div className="mb-3"><div className="text-xs text-slate-400 mb-1">Nguồn để dựng:</div><LinkList links={store.source_links} label="Nguồn" icon={Film} /></div>}
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Tiêu đề video</label>
