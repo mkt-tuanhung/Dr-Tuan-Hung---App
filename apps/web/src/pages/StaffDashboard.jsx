@@ -6,7 +6,8 @@ import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
-  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile
+  Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile,
+  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -60,9 +61,13 @@ const FULL_MENU = [
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
-  { id: 'content',    label: 'Kho media & Video Ads', icon: Clapperboard, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
+  { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
+    { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },
+    { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder'] },
+    { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle, roles: ['editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
+    { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon,  roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
+  ] },
   { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout, roles: ['seeding', 'admin', 'accountant', 'shareholder'] },
-  { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
   { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin', 'shareholder'] },
@@ -116,10 +121,10 @@ const EditorOverview = ({ profile, setActiveTab }) => {
   const fmtM = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n || 0)));
   return (
     <div className="grid grid-cols-2 gap-4">
-      <Card icon={Trophy} color="bg-amber-50 text-amber-600" label="Clip Win (tháng)" value={s.win} unit="clip" onClick={() => setActiveTab('content')} />
-      <Card icon={Scissors} color="bg-blue-50 text-blue-600" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content')} />
-      <Card icon={CheckCircle2} color="bg-violet-50 text-violet-600" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content')} />
-      <Card icon={Target} color="bg-rose-50 text-rose-600" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content')} />
+      <Card icon={Trophy} color="bg-amber-50 text-amber-600" label="Clip Win (tháng)" value={s.win} unit="clip" onClick={() => setActiveTab('content_video')} />
+      <Card icon={Scissors} color="bg-blue-50 text-blue-600" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content_video')} />
+      <Card icon={CheckCircle2} color="bg-violet-50 text-violet-600" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content_video')} />
+      <Card icon={Target} color="bg-rose-50 text-rose-600" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content_video')} />
       <Card icon={Wallet} color="bg-teal-50 text-teal-600" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
     </div>
   );
@@ -307,6 +312,7 @@ const StaffDashboard = () => {
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState({});
 
   const handleLogout = async () => {
     await logout();
@@ -320,16 +326,25 @@ const StaffDashboard = () => {
   }, []);
 
   const isOutsource = profile?.position === 'Outsource';
-  const allowedMenu = FULL_MENU.filter(m =>
-    (m.roles.includes('all') || m.roles.includes(profile?.role) || m.roles.includes(profile?.role_2))
+  const roleOk = (m) =>
+    (m.roles?.includes('all') || m.roles?.includes(profile?.role) || m.roles?.includes(profile?.role_2))
     && !(m.exclude && (m.exclude.includes(profile?.role) || m.exclude.includes(profile?.role_2)))
-    && !(isOutsource && OUTSOURCE_HIDE.includes(m.id))
-  );
+    && !(isOutsource && OUTSOURCE_HIDE.includes(m.id));
+  // Menu có nhóm con (dropdown): giữ nhóm nếu có ít nhất 1 mục con được phép
+  const allowedMenu = FULL_MENU.map(m => {
+    if (m.children) {
+      const kids = m.children.filter(roleOk);
+      return kids.length ? { ...m, children: kids } : null;
+    }
+    return roleOk(m) ? m : null;
+  }).filter(Boolean);
+  // Danh sách phẳng (gồm cả mục con) để kiểm tra quyền & tra cứu tab đang mở
+  const flatMenu = allowedMenu.flatMap(m => (m.children ? m.children : [m]));
 
   // Nếu tab hiện tại không thuộc quyền của nhân sự → về mục đầu tiên được phép
   useEffect(() => {
-    if (profile && !allowedMenu.some(m => m.id === activeTab)) {
-      setActiveTab(allowedMenu[0]?.id || 'overview');
+    if (profile && !flatMenu.some(m => m.id === activeTab)) {
+      setActiveTab(flatMenu[0]?.id || 'overview');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
@@ -375,7 +390,9 @@ const StaffDashboard = () => {
     if (activeTab === 'cashflow') return <CashFlowPage />;
     if (activeTab === 'payroll') return <PayrollPage />;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
-    if (activeTab === 'content') return <ContentProductionPage setActiveTab={setActiveTab} />;
+    if (activeTab === 'content' || activeTab === 'content_kho') return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;
+    if (activeTab === 'content_video') return <ContentProductionPage setActiveTab={setActiveTab} view="video" />;
+    if (activeTab === 'content_images') return <ContentProductionPage setActiveTab={setActiveTab} view="images" />;
     if (activeTab === 'seeding_rev') return <SeedingRevenuePage />;
     if (activeTab === 'service_quality') return <ServiceQualityPage />;
     if (activeTab === 'data_kh') return <MarketingDataPage />;
@@ -384,10 +401,10 @@ const StaffDashboard = () => {
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
     if (activeTab === 'meetings') return <MeetingPage />;
-    return <ComingSoon label={allowedMenu.find(m => m.id === activeTab)?.label || activeTab} />;
+    return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 
-  const activeMenu = allowedMenu.find(m => m.id === activeTab);
+  const activeMenu = flatMenu.find(m => m.id === activeTab);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -421,9 +438,50 @@ const StaffDashboard = () => {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {allowedMenu.map(item => {
             const Icon = item.icon;
+            // Mục có nhóm con (dropdown)
+            if (item.children) {
+              const childActive = item.children.some(c => c.id === activeTab);
+              const open = openGroups[item.id] ?? childActive;
+              return (
+                <div key={item.id}>
+                  <button
+                    onClick={() => setOpenGroups(g => ({ ...g, [item.id]: !(g[item.id] ?? childActive) }))}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      childActive ? 'text-teal-700 bg-teal-50/70' : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {open && (
+                    <div className="mt-0.5 ml-3.5 pl-3 border-l border-teal-100 space-y-0.5">
+                      {item.children.map(c => {
+                        const CIcon = c.icon;
+                        const active = activeTab === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            onClick={() => { setActiveTab(c.id); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                              active
+                                ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-sm shadow-teal-200'
+                                : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
+                            }`}
+                          >
+                            <CIcon className="w-4 h-4 shrink-0" />
+                            {c.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
             const active = activeTab === item.id;
             return (
               <button
