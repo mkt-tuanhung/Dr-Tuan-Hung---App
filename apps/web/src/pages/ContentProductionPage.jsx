@@ -766,8 +766,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
       {buildFor && <BuildClipModal store={buildFor} me={me} onClose={() => setBuildFor(null)} onSaved={() => { setBuildFor(null); loadData(); }} />}
       {editClip && <BuildClipModal clip={editClip} store={storeOf(editClip.media_customer_id)} me={me} onClose={() => setEditClip(null)} onSaved={() => { setEditClip(null); loadData(); }} />}
       {scoreFor && <SourceScoreModal store={scoreFor} onClose={() => setScoreFor(null)} onSaved={() => { setScoreFor(null); loadData(); }} />}
-      {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)} onSyncFb={syncFbClip}
-        onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
+      {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)}
+        onSaved={async (payload) => { await patchClip(reviewFor.id, payload, payload.approved_to_run ? 'Đã duyệt cho chạy Ads' : 'Đã gửi lại editor để sửa'); setReviewFor(null); }} />}
       {winModal && <WinRuleModal rule={winRule} onClose={() => setWinModal(false)} onSave={saveWinRule} />}
       {videoFor && <VideoModal clip={videoFor} me={me} canScore={canAds} onScore={() => { setReviewFor(videoFor); setVideoFor(null); }} onClose={() => setVideoFor(null)} />}
       {sourceFor && <VideoModal clip={{ clip_links: sourceFor.source_links }} title={`Xem source — ${sourceFor.customer_name || ''}`} onClose={() => setSourceFor(null)} />}
@@ -1358,18 +1358,18 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
           )}
         </section>
 
-        {/* 3. CHẤM ĐIỂM */}
+        {/* 3. CHẤM ĐIỂM (hệ thống tự chấm theo chỉ số Ads) */}
         <section className="border-t border-slate-100 pt-3 mt-auto">
-          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">③ Chấm điểm</h4>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">③ Điểm hệ thống tự chấm</h4>
           <div className="flex flex-wrap items-center gap-2">
             {(c.win || c.score > 0)
               ? <span className={`text-sm font-bold px-3 py-1 rounded-full inline-flex items-center gap-1 ${cat.cls}`}>{cat.warn && '⚠️'}{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}</span>
-              : <span className="text-sm text-slate-400">Chưa chấm</span>}
+              : <span className="text-sm text-slate-400">Chưa có điểm — tự chấm sau khi clip chạy Ads</span>}
             {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-1 rounded-full inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
             {c.ads_feedback && <span className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</span>}
           </div>
           <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {canAds && <button onClick={onReview} className="text-xs font-semibold text-violet-700 px-3 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50">Đánh giá / Gán ID</button>}
+            {canAds && !c.approved_to_run && <button onClick={onReview} className="text-xs font-semibold text-violet-700 px-3 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50">Xem &amp; góp ý</button>}
             {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />Duyệt chạy Ads</button>}
             <div className="ml-auto">
               <ActionMenu items={[
@@ -1792,30 +1792,28 @@ const WinRuleModal = ({ rule, onClose, onSave }) => {
   );
 };
 
-const ReviewClipModal = ({ clip, store, me, onClose, onSaved, onSyncFb }) => {
+// Modal DUYỆT clip (giai đoạn trước khi chạy Ads): Ads xem clip -> góp ý cho editor
+// rồi quyết định "Cần sửa" (gửi lại editor) hoặc "Duyệt & chạy Ads".
+// KHÔNG chấm điểm tay ở đây — điểm/Win do hệ thống tự tính từ chỉ số Ads sau khi chạy.
+const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
   const [feedback, setFeedback] = useState(clip.ads_feedback || '');
-  const [win, setWin] = useState(clip.win ?? false);
-  const [amount, setAmount] = useState(clip.win_amount ? String(clip.win_amount) : '');
-  const [score, setScore] = useState(clip.score ? String(clip.score) : '');
-  const [note, setNote] = useState(clip.result_note || '');
-  const [campaignId, setCampaignId] = useState(clip.fb_campaign_id || '');
   const [saving, setSaving] = useState(false);
 
-  const submit = async (stage) => {
+  const submit = async (action) => {
     setSaving(true);
+    const approve = action === 'approve';
     const payload = {
-      ads_id: me.id, ads_feedback: feedback || null, stage,
-      win: stage === 'revision' ? false : win,
-      win_amount: stage !== 'revision' && win ? (Number(String(amount).replace(/\D/g, '')) || 0) : 0,
-      score: Number(score) || 0, result_note: note || null,
-      fb_campaign_id: campaignId.replace(/\D/g, '') || null,
-      evaluated_at: stage === 'revision' ? null : new Date().toISOString(),
+      ads_id: me.id,
+      ads_feedback: feedback || null,
+      stage: approve ? 'done' : 'revision',
+      approved_to_run: approve,
+      evaluated_at: approve ? new Date().toISOString() : null,
     };
     await onSaved(payload);
     setSaving(false);
   };
   return (
-    <Modal title="Đánh giá clip" onClose={onClose}>
+    <Modal title="Duyệt clip" onClose={onClose}>
       <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b> · Editor: <b>{clip.editor?.full_name || '—'}</b></p>
       <div className="mb-3 flex flex-col gap-2">
         {(clip.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
@@ -1824,41 +1822,12 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved, onSyncFb }) => {
       </div>
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý cho editor</label>
-      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} placeholder="Nhận xét cho editor…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
-
-      {/* Điểm video thành phẩm */}
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Điểm video thành phẩm (1–10)</label>
-      <div className="flex items-center gap-2 mb-1">
-        <input value={score} onChange={e => { const v = Math.min(10, Number(e.target.value.replace(/[^\d]/g, '')) || 0); setScore(v ? String(v) : ''); if (v < 10 && win) setWin(false); if (v === 10) setWin(true); }} inputMode="numeric" placeholder="0–10" className="w-24 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none text-center font-bold" />
-        {(() => { const cat = scoreCat(score, win); return <span className={`text-xs font-bold px-2.5 py-1.5 rounded-lg ${cat.cls}`}>{cat.warn && '⚠️ '}{cat.label}</span>; })()}
-        <span className="text-[11px] text-slate-400">10=Win · ≥8 Tốt · 5–7 TB · &lt;5 Tệ</span>
-      </div>
-
-      <button onClick={() => setWin(w => { const nw = !w; if (nw) setScore('10'); return nw; })} className={`w-full my-2 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 ${win ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-slate-100 text-slate-500 border-2 border-transparent'}`}>
-        <Trophy className="w-5 h-5" /> {win ? 'WIN — 10 điểm' : 'Chấm WIN (=10đ)'}
-      </button>
-      {win && (
-        <>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">Tiền thưởng editor</label>
-          <MoneyInput value={amount} onChange={setAmount} placeholder="VD: 100.000" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
-        </>
-      )}
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Nhận xét kết quả</label>
-      <input value={note} onChange={e => setNote(e.target.value)} placeholder="VD: chuyển đổi tốt / cần đổi hook…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-4" />
-
-      {/* Gán ID chiến dịch Facebook để kéo chỉ số */}
-      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 mb-4">
-        <label className="block text-sm font-bold text-blue-700 mb-1 flex items-center gap-1"><BarChart2 className="w-4 h-4" />ID chiến dịch Facebook (chạy Ads xong dán vào)</label>
-        <div className="flex gap-2">
-          <input value={campaignId} onChange={e => setCampaignId(e.target.value)} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-blue-400 outline-none" />
-          <button type="button" onClick={async () => { const cid = campaignId.replace(/\D/g, ''); if (!cid) { toast.error('Nhập ID chiến dịch'); return; } await supabase.from('media_clips').update({ fb_campaign_id: cid }).eq('id', clip.id); onSyncFb?.(clip.id, cid); }} className="shrink-0 px-3.5 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><RotateCcw className="w-4 h-4" />Kéo chỉ số</button>
-        </div>
-        <p className="text-[11px] text-slate-400 mt-1">Lấy ID trong Facebook Ads Manager (cột/URL chiến dịch). Chỉ số sẽ hiện trên clip.</p>
-      </div>
+      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={3} placeholder="VD: đổi hook 3 giây đầu, chỉnh lại nhạc…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-2" />
+      <p className="text-[11px] text-slate-400 mb-4 flex items-start gap-1"><BarChart2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />Điểm &amp; Win sẽ do hệ thống tự chấm theo chỉ số Ads sau khi clip chạy (không cần chấm tay).</p>
 
       <div className="flex justify-end gap-2">
-        <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa</button>
-        <button onClick={() => submit('done')} disabled={saving} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lưu &amp; duyệt</button>
+        <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa — gửi lại editor</button>
+        <button onClick={() => submit('approve')} disabled={saving} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Duyệt &amp; chạy Ads</button>
       </div>
     </Modal>
   );
