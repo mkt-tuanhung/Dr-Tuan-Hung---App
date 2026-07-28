@@ -10,6 +10,7 @@ import {
   Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, MoreVertical, Pencil, BarChart2, Ban, EyeOff,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
+import ImageLibrary from '@/components/ImageLibrary.jsx';
 
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
 const parseLinks = (t) => (t || '').split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s));
@@ -221,10 +222,12 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const canAddMedia = roles.includes('media') || isAdmin;
   const canEdit = roles.includes('editor') || isAdmin;
   const canAds = roles.includes('marketing') || isAdmin;
+  const canDesign = roles.includes('designer') || isAdmin; // được upload/quản lý thư viện ảnh
 
   const tabs = [];
   if (canAddMedia || canEdit || isManager) tabs.push('kho');
   if (canEdit || canAds || isManager) tabs.push('video');
+  tabs.push('images'); // Thư viện ảnh mở cho mọi người trong module (chỉ designer/admin được sửa)
   const [tab, setTab] = useState(tabs[0] || 'kho');
 
   const [stores, setStores] = useState([]);
@@ -434,9 +437,10 @@ const ContentProductionPage = ({ setActiveTab }) => {
       </div>
 
       {/* Thẻ điều hướng lớn */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {tabs.includes('kho') && <FeatureCard tone="teal" icon={FolderOpen} title="Kho media" sub="Xem tất cả" active={tab === 'kho'} onClick={() => setTab('kho')} />}
         {tabs.includes('video') && <FeatureCard tone="violet" icon={PlayCircle} title="Video Ads" sub={tab === 'video' ? 'Đang xem' : 'Duyệt & chấm'} active={tab === 'video'} onClick={() => setTab('video')} />}
+        <FeatureCard tone="fuchsia" icon={Image} title="Hình ảnh" sub={tab === 'images' ? 'Đang xem' : 'Thư viện ảnh'} active={tab === 'images'} onClick={() => setTab('images')} />
         {canAds && setActiveTab && <FeatureCard tone="amber" icon={BarChart2} title="Chi phí Ads" sub="Xem báo cáo" onClick={() => setActiveTab('ads_report')} />}
       </div>
 
@@ -572,6 +576,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
 
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+      ) : tab === 'images' ? (
+        <ImageLibrary me={me} canWrite={canDesign} />
       ) : tab === 'kho' ? (
         visStores.length === 0 ? (
           <Empty icon={FolderOpen} title="Kho media trống"
@@ -675,6 +681,7 @@ const FEAT_TONE = {
   teal:   { bg: 'bg-teal-50',   icon: 'bg-teal-500',   blob: 'bg-teal-200/50' },
   violet: { bg: 'bg-violet-50', icon: 'bg-violet-500', blob: 'bg-violet-200/50' },
   amber:  { bg: 'bg-amber-50',  icon: 'bg-amber-500',  blob: 'bg-amber-200/50' },
+  fuchsia:{ bg: 'bg-fuchsia-50', icon: 'bg-fuchsia-500', blob: 'bg-fuchsia-200/50' },
 };
 const FeatureCard = ({ tone, icon: Icon, title, sub, active, onClick }) => {
   const t = FEAT_TONE[tone];
