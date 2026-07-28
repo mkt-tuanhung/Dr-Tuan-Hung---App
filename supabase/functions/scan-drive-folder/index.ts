@@ -131,28 +131,53 @@ Deno.serve(async (req) => {
 
     const token = await getAccessToken(sa);
 
-    const names: string[] = [];
-    let readable = 0, priv = 0, noId = 0;
-    const diag: string[] = [];
-    for (const link of links) {
-      const id = extractFolderId(link);
-      if (!id) { noId++; diag.push("no-id"); continue; }
+    // Liệt kê con của 1 thư mục
+    const listChildren = async (fid: string): Promise<{ ok: boolean; status: number; files: { id: string; name: string; mimeType: string }[] }> => {
       const params = new URLSearchParams({
-        q: `'${id}' in parents and trashed = false`,
+        q: `'${fid}' in parents and trashed = false`,
         fields: "files(id,name,mimeType)", pageSize: "1000",
         supportsAllDrives: "true", includeItemsFromAllDrives: "true",
       });
       const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) { priv++; diag.push("http" + res.status); continue; }
+      if (!res.ok) return { ok: false, status: res.status, files: [] };
       const data = await res.json();
+      return { ok: true, status: 200, files: data.files || [] };
+    };
+    const FOLDER = "application/vnd.google-apps.folder";
+
+    const names: string[] = [];
+    let readable = 0, priv = 0, noId = 0, videoCount = 0, imageCount = 0;
+    const diag: string[] = [];
+    for (const link of links) {
+      const rootId = extractFolderId(link);
+      if (!rootId) { noId++; diag.push("no-id"); continue; }
+      const first = await listChildren(rootId);
+      if (!first.ok) { priv++; diag.push("http" + first.status); continue; }
       readable++;
-      const arr = data.files || [];
-      diag.push("ok:" + arr.length);
-      for (const f of arr) names.push(f.name || "");
+      diag.push("ok:" + first.files.length);
+      // BFS đếm video/ảnh toàn bộ cây con (giới hạn ~80 thư mục để tránh quá tải)
+      const queue: string[] = [];
+      let guard = 0;
+      for (const f of first.files) {
+        if (f.mimeType === FOLDER) { names.push(f.name || ""); queue.push(f.id); }
+        else if ((f.mimeType || "").startsWith("video/")) videoCount++;
+        else if ((f.mimeType || "").startsWith("image/")) imageCount++;
+      }
+      while (queue.length && guard < 80) {
+        guard++;
+        const fid = queue.shift()!;
+        const sub = await listChildren(fid);
+        if (!sub.ok) continue;
+        for (const f of sub.files) {
+          if (f.mimeType === FOLDER) queue.push(f.id);
+          else if ((f.mimeType || "").startsWith("video/")) videoCount++;
+          else if ((f.mimeType || "").startsWith("image/")) imageCount++;
+        }
+      }
     }
 
     const types = [...new Set([...keywordTypes(names), ...(await geminiTypes(names))])];
-    return json({ ok: true, types, folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv, noId, diag });
+    return json({ ok: true, types, folders: names.slice(0, 100), videoCount, imageCount, readableLinks: readable, privateLinks: priv, noId, diag });
   } catch (e) {
     console.error("scan-drive-folder error", e);
     return json({ ok: false, error: String((e as Error)?.message || e) });
