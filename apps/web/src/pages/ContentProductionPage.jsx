@@ -674,7 +674,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : tab === 'overview' ? (
-        <AdsOverview clips={clips} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} />
+        <AdsOverview clips={clips} stores={stores} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} />
       ) : tab === 'images' ? (
         <ImageLibrary me={me} canWrite={canDesign} />
       ) : tab === 'kho' ? (
@@ -702,16 +702,23 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       ) : (
         <>
           {(canAds || isManager) && <FbSummaryStrip clips={clips} onReport={setActiveTab ? () => setActiveTab('ads_report') : null} />}
-          {/* Sub-tab trạng thái (kiểu gạch chân) + cập nhật chỉ số */}
-          <div className="flex items-end gap-3 flex-wrap border-b border-slate-100">
-            <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mb-px">
-              {[['all', 'Tất cả', reviewClips.length], ['pending', 'Chờ Ads duyệt', videoCounts.pending], ['running', 'Đang chạy', videoCounts.running], ['review', 'Đang duyệt', videoCounts.review], ['off', 'Đã tắt', videoCounts.off]].map(([k, l, n]) => (
-                <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold border-b-2 transition ${videoTab === k ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-                  {l}{n != null ? ` (${n})` : ''}
-                </button>
-              ))}
+          {/* Sub-tab trạng thái (pill nổi bật) + cập nhật chỉ số */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {[['all', 'Tất cả', reviewClips.length, 'teal'], ['pending', 'Chờ Ads duyệt', videoCounts.pending, 'violet'], ['running', 'Đang chạy', videoCounts.running, 'emerald'], ['review', 'Đang duyệt', videoCounts.review, 'amber'], ['off', 'Đã tắt', videoCounts.off, 'slate']].map(([k, l, n, col]) => {
+                const active = videoTab === k;
+                const txt = { teal: 'text-teal-600', violet: 'text-violet-600', emerald: 'text-emerald-600', amber: 'text-amber-600', slate: 'text-slate-700' }[col];
+                const bdg = active
+                  ? { teal: 'bg-teal-100 text-teal-700', violet: 'bg-violet-100 text-violet-700', emerald: 'bg-emerald-100 text-emerald-700', amber: 'bg-amber-100 text-amber-700', slate: 'bg-slate-200 text-slate-600' }[col]
+                  : 'bg-slate-200/70 text-slate-500';
+                return (
+                  <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold transition ${active ? `bg-white shadow-sm ${txt}` : 'text-slate-500 hover:text-slate-700'}`}>
+                    {l}<span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${bdg}`}>{n}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="ml-auto flex items-center gap-2 pb-2">
+            <div className="ml-auto flex items-center gap-2">
               {canAds && <button onClick={() => setWinModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"><Trophy className="w-4 h-4 text-amber-500" />Định nghĩa Win</button>}
               {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
             </div>
@@ -1307,16 +1314,18 @@ const TodoPanel = ({ tiles, compact }) => {
 };
 
 // ---------- Trang Tổng quan Marketing (dashboard) ----------
-const AdsOverview = ({ clips, storeOf, now, videoCounts, todoTiles, lb, onOpenClip, onGoVideo }) => {
+const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, onOpenClip, onGoVideo }) => {
   const approved = clips.filter(c => c.approved_to_run);
-  const totalSpend = clips.reduce((s, c) => s + (Number(c.fb_spend) || 0), 0);
-  const totalPhones = clips.reduce((s, c) => s + (Number(c.fb_leads) || 0), 0);
-  const avgCpa = totalPhones > 0 ? Math.round(totalSpend / totalPhones) : null;
   const winCount = clips.filter(c => c.win).length;
   const winRate = approved.length ? Math.round(winCount / approved.length * 100) : 0;
-  const recent = [...clips].sort((a, b) => new Date(b.submitted_at || b.created_at || 0) - new Date(a.submitted_at || a.created_at || 0)).slice(0, 5);
+  const recent = [...clips].sort((a, b) => new Date(b.fb_synced_at || b.submitted_at || b.created_at || 0) - new Date(a.fb_synced_at || a.submitted_at || a.created_at || 0)).slice(0, 6);
   const topPhones = clips.filter(c => (c.fb_leads || 0) > 0).sort((a, b) => (b.fb_leads || 0) - (a.fb_leads || 0)).slice(0, 5);
   const maxP = topPhones[0]?.fb_leads || 1;
+  // Chỉ số Kho media
+  const sourcesN = stores.filter(s => (s.source_links || []).length > 0).length;
+  const totalVideo = stores.reduce((s, x) => s + (Number(x.source_video_count) || 0), 0);
+  const totalImage = stores.reduce((s, x) => s + (Number(x.source_image_count) || 0), 0);
+  const undoneSrc = stores.filter(s => (s.source_links || []).length > 0 && !clips.some(c => c.media_customer_id === s.id)).length;
   const segs = [
     { key: 'pending', label: 'Chờ duyệt', n: videoCounts.pending, color: '#8b5cf6' },
     { key: 'running', label: 'Đang chạy', n: videoCounts.running, color: '#10b981' },
@@ -1328,13 +1337,18 @@ const AdsOverview = ({ clips, storeOf, now, videoCounts, todoTiles, lb, onOpenCl
   const gradient = segTotal > 0
     ? 'conic-gradient(' + segs.filter(s => s.n > 0).map(s => { const a = acc; acc += s.n; return `${s.color} ${(a / segTotal * 360)}deg ${(acc / segTotal * 360)}deg`; }).join(', ') + ')'
     : '#e2e8f0';
-  const KT = { teal: 'bg-teal-50 text-teal-600', violet: 'bg-violet-50 text-violet-600', blue: 'bg-blue-50 text-blue-600', amber: 'bg-amber-50 text-amber-600', rose: 'bg-rose-50 text-rose-600' };
+  const KT = { teal: 'bg-teal-50 text-teal-600', violet: 'bg-violet-50 text-violet-600', blue: 'bg-blue-50 text-blue-600', indigo: 'bg-indigo-50 text-indigo-600', amber: 'bg-amber-50 text-amber-600' };
   const kpis = [
-    { icon: PlayCircle, tone: 'teal', value: approved.length, label: 'Video Ads', sub: 'clip đã duyệt' },
-    { icon: Clock, tone: 'violet', value: videoCounts.pending, label: 'Clip chờ duyệt', sub: 'clip' },
-    { icon: Phone, tone: 'blue', value: totalPhones, label: 'Tổng SĐT', sub: 'số điện thoại' },
-    { icon: Wallet, tone: 'amber', value: fmtM(totalSpend), label: 'Chi phí Ads', sub: 'đã chi' },
-    { icon: TrendingUp, tone: 'rose', value: avgCpa != null ? fmtM(avgCpa) : '—', label: 'Giá/SĐT TB', sub: `Win ${winRate}%` },
+    { icon: PlayCircle, tone: 'teal', spark: '#14b8a6', value: approved.length, label: 'Video Ads', sub: 'clip đã duyệt' },
+    { icon: Clock, tone: 'violet', spark: '#8b5cf6', value: videoCounts.pending, label: 'Clip chờ duyệt', sub: 'clip' },
+    { icon: FolderOpen, tone: 'blue', spark: '#3b82f6', value: sourcesN, label: 'Nguồn media', sub: 'nguồn trong kho' },
+    { icon: Film, tone: 'indigo', spark: '#6366f1', value: totalVideo, label: 'Video gốc', sub: 'video trong kho' },
+    { icon: Image, tone: 'amber', spark: '#f59e0b', value: totalImage, label: 'Ảnh gốc', sub: 'ảnh trong kho' },
+  ];
+  const insights = [
+    { icon: Trophy, cls: 'bg-amber-50 text-amber-600', text: winRate > 0 ? `${winRate}% clip đã duyệt đạt Win — hiệu quả đang cải thiện.` : 'Chưa có clip đạt Win tháng này — cần tối ưu nội dung.' },
+    { icon: Clock, cls: 'bg-violet-50 text-violet-600', text: videoCounts.pending === 0 ? '0 clip chờ duyệt. Quy trình đang vận hành trơn tru.' : `${videoCounts.pending} clip đang chờ Ads duyệt — nên xử lý sớm.` },
+    { icon: FolderOpen, cls: 'bg-teal-50 text-teal-600', text: undoneSrc > 0 ? `${undoneSrc} nguồn media mới chưa dựng — cần editor xử lý.` : 'Tất cả nguồn media đã được dựng clip.' },
   ];
   return (
     <div className="space-y-4">
@@ -1342,89 +1356,138 @@ const AdsOverview = ({ clips, storeOf, now, videoCounts, todoTiles, lb, onOpenCl
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {kpis.map((k, i) => (
           <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <span className={`w-10 h-10 rounded-xl grid place-items-center ${KT[k.tone]}`}><k.icon className="w-5 h-5" /></span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2.5 tabular-nums leading-none">{k.value}</div>
-            <div className="text-[13px] font-semibold text-slate-500 mt-1">{k.label}</div>
-            <div className="text-[11px] text-slate-400">{k.sub}</div>
+            <div className="flex items-center gap-2.5">
+              <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${KT[k.tone]}`}><k.icon className="w-5 h-5" /></span>
+              <span className="text-[13px] font-semibold text-slate-500 leading-tight">{k.label}</span>
+            </div>
+            <div className="text-[26px] font-extrabold text-slate-800 mt-2 tabular-nums leading-none">{k.value}</div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[11px] text-slate-400">{k.sub}</span>
+              <Sparkline color={k.spark} />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Recent + Top */}
+      {/* Hiệu suất video gần đây (bảng) + Top clip */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-slate-800">Video Ads gần đây</h3>
-            <button onClick={onGoVideo} className="text-xs font-semibold text-violet-600 hover:underline">Xem tất cả</button>
+            <h3 className="font-bold text-slate-800 flex items-center gap-2"><Film className="w-4 h-4 text-teal-500" />Hiệu suất video gần đây</h3>
+            <button onClick={onGoVideo} className="text-xs font-semibold text-teal-600 hover:underline">Xem tất cả →</button>
           </div>
-          <div className="space-y-1">
-            {recent.length === 0 && <p className="text-sm text-slate-400 py-6 text-center">Chưa có clip nào</p>}
-            {recent.map(c => {
-              const st = storeOf(c.media_customer_id); const thumb = (c.thumb_links || [])[0];
-              const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; const fb = fbStatusInfo(c.fb_status);
-              return (
-                <button key={c.id} onClick={() => onOpenClip(c)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-left">
-                  <span className="w-12 h-12 rounded-lg overflow-hidden bg-slate-800 grid place-items-center shrink-0">{thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" /> : <PlayCircle className="w-5 h-5 text-white/60" />}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-slate-700 truncate">{c.title || st?.customer_name || 'Clip'}</span>
-                    <span className="block text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}</span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full ${fb ? fb.cls : (STAGE[eff]?.cls || '')}`}>{fb ? fb.label : (STAGE[eff]?.label || eff)}</span>
-                    <span className="block text-[11px] text-slate-500 mt-0.5">{c.fb_leads || 0} SĐT · {fmtM(c.fb_spend)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {recent.length === 0 ? <p className="text-sm text-slate-400 py-6 text-center">Chưa có clip nào</p> : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-[10px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                  <th className="text-left font-semibold py-2">Video Ads</th>
+                  <th className="text-left font-semibold py-2">Khách hàng</th>
+                  <th className="text-left font-semibold py-2">Trạng thái</th>
+                  <th className="text-right font-semibold py-2">Cập nhật</th>
+                </tr></thead>
+                <tbody>
+                  {recent.map(c => {
+                    const st = storeOf(c.media_customer_id); const thumb = (c.thumb_links || [])[0];
+                    const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; const fb = fbStatusInfo(c.fb_status);
+                    const badge = fb || { label: STAGE[eff]?.label || eff, cls: STAGE[eff]?.cls || 'bg-slate-100 text-slate-500' };
+                    const d = c.fb_synced_at || c.submitted_at || c.created_at;
+                    return (
+                      <tr key={c.id} onClick={() => onOpenClip(c)} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer">
+                        <td className="py-2 pr-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-9 h-9 rounded-lg overflow-hidden bg-slate-800 grid place-items-center shrink-0">{thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" /> : <PlayCircle className="w-4 h-4 text-white/60" />}</span>
+                            <span className="font-semibold text-slate-700 truncate max-w-[170px]">{c.title || st?.customer_name || 'Clip'}</span>
+                          </div>
+                        </td>
+                        <td className="py-2 pr-2 text-slate-500 truncate max-w-[130px]">{st?.customer_name || '—'}</td>
+                        <td className="py-2 pr-2"><span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span></td>
+                        <td className="py-2 text-right text-[11px] text-slate-400 whitespace-nowrap">{d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <h3 className="font-bold text-slate-800 mb-3">Top clip theo số điện thoại</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2"><Phone className="w-4 h-4 text-blue-500" />Top clip theo số điện thoại</h3>
+            <span className="text-[11px] text-slate-400 border border-slate-200 rounded-lg px-2 py-1">2 tháng gần nhất</span>
+          </div>
           <div className="space-y-3">
             {topPhones.length === 0 && <p className="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu SĐT</p>}
-            {topPhones.map(c => {
+            {topPhones.map((c, idx) => {
               const st = storeOf(c.media_customer_id); const pct = Math.round((c.fb_leads || 0) / maxP * 100);
               return (
-                <div key={c.id}>
-                  <div className="flex items-center justify-between text-[13px] mb-1"><span className="font-medium text-slate-600 truncate pr-2">{c.title || st?.customer_name || 'Clip'}</span><span className="font-bold text-teal-600 shrink-0">{c.fb_leads || 0} SĐT</span></div>
-                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-600" style={{ width: `${pct}%` }} /></div>
+                <div key={c.id} className="flex items-center gap-3">
+                  <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-slate-300 text-white' : idx === 2 ? 'bg-orange-200 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>{idx + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between text-[13px] mb-1"><span className="font-medium text-slate-600 truncate pr-2">{c.title || st?.customer_name || 'Clip'}</span><span className="font-bold text-teal-600 shrink-0">{c.fb_leads || 0} SĐT</span></div>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-600" style={{ width: `${pct}%` }} /></div>
+                  </div>
                 </div>
               );
             })}
           </div>
+          <div className="mt-3 pt-2 border-t border-slate-50 text-[11px] text-teal-600 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-500" />Số điện thoại thu được</div>
         </div>
       </div>
 
-      {/* Todo + Leaderboard + Donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Row 3: Việc cần xử lý + Bảng điểm + Donut + Insight */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} compact />
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <h3 className="font-bold text-amber-600 mb-2.5 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4" />Bảng điểm Editor tháng {now.getMonth() + 1}</h3>
-          <div className="space-y-1.5">
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col">
+          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4 text-amber-500" />Bảng điểm Editor tháng {now.getMonth() + 1}</h3>
+          <div className="space-y-2.5 flex-1">
             {lb.length === 0 && <p className="text-sm text-slate-400 py-4 text-center">Chưa có dữ liệu</p>}
-            {lb.map((e, i) => (
-              <div key={e.id} className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 text-sm text-slate-700 min-w-0"><span className={`w-5 h-5 shrink-0 rounded-full grid place-items-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span><span className="truncate">{e.name}</span></span>
-                <span className="text-[11px] text-slate-500 shrink-0">{e.avg == null ? 'Chưa chấm' : `TB ${e.avg.toFixed(1)}`} · {e.w} Win</span>
-              </div>
-            ))}
+            {lb.slice(0, 3).map((e, i) => {
+              const cat = e.avg == null ? null : scoreCat(e.avg, false);
+              return (
+                <div key={e.id} className="flex items-center gap-2.5">
+                  <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : 'bg-orange-200 text-orange-700'}`}>{i + 1}</span>
+                  <span className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 grid place-items-center text-xs font-bold shrink-0">{(e.name || '?').charAt(0)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-slate-700 truncate">{e.name}</div>
+                    <div className="text-[11px] text-slate-400">{e.avg == null ? 'Chưa chấm' : `TB ${e.avg.toFixed(1)}`} · {e.w} Win</div>
+                  </div>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? '—' : e.avg.toFixed(0)}</span>
+                </div>
+              );
+            })}
           </div>
+          <button onClick={onGoVideo} className="text-[11px] font-semibold text-teal-600 hover:underline mt-3 text-left">Xem bảng điểm chi tiết →</button>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <h3 className="font-bold text-slate-800 mb-3 text-sm">Phân bổ trạng thái clip</h3>
-          <div className="flex items-center gap-4">
-            <div className="relative w-28 h-28 shrink-0 rounded-full" style={{ background: gradient }}>
-              <div className="absolute inset-[20%] rounded-full bg-white grid place-items-center"><div className="text-center"><div className="text-xl font-extrabold text-slate-800 leading-none">{segTotal}</div><div className="text-[10px] text-slate-400">clip</div></div></div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col">
+          <h3 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2"><LayoutDashboard className="w-4 h-4 text-blue-500" />Phân bổ trạng thái clip</h3>
+          <div className="flex items-center gap-4 flex-1">
+            <div className="relative w-24 h-24 shrink-0 rounded-full" style={{ background: gradient }}>
+              <div className="absolute inset-[22%] rounded-full bg-white grid place-items-center"><div className="text-center"><div className="text-lg font-extrabold text-slate-800 leading-none">{segTotal}</div><div className="text-[10px] text-slate-400">clip</div></div></div>
             </div>
             <div className="space-y-1.5 flex-1 min-w-0">
               {segs.map(s => (
-                <div key={s.key} className="flex items-center justify-between text-[13px]">
+                <div key={s.key} className="flex items-center justify-between text-[12px]">
                   <span className="flex items-center gap-1.5 text-slate-600 min-w-0"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} /><span className="truncate">{s.label}</span></span>
                   <span className="font-bold text-slate-700 shrink-0">{s.n}</span>
                 </div>
               ))}
             </div>
+          </div>
+          <button onClick={onGoVideo} className="text-[11px] font-semibold text-teal-600 hover:underline mt-3 text-left">Xem chi tiết →</button>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col">
+          <h3 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-teal-500" />Insight nhanh</h3>
+          <div className="space-y-3 flex-1">
+            {insights.map((it, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className={`w-7 h-7 rounded-lg grid place-items-center shrink-0 ${it.cls}`}><it.icon className="w-4 h-4" /></span>
+                <p className="text-[12px] text-slate-600 leading-snug">{it.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
