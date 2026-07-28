@@ -436,6 +436,35 @@ const ContentProductionPage = ({ setActiveTab }) => {
         {canAds && setActiveTab && <FeatureCard tone="amber" icon={BarChart2} title="Chi phí Ads" sub="Xem báo cáo" onClick={() => setActiveTab('ads_report')} />}
       </div>
 
+      {/* Việc cần xử lý (nhắc việc theo vai trò) */}
+      {(() => {
+        const withSrc = stores.filter(s => (s.source_links || []).length > 0 && clipsOf(s.id).length === 0);
+        const staleSrc = withSrc.filter(s => staleAgeDays(s) >= 14);
+        const pending = clips.filter(c => c.stage === 'submitted');
+        const revision = clips.filter(c => c.stage === 'revision');
+        const TONE = { teal: 'bg-teal-50 border-teal-200 text-teal-700', rose: 'bg-rose-50 border-rose-200 text-rose-700', violet: 'bg-violet-50 border-violet-200 text-violet-700', amber: 'bg-amber-50 border-amber-200 text-amber-700' };
+        const tiles = [];
+        if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { setTab('kho'); setKhoStale(0); setKhoPhase('all'); } });
+        if (canEdit || isManager) tiles.push({ n: staleSrc.length, label: 'Nguồn tồn đọng > 14 ngày', tone: 'rose', icon: AlertTriangle, onClick: () => { setTab('kho'); setKhoStale(14); } });
+        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { setTab('video'); setVideoScore('chua'); } });
+        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { setTab('video'); } });
+        const shown = tiles.filter(t => t.n > 0);
+        if (!shown.length) return null;
+        return (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4 text-amber-500" /> Việc cần xử lý</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {shown.map((t, i) => (
+                <button key={i} onClick={t.onClick} className={`text-left rounded-xl p-3 border transition hover:shadow-md ${TONE[t.tone]}`}>
+                  <div className="flex items-center justify-between"><t.icon className="w-5 h-5" /><span className="text-2xl font-bold tabular-nums">{t.n}</span></div>
+                  <div className="text-xs font-semibold mt-1">{t.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Leaderboard */}
       {lb.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
