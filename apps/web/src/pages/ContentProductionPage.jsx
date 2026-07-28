@@ -37,16 +37,16 @@ const SRC_LABEL = Object.fromEntries(SOURCE_CHECKLIST.map(t => [t.key, t.label])
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const driveNorm = (s) => (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 const DRIVE_RULES = [
-  { key: 'truoc_pt', any: ['truoc pt', 'truoc phau', 'truoc mo', 'before', 'pre op', 'preop', 'b4'] },
-  { key: 'sau_pt', any: ['sau pt', 'sau phau', 'sau mo', 'after', 'post op', 'postop'] },
+  { key: 'truoc_pt', any: ['truoc pt', 'truoc phau', 'truoc mo', 'truoc khi', 'before', 'pre op', 'preop', 'b4', 'truoc'] },
+  { key: 'sau_pt', any: ['sau pt', 'sau phau', 'sau mo', 'hau phau', 'after', 'post op', 'postop', 'sau '] },
   { key: 'beauty', any: ['beauty', 'lam dep', 'beauty shot'] },
-  { key: 'feedback', any: ['feedback', 'phan hoi', 'cam nhan', 'review', 'danh gia'] },
-  { key: 'tai_kham', any: ['tai kham', 'recheck', 're-check', 'follow up', 'followup'] },
+  { key: 'feedback', any: ['feedback', 'phan hoi', 'cam nhan', 'review', 'danh gia', 'cam on'] },
+  { key: 'tai_kham', any: ['tai kham', 'tham kham', 're kham', 'recheck', 're-check', 'follow up', 'followup'] },
 ];
 function detectDriveTypes(names) {
   const found = new Set();
   for (const raw of names) {
-    const n = driveNorm(raw);
+    const n = driveNorm(raw) + ' '; // thêm khoảng trắng cuối để 'sau ' khớp cả tên kết thúc bằng 'sau'
     for (const r of DRIVE_RULES) if (r.any.some(k => n.includes(k))) found.add(r.key);
   }
   return [...found];
@@ -80,7 +80,15 @@ async function scanDrive(links) {
       for (const f of (data.files || [])) names.push(f.name || '');
     } catch { priv++; }
   }
-  return { ok: true, types: detectDriveTypes(names), folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv };
+  // Lớp 1: dò từ khoá. Lớp 2: AI (Gemini) đọc hiểu tên thư mục — hợp nhất kết quả.
+  let types = detectDriveTypes(names);
+  if (names.length) {
+    try {
+      const { data } = await supabase.functions.invoke('classify-folders', { body: { names } });
+      if (data?.ok && Array.isArray(data.types)) types = [...new Set([...types, ...data.types])];
+    } catch { /* AI không sẵn sàng → dùng kết quả từ khoá */ }
+  }
+  return { ok: true, types, folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv };
 }
 // Soi rồi tự cập nhật source_types cho 1 store (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
@@ -355,7 +363,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       } else if (d?.ok && d.privateLinks && !d.readableLinks) {
         toast('Link riêng tư — không soi được. Chia sẻ "Bất kỳ ai có link" hoặc chỉnh tay.', { id: 'scan-' + s.id, icon: '🔒' });
       } else {
-        toast('Không thấy thư mục khớp tên loại source', { id: 'scan-' + s.id, icon: 'ℹ️' });
+        toast('Đã đọc ' + (d.folders?.length || 0) + ' thư mục nhưng chưa khớp loại nào: ' + (d.folders || []).slice(0, 8).join(', '), { id: 'scan-' + s.id, icon: 'ℹ️', duration: 6000 });
       }
     } catch (e) { toast.error('Soi lỗi: ' + e.message, { id: 'scan-' + s.id }); }
   };
@@ -1069,7 +1077,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
         setSourceTypes(d.types || []);
         if (d.types?.length) toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
         else if (d.privateLinks) toast('Link riêng tư — không đọc được, chỉnh tay nhé', { icon: '🔒' });
-        else toast('Không thấy thư mục khớp tên loại source', { icon: 'ℹ️' });
+        else toast('Đã đọc ' + (d.folders?.length || 0) + ' thư mục nhưng chưa khớp loại nào: ' + (d.folders || []).slice(0, 8).join(', '), { icon: 'ℹ️', duration: 6000 });
       } else toast.error(d?.error || 'Soi thất bại');
     } catch (e) { toast.error('Soi lỗi: ' + e.message); }
     setScanning(false);
@@ -1236,7 +1244,7 @@ const SourceModal = ({ store, onClose, onSaved }) => {
         setSourceTypes(d.types || []);
         if (d.types?.length) toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
         else if (d.privateLinks) toast('Link riêng tư — không đọc được, chỉnh tay nhé', { icon: '🔒' });
-        else toast('Không thấy thư mục khớp tên loại source', { icon: 'ℹ️' });
+        else toast('Đã đọc ' + (d.folders?.length || 0) + ' thư mục nhưng chưa khớp loại nào: ' + (d.folders || []).slice(0, 8).join(', '), { icon: 'ℹ️', duration: 6000 });
       } else toast.error(d?.error || 'Soi thất bại');
     } catch (e) { toast.error('Soi lỗi: ' + e.message); }
     setScanning(false);
