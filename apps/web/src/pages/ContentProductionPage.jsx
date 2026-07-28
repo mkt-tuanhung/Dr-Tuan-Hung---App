@@ -241,6 +241,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [addOpen, setAddOpen] = useState(false);
+  const [scanningAll, setScanningAll] = useState(false);
   const [addVideoOpen, setAddVideoOpen] = useState(false);
   const [editSource, setEditSource] = useState(null);
   const [linkFor, setLinkFor] = useState(null);
@@ -303,6 +304,34 @@ const ContentProductionPage = ({ setActiveTab }) => {
     setStores(prev => prev.filter(x => x.id !== s.id));
     await supabase.from('media_customers').delete().eq('id', s.id);
   }, { okLabel: 'Xoá', danger: true });
+  // Soi 1 phát tất cả khách có link Drive
+  const rescanAll = async () => {
+    const targets = stores.filter(s => (s.source_links || []).length > 0);
+    if (!targets.length) { toast.error('Không có khách nào có link Drive'); return; }
+    setScanningAll(true);
+    const tid = 'scan-all';
+    let done = 0, ok = 0, failCol = false;
+    toast.loading(`Đang soi 0/${targets.length}…`, { id: tid });
+    const BATCH = 5;
+    for (let i = 0; i < targets.length; i += BATCH) {
+      const chunk = targets.slice(i, i + BATCH);
+      await Promise.all(chunk.map(async (s) => {
+        try {
+          const d = await scanDrive(s.source_links);
+          if (d?.ok && d.folders?.length) {
+            const { error } = await supabase.from('media_customers').update({ source_folders: d.folders }).eq('id', s.id);
+            if (error) failCol = true; else ok++;
+          }
+        } catch { /* bỏ qua khách lỗi */ }
+        done++;
+        toast.loading(`Đang soi ${done}/${targets.length}…`, { id: tid });
+      }));
+    }
+    setScanningAll(false);
+    if (failCol) toast.error('Lưu lỗi — cần chạy media_source_folders.sql', { id: tid, duration: 9000 });
+    else toast.success(`Soi xong ${ok}/${targets.length} khách có thư mục`, { id: tid, duration: 6000 });
+    loadData();
+  };
   const rescanStore = async (s) => {
     const links = s.source_links || [];
     if (!links.length) { toast.error('Khách này chưa có link Drive'); return; }
@@ -372,10 +401,17 @@ const ContentProductionPage = ({ setActiveTab }) => {
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Clapperboard className="w-6 h-6 text-teal-600" /> Sản xuất Ads</h2>
           <p className="text-slate-400 text-sm mt-0.5">Kho media (Media) → Editor dựng clip → Ads duyệt &amp; chấm Win</p>
         </div>
-        {tab === 'kho' && canAddMedia && (
-          <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
-            <Plus className="w-4 h-4" /> Thêm media
-          </button>
+        {tab === 'kho' && (canAddMedia || canEdit) && (
+          <div className="flex items-center gap-2">
+            <button onClick={rescanAll} disabled={scanningAll} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">
+              {scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả Drive
+            </button>
+            {canAddMedia && (
+              <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
+                <Plus className="w-4 h-4" /> Thêm media
+              </button>
+            )}
+          </div>
         )}
         {tab === 'video' && canEdit && (
           <button onClick={() => setAddVideoOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
