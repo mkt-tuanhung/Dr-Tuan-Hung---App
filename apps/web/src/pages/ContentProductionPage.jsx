@@ -240,7 +240,7 @@ const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày qu
   );
 };
 
-const ContentProductionPage = ({ setActiveTab }) => {
+const ContentProductionPage = ({ setActiveTab, view }) => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const isAdmin = roles.includes('admin');
@@ -254,7 +254,11 @@ const ContentProductionPage = ({ setActiveTab }) => {
   if (canAddMedia || canEdit || isManager || canDesign) tabs.push('kho');
   if (canEdit || canAds || isManager) tabs.push('video');
   tabs.push('images'); // Thư viện ảnh mở cho mọi người trong module (chỉ designer/admin được sửa)
-  const [tab, setTab] = useState(tabs[0] || 'kho');
+  // Tab do sidebar điều khiển (prop view: 'kho' | 'video' | 'images'); vẫn giữ setTab cho điều hướng nội bộ.
+  const [tab, setTab] = useState(view || tabs[0] || 'kho');
+  useEffect(() => { if (view && view !== tab) setTab(view); /* eslint-disable-next-line */ }, [view]);
+  // Chuyển sang mục con khác trên sidebar (đồng bộ cả thanh menu bên trái)
+  const gotoView = (v) => { setTab(v); setActiveTab?.(v === 'kho' ? 'content_kho' : v === 'video' ? 'content_video' : 'content_images'); };
 
   const [stores, setStores] = useState([]);
   const [clips, setClips] = useState([]);
@@ -523,8 +527,16 @@ const ContentProductionPage = ({ setActiveTab }) => {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Clapperboard className="w-6 h-6 text-teal-600" /> Sản xuất Ads</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Kho media (Media) → Editor dựng clip → Ads duyệt &amp; chấm Win</p>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            {tab === 'kho' ? <><FolderOpen className="w-6 h-6 text-teal-600" /> Kho Media</>
+              : tab === 'video' ? <><PlayCircle className="w-6 h-6 text-violet-600" /> Video Ads</>
+              : <><Image className="w-6 h-6 text-fuchsia-600" /> Thư viện ảnh</>}
+          </h2>
+          <p className="text-slate-400 text-sm mt-0.5">
+            {tab === 'kho' ? 'Media up nguồn → Editor dựng clip cho từng khách'
+              : tab === 'video' ? 'Ads duyệt clip · gán chiến dịch · theo dõi chỉ số & chấm Win'
+              : 'Thư viện hình ảnh dùng chung (Designer/Admin được chỉnh sửa)'}
+          </p>
         </div>
         {tab === 'kho' && (canAddMedia || canEdit) && (
           <div className="flex items-center gap-2">
@@ -545,14 +557,6 @@ const ContentProductionPage = ({ setActiveTab }) => {
         )}
       </div>
 
-      {/* Thẻ điều hướng lớn */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {tabs.includes('kho') && <FeatureCard tone="teal" icon={FolderOpen} title="Kho media" sub="Xem tất cả" active={tab === 'kho'} onClick={() => setTab('kho')} />}
-        {tabs.includes('video') && <FeatureCard tone="violet" icon={PlayCircle} title="Video Ads" sub={tab === 'video' ? 'Đang xem' : 'Duyệt & chấm'} active={tab === 'video'} onClick={() => setTab('video')} />}
-        <FeatureCard tone="fuchsia" icon={Image} title="Hình ảnh" sub={tab === 'images' ? 'Đang xem' : 'Thư viện ảnh'} active={tab === 'images'} onClick={() => setTab('images')} />
-        {canAds && setActiveTab && <FeatureCard tone="amber" icon={BarChart2} title="Chi phí Ads" sub="Xem báo cáo" onClick={() => setActiveTab('ads_report')} />}
-      </div>
-
       {/* Việc cần xử lý (nhắc việc theo vai trò) */}
       {(() => {
         const withSrc = stores.filter(s => (s.source_links || []).length > 0 && clipsOf(s.id).length === 0);
@@ -563,10 +567,10 @@ const ContentProductionPage = ({ setActiveTab }) => {
         const DOT = { teal: 'bg-teal-500', rose: 'bg-rose-500', violet: 'bg-violet-500', amber: 'bg-amber-500' };
         const tiles = [];
         const clearKho = () => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoTag(''); setKhoPhase('all'); };
-        if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { setTab('kho'); clearKho(); setKhoStale(0); setKhoUndone(true); } });
-        if (canEdit || isManager) tiles.push({ n: staleSrc.length, label: 'Nguồn tồn đọng > 14 ngày', tone: 'rose', icon: AlertTriangle, onClick: () => { setTab('kho'); clearKho(); setKhoUndone(false); setKhoStale(14); } });
-        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { setTab('video'); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoTab('pending'); } });
-        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { setTab('video'); setVideoTab('all'); setVideoScore(''); } });
+        if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { gotoView('kho'); clearKho(); setKhoStale(0); setKhoUndone(true); } });
+        if (canEdit || isManager) tiles.push({ n: staleSrc.length, label: 'Nguồn tồn đọng > 14 ngày', tone: 'rose', icon: AlertTriangle, onClick: () => { gotoView('kho'); clearKho(); setKhoUndone(false); setKhoStale(14); } });
+        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { gotoView('video'); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoTab('pending'); } });
+        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { gotoView('video'); setVideoTab('all'); setVideoScore(''); } });
         const shown = tiles.filter(t => t.n > 0);
         if (!shown.length) return null;
         return (

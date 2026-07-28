@@ -25,6 +25,8 @@ import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx
 import DepositManagementPage from '@/pages/DepositManagementPage.jsx';
 import MarketingHubPage from '@/pages/MarketingHubPage.jsx';
 import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
+import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
+import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
 import MeetingPage from '@/pages/MeetingPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
@@ -33,7 +35,8 @@ import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
@@ -62,7 +65,12 @@ const MENU_GROUPS = [
     { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
-    { id: 'marketing', label: 'Marketing / Ads', icon: Target },
+    { id: 'marketing', label: 'Marketing', icon: Clapperboard, children: [
+      { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2 },
+      { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen },
+      { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle },
+      { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
+    ] },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'meetings', label: 'Phòng họp', icon: Video },
@@ -71,7 +79,7 @@ const MENU_GROUPS = [
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
   ]},
 ];
-const MENU = MENU_GROUPS.flatMap(g => g.items);
+const MENU = MENU_GROUPS.flatMap(g => g.items).flatMap(m => m.children ? [m, ...m.children] : [m]);
 
 // Màu nền/nhãn nhẹ theo nhóm (class tĩnh để Tailwind không purge)
 const GROUP_STYLE = {
@@ -603,6 +611,7 @@ const AdminDashboard = () => {
 
   useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState({});
   const [pendingLeaves, setPendingLeaves] = useState(0);
 
   useEffect(() => {
@@ -654,7 +663,10 @@ const AdminDashboard = () => {
       case 'meetings': return <MeetingPage />;
       case 'community': return <CommunityPage />;
       case 'notifications': return <NotificationsPage />;
-      case 'marketing': return <MarketingHubPage />;
+      case 'marketing': case 'content_kho': return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;
+      case 'content_video': return <ContentProductionPage setActiveTab={setActiveTab} view="video" />;
+      case 'content_images': return <ContentProductionPage setActiveTab={setActiveTab} view="images" />;
+      case 'ads_report': return <AdsReportPage />;
       case 'data_kh': return <MarketingDataPage />;
       case 'khach_tu_van': return <KhachTuVanPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
@@ -714,6 +726,43 @@ const AdminDashboard = () => {
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = item.icon;
+                  // Mục có nhóm con (dropdown)
+                  if (item.children) {
+                    const childActive = item.children.some(c => c.id === activeTab);
+                    const open = openGroups[item.id] ?? childActive;
+                    return (
+                      <div key={item.id}>
+                        <button
+                          onClick={() => setOpenGroups(g => ({ ...g, [item.id]: !(g[item.id] ?? childActive) }))}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
+                            childActive ? 'text-white bg-white/10' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3"><Icon className="w-4 h-4 shrink-0" />{item.label}</div>
+                          <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                        </button>
+                        {open && (
+                          <div className="mt-0.5 ml-4 pl-3 border-l border-white/10 space-y-0.5">
+                            {item.children.map(c => {
+                              const CIcon = c.icon;
+                              const active = activeTab === c.id;
+                              return (
+                                <button
+                                  key={c.id}
+                                  onClick={() => { setActiveTab(c.id); setSidebarOpen(false); }}
+                                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                                    active ? 'bg-teal-500 text-white shadow-lg shadow-teal-900/40' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                  }`}
+                                >
+                                  <CIcon className="w-4 h-4 shrink-0" />{c.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
                   const active = activeTab === item.id;
                   return (
                     <button
