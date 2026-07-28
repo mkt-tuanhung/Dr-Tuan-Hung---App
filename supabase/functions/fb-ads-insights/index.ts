@@ -57,9 +57,39 @@ Deno.serve(async (req) => {
     if (!token) return json({ ok: false, error: "Chưa cấu hình FB_ADS_TOKEN" });
 
     const body = await req.json().catch(() => ({}));
+    const datePreset = body.date_preset || "maximum";
+
+    // ---- Chế độ 1 chiến dịch: lấy chỉ số theo campaign_id (gán vào 1 clip) ----
+    const campaignId = (body.campaign_id || "").toString().trim().replace(/[^0-9]/g, "");
+    if (campaignId) {
+      const p = new URLSearchParams({
+        fields: "spend,impressions,reach,inline_link_clicks,ctr,actions,campaign_name",
+        date_preset: datePreset,
+        access_token: token,
+      });
+      if (body.since && body.until) { p.delete("date_preset"); p.set("time_range", JSON.stringify({ since: body.since, until: body.until })); }
+      const r = await fetch(`https://graph.facebook.com/${API}/${campaignId}/insights?${p.toString()}`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.error) return json({ ok: false, error: d?.error?.message || `Facebook lỗi HTTP ${r.status}`, code: d?.error?.code });
+      const row = (d.data || [])[0] || {};
+      const actions = row.actions as { action_type: string; value: string }[];
+      const messages = sumActions(actions, MSG_ACTIONS);
+      const leads = sumActions(actions, LEAD_ACTIONS);
+      const spend = Number(row.spend) || 0;
+      const results = messages + leads;
+      return json({ ok: true, metrics: {
+        campaign_name: row.campaign_name || null,
+        spend, messages, leads, results,
+        impressions: Number(row.impressions) || 0,
+        reach: Number(row.reach) || 0,
+        link_clicks: Number(row.inline_link_clicks) || 0,
+        ctr: Number(row.ctr) || 0,
+        cpa: results > 0 ? Math.round(spend / results) : null,
+      } });
+    }
+
     const acct = (body.ad_account_id || Deno.env.get("FB_AD_ACCOUNT_ID") || "").toString().replace(/^act_/, "");
     if (!acct) return json({ ok: false, error: "Chưa cấu hình FB_AD_ACCOUNT_ID" });
-    const datePreset = body.date_preset || "last_30d";
 
     const fields = [
       "ad_id", "ad_name", "campaign_name", "adset_name",
