@@ -332,6 +332,12 @@ const ContentProductionPage = ({ setActiveTab }) => {
       () => patchClip(c.id, { approved_to_run: true, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ'),
       { okLabel: 'Duyệt chạy Ads' });
   };
+  // Mở thẳng link Google Drive nguồn (thư mục tổng) trong tab mới
+  const openSource = (s) => {
+    const links = (s.source_links || []).filter(Boolean);
+    if (!links.length) { toast.error('Khách này chưa có link nguồn'); return; }
+    window.open(links[0], '_blank', 'noopener');
+  };
   const delStore = (s) => ask('Xoá media khách hàng này (kèm các clip)?', async () => {
     setStores(prev => prev.filter(x => x.id !== s.id));
     await supabase.from('media_customers').delete().eq('id', s.id);
@@ -506,7 +512,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
               <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={null} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
-                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
+                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => openSource(s)}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
@@ -514,7 +520,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
             {visStores.map(s => (
               <StoreRow key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
-                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
+                onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => openSource(s)}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
             ))}
           </div>
