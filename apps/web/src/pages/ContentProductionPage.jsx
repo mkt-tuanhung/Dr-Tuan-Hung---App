@@ -63,10 +63,11 @@ async function scanDrive(links) {
   if (!GOOGLE_API_KEY) throw new Error('Chưa cấu hình VITE_GOOGLE_API_KEY');
   const valid = (links || []).filter(l => typeof l === 'string' && /^https?:\/\//i.test(l));
   const names = [];
-  let readable = 0, priv = 0;
+  let readable = 0, priv = 0, noId = 0;
+  const diag = [];
   for (const link of valid) {
     const id = extractFolderId(link);
-    if (!id) continue;
+    if (!id) { noId++; diag.push('no-id'); continue; }
     const params = new URLSearchParams({
       q: `'${id}' in parents and trashed = false`,
       fields: 'files(id,name,mimeType)', pageSize: '1000',
@@ -74,11 +75,13 @@ async function scanDrive(links) {
     });
     try {
       const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
-      if (!res.ok) { priv++; continue; }
+      if (!res.ok) { priv++; diag.push('http' + res.status); continue; }
       const data = await res.json();
       readable++;
-      for (const f of (data.files || [])) names.push(f.name || '');
-    } catch { priv++; }
+      const arr = data.files || [];
+      diag.push('ok:' + arr.length);
+      for (const f of arr) names.push(f.name || '');
+    } catch { priv++; diag.push('err'); }
   }
   // Lớp 1: dò từ khoá. Lớp 2: AI (Gemini) đọc hiểu tên thư mục — hợp nhất kết quả.
   let types = detectDriveTypes(names);
@@ -88,7 +91,7 @@ async function scanDrive(links) {
       if (data?.ok && Array.isArray(data.types)) types = [...new Set([...types, ...data.types])];
     } catch { /* AI không sẵn sàng → dùng kết quả từ khoá */ }
   }
-  return { ok: true, types, folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv };
+  return { ok: true, types, folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv, linkCount: valid.length, noId, diag };
 }
 // Soi rồi tự cập nhật source_types cho 1 store (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
@@ -363,7 +366,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       } else if (d?.ok && d.privateLinks && !d.readableLinks) {
         toast('Link riêng tư — không soi được. Chia sẻ "Bất kỳ ai có link" hoặc chỉnh tay.', { id: 'scan-' + s.id, icon: '🔒' });
       } else {
-        toast('Đã đọc ' + (d.folders?.length || 0) + ' thư mục nhưng chưa khớp loại nào: ' + (d.folders || []).slice(0, 8).join(', '), { id: 'scan-' + s.id, icon: 'ℹ️', duration: 6000 });
+        toast('Đọc ' + (d.folders?.length || 0) + ' thư mục [link:' + d.linkCount + ' • ' + (d.diag || []).join(',') + ']: ' + (d.folders || []).slice(0, 8).join(', '), { id: 'scan-' + s.id, icon: 'ℹ️', duration: 9000 });
       }
     } catch (e) { toast.error('Soi lỗi: ' + e.message, { id: 'scan-' + s.id }); }
   };
@@ -1077,7 +1080,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
         setSourceTypes(d.types || []);
         if (d.types?.length) toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
         else if (d.privateLinks) toast('Link riêng tư — không đọc được, chỉnh tay nhé', { icon: '🔒' });
-        else toast('Đã đọc ' + (d.folders?.length || 0) + ' thư mục nhưng chưa khớp loại nào: ' + (d.folders || []).slice(0, 8).join(', '), { icon: 'ℹ️', duration: 6000 });
+        else toast('Đọc ' + (d.folders?.length || 0) + ' thư mục [link:' + d.linkCount + ' • ' + (d.diag || []).join(',') + ']: ' + (d.folders || []).slice(0, 8).join(', '), { icon: 'ℹ️', duration: 9000 });
       } else toast.error(d?.error || 'Soi thất bại');
     } catch (e) { toast.error('Soi lỗi: ' + e.message); }
     setScanning(false);
@@ -1244,7 +1247,7 @@ const SourceModal = ({ store, onClose, onSaved }) => {
         setSourceTypes(d.types || []);
         if (d.types?.length) toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
         else if (d.privateLinks) toast('Link riêng tư — không đọc được, chỉnh tay nhé', { icon: '🔒' });
-        else toast('Đã đọc ' + (d.folders?.length || 0) + ' thư mục nhưng chưa khớp loại nào: ' + (d.folders || []).slice(0, 8).join(', '), { icon: 'ℹ️', duration: 6000 });
+        else toast('Đọc ' + (d.folders?.length || 0) + ' thư mục [link:' + d.linkCount + ' • ' + (d.diag || []).join(',') + ']: ' + (d.folders || []).slice(0, 8).join(', '), { icon: 'ℹ️', duration: 9000 });
       } else toast.error(d?.error || 'Soi thất bại');
     } catch (e) { toast.error('Soi lỗi: ' + e.message); }
     setScanning(false);
