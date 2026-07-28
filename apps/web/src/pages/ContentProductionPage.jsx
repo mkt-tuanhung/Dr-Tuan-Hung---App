@@ -42,15 +42,16 @@ async function scanDrive(links) {
   if (!data?.ok) throw new Error(data?.error || 'Soi Drive thất bại');
   return { ...data, linkCount: valid.length };
 }
-// Soi rồi tự cập nhật source_types cho 1 store (chạy nền, không chặn lưu)
+// Soi rồi tự lưu danh sách TÊN thư mục con (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
   try {
     const d = await scanDrive(links);
-    if (d?.ok && d.types?.length) {
-      await supabase.from('media_customers').update({ source_types: d.types }).eq('id', id);
-      toast.success('Tự nhận diện source: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '));
+    if (d?.ok && d.folders?.length) {
+      const { error } = await supabase.from('media_customers').update({ source_folders: d.folders }).eq('id', id);
+      if (error) toast.error('Lưu thư mục lỗi: ' + error.message);
+      else toast.success('Đã đọc source: ' + d.folders.slice(0, 8).join(', '));
     } else if (d?.ok && d.privateLinks > 0 && !d.readableLinks) {
-      toast('Link Drive để riêng tư nên không soi được — hãy chỉnh tay hoặc chia sẻ "Bất kỳ ai có link".', { icon: '🔒' });
+      toast('Link Drive chưa share cho service account (http404).', { icon: '🔒' });
     }
   } catch { /* im lặng để không chặn thao tác lưu */ }
 }
@@ -308,12 +309,13 @@ const ContentProductionPage = ({ setActiveTab }) => {
     toast.loading('Đang soi Drive…', { id: 'scan-' + s.id });
     try {
       const d = await scanDrive(links);
-      if (d?.ok && d.types?.length) {
-        await supabase.from('media_customers').update({ source_types: d.types }).eq('id', s.id);
-        toast.success('Đã nhận diện: ' + d.types.map(k => SRC_LABEL[k] || k).join(', '), { id: 'scan-' + s.id });
+      if (d?.ok && d.folders?.length) {
+        const { error } = await supabase.from('media_customers').update({ source_folders: d.folders }).eq('id', s.id);
+        if (error) { toast.error('Lưu lỗi: ' + error.message + ' — cần chạy media_source_folders.sql', { id: 'scan-' + s.id, duration: 9000 }); return; }
+        toast.success('Đã đọc ' + d.folders.length + ' thư mục: ' + d.folders.slice(0, 8).join(', '), { id: 'scan-' + s.id, duration: 6000 });
         loadData();
       } else if (d?.ok && d.privateLinks && !d.readableLinks) {
-        toast('Link riêng tư — không soi được. Chia sẻ "Bất kỳ ai có link" hoặc chỉnh tay.', { id: 'scan-' + s.id, icon: '🔒' });
+        toast('Link riêng tư — chưa share thư mục cho service account (báo http404).', { id: 'scan-' + s.id, icon: '🔒' });
       } else {
         toast('Đọc ' + (d.folders?.length || 0) + ' thư mục [link:' + d.linkCount + ' • ' + (d.diag || []).join(',') + ']: ' + (d.folders || []).slice(0, 8).join(', '), { id: 'scan-' + s.id, icon: 'ℹ️', duration: 9000 });
       }
@@ -705,6 +707,22 @@ const SourceTypeBadges = ({ types = [], showMissing = true }) => {
   );
 };
 
+// Hiện đúng TÊN các thư mục con đọc được trong link Drive
+const FolderChips = ({ folders = [], max = 12 }) => {
+  const list = folders || [];
+  if (!list.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {list.slice(0, max).map((f, i) => (
+        <span key={i} className="text-[11px] font-medium bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md inline-flex items-center gap-1 max-w-[160px]">
+          <FolderOpen className="w-3 h-3 shrink-0" /><span className="truncate">{f}</span>
+        </span>
+      ))}
+      {list.length > max && <span className="text-[11px] text-slate-400 px-1">+{list.length - max}</span>}
+    </div>
+  );
+};
+
 // ---------- Bảng hiệu quả Facebook Ads (Feature #1) ----------
 const FbAdsPanel = () => {
   const [open, setOpen] = useState(false);
@@ -834,7 +852,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
         <LinkList links={s.source_links} label="Nguồn" icon={Film} />
         <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
         {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
-        <SourceTypeBadges types={s.source_types} showMissing={false} />
+        <FolderChips folders={s.source_folders} max={6} />
         <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
         {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
         {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
@@ -895,7 +913,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
           {s.source_id && <div className="font-mono text-violet-600 text-xs font-bold mt-1.5">#{s.source_id}</div>}
           {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
           {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
-          <div className="mt-2"><SourceTypeBadges types={s.source_types} /></div>
+          <div className="mt-2"><FolderChips folders={s.source_folders} /></div>
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             {hasSrc && <button onClick={onViewSource} className="text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full inline-flex items-center gap-1 hover:bg-blue-100">Nguồn <ExternalLink className="w-3 h-3" /></button>}
             <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${ss.cls}`}>{ss.label}</span>
@@ -1064,7 +1082,6 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
       source_id: sourceId.trim() || null, shoot_date: shootDate || null,
       media_in_charge_id: mediaChargeId || null, media_in_charge: chargeName,
       source_type: sourceType || null, source_status: sourceStatus || 'chua_dung',
-      source_types: sourceTypes,
     };
     if (mode === 'existing') {
       if (!picked) { toast.error('Hãy TAG (chọn) khách hàng'); return; }
@@ -1079,7 +1096,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
     if (error) { toast.error('Lỗi: ' + error.message); return; }
     toast.success('Đã thêm vào kho media');
     // Chưa có loại source → tự soi Drive điền giúp (chạy nền)
-    if (ins?.id && sourceTypes.length === 0) scanDriveAndUpdate(ins.id, arr);
+    if (ins?.id) scanDriveAndUpdate(ins.id, arr);
     onSaved();
   };
 
@@ -1204,11 +1221,11 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const save = async () => {
     setSaving(true);
     const arr = parseLinks(links);
-    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_types: sourceTypes, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
+    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Đã cập nhật nguồn');
-    if (sourceTypes.length === 0) scanDriveAndUpdate(store.id, arr);
+    scanDriveAndUpdate(store.id, arr);
     onSaved();
   };
   return (
