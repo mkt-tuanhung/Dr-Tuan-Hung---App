@@ -348,7 +348,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
-      toast.success(`Đã cập nhật: ${m.messages || 0} tin nhắn · ${m.leads || 0} KH tiềm năng · ${m.purchases || 0} lượt mua`, { id: 'fb-' + clipId, duration: 6000 });
+      toast.success(`Đã cập nhật: ${m.messages || 0} khách tiềm năng · ${m.leads || 0} lượt mua (SĐT)`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
     } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
   };
@@ -1291,9 +1291,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
     if (!cid) { toast.error('Nhập ID chiến dịch Facebook'); return; }
     onSyncFb?.(c.id, cid);
   };
-  const leads = c.fb_leads || 0;          // Khách hàng tiềm năng
-  const purchases = c.fb_purchases || 0;  // Lượt mua (= số điện thoại)
-  const cpa = purchases > 0 ? Math.round(c.fb_spend / purchases) : ((c.fb_messages + leads) > 0 ? Math.round(c.fb_spend / (c.fb_messages + leads)) : null);
+  const contacts = c.fb_messages || 0;    // Khách hàng tiềm năng = khách nhắn tin + tương tác page
+  const phones = c.fb_leads || 0;         // Lượt mua (SĐT) = số điện thoại xin được (lead)
+  const cpa = phones > 0 ? Math.round(c.fb_spend / phones) : null; // Giá mỗi SĐT
   const Row = ({ label, children }) => <div className="flex gap-1.5 text-sm"><span className="text-slate-400 shrink-0">{label}:</span><span className="text-slate-700 font-semibold min-w-0 truncate">{children}</span></div>;
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col lg:flex-row">
@@ -1340,10 +1340,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
           </div>
           {c.fb_campaign_id ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{c.fb_messages || 0}</div><div className="text-[10px] text-slate-400 leading-tight">Nhắn tin</div></div>
-                <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{leads}</div><div className="text-[10px] text-slate-400 leading-tight">Khách tiềm năng</div></div>
-                <div className="bg-violet-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-violet-700">{purchases}</div><div className="text-[10px] text-slate-400 leading-tight">Lượt mua (SĐT)</div></div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{contacts}</div><div className="text-[10px] text-slate-400 leading-tight">Khách hàng tiềm năng</div></div>
+                <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{phones}</div><div className="text-[10px] text-slate-400 leading-tight">Lượt mua (SĐT)</div></div>
                 <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400 leading-tight">Đã chi</div></div>
                 <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400 leading-tight">Giá/SĐT</div></div>
               </div>
