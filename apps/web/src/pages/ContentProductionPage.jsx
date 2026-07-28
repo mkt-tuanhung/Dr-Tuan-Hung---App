@@ -32,11 +32,55 @@ const SOURCE_CHECKLIST = [
   { key: 'tai_kham', label: 'Tái khám' },
 ];
 const SRC_LABEL = Object.fromEntries(SOURCE_CHECKLIST.map(t => [t.key, t.label]));
-// Gọi edge function tự soi thư mục trong link Google Drive
+// Soi Google Drive TRỰC TIẾP từ trình duyệt bằng API key (folder chia sẻ "Bất kỳ ai có link").
+// Cần biến môi trường VITE_GOOGLE_API_KEY (bật Google Drive API cho key này).
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const driveNorm = (s) => (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+const DRIVE_RULES = [
+  { key: 'truoc_pt', any: ['truoc pt', 'truoc phau', 'truoc mo', 'before', 'pre op', 'preop', 'b4'] },
+  { key: 'sau_pt', any: ['sau pt', 'sau phau', 'sau mo', 'after', 'post op', 'postop'] },
+  { key: 'beauty', any: ['beauty', 'lam dep', 'beauty shot'] },
+  { key: 'feedback', any: ['feedback', 'phan hoi', 'cam nhan', 'review', 'danh gia'] },
+  { key: 'tai_kham', any: ['tai kham', 'recheck', 're-check', 'follow up', 'followup'] },
+];
+function detectDriveTypes(names) {
+  const found = new Set();
+  for (const raw of names) {
+    const n = driveNorm(raw);
+    for (const r of DRIVE_RULES) if (r.any.some(k => n.includes(k))) found.add(r.key);
+  }
+  return [...found];
+}
+function extractFolderId(link) {
+  if (!link) return null;
+  let m = link.match(/\/folders\/([a-zA-Z0-9_-]+)/); if (m) return m[1];
+  m = link.match(/[?&]id=([a-zA-Z0-9_-]+)/); if (m) return m[1];
+  m = link.match(/\/d\/([a-zA-Z0-9_-]+)/); if (m) return m[1];
+  return null;
+}
+// Trả { ok, types[], folders[], readableLinks, privateLinks }
 async function scanDrive(links) {
-  const { data, error } = await supabase.functions.invoke('scan-drive-folder', { body: { links } });
-  if (error) throw new Error(error.message || 'Lỗi gọi soi Drive');
-  return data; // { ok, types[], folders[], readableLinks, privateLinks, error }
+  if (!GOOGLE_API_KEY) throw new Error('Chưa cấu hình VITE_GOOGLE_API_KEY');
+  const valid = (links || []).filter(l => typeof l === 'string' && /^https?:\/\//i.test(l));
+  const names = [];
+  let readable = 0, priv = 0;
+  for (const link of valid) {
+    const id = extractFolderId(link);
+    if (!id) continue;
+    const params = new URLSearchParams({
+      q: `'${id}' in parents and trashed = false`,
+      fields: 'files(id,name,mimeType)', pageSize: '1000',
+      supportsAllDrives: 'true', includeItemsFromAllDrives: 'true', key: GOOGLE_API_KEY,
+    });
+    try {
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
+      if (!res.ok) { priv++; continue; }
+      const data = await res.json();
+      readable++;
+      for (const f of (data.files || [])) names.push(f.name || '');
+    } catch { priv++; }
+  }
+  return { ok: true, types: detectDriveTypes(names), folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv };
 }
 // Soi rồi tự cập nhật source_types cho 1 store (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
