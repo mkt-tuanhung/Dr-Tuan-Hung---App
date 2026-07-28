@@ -47,7 +47,7 @@ async function scanDriveAndUpdate(id, links) {
   try {
     const d = await scanDrive(links);
     if (d?.ok && d.folders?.length) {
-      const { error } = await supabase.from('media_customers').update({ source_folders: d.folders }).eq('id', id);
+      const { error } = await supabase.from('media_customers').update({ source_folders: d.folders, source_video_count: d.videoCount ?? 0, source_image_count: d.imageCount ?? 0 }).eq('id', id);
       if (error) toast.error('Lưu thư mục lỗi: ' + error.message);
       else toast.success('Đã đọc source: ' + d.folders.slice(0, 8).join(', '));
     } else if (d?.ok && d.privateLinks > 0 && !d.readableLinks) {
@@ -319,7 +319,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
         try {
           const d = await scanDrive(s.source_links);
           if (d?.ok && d.folders?.length) {
-            const { error } = await supabase.from('media_customers').update({ source_folders: d.folders }).eq('id', s.id);
+            const { error } = await supabase.from('media_customers').update({ source_folders: d.folders, source_video_count: d.videoCount ?? 0, source_image_count: d.imageCount ?? 0 }).eq('id', s.id);
             if (error) failCol = true; else ok++;
           }
         } catch { /* bỏ qua khách lỗi */ }
@@ -339,7 +339,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
     try {
       const d = await scanDrive(links);
       if (d?.ok && d.folders?.length) {
-        const { error } = await supabase.from('media_customers').update({ source_folders: d.folders }).eq('id', s.id);
+        const { error } = await supabase.from('media_customers').update({ source_folders: d.folders, source_video_count: d.videoCount ?? 0, source_image_count: d.imageCount ?? 0 }).eq('id', s.id);
         if (error) { toast.error('Lưu lỗi: ' + error.message + ' — cần chạy media_source_folders.sql', { id: 'scan-' + s.id, duration: 9000 }); return; }
         toast.success('Đã đọc ' + d.folders.length + ' thư mục: ' + d.folders.slice(0, 8).join(', '), { id: 'scan-' + s.id, duration: 6000 });
         loadData();
@@ -889,6 +889,12 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
         <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
         {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
         <FolderChips folders={s.source_folders} max={6} />
+        {(s.source_video_count > 0 || s.source_image_count > 0) && (
+          <span className="text-[11px] font-semibold text-slate-500 inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-0.5 text-violet-600"><Film className="w-3 h-3" />{s.source_video_count}</span>
+            <span className="inline-flex items-center gap-0.5 text-teal-600"><Image className="w-3 h-3" />{s.source_image_count}</span>
+          </span>
+        )}
         <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
         {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
         {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
@@ -950,6 +956,12 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
           {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
           {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
           <div className="mt-2"><FolderChips folders={s.source_folders} /></div>
+          {(s.source_video_count > 0 || s.source_image_count > 0) && (
+            <div className="flex items-center gap-3 mt-2 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1 text-violet-600"><Film className="w-3.5 h-3.5" />{s.source_video_count} video</span>
+              <span className="inline-flex items-center gap-1 text-teal-600"><Image className="w-3.5 h-3.5" />{s.source_image_count} ảnh</span>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             {hasSrc && <button onClick={onViewSource} className="text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full inline-flex items-center gap-1 hover:bg-blue-100">Nguồn <ExternalLink className="w-3 h-3" /></button>}
             <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${ss.cls}`}>{ss.label}</span>
