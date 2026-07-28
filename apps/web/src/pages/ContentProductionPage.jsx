@@ -8,7 +8,7 @@ import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
   Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
   Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, MoreVertical, Pencil, BarChart2, Ban, EyeOff,
-  Clock, Wallet, TrendingUp, Phone, LayoutDashboard,
+  Clock, Wallet, TrendingUp, Phone, LayoutDashboard, Copy,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 import ImageLibrary from '@/components/ImageLibrary.jsx';
@@ -260,7 +260,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const [tab, setTab] = useState(view || tabs[0] || 'kho');
   useEffect(() => { if (view && view !== tab) setTab(view); /* eslint-disable-next-line */ }, [view]);
   // Chuyển sang mục con khác trên sidebar (đồng bộ cả thanh menu bên trái)
-  const gotoView = (v) => { setTab(v); setActiveTab?.(v === 'kho' ? 'content_kho' : v === 'video' ? 'content_video' : 'content_images'); };
+  const gotoView = (v) => { setTab(v); setActiveTab?.(v === 'overview' ? 'content_overview' : v === 'kho' ? 'content_kho' : v === 'video' ? 'content_video' : 'content_images'); };
 
   const [stores, setStores] = useState([]);
   const [clips, setClips] = useState([]);
@@ -482,6 +482,17 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     return a;
   }, {})).map(e => ({ ...e, avg: e.sc ? e.sum / e.sc : null })).sort((x, y) => (y.avg ?? -1) - (x.avg ?? -1)).slice(0, 5);
 
+  // Điểm trung bình tháng của từng editor (clip chưa chấm bỏ qua) — dùng cho "Điểm Editor" trên thẻ clip
+  const editorAvgMap = evalC.reduce((a, c) => {
+    if (c.win || (Number(c.score) || 0) > 0) {
+      const pts = c.win ? 10 : (Number(c.score) || 0);
+      a[c.editor_id] = a[c.editor_id] || { sum: 0, n: 0 };
+      a[c.editor_id].sum += pts; a[c.editor_id].n++;
+    }
+    return a;
+  }, {});
+  const editorAvg = (id) => { const e = editorAvgMap[id]; return e && e.n ? e.sum / e.n : null; };
+
   // Danh sách "Việc cần xử lý" (dùng chung cho panel & trang Tổng quan)
   const clearKhoFilters = () => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoTag(''); setKhoPhase('all'); };
   const todoTiles = (() => {
@@ -578,24 +589,14 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         )}
       </div>
 
-      {/* Việc cần xử lý (nhắc việc theo vai trò) — không hiện ở Thư viện ảnh & Tổng quan */}
-      {tab !== 'images' && tab !== 'overview' && <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} />}
+      {/* Kho media: Việc cần xử lý full-width */}
+      {tab === 'kho' && <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} />}
 
-      {/* Leaderboard — chỉ hiện ở Video Ads (Kho media / Hình ảnh không cần) */}
-      {tab === 'video' && lb.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <h3 className="font-bold text-amber-600 mb-2 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4" /> Bảng điểm Editor tháng {now.getMonth() + 1}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {lb.map((e, i) => { const cat = e.avg == null ? null : scoreCat(e.avg, false); return (
-              <div key={e.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 gap-2">
-                <span className="flex items-center gap-2 text-sm font-medium text-slate-700 min-w-0"><span className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span><span className="truncate">{e.name}</span></span>
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? 'Chưa chấm' : `TB ${e.avg.toFixed(1)}/10`}</span>
-                  <span className="text-[11px] text-slate-500">{e.n} clip · {e.w} Win</span>
-                </span>
-              </div>
-            ); })}
-          </div>
+      {/* Video Ads: Việc cần xử lý + Bảng điểm Editor cạnh nhau (theo mockup) */}
+      {tab === 'video' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} compact />
+          <LeaderboardCard lb={lb} now={now} onSeeAll={() => gotoView('overview')} />
         </div>
       )}
 
@@ -700,19 +701,19 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         )
       ) : (
         <>
-          {(canAds || isManager) && <FbAdsPanel />}
-          {/* Sub-tab trạng thái + cập nhật chỉ số */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {[['all', 'Tất cả', null], ['pending', 'Chờ Ads duyệt', videoCounts.pending], ['running', 'Đang chạy', videoCounts.running], ['review', 'Đang duyệt', videoCounts.review], ['off', 'Đã tắt', videoCounts.off]].map(([k, l, n]) => (
-                <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold transition ${videoTab === k ? (k === 'running' ? 'bg-emerald-600 text-white' : k === 'review' ? 'bg-amber-500 text-white' : k === 'off' ? 'bg-slate-600 text-white' : 'bg-violet-600 text-white') : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
-                  {l}{n != null && n > 0 ? ` (${n})` : ''}
+          {(canAds || isManager) && <FbSummaryStrip clips={clips} onReport={setActiveTab ? () => setActiveTab('ads_report') : null} />}
+          {/* Sub-tab trạng thái (kiểu gạch chân) + cập nhật chỉ số */}
+          <div className="flex items-end gap-3 flex-wrap border-b border-slate-100">
+            <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mb-px">
+              {[['all', 'Tất cả', reviewClips.length], ['pending', 'Chờ Ads duyệt', videoCounts.pending], ['running', 'Đang chạy', videoCounts.running], ['review', 'Đang duyệt', videoCounts.review], ['off', 'Đã tắt', videoCounts.off]].map(([k, l, n]) => (
+                <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold border-b-2 transition ${videoTab === k ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+                  {l}{n != null ? ` (${n})` : ''}
                 </button>
               ))}
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              {canAds && <button onClick={() => setWinModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600"><Trophy className="w-4 h-4" />Định nghĩa Win</button>}
-              {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
+            <div className="ml-auto flex items-center gap-2 pb-2">
+              {canAds && <button onClick={() => setWinModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"><Trophy className="w-4 h-4 text-amber-500" />Định nghĩa Win</button>}
+              {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
             </div>
           </div>
           {winRule && winRule.win_phones > 0 && (
@@ -743,7 +744,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         ) : (
           <div className="space-y-3">
             {reviewClips.map(c => (
-              <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds}
+              <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} editorAvg={editorAvg(c.editor_id)}
                 onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip} />
             ))}
           </div>
@@ -1431,12 +1432,79 @@ const AdsOverview = ({ clips, storeOf, now, videoCounts, todoTiles, lb, onOpenCl
   );
 };
 
+// ---------- Thanh "Hiệu quả Facebook Ads" (tổng hợp các clip) ----------
+const Sparkline = ({ color }) => (
+  <svg viewBox="0 0 60 20" className="w-12 h-5 shrink-0" preserveAspectRatio="none">
+    <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points="0,16 12,11 24,13 36,6 48,9 60,3" />
+  </svg>
+);
+const FbSummaryStrip = ({ clips, onReport }) => {
+  const spend = clips.reduce((s, c) => s + (Number(c.fb_spend) || 0), 0);
+  const contacts = clips.reduce((s, c) => s + (Number(c.fb_messages) || 0), 0);
+  const phones = clips.reduce((s, c) => s + (Number(c.fb_leads) || 0), 0);
+  const cpa = phones > 0 ? Math.round(spend / phones) : null;
+  const cells = [
+    { label: 'Chi phí', value: fmtM(spend) },
+    { label: 'Khách hàng tiềm năng', value: contacts, spark: '#14b8a6' },
+    { label: 'Lượt mua (SĐT)', value: phones, spark: '#3b82f6' },
+    { label: 'Giá/SĐT', value: cpa != null ? fmtM(cpa) : '—' },
+  ];
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-5 flex-wrap">
+      <div className="flex items-center gap-3 min-w-[210px]">
+        <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 grid place-items-center shrink-0"><BarChart2 className="w-5 h-5" /></span>
+        <div><div className="font-bold text-slate-800">Hiệu quả Facebook Ads</div><div className="text-[11px] text-slate-400">Clip nào “đẻ tiền” — chi phí, lead, CPA từ tài khoản Ads</div></div>
+      </div>
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 min-w-[260px]">
+        {cells.map((c, i) => (
+          <div key={i}>
+            <div className="text-[11px] text-slate-400">{c.label}</div>
+            <div className="text-lg font-extrabold text-slate-800 flex items-center gap-2 leading-tight">{c.value}{c.spark && <Sparkline color={c.spark} />}</div>
+          </div>
+        ))}
+      </div>
+      {onReport && <button onClick={onReport} className="shrink-0 h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1.5"><BarChart2 className="w-4 h-4" />Xem báo cáo chi tiết</button>}
+    </div>
+  );
+};
+
+// ---------- Card "Bảng điểm Editor" (3 top editor) ----------
+const LeaderboardCard = ({ lb, now, onSeeAll }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+    <div className="flex items-start justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+        <div><div className="font-bold text-slate-800 text-sm leading-tight">Bảng điểm Editor tháng {now.getMonth() + 1}</div><div className="text-[11px] text-slate-400">Top editor theo điểm Win</div></div>
+      </div>
+      {onSeeAll && <button onClick={onSeeAll} className="text-xs font-semibold text-teal-600 hover:underline shrink-0">Xem bảng điểm →</button>}
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      {lb.length === 0 && <p className="text-sm text-slate-400 py-3 text-center col-span-full">Chưa có dữ liệu</p>}
+      {lb.slice(0, 3).map((e, i) => {
+        const cat = e.avg == null ? null : scoreCat(e.avg, false);
+        const rankCls = i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : 'bg-orange-200 text-orange-700';
+        return (
+          <div key={e.id} className="rounded-xl bg-slate-50 p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold ${rankCls}`}>{i + 1}</span>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? 'Chưa chấm' : `${i === 0 ? 'TB ' : ''}${e.avg.toFixed(1)}/10`}</span>
+            </div>
+            <div className="text-sm font-bold text-slate-700 truncate">{e.name}</div>
+            <div className="text-[11px] text-slate-400">{e.n} clip · {e.w} Win</div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
   const mine = c.editor_id === me?.id;
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
   const fbInfo = fbStatusInfo(c.fb_status);
+  const status = fbInfo || { label: STAGE[eff]?.label || eff, cls: STAGE[eff]?.cls || 'bg-slate-100 text-slate-500' };
   const [cidInput, setCidInput] = useState('');
   const doAssign = () => {
     const cid = cidInput.replace(/\D/g, '');
@@ -1446,94 +1514,112 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
   const contacts = c.fb_messages || 0;    // Khách hàng tiềm năng = khách nhắn tin + tương tác page
   const phones = c.fb_leads || 0;         // Lượt mua (SĐT) = số điện thoại xin được (lead)
   const cpa = phones > 0 ? Math.round(c.fb_spend / phones) : null; // Giá mỗi SĐT
-  const Row = ({ label, children }) => <div className="flex gap-1.5 text-sm"><span className="text-slate-400 shrink-0">{label}:</span><span className="text-slate-700 font-semibold min-w-0 truncate">{children}</span></div>;
+  const clipUrl = (c.clip_links || [])[0];
+  const menuItems = [
+    canAds && !c.approved_to_run && { label: 'Duyệt chạy Ads', icon: <CheckCircle2 className="w-4 h-4" />, onClick: onApproveRun },
+    canAds && { label: c.approved_to_run ? 'Ghi chú / đánh giá' : 'Xem & góp ý', icon: <Pencil className="w-4 h-4" />, onClick: onReview },
+    (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
+    (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
+  ];
+  const Metric = ({ label, value, strong }) => (
+    <div className="p-3">
+      <div className="text-[11px] text-slate-400 leading-tight">{label}</div>
+      <div className={`font-extrabold text-slate-800 ${strong ? 'text-base' : 'text-base'}`}>{value}</div>
+    </div>
+  );
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col lg:flex-row">
-      {/* ---- TRÁI: clip ---- */}
-      <div className="lg:w-[280px] shrink-0 bg-slate-900 p-3 flex flex-col gap-2">
-        {(c.clip_links || []).length > 0
-          ? <VideoPreview url={c.clip_links[0]} className="w-full aspect-[9/16] max-h-[440px]" />
-          : <div className="w-full aspect-[9/16] rounded-lg bg-slate-800 grid place-items-center text-white/30"><PlayCircle className="w-10 h-10" /></div>}
-        {(c.clip_links || []).length > 0 && (
-          <button onClick={onView} className="w-full py-2 rounded-lg bg-white/10 text-white text-sm font-bold hover:bg-white/20 inline-flex items-center justify-center gap-1.5"><Play className="w-4 h-4 fill-white" /> Xem lớn</button>
-        )}
-      </div>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Clip bên trái */}
+        <button onClick={onView} className="md:w-[300px] shrink-0 relative rounded-xl overflow-hidden bg-slate-900 aspect-video group">
+          {clipUrl
+            ? <VideoPreview url={clipUrl} className="w-full h-full" />
+            : <span className="absolute inset-0 grid place-items-center text-white/30"><PlayCircle className="w-10 h-10" /></span>}
+          <span className="pointer-events-none absolute inset-0 grid place-items-center"><span className="w-11 h-11 rounded-full bg-black/45 grid place-items-center group-hover:bg-black/60 transition"><Play className="w-5 h-5 text-white fill-white ml-0.5" /></span></span>
+        </button>
 
-      {/* ---- PHẢI: thông số ---- */}
-      <div className="flex-1 min-w-0 p-4 flex flex-col gap-3.5">
-        {/* 1. THÔNG TIN VIDEO */}
-        <section>
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">① Thông tin video</h4>
-            <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[eff]?.cls || ''}`}>{STAGE[eff]?.label || eff}</span>
+        {/* Thông tin bên phải */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-bold text-slate-800 text-[15px] leading-snug min-w-0">{c.title || '(Chưa đặt tiêu đề)'}</h3>
+            <div className="shrink-0 text-right">
+              <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>
+              {c.fb_synced_at && <div className="text-[11px] text-slate-400 mt-1">Cập nhật: {new Date(c.fb_synced_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
+            </div>
           </div>
-          <div className="font-bold text-slate-800 mb-1.5">{c.title || '(Chưa đặt tiêu đề)'}</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <Row label="Khách">{store?.customer_name || '—'}</Row>
-            <Row label="Editor">{c.editor?.full_name || '—'}</Row>
+
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mt-1.5 text-sm">
+            <span className="text-slate-500"><span className="text-slate-400">Khách hàng:</span> <b className="text-slate-700">{store?.customer_name || '—'}</b></span>
+            <span className="text-slate-500"><span className="text-slate-400">Editor:</span> <b className="text-slate-700">{c.editor?.full_name || '—'}</b></span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap mt-1">
-            <span className="text-sm text-slate-400">Nguồn:</span>
+
+          <div className="flex items-center gap-2 flex-wrap mt-1 text-sm">
+            <span className="text-slate-400">Nguồn:</span>
             {(store?.source_links || []).length > 0
-              ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-teal-600 font-semibold inline-flex items-center gap-1 text-sm hover:underline"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
-              : <span className="text-slate-300 text-sm">—</span>}
+              ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-teal-600 font-semibold inline-flex items-center gap-1 hover:underline"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
+              : <span className="text-slate-300">—</span>}
             <PermissionBadges s={store} size="sm" />
           </div>
-          {(c.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2 mt-2">{(c.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-16 w-16" download />)}</div>}
-        </section>
+          {(c.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2 mt-2">{(c.thumb_links || []).slice(0, 4).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-12 w-12" download />)}</div>}
 
-        {/* 2. HIỆU SUẤT ADS */}
-        <section className="border-t border-slate-100 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide inline-flex items-center gap-1.5">② Hiệu suất Ads
-              {fbInfo && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${fbInfo.cls}`}>● {fbInfo.label}</span>}
-            </h4>
-            {canAds && c.fb_campaign_id && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[11px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
-          </div>
+          {c.fb_campaign_id && (
+            <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
+              <LinkIcon className="w-3 h-3" />ID chiến dịch: <span className="font-mono text-slate-500">{c.fb_campaign_id}</span>
+              <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3 h-3" /></button>
+              {canAds && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="ml-auto text-blue-600 font-semibold inline-flex items-center gap-0.5 hover:underline"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
+            </div>
+          )}
+
+          {/* Dải chỉ số Ads */}
           {c.fb_campaign_id ? (
-            <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{contacts}</div><div className="text-[10px] text-slate-400 leading-tight">Khách hàng tiềm năng</div></div>
-                <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{phones}</div><div className="text-[10px] text-slate-400 leading-tight">Lượt mua (SĐT)</div></div>
-                <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400 leading-tight">Đã chi</div></div>
-                <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400 leading-tight">Giá/SĐT</div></div>
-              </div>
-              <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-400"><LinkIcon className="w-3 h-3" />ID chiến dịch: <span className="font-mono text-slate-500">{c.fb_campaign_id}</span>{c.fb_synced_at && <span className="ml-auto">Cập nhật: {new Date(c.fb_synced_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}</div>
-            </>
+            <div className="grid grid-cols-2 sm:grid-cols-4 rounded-xl border border-slate-100 divide-x divide-y sm:divide-y-0 divide-slate-100 mt-3 overflow-hidden">
+              <Metric label="Khách hàng tiềm năng" value={contacts} />
+              <Metric label="Lượt mua (SĐT)" value={phones} />
+              <Metric label="Chi phí" value={fmtM(c.fb_spend)} />
+              <Metric label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} />
+            </div>
           ) : canAds ? (
-            <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 space-y-2">
-              <p className="text-xs text-slate-500">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> vào đây để kéo chỉ số về:</p>
+            <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 mt-3">
+              <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> để kéo chỉ số về:</p>
               <div className="flex gap-2">
                 <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
                 <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
               </div>
             </div>
           ) : (
-            <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3">Chưa gán ID chiến dịch Facebook.</div>
+            <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3 mt-3">Chưa gán ID chiến dịch Facebook.</div>
           )}
-        </section>
+        </div>
+      </div>
 
-        {/* 3. CHẤM ĐIỂM (hệ thống tự chấm theo chỉ số Ads) */}
-        <section className="border-t border-slate-100 pt-3 mt-auto">
-          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">③ Điểm hệ thống tự chấm</h4>
-          <div className="flex flex-wrap items-center gap-2">
-            {(c.win || c.score > 0)
-              ? <span className={`text-sm font-bold px-3 py-1 rounded-full inline-flex items-center gap-1 ${cat.cls}`}>{cat.warn && '⚠️'}{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}</span>
-              : <span className="text-sm text-slate-400">Chưa có điểm — tự chấm sau khi clip chạy Ads</span>}
-            {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-1 rounded-full inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
-            {c.ads_feedback && <span className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</span>}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {canAds && !c.approved_to_run && <button onClick={onReview} className="text-xs font-semibold text-violet-700 px-3 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50">Xem &amp; góp ý</button>}
-            {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />Duyệt chạy Ads</button>}
-            <div className="ml-auto">
-              <ActionMenu items={[
-                (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
-                (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
-              ]} />
-            </div>
-          </div>
-        </section>
+      {/* Dải điểm dưới cùng */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 mt-3 pt-3 border-t border-slate-100">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Điểm hệ thống tự chấm</span>
+          {(c.win || c.score > 0)
+            ? <span className={`text-sm font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${cat.cls}`}>{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
+            : <span className="text-xs text-slate-400">Chưa có điểm</span>}
+          {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-slate-400">Điểm Editor</span>
+          <span className="text-sm font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">{editorAvg != null ? `${editorAvg.toFixed(1)}/10` : '—'}</span>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs min-w-0">
+          <span className="text-slate-400 shrink-0">Ghi chú:</span>
+          {c.ads_feedback
+            ? <span className="text-slate-600 truncate max-w-[240px]">{c.ads_feedback}</span>
+            : <span className="text-slate-300">chưa có</span>}
+          {canAds && <button onClick={onReview} className="text-slate-400 hover:text-violet-600 shrink-0"><Pencil className="w-3.5 h-3.5" /></button>}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-3 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>}
+          <button onClick={onView} className="text-sm font-semibold text-white px-4 h-9 rounded-xl bg-blue-600 hover:bg-blue-700">Xem chi tiết</button>
+          <ActionMenu items={menuItems} />
+        </div>
       </div>
     </div>
   );
