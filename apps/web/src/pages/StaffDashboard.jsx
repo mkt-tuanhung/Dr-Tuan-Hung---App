@@ -50,10 +50,10 @@ const ROLE_LABELS = {
 const OUTSOURCE_HIDE = ['appointments', 'attendance', 'advances'];
 
 const FULL_MENU = [
-  { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'] },
-  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant'] },
-  { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant'] },
-  { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'] },
+  { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'], exclude: ['designer'] },
+  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant', 'designer'] },
+  { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant', 'designer'] },
+  { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'], exclude: ['designer'] },
   { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
   { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
@@ -70,7 +70,7 @@ const FULL_MENU = [
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong', 'shareholder'] },
 
   // CRM
-  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'] },
+  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['designer'] },
   { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile, roles: ['admin', 'accountant', 'shareholder', 'cskh', 'dieu_duong'] },
   { id: 'khach_tu_van', label: 'Khách tư vấn',    icon: UserCheck, roles: ['sale_offline', 'admin'] },
   { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
@@ -326,10 +326,10 @@ const StaffDashboard = () => {
     && !(isOutsource && OUTSOURCE_HIDE.includes(m.id))
   );
 
-  // Nếu tab khôi phục không thuộc quyền của nhân sự → về Tổng quan
+  // Nếu tab hiện tại không thuộc quyền của nhân sự → về mục đầu tiên được phép
   useEffect(() => {
-    if (profile && activeTab !== 'overview' && !allowedMenu.some(m => m.id === activeTab)) {
-      setActiveTab('overview');
+    if (profile && !allowedMenu.some(m => m.id === activeTab)) {
+      setActiveTab(allowedMenu[0]?.id || 'overview');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);

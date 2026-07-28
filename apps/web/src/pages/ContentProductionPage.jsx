@@ -225,7 +225,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const canDesign = roles.includes('designer') || isAdmin; // được upload/quản lý thư viện ảnh
 
   const tabs = [];
-  if (canAddMedia || canEdit || isManager) tabs.push('kho');
+  if (canAddMedia || canEdit || isManager || canDesign) tabs.push('kho');
   if (canEdit || canAds || isManager) tabs.push('video');
   tabs.push('images'); // Thư viện ảnh mở cho mọi người trong module (chỉ designer/admin được sửa)
   const [tab, setTab] = useState(tabs[0] || 'kho');
