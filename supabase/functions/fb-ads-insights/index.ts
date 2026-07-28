@@ -34,6 +34,17 @@ const LEAD_ACTIONS = [
   "onsite_conversion.lead_grouped",
   "offsite_conversion.fb_pixel_lead",
 ];
+// Lượt mua (purchase). Lấy 1 nguồn "gộp" để tránh cộng trùng:
+// ưu tiên omni_purchase -> purchase -> (pixel + onsite).
+function pickPurchases(actions: { action_type: string; value: string }[] | undefined): number {
+  if (!Array.isArray(actions)) return 0;
+  const get = (t: string) => { const a = actions.find((x) => x.action_type === t); return a ? Number(a.value) || 0 : 0; };
+  const omni = get("omni_purchase");
+  if (omni) return omni;
+  const plain = get("purchase");
+  if (plain) return plain;
+  return get("offsite_conversion.fb_pixel_purchase") + get("onsite_conversion.purchase") + get("onsite_web_purchase");
+}
 
 function sumActions(actions: { action_type: string; value: string }[] | undefined, keys: string[]): number {
   if (!Array.isArray(actions)) return 0;
@@ -75,6 +86,7 @@ Deno.serve(async (req) => {
       const actions = row.actions as { action_type: string; value: string }[];
       const messages = sumActions(actions, MSG_ACTIONS);
       const leads = sumActions(actions, LEAD_ACTIONS);
+      const purchases = pickPurchases(actions);
       const spend = Number(row.spend) || 0;
       const results = messages + leads;
       // Lấy trạng thái chiến dịch (ACTIVE / PAUSED...)
@@ -86,7 +98,7 @@ Deno.serve(async (req) => {
       } catch { /* bỏ qua */ }
       return json({ ok: true, metrics: {
         campaign_name: row.campaign_name || null, status,
-        spend, messages, leads, results,
+        spend, messages, leads, purchases, results,
         impressions: Number(row.impressions) || 0,
         reach: Number(row.reach) || 0,
         link_clicks: Number(row.inline_link_clicks) || 0,
@@ -127,6 +139,7 @@ Deno.serve(async (req) => {
       const actions = r.actions as { action_type: string; value: string }[];
       const messages = sumActions(actions, MSG_ACTIONS);
       const leads = sumActions(actions, LEAD_ACTIONS);
+      const purchases = pickPurchases(actions);
       const results = messages + leads; // tổng "kết quả xin được"
       return {
         ad_id: r.ad_id,
@@ -141,6 +154,7 @@ Deno.serve(async (req) => {
         video_views: pickVideoViews(r.video_thruplay_watched_actions as { value: string }[]),
         messages,
         leads,
+        purchases,
         results,
         cpa: results > 0 ? Math.round(spend / results) : null,
       };
