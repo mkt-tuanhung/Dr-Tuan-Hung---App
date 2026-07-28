@@ -239,10 +239,12 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [khoTo, setKhoTo] = useState('');           // lọc ngày quay đến
   const [khoStale, setKhoStale] = useState(0);      // lọc nguồn tồn đọng (chưa dựng > N ngày); 0 = tắt
   const [khoTag, setKhoTag] = useState('');         // lọc theo nhãn
+  const [khoUndone, setKhoUndone] = useState(false); // chỉ nguồn chưa dựng clip nào
   const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
   const [videoView, setVideoView] = useState('card'); // 'card' | 'grid' (xem lưới thumbnail)
+  const [videoPending, setVideoPending] = useState(false); // chỉ clip chờ Ads duyệt (stage submitted)
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [addOpen, setAddOpen] = useState(false);
@@ -385,7 +387,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
     (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)) &&
     // Tồn đọng: chưa dựng clip nào & đã quá N ngày kể từ khi thêm nguồn
     (!khoStale || (clipsOf(s.id).length === 0 && staleAgeDays(s) >= khoStale)) &&
-    (!khoTag || (s.tags || []).includes(khoTag)));
+    (!khoTag || (s.tags || []).includes(khoTag)) &&
+    (!khoUndone || clipsOf(s.id).length === 0));
   const phaseCount = (id) => id === 'all' ? phaseBase.length : phaseBase.filter(s => phaseOf(s) === id).length;
   const visStores = khoPhase === 'all' ? phaseBase : phaseBase.filter(s => phaseOf(s) === khoPhase);
   const allTags = [...new Set(stores.flatMap(s => s.tags || []))].sort();
@@ -393,6 +396,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
     if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
+    if (videoPending) return c.stage === 'submitted'; // chỉ clip chờ Ads duyệt
     if (!matchScoreFilter(c, videoScore)) return false;
     if (videoService && !((st?.service || '').includes(videoService))) return false;
     const day = (c.submitted_at || c.created_at || '').slice(0, 10);
@@ -444,10 +448,11 @@ const ContentProductionPage = ({ setActiveTab }) => {
         const revision = clips.filter(c => c.stage === 'revision');
         const TONE = { teal: 'bg-teal-50 border-teal-200 text-teal-700', rose: 'bg-rose-50 border-rose-200 text-rose-700', violet: 'bg-violet-50 border-violet-200 text-violet-700', amber: 'bg-amber-50 border-amber-200 text-amber-700' };
         const tiles = [];
-        if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { setTab('kho'); setKhoStale(0); setKhoPhase('all'); } });
-        if (canEdit || isManager) tiles.push({ n: staleSrc.length, label: 'Nguồn tồn đọng > 14 ngày', tone: 'rose', icon: AlertTriangle, onClick: () => { setTab('kho'); setKhoStale(14); } });
-        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { setTab('video'); setVideoScore('chua'); } });
-        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { setTab('video'); } });
+        const clearKho = () => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoTag(''); setKhoPhase('all'); };
+        if (canEdit || isManager) tiles.push({ n: withSrc.length, label: 'Nguồn mới chưa dựng', tone: 'teal', icon: FolderOpen, onClick: () => { setTab('kho'); clearKho(); setKhoStale(0); setKhoUndone(true); } });
+        if (canEdit || isManager) tiles.push({ n: staleSrc.length, label: 'Nguồn tồn đọng > 14 ngày', tone: 'rose', icon: AlertTriangle, onClick: () => { setTab('kho'); clearKho(); setKhoUndone(false); setKhoStale(14); } });
+        if (canAds || isManager) tiles.push({ n: pending.length, label: 'Clip chờ Ads duyệt', tone: 'violet', icon: PlayCircle, onClick: () => { setTab('video'); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoPending(true); } });
+        if (canEdit || isManager) tiles.push({ n: revision.length, label: 'Clip cần sửa lại', tone: 'amber', icon: RotateCcw, onClick: () => { setTab('video'); setVideoPending(false); setVideoScore(''); } });
         const shown = tiles.filter(t => t.n > 0);
         if (!shown.length) return null;
         return (
@@ -511,7 +516,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
                 {allTags.map(t => <option key={t} value={t}>#{t}</option>)}
               </select>
             )}
-            {(khoStatus || khoService || khoFrom || khoTo || khoStale || khoTag) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); setKhoTag(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            {khoUndone && <span className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-teal-600 text-white font-semibold">Chưa dựng<button onClick={() => setKhoUndone(false)}><X className="w-3.5 h-3.5" /></button></span>}
+            {(khoStatus || khoService || khoFrom || khoTo || khoStale || khoTag || khoUndone) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); setKhoTag(''); setKhoUndone(false); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden">
               <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
               <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
@@ -529,7 +535,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <DateRangeFilter from={videoFrom} to={videoTo} headerLabel="Lọc theo ngày dựng" onApply={(f, t) => { setVideoFrom(f); setVideoTo(t); }} />
-            {(videoScore || videoService || videoFrom || videoTo) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            {videoPending && <span className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-violet-600 text-white font-semibold">Chờ duyệt<button onClick={() => setVideoPending(false)}><X className="w-3.5 h-3.5" /></button></span>}
+            {(videoScore || videoService || videoFrom || videoTo || videoPending) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); setVideoPending(false); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden ml-auto">
               <button onClick={() => setVideoView('card')} title="Xem thẻ" className={`px-3 py-2 ${videoView === 'card' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
               <button onClick={() => setVideoView('grid')} title="Xem lưới" className={`px-3 py-2 ${videoView === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
