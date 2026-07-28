@@ -373,6 +373,9 @@ const ContentProductionPage = ({ setActiveTab }) => {
   // Giai đoạn của 1 media (suy từ tiến độ): đã duyệt / chờ duyệt / đang dựng
   const phaseOf = (s) => { const p = progressOf(s.id, s.source_status); return p === 100 ? 'da_duyet' : p >= 75 ? 'cho_duyet' : 'dang_dung'; };
   const phaseBase = stores.filter(s =>
+    // Kho media CHỈ hiện khách có SOURCE gốc do Media up (có link nguồn).
+    // Thẻ do Editor tự tạo khi up video (không có source) sẽ không lẫn vào đây — clip nằm ở Video Ads.
+    (s.source_links || []).length > 0 &&
     (!q || (s.customer_name || '').toLowerCase().includes(q) || (s.customer_phone || '').includes(q)) &&
     (!khoStatus || (s.source_status || 'chua_dung') === khoStatus) &&
     (!khoService || (s.service || '').includes(khoService)) &&
@@ -502,7 +505,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
         ) : khoView === 'card' ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
-              <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={firstThumbOf(s.id)} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+              <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={null} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => setSourceFor(s)}
                 onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
             ))}
