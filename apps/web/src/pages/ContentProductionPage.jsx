@@ -889,7 +889,7 @@ const FbAdsPanel = () => {
 const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onRescan, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
-    <div className="p-3 hover:bg-slate-50/60 flex flex-col lg:flex-row lg:items-center gap-3">
+    <div className={`p-3 flex flex-col lg:flex-row lg:items-center gap-3 ${s.no_image ? 'bg-rose-50 hover:bg-rose-100' : s.hide_face ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50/60'}`}>
       <div className="min-w-0 lg:w-60 shrink-0">
         <div className="font-bold text-slate-800 text-sm truncate flex items-center gap-2">
           <span className="truncate">{s.customer_name || 'Khách chưa đặt tên'}</span>
@@ -948,6 +948,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
   const owner = canAddMedia || s.media_id === me?.id;
   const ss = SOURCE_STATUS[s.source_status || 'chua_dung'] || { label: s.source_status, cls: 'bg-slate-100 text-slate-600' };
   const hasSrc = (s.source_links || []).length > 0;
+  const permTone = s.no_image ? 'bg-rose-50 border-rose-300' : s.hide_face ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-100';
   const menuItems = [
     canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
     owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
@@ -956,7 +957,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
     owner && { label: 'Xoá media', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
   ];
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3.5">
+    <div className={`rounded-2xl border shadow-sm p-3.5 ${permTone}`}>
       <div className="flex gap-3">
         {/* Thumbnail */}
         <button onClick={hasSrc ? onViewSource : (canEdit ? onBuild : undefined)} className="relative w-[104px] h-[104px] rounded-2xl overflow-hidden shrink-0 bg-gradient-to-br from-teal-300 to-teal-600">
