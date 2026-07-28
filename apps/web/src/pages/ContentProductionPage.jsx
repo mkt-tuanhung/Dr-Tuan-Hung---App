@@ -23,6 +23,14 @@ const suggestSourceId = (name, date) => {
   return cap && d ? `${cap}${d}_01` : '';
 };
 const SOURCE_TYPES = ['Before/After', 'Feedback', 'Hậu phẫu', 'Quá trình làm', 'Tư vấn bác sĩ', 'Khác'];
+// Checklist các loại source đã có trong link Google Drive của khách (Feature #5)
+const SOURCE_CHECKLIST = [
+  { key: 'truoc_pt', label: 'Trước PT' },
+  { key: 'sau_pt', label: 'Sau PT' },
+  { key: 'beauty', label: 'Beauty' },
+  { key: 'feedback', label: 'Feedback' },
+  { key: 'tai_kham', label: 'Tái khám' },
+];
 const SERVICE_GROUPS = ['Hàm mặt', 'Body', 'Tiểu phẫu'];
 // Lọc nhanh theo giai đoạn (suy từ tiến độ dựng clip)
 const KHO_PHASES = [
@@ -609,6 +617,42 @@ const ActionMenu = ({ items, vertical = false }) => {
   );
 };
 
+// ---------- Chọn / hiển thị checklist loại source (Feature #5) ----------
+const SourceTypePicker = ({ value = [], onChange }) => (
+  <div className="flex flex-wrap gap-2">
+    {SOURCE_CHECKLIST.map(t => {
+      const on = (value || []).includes(t.key);
+      return (
+        <button type="button" key={t.key}
+          onClick={() => onChange(on ? value.filter(x => x !== t.key) : [...(value || []), t.key])}
+          className={`px-3.5 py-2 rounded-xl text-sm font-semibold border inline-flex items-center gap-1.5 transition ${on ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+          {on ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}{t.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
+const SourceTypeBadges = ({ types = [], showMissing = true }) => {
+  const present = SOURCE_CHECKLIST.filter(t => (types || []).includes(t.key));
+  const missing = SOURCE_CHECKLIST.filter(t => !(types || []).includes(t.key));
+  if (present.length === 0 && !showMissing) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {present.map(t => (
+        <span key={t.key} className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" />{t.label}
+        </span>
+      ))}
+      {showMissing && missing.map(t => (
+        <span key={t.key} className="text-[11px] font-medium bg-slate-50 text-slate-400 px-2 py-0.5 rounded-md inline-flex items-center gap-1 border border-dashed border-slate-200">
+          <Circle className="w-2.5 h-2.5" />{t.label}
+        </span>
+      ))}
+    </div>
+  );
+};
+
 // ---------- Hàng Kho media (danh sách) ----------
 const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
@@ -635,6 +679,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
         <LinkList links={s.source_links} label="Nguồn" icon={Film} />
         <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
         {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
+        <SourceTypeBadges types={s.source_types} showMissing={false} />
         <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
         {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
         {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
@@ -693,6 +738,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
           {s.source_id && <div className="font-mono text-violet-600 text-xs font-bold mt-1.5">#{s.source_id}</div>}
           {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
           {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
+          <div className="mt-2"><SourceTypeBadges types={s.source_types} /></div>
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             {hasSrc && <button onClick={onViewSource} className="text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full inline-flex items-center gap-1 hover:bg-blue-100">Nguồn <ExternalLink className="w-3 h-3" /></button>}
             <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${ss.cls}`}>{ss.label}</span>
@@ -807,6 +853,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
   const [sourceId, setSourceId] = useState('');
   const [mediaChargeId, setMediaChargeId] = useState('');
   const [sourceType, setSourceType] = useState('');
+  const [sourceTypes, setSourceTypes] = useState([]);
   const [sourceStatus, setSourceStatus] = useState('chua_dung');
   const [mediaStaff, setMediaStaff] = useState([]);
   const [links, setLinks] = useState('');
@@ -843,6 +890,7 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
       source_id: sourceId.trim() || null, shoot_date: shootDate || null,
       media_in_charge_id: mediaChargeId || null, media_in_charge: chargeName,
       source_type: sourceType || null, source_status: sourceStatus || 'chua_dung',
+      source_types: sourceTypes,
     };
     if (mode === 'existing') {
       if (!picked) { toast.error('Hãy TAG (chọn) khách hàng'); return; }
@@ -935,6 +983,10 @@ const AddMediaModal = ({ me, onClose, onSaved }) => {
             </Field>
           </div>
           <Field label="Link Google Drive (mỗi dòng 1 link)"><textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
+          <Field label="Trong link đã có những source nào?">
+            <SourceTypePicker value={sourceTypes} onChange={setSourceTypes} />
+            <p className="text-[11px] text-slate-400 mt-1.5">Tick các loại đã có trong thư mục Drive để nhân sự khác biết còn thiếu gì.</p>
+          </Field>
           <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
         </>
       )}
@@ -949,11 +1001,12 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const [links, setLinks] = useState((store.source_links || []).join('\n'));
   const [note, setNote] = useState(store.note || '');
   const [sourceType, setSourceType] = useState(store.source_type || '');
+  const [sourceTypes, setSourceTypes] = useState(store.source_types || []);
   const [sourceStatus, setSourceStatus] = useState(store.source_status || 'chua_dung');
   const [saving, setSaving] = useState(false);
   const save = async () => {
     setSaving(true);
-    const { error } = await supabase.from('media_customers').update({ source_links: parseLinks(links), note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
+    const { error } = await supabase.from('media_customers').update({ source_links: parseLinks(links), note: note || null, source_type: sourceType || null, source_types: sourceTypes, source_status: sourceStatus || 'chua_dung' }).eq('id', store.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Đã cập nhật nguồn'); onSaved();
@@ -975,6 +1028,9 @@ const SourceModal = ({ store, onClose, onSaved }) => {
         </Field>
       </div>
       <Field label="Link nguồn (mỗi dòng 1 link)"><textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className={inpCls} /></Field>
+      <Field label="Trong link đã có những source nào?">
+        <SourceTypePicker value={sourceTypes} onChange={setSourceTypes} />
+      </Field>
       <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
