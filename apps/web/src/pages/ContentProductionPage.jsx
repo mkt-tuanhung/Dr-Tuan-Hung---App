@@ -32,6 +32,8 @@ const SOURCE_CHECKLIST = [
   { key: 'tai_kham', label: 'Tái khám' },
 ];
 const SRC_LABEL = Object.fromEntries(SOURCE_CHECKLIST.map(t => [t.key, t.label]));
+// Số ngày kể từ khi thêm nguồn (để tính "tồn đọng")
+const staleAgeDays = (s) => { const t = s.created_at || s.shoot_date; if (!t) return 0; return Math.floor((Date.now() - new Date(t).getTime()) / 86400000); };
 // Soi qua edge function scan-drive-folder (service account) — liệt kê thư mục con + phân loại.
 // Trả { ok, types[], folders[], readableLinks, privateLinks, linkCount, noId, diag }
 async function scanDrive(links) {
@@ -235,6 +237,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [khoService, setKhoService] = useState(''); // lọc dịch vụ
   const [khoFrom, setKhoFrom] = useState('');       // lọc ngày quay từ
   const [khoTo, setKhoTo] = useState('');           // lọc ngày quay đến
+  const [khoStale, setKhoStale] = useState(0);      // lọc nguồn tồn đọng (chưa dựng > N ngày); 0 = tắt
   const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
@@ -377,7 +380,9 @@ const ContentProductionPage = ({ setActiveTab }) => {
     (!khoStatus || (s.source_status || 'chua_dung') === khoStatus) &&
     (!khoService || (s.service || '').includes(khoService)) &&
     (!khoFrom || (s.shoot_date && s.shoot_date >= khoFrom)) &&
-    (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)));
+    (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)) &&
+    // Tồn đọng: chưa dựng clip nào & đã quá N ngày kể từ khi thêm nguồn
+    (!khoStale || (clipsOf(s.id).length === 0 && staleAgeDays(s) >= khoStale)));
   const phaseCount = (id) => id === 'all' ? phaseBase.length : phaseBase.filter(s => phaseOf(s) === id).length;
   const visStores = khoPhase === 'all' ? phaseBase : phaseBase.filter(s => phaseOf(s) === khoPhase);
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
@@ -461,7 +466,13 @@ const ContentProductionPage = ({ setActiveTab }) => {
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <DateRangeFilter from={khoFrom} to={khoTo} onApply={(f, t) => { setKhoFrom(f); setKhoTo(t); }} />
-            {(khoStatus || khoService || khoFrom || khoTo) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            <select value={khoStale} onChange={e => setKhoStale(Number(e.target.value))} className={`flex-1 sm:flex-none min-w-[150px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border outline-none ${khoStale ? 'border-amber-400 bg-amber-50 text-amber-700 font-semibold' : 'border-slate-200 bg-white'}`}>
+              <option value={0}>Mọi nguồn (tồn đọng)</option>
+              <option value={7}>Tồn đọng &gt; 7 ngày</option>
+              <option value={14}>Tồn đọng &gt; 14 ngày</option>
+              <option value={30}>Tồn đọng &gt; 30 ngày</option>
+            </select>
+            {(khoStatus || khoService || khoFrom || khoTo || khoStale) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden">
               <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
               <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
@@ -896,6 +907,7 @@ const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSourc
           </span>
         )}
         <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
+        {clipCount === 0 && staleAgeDays(s) >= 14 && <span className="text-[11px] font-bold bg-rose-100 text-rose-700 px-2 py-1 rounded-lg inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Tồn {staleAgeDays(s)}n</span>}
         {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
         {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
         {s.updated_at && <span className="text-[11px] text-slate-300 ml-auto">{new Date(s.updated_at).toLocaleDateString('vi-VN')}</span>}
@@ -967,6 +979,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
             <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${ss.cls}`}>{ss.label}</span>
             <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-100 disabled:opacity-60">{clipCount} clip</button>
             {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">★ {s.source_score}/10</span>}
+            {clipCount === 0 && staleAgeDays(s) >= 14 && <span className="text-[11px] font-bold bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Tồn {staleAgeDays(s)}n</span>}
           </div>
         </div>
       </div>
