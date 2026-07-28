@@ -82,6 +82,15 @@ const scoreCat = (score, win) => {
   if (n > 0) return { label: 'Tệ', cls: 'bg-rose-100 text-rose-700', warn: true };
   return { label: 'Chưa chấm', cls: 'bg-slate-100 text-slate-500', warn: false };
 };
+// Tự chấm Win/điểm theo định nghĩa Ads (CPA mục tiêu = ngân sách ÷ số điện thoại)
+function scoreByRule(spend, phones, rule) {
+  const target = rule && rule.win_phones > 0 && Number(rule.win_budget) > 0 ? Number(rule.win_budget) / rule.win_phones : null;
+  if (!target) return null; // chưa định nghĩa -> không tự chấm
+  if (!phones || phones <= 0) return { win: false, score: Number(spend) > 0 ? 2 : 0 };
+  const ratio = (Number(spend) / phones) / target;   // <=1 là đạt/tốt hơn chuẩn
+  const score = ratio <= 1 ? 10 : ratio <= 1.3 ? 8 : ratio <= 2 ? 6 : 3;
+  return { win: score >= 10, score };
+}
 const SCORE_FILTERS = { win: 'WIN (10đ)', tot: 'Tốt (≥8)', tb: 'Trung bình (5-7)', te: 'Tệ (<5)', chua: 'Chưa chấm' };
 const matchScoreFilter = (c, f) => {
   if (!f) return true;
@@ -252,6 +261,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [addOpen, setAddOpen] = useState(false);
   const [scanningAll, setScanningAll] = useState(false);
+  const [winRule, setWinRule] = useState(null);      // định nghĩa Ads Win
+  const [winModal, setWinModal] = useState(false);
   const [addVideoOpen, setAddVideoOpen] = useState(false);
   const [editSource, setEditSource] = useState(null);
   const [linkFor, setLinkFor] = useState(null);
@@ -267,12 +278,14 @@ const ContentProductionPage = ({ setActiveTab }) => {
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
-    const [scRes, clRes] = await Promise.all([
+    const [scRes, clRes, wrRes] = await Promise.all([
       supabase.from('media_customers').select('*, media:profiles!media_id(full_name)').order('updated_at', { ascending: false }),
       supabase.from('media_clips').select('*, editor:profiles!editor_id(full_name), ads:profiles!ads_id(full_name)').order('updated_at', { ascending: false }),
+      supabase.from('ads_win_rule').select('*').eq('id', 1).maybeSingle(),
     ]);
     setStores(scRes.data || []);
     setClips(clRes.data || []);
+    if (wrRes.data) setWinRule(wrRes.data);
     didLoad.current = true;
     setLoading(false);
   }, []);
@@ -308,11 +321,14 @@ const ContentProductionPage = ({ setActiveTab }) => {
       if (error) throw new Error(error.message);
       if (!data?.ok) throw new Error(data?.error || 'Lỗi Facebook');
       const m = data.metrics || {};
-      const { error: upErr } = await supabase.from('media_clips').update({
+      const upd = {
         fb_campaign_id: cid, fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
         fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
         fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
-      }).eq('id', clipId);
+      };
+      const v = scoreByRule(m.spend ?? 0, m.leads ?? 0, winRule); // tự chấm theo định nghĩa
+      if (v) { upd.win = v.win; upd.score = v.score; }
+      const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
       toast.success(`Đã cập nhật: ${m.messages || 0} tin nhắn · ${m.leads || 0} lead · CPA ${m.cpa != null ? fmtM(m.cpa) : '—'}`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
@@ -331,11 +347,14 @@ const ContentProductionPage = ({ setActiveTab }) => {
         const { data } = await supabase.functions.invoke('fb-ads-insights', { body: { campaign_id: c.fb_campaign_id } });
         if (data?.ok) {
           const m = data.metrics || {};
-          const { error } = await supabase.from('media_clips').update({
+          const upd = {
             fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
             fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
             fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
-          }).eq('id', c.id);
+          };
+          const v = scoreByRule(m.spend ?? 0, m.leads ?? 0, winRule);
+          if (v) { upd.win = v.win; upd.score = v.score; }
+          const { error } = await supabase.from('media_clips').update(upd).eq('id', c.id);
           if (error) fail = true; else ok++;
         } else fail = true;
       } catch { fail = true; }
@@ -344,6 +363,19 @@ const ContentProductionPage = ({ setActiveTab }) => {
     setSyncingAll(false);
     toast[fail && ok === 0 ? 'error' : 'success'](`Đã cập nhật ${ok}/${targets.length} clip`, { id: 'fb-all', duration: 6000 });
     loadData();
+  };
+  // Lưu định nghĩa Win + chấm lại toàn bộ clip đã có chỉ số (không gọi lại FB)
+  const saveWinRule = async (budget, phones) => {
+    const rule = { win_budget: Number(String(budget).replace(/\D/g, '')) || 0, win_phones: Number(String(phones).replace(/\D/g, '')) || 0 };
+    if (!rule.win_budget || !rule.win_phones) { toast.error('Nhập cả ngân sách và số điện thoại'); return; }
+    const { error } = await supabase.from('ads_win_rule').upsert({ id: 1, ...rule, updated_by: me.id, updated_at: new Date().toISOString() });
+    if (error) { toast.error('Lỗi lưu: ' + error.message); return; }
+    setWinRule({ id: 1, ...rule });
+    const targets = clips.filter(c => c.fb_campaign_id && (Number(c.fb_spend) > 0 || Number(c.fb_leads) > 0));
+    let n = 0;
+    for (const c of targets) { const v = scoreByRule(c.fb_spend, c.fb_leads, rule); if (v) { await supabase.from('media_clips').update({ win: v.win, score: v.score }).eq('id', c.id); n++; } }
+    toast.success(`Đã lưu định nghĩa Win — tự chấm lại ${n} clip`);
+    setWinModal(false); loadData();
   };
   const approveRun = (c) => {
     if (c.approved_to_run) return;
@@ -670,8 +702,14 @@ const ContentProductionPage = ({ setActiveTab }) => {
                 </button>
               ))}
             </div>
-            {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
+            <div className="ml-auto flex items-center gap-2">
+              {canAds && <button onClick={() => setWinModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600"><Trophy className="w-4 h-4" />Định nghĩa Win</button>}
+              {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
+            </div>
           </div>
+          {winRule && winRule.win_phones > 0 && (
+            <div className="text-[11px] text-slate-500 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 inline-flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-amber-500" />Định nghĩa Win: chi <b>{fmtM(winRule.win_budget)}</b> ra <b>{winRule.win_phones} SĐT</b> (CPA ≤ {fmtM(Math.round(winRule.win_budget / winRule.win_phones))}/SĐT) → tự chấm.</div>
+          )}
           {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : videoView === 'grid' ? (
@@ -715,6 +753,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       {scoreFor && <SourceScoreModal store={scoreFor} onClose={() => setScoreFor(null)} onSaved={() => { setScoreFor(null); loadData(); }} />}
       {reviewFor && <ReviewClipModal clip={reviewFor} store={storeOf(reviewFor.media_customer_id)} me={me} onClose={() => setReviewFor(null)} onSyncFb={syncFbClip}
         onSaved={async (payload) => { await patchClip(reviewFor.id, payload, 'Đã lưu đánh giá'); setReviewFor(null); }} />}
+      {winModal && <WinRuleModal rule={winRule} onClose={() => setWinModal(false)} onSave={saveWinRule} />}
       {videoFor && <VideoModal clip={videoFor} me={me} canScore={canAds} onScore={() => { setReviewFor(videoFor); setVideoFor(null); }} onClose={() => setVideoFor(null)} />}
       {sourceFor && <VideoModal clip={{ clip_links: sourceFor.source_links }} title={`Xem source — ${sourceFor.customer_name || ''}`} onClose={() => setSourceFor(null)} />}
       {confirmState && <ConfirmDialog {...confirmState} onClose={() => setConfirmState(null)} />}
@@ -1678,6 +1717,24 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
 };
 
 // ---------- Modal: Ads đánh giá clip ----------
+// ---------- Modal: Định nghĩa Ads Win ----------
+const WinRuleModal = ({ rule, onClose, onSave }) => {
+  const [budget, setBudget] = useState(rule?.win_budget ? String(rule.win_budget) : '');
+  const [phones, setPhones] = useState(rule?.win_phones ? String(rule.win_phones) : '');
+  const [saving, setSaving] = useState(false);
+  const b = Number(String(budget).replace(/\D/g, '')), p = Number(String(phones).replace(/\D/g, ''));
+  const cpa = b && p ? Math.round(b / p) : null;
+  return (
+    <Modal title="Định nghĩa Ads Win" onClose={onClose}>
+      <p className="text-sm text-slate-500 mb-3">Win không cố định theo con số cứng — bạn đặt theo thị trường. Hệ thống sẽ <b>tự chấm</b> mỗi clip dựa trên chỉ số Facebook đã kéo về (Ads khỏi chấm tay).</p>
+      <Field label="Ngân sách đã chi tiêu (đồng)"><MoneyInput value={budget} onChange={setBudget} placeholder="VD: 1.000.000" className={inpCls} /></Field>
+      <Field label="Số điện thoại (SĐT xin được) tương ứng"><input value={phones} onChange={e => setPhones(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="VD: 10" className={inpCls} /></Field>
+      {cpa && <div className="text-sm bg-amber-50 border border-amber-100 rounded-xl p-3 text-amber-700 mb-3">→ Chuẩn Win: <b>CPA ≤ {fmtM(cpa)}/SĐT</b>. Clip có chi phí mỗi SĐT thấp hơn mức này sẽ tự chấm <b>Win</b>; cao hơn thì Tốt / TB / Tệ.</div>}
+      <ModalActions onClose={onClose} onSave={async () => { setSaving(true); await onSave(budget, phones); setSaving(false); }} saving={saving} saveLabel="Lưu & tự chấm lại" />
+    </Modal>
+  );
+};
+
 const ReviewClipModal = ({ clip, store, me, onClose, onSaved, onSyncFb }) => {
   const [feedback, setFeedback] = useState(clip.ads_feedback || '');
   const [win, setWin] = useState(clip.win ?? false);
