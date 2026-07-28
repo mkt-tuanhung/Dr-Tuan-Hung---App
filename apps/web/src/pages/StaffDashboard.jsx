@@ -60,7 +60,7 @@ const FULL_MENU = [
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
-  { id: 'content',    label: 'Kho media & Video Ads', icon: Clapperboard, roles: ['media', 'editor', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
+  { id: 'content',    label: 'Kho media & Video Ads', icon: Clapperboard, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
   { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout, roles: ['seeding', 'admin', 'accountant', 'shareholder'] },
   { id: 'ads_report', label: 'Chi phí Ads',     icon: BarChart2, roles: ['marketing', 'admin', 'accountant'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
