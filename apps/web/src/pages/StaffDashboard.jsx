@@ -62,6 +62,7 @@ const FULL_MENU = [
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
   { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
+    { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },
     { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle, roles: ['editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
@@ -390,6 +391,7 @@ const StaffDashboard = () => {
     if (activeTab === 'cashflow') return <CashFlowPage />;
     if (activeTab === 'payroll') return <PayrollPage />;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
+    if (activeTab === 'content_overview') return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
     if (activeTab === 'content' || activeTab === 'content_kho') return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;
     if (activeTab === 'content_video') return <ContentProductionPage setActiveTab={setActiveTab} view="video" />;
     if (activeTab === 'content_images') return <ContentProductionPage setActiveTab={setActiveTab} view="images" />;

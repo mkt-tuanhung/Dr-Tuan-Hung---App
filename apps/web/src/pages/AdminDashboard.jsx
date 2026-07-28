@@ -66,6 +66,7 @@ const MENU_GROUPS = [
     { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
     { id: 'marketing', label: 'Marketing', icon: Clapperboard, children: [
+      { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard },
       { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2 },
       { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen },
       { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle },
@@ -663,6 +664,7 @@ const AdminDashboard = () => {
       case 'meetings': return <MeetingPage />;
       case 'community': return <CommunityPage />;
       case 'notifications': return <NotificationsPage />;
+      case 'content_overview': return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
       case 'marketing': case 'content_kho': return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;
       case 'content_video': return <ContentProductionPage setActiveTab={setActiveTab} view="video" />;
       case 'content_images': return <ContentProductionPage setActiveTab={setActiveTab} view="images" />;
