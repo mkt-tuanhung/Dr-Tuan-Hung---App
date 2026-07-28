@@ -340,6 +340,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       const m = data.metrics || {};
       const upd = {
         fb_campaign_id: cid, fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
+        fb_purchases: m.purchases ?? 0,
         fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
         fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
       };
@@ -347,7 +348,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
-      toast.success(`Đã cập nhật: ${m.messages || 0} tin nhắn · ${m.leads || 0} lead · CPA ${m.cpa != null ? fmtM(m.cpa) : '—'}`, { id: 'fb-' + clipId, duration: 6000 });
+      toast.success(`Đã cập nhật: ${m.messages || 0} tin nhắn · ${m.leads || 0} KH tiềm năng · ${m.purchases || 0} lượt mua`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
     } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
   };
@@ -366,6 +367,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
           const m = data.metrics || {};
           const upd = {
             fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
+            fb_purchases: m.purchases ?? 0,
             fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
             fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
           };
@@ -1289,8 +1291,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
     if (!cid) { toast.error('Nhập ID chiến dịch Facebook'); return; }
     onSyncFb?.(c.id, cid);
   };
-  const phones = c.fb_leads || 0;
-  const cpa = (c.fb_messages + phones) > 0 ? Math.round(c.fb_spend / (c.fb_messages + phones)) : null;
+  const leads = c.fb_leads || 0;          // Khách hàng tiềm năng
+  const purchases = c.fb_purchases || 0;  // Lượt mua (= số điện thoại)
+  const cpa = purchases > 0 ? Math.round(c.fb_spend / purchases) : ((c.fb_messages + leads) > 0 ? Math.round(c.fb_spend / (c.fb_messages + leads)) : null);
   const Row = ({ label, children }) => <div className="flex gap-1.5 text-sm"><span className="text-slate-400 shrink-0">{label}:</span><span className="text-slate-700 font-semibold min-w-0 truncate">{children}</span></div>;
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col lg:flex-row">
@@ -1337,11 +1340,12 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDel
           </div>
           {c.fb_campaign_id ? (
             <>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{c.fb_messages || 0}</div><div className="text-[10px] text-slate-400">Nhắn tin</div></div>
-                <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{phones}</div><div className="text-[10px] text-slate-400">SĐT</div></div>
-                <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400">Đã chi</div></div>
-                <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400">CPA</div></div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{c.fb_messages || 0}</div><div className="text-[10px] text-slate-400 leading-tight">Nhắn tin</div></div>
+                <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{leads}</div><div className="text-[10px] text-slate-400 leading-tight">Khách tiềm năng</div></div>
+                <div className="bg-violet-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-violet-700">{purchases}</div><div className="text-[10px] text-slate-400 leading-tight">Lượt mua (SĐT)</div></div>
+                <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400 leading-tight">Đã chi</div></div>
+                <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400 leading-tight">Giá/SĐT</div></div>
               </div>
               <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-400"><LinkIcon className="w-3 h-3" />ID chiến dịch: <span className="font-mono text-slate-500">{c.fb_campaign_id}</span>{c.fb_synced_at && <span className="ml-auto">Cập nhật: {new Date(c.fb_synced_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}</div>
             </>
