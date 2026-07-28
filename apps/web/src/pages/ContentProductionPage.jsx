@@ -32,66 +32,15 @@ const SOURCE_CHECKLIST = [
   { key: 'tai_kham', label: 'Tái khám' },
 ];
 const SRC_LABEL = Object.fromEntries(SOURCE_CHECKLIST.map(t => [t.key, t.label]));
-// Soi Google Drive TRỰC TIẾP từ trình duyệt bằng API key (folder chia sẻ "Bất kỳ ai có link").
-// Cần biến môi trường VITE_GOOGLE_API_KEY (bật Google Drive API cho key này).
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const driveNorm = (s) => (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-const DRIVE_RULES = [
-  { key: 'truoc_pt', any: ['truoc pt', 'truoc phau', 'truoc mo', 'truoc khi', 'before', 'pre op', 'preop', 'b4', 'truoc'] },
-  { key: 'sau_pt', any: ['sau pt', 'sau phau', 'sau mo', 'hau phau', 'after', 'post op', 'postop', 'sau '] },
-  { key: 'beauty', any: ['beauty', 'lam dep', 'beauty shot'] },
-  { key: 'feedback', any: ['feedback', 'phan hoi', 'cam nhan', 'review', 'danh gia', 'cam on'] },
-  { key: 'tai_kham', any: ['tai kham', 'tham kham', 're kham', 'recheck', 're-check', 'follow up', 'followup'] },
-];
-function detectDriveTypes(names) {
-  const found = new Set();
-  for (const raw of names) {
-    const n = driveNorm(raw) + ' '; // thêm khoảng trắng cuối để 'sau ' khớp cả tên kết thúc bằng 'sau'
-    for (const r of DRIVE_RULES) if (r.any.some(k => n.includes(k))) found.add(r.key);
-  }
-  return [...found];
-}
-function extractFolderId(link) {
-  if (!link) return null;
-  let m = link.match(/\/folders\/([a-zA-Z0-9_-]+)/); if (m) return m[1];
-  m = link.match(/[?&]id=([a-zA-Z0-9_-]+)/); if (m) return m[1];
-  m = link.match(/\/d\/([a-zA-Z0-9_-]+)/); if (m) return m[1];
-  return null;
-}
-// Trả { ok, types[], folders[], readableLinks, privateLinks }
+// Soi qua edge function scan-drive-folder (service account) — liệt kê thư mục con + phân loại.
+// Trả { ok, types[], folders[], readableLinks, privateLinks, linkCount, noId, diag }
 async function scanDrive(links) {
-  if (!GOOGLE_API_KEY) throw new Error('Chưa cấu hình VITE_GOOGLE_API_KEY');
   const valid = (links || []).filter(l => typeof l === 'string' && /^https?:\/\//i.test(l));
-  const names = [];
-  let readable = 0, priv = 0, noId = 0;
-  const diag = [];
-  for (const link of valid) {
-    const id = extractFolderId(link);
-    if (!id) { noId++; diag.push('no-id'); continue; }
-    const params = new URLSearchParams({
-      q: `'${id}' in parents and trashed = false`,
-      fields: 'files(id,name,mimeType)', pageSize: '1000',
-      supportsAllDrives: 'true', includeItemsFromAllDrives: 'true', key: GOOGLE_API_KEY,
-    });
-    try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
-      if (!res.ok) { priv++; diag.push('http' + res.status); continue; }
-      const data = await res.json();
-      readable++;
-      const arr = data.files || [];
-      diag.push('ok:' + arr.length);
-      for (const f of arr) names.push(f.name || '');
-    } catch { priv++; diag.push('err'); }
-  }
-  // Lớp 1: dò từ khoá. Lớp 2: AI (Gemini) đọc hiểu tên thư mục — hợp nhất kết quả.
-  let types = detectDriveTypes(names);
-  if (names.length) {
-    try {
-      const { data } = await supabase.functions.invoke('classify-folders', { body: { names } });
-      if (data?.ok && Array.isArray(data.types)) types = [...new Set([...types, ...data.types])];
-    } catch { /* AI không sẵn sàng → dùng kết quả từ khoá */ }
-  }
-  return { ok: true, types, folders: names.slice(0, 100), readableLinks: readable, privateLinks: priv, linkCount: valid.length, noId, diag };
+  if (!valid.length) return { ok: true, types: [], folders: [], readableLinks: 0, privateLinks: 0, linkCount: 0, noId: 0, diag: [] };
+  const { data, error } = await supabase.functions.invoke('scan-drive-folder', { body: { links: valid } });
+  if (error) throw new Error(error.message || 'Lỗi gọi soi Drive');
+  if (!data?.ok) throw new Error(data?.error || 'Soi Drive thất bại');
+  return { ...data, linkCount: valid.length };
 }
 // Soi rồi tự cập nhật source_types cho 1 store (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
