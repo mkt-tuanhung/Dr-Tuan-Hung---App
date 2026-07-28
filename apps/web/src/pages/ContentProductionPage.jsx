@@ -733,7 +733,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds}
                 onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip}
@@ -1265,63 +1265,95 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
 const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
   const mine = c.editor_id === me?.id;
+  const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
+  const cat = scoreCat(c.score, c.win);
+  const phones = c.fb_leads || 0;
+  const cpa = (c.fb_messages + phones) > 0 ? Math.round(c.fb_spend / (c.fb_messages + phones)) : null;
+  const Row = ({ label, children }) => <div className="flex gap-1.5 text-sm"><span className="text-slate-400 shrink-0">{label}:</span><span className="text-slate-700 font-semibold min-w-0 truncate">{children}</span></div>;
   return (
-    <div className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm flex flex-col min-w-0">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-bold text-slate-800 text-sm truncate">{c.title || '(Chưa đặt tiêu đề)'}</div>
-          <div className="text-[11px] text-slate-400 truncate">{store?.customer_name}{store?.customer_phone ? ` · ${store.customer_phone}` : ''} · {c.editor?.full_name || '—'}</div>
-          <div className="mt-1"><PermissionBadges s={store} size="sm" /></div>
-        </div>
-        {(() => { const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; return <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[eff]?.cls || ''}`}>{STAGE[eff]?.label || eff}</span>; })()}
-      </div>
-      <div className="mt-2 flex flex-col gap-2">
-        {(c.clip_links || []).length > 0 ? (c.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />) : <span className="text-xs text-slate-300">Chưa có clip</span>}
-        {(c.thumb_links || []).length > 0 && (
-          <div className="flex flex-wrap gap-2">{(c.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-24 w-24" download />)}</div>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col lg:flex-row">
+      {/* ---- TRÁI: clip ---- */}
+      <div className="lg:w-[280px] shrink-0 bg-slate-900 p-3 flex flex-col gap-2">
+        {(c.clip_links || []).length > 0
+          ? <VideoPreview url={c.clip_links[0]} className="w-full aspect-[9/16] max-h-[440px]" />
+          : <div className="w-full aspect-[9/16] rounded-lg bg-slate-800 grid place-items-center text-white/30"><PlayCircle className="w-10 h-10" /></div>}
+        {(c.clip_links || []).length > 0 && (
+          <button onClick={onView} className="w-full py-2 rounded-lg bg-white/10 text-white text-sm font-bold hover:bg-white/20 inline-flex items-center justify-center gap-1.5"><Play className="w-4 h-4 fill-white" /> Xem lớn</button>
         )}
-        {(c.win || c.score > 0) && (() => { const cat = scoreCat(c.score, c.win); return (
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 w-fit ${cat.cls}`}>
-            {cat.warn && '⚠️'}{c.win ? '🏆' : ''} Điểm {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}
-          </span>); })()}
-        {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full w-fit inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Đã duyệt chạy Ads</span>}
-        {c.ad_status && AD_STATUS[c.ad_status] && <span className={`text-xs font-medium flex items-center gap-1 ${AD_STATUS[c.ad_status].cls}`}>{React.createElement(AD_STATUS[c.ad_status].icon, { className: 'w-3 h-3' })} {AD_STATUS[c.ad_status].label}</span>}
-        {c.ads_feedback && <div className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</div>}
-        {c.fb_campaign_id && (
-          <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold text-blue-700 inline-flex items-center gap-1"><BarChart2 className="w-3 h-3" />CHỈ SỐ FACEBOOK
-                {c.fb_status && <span className={`ml-1 px-1.5 py-0.5 rounded-full ${c.fb_status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{c.fb_status === 'ACTIVE' ? '● Đang chạy' : '● Đã tắt'}</span>}
-              </span>
-              {canAds && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[10px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
+      </div>
+
+      {/* ---- PHẢI: thông số ---- */}
+      <div className="flex-1 min-w-0 p-4 flex flex-col gap-3.5">
+        {/* 1. THÔNG TIN VIDEO */}
+        <section>
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">① Thông tin video</h4>
+            <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${STAGE[eff]?.cls || ''}`}>{STAGE[eff]?.label || eff}</span>
+          </div>
+          <div className="font-bold text-slate-800 mb-1.5">{c.title || '(Chưa đặt tiêu đề)'}</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <Row label="Khách">{store?.customer_name || '—'}</Row>
+            <Row label="Editor">{c.editor?.full_name || '—'}</Row>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap mt-1">
+            <span className="text-sm text-slate-400">Nguồn:</span>
+            {(store?.source_links || []).length > 0
+              ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-teal-600 font-semibold inline-flex items-center gap-1 text-sm hover:underline"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
+              : <span className="text-slate-300 text-sm">—</span>}
+            <PermissionBadges s={store} size="sm" />
+          </div>
+          {(c.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2 mt-2">{(c.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-16 w-16" download />)}</div>}
+        </section>
+
+        {/* 2. HIỆU SUẤT ADS */}
+        <section className="border-t border-slate-100 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide inline-flex items-center gap-1.5">② Hiệu suất Ads
+              {c.fb_status && <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${c.fb_status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{c.fb_status === 'ACTIVE' ? '● Đang chạy' : '● Đã tắt'}</span>}
+            </h4>
+            {canAds && c.fb_campaign_id && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[11px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
+          </div>
+          {c.fb_campaign_id ? (
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-blue-700">{c.fb_messages || 0}</div><div className="text-[10px] text-slate-400">Nhắn tin</div></div>
+              <div className="bg-teal-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-teal-700">{phones}</div><div className="text-[10px] text-slate-400">SĐT</div></div>
+              <div className="bg-slate-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[10px] text-slate-400">Đã chi</div></div>
+              <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-lg font-bold text-amber-700">{cpa != null ? fmtM(cpa) : '—'}</div><div className="text-[10px] text-slate-400">CPA</div></div>
             </div>
-            <div className="grid grid-cols-4 gap-1 text-center">
-              <div><div className="text-sm font-bold text-slate-800">{c.fb_messages || 0}</div><div className="text-[9px] text-slate-400">Nhắn tin</div></div>
-              <div><div className="text-sm font-bold text-slate-800">{c.fb_leads || 0}</div><div className="text-[9px] text-slate-400">Lead</div></div>
-              <div><div className="text-sm font-bold text-slate-800">{fmtM(c.fb_spend)}</div><div className="text-[9px] text-slate-400">Chi</div></div>
-              <div><div className="text-sm font-bold text-teal-700">{(c.fb_messages + c.fb_leads) > 0 ? fmtM(Math.round(c.fb_spend / (c.fb_messages + c.fb_leads))) : '—'}</div><div className="text-[9px] text-slate-400">CPA</div></div>
+          ) : (
+            <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3">Chưa gán ID chiến dịch Facebook.{canAds ? ' Bấm "Đánh giá" để gán ID rồi kéo chỉ số.' : ''}</div>
+          )}
+        </section>
+
+        {/* 3. CHẤM ĐIỂM */}
+        <section className="border-t border-slate-100 pt-3 mt-auto">
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">③ Chấm điểm</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            {(c.win || c.score > 0)
+              ? <span className={`text-sm font-bold px-3 py-1 rounded-full inline-flex items-center gap-1 ${cat.cls}`}>{cat.warn && '⚠️'}{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10 · {cat.label}{c.win && c.win_amount ? ` · ${fmtM(c.win_amount)}` : ''}</span>
+              : <span className="text-sm text-slate-400">Chưa chấm</span>}
+            {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-1 rounded-full inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
+            {c.ads_feedback && <span className="text-[11px] text-rose-500 italic">Ads: “{c.ads_feedback}”</span>}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {canAds && <button onClick={onReview} className="text-xs font-semibold text-violet-700 px-3 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50">Đánh giá / Gán ID</button>}
+            {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />Duyệt chạy Ads</button>}
+            {canAds && (
+              <select value={c.ad_status || ''} onChange={e => onSetAd(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
+                <option value="">Trạng thái tay…</option>
+                <option value="dang_chay">Đang chạy</option>
+                <option value="tam_dung">Tạm dừng</option>
+                <option value="chua_chay">Chưa chạy</option>
+              </select>
+            )}
+            <div className="ml-auto">
+              <ActionMenu items={[
+                (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
+                (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
+              ]} />
             </div>
           </div>
-        )}
-      </div>
-      <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
-        {(c.clip_links || []).length > 0 && <button onClick={onView} className="text-xs font-bold text-white px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 inline-flex items-center gap-1"><Play className="w-3.5 h-3.5 fill-white" /> Xem lớn</button>}
-        {canAds && <button onClick={onReview} className="text-xs font-semibold text-violet-700 px-2.5 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50">Đánh giá</button>}
-        {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Duyệt chạy Ads</button>}
-        {canAds && (
-          <select value={c.ad_status || ''} onChange={e => onSetAd(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
-            <option value="">Trạng thái…</option>
-            <option value="dang_chay">Đang chạy</option>
-            <option value="tam_dung">Tạm dừng</option>
-            <option value="chua_chay">Chưa chạy</option>
-          </select>
-        )}
-        <div className="ml-auto">
-          <ActionMenu items={[
-            (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
-            (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
-          ]} />
-        </div>
+        </section>
       </div>
     </div>
   );
