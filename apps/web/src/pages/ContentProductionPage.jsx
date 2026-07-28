@@ -110,6 +110,23 @@ const STAGE = {
 };
 const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-teal-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
 
+// Trạng thái campaign lấy trực tiếp từ Facebook Ads Manager (effective_status).
+// Gom về 3 nhóm hiển thị: đang chạy / đang duyệt / đã tắt.
+const FB_REVIEW = ['IN_PROCESS', 'PENDING_REVIEW', 'PREAPPROVED', 'PENDING_BILLING_INFO', 'WITH_ISSUES'];
+const fbStatusInfo = (s) => {
+  if (!s) return null;
+  if (s === 'ACTIVE') return { kind: 'running', label: 'Đang chạy', cls: 'bg-emerald-100 text-emerald-700' };
+  if (FB_REVIEW.includes(s)) return { kind: 'review', label: 'Đang duyệt', cls: 'bg-amber-100 text-amber-700' };
+  return { kind: 'off', label: 'Đã tắt', cls: 'bg-slate-200 text-slate-600' };
+};
+// Nhóm trạng thái của 1 clip: ưu tiên trạng thái thật từ Facebook; nếu chưa đồng bộ thì tạm dựa vào cờ cũ.
+const fbKind = (c) => {
+  if (c.fb_status) return fbStatusInfo(c.fb_status).kind;
+  if (c.ad_status === 'dang_chay') return 'running';
+  if (c.ad_status === 'tam_dung') return 'off';
+  return null;
+};
+
 // ----- Xem trước video / ảnh từ link (Google Drive, YouTube, file trực tiếp) -----
 const driveId = (url) => {
   const m = (url || '').match(/\/d\/([a-zA-Z0-9_-]+)/) || (url || '').match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -478,12 +495,12 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
     if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
-    // Sub-tab theo trạng thái
-    const running = c.fb_status === 'ACTIVE' || (!c.fb_status && c.ad_status === 'dang_chay');
-    const off = (c.fb_status && c.fb_status !== 'ACTIVE') || (!c.fb_status && c.ad_status === 'tam_dung');
+    // Sub-tab theo trạng thái campaign (lấy từ Ads Manager)
+    const k = fbKind(c);
     if (videoTab === 'pending') return c.stage === 'submitted' && !c.approved_to_run;
-    if (videoTab === 'running') return c.approved_to_run && running;
-    if (videoTab === 'off') return c.approved_to_run && off;
+    if (videoTab === 'running') return c.approved_to_run && k === 'running';
+    if (videoTab === 'review') return c.approved_to_run && k === 'review';
+    if (videoTab === 'off') return c.approved_to_run && k === 'off';
     if (!matchScoreFilter(c, videoScore)) return false;
     if (videoService && !((st?.service || '').includes(videoService))) return false;
     const day = (c.submitted_at || c.created_at || '').slice(0, 10);
@@ -493,12 +510,11 @@ const ContentProductionPage = ({ setActiveTab }) => {
     const d = new Date(c.submitted_at || c.created_at);
     return c.stage !== 'done' || (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
   });
-  const _run = (c) => c.fb_status === 'ACTIVE' || (!c.fb_status && c.ad_status === 'dang_chay');
-  const _off = (c) => (c.fb_status && c.fb_status !== 'ACTIVE') || (!c.fb_status && c.ad_status === 'tam_dung');
   const videoCounts = {
     pending: clips.filter(c => c.stage === 'submitted' && !c.approved_to_run).length,
-    running: clips.filter(c => c.approved_to_run && _run(c)).length,
-    off: clips.filter(c => c.approved_to_run && _off(c)).length,
+    running: clips.filter(c => c.approved_to_run && fbKind(c) === 'running').length,
+    review: clips.filter(c => c.approved_to_run && fbKind(c) === 'review').length,
+    off: clips.filter(c => c.approved_to_run && fbKind(c) === 'off').length,
   };
 
   return (
@@ -696,8 +712,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
           {/* Sub-tab trạng thái + cập nhật chỉ số */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {[['all', 'Tất cả', null], ['pending', 'Chờ duyệt', videoCounts.pending], ['running', 'Đang chạy', videoCounts.running], ['off', 'Đã tắt', videoCounts.off]].map(([k, l, n]) => (
-                <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold transition ${videoTab === k ? (k === 'running' ? 'bg-emerald-600 text-white' : k === 'off' ? 'bg-slate-600 text-white' : 'bg-violet-600 text-white') : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
+              {[['all', 'Tất cả', null], ['pending', 'Chờ Ads duyệt', videoCounts.pending], ['running', 'Đang chạy', videoCounts.running], ['review', 'Đang duyệt', videoCounts.review], ['off', 'Đã tắt', videoCounts.off]].map(([k, l, n]) => (
+                <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold transition ${videoTab === k ? (k === 'running' ? 'bg-emerald-600 text-white' : k === 'review' ? 'bg-amber-500 text-white' : k === 'off' ? 'bg-slate-600 text-white' : 'bg-violet-600 text-white') : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
                   {l}{n != null && n > 0 ? ` (${n})` : ''}
                 </button>
               ))}
@@ -736,8 +752,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
           <div className="space-y-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip}
-                onSetAd={(ad_status) => patchClip(c.id, { ad_status, ads_id: me.id }, 'Đã cập nhật trạng thái chạy')} />
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip} />
             ))}
           </div>
         )}
@@ -1263,10 +1278,11 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
 };
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
   const mine = c.editor_id === me?.id;
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
+  const fbInfo = fbStatusInfo(c.fb_status);
   const phones = c.fb_leads || 0;
   const cpa = (c.fb_messages + phones) > 0 ? Math.round(c.fb_spend / (c.fb_messages + phones)) : null;
   const Row = ({ label, children }) => <div className="flex gap-1.5 text-sm"><span className="text-slate-400 shrink-0">{label}:</span><span className="text-slate-700 font-semibold min-w-0 truncate">{children}</span></div>;
@@ -1309,7 +1325,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
         <section className="border-t border-slate-100 pt-3">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide inline-flex items-center gap-1.5">② Hiệu suất Ads
-              {c.fb_status && <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${c.fb_status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{c.fb_status === 'ACTIVE' ? '● Đang chạy' : '● Đã tắt'}</span>}
+              {fbInfo && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${fbInfo.cls}`}>● {fbInfo.label}</span>}
             </h4>
             {canAds && c.fb_campaign_id && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-[11px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-0.5"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
           </div>
@@ -1338,14 +1354,6 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, onReview, onSetAd, onEd
           <div className="flex flex-wrap items-center gap-1.5 mt-3">
             {canAds && <button onClick={onReview} className="text-xs font-semibold text-violet-700 px-3 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50">Đánh giá / Gán ID</button>}
             {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />Duyệt chạy Ads</button>}
-            {canAds && (
-              <select value={c.ad_status || ''} onChange={e => onSetAd(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-1.5 py-1">
-                <option value="">Trạng thái tay…</option>
-                <option value="dang_chay">Đang chạy</option>
-                <option value="tam_dung">Tạm dừng</option>
-                <option value="chua_chay">Chưa chạy</option>
-              </select>
-            )}
             <div className="ml-auto">
               <ActionMenu items={[
                 (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
