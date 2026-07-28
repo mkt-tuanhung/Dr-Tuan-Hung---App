@@ -238,6 +238,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [khoFrom, setKhoFrom] = useState('');       // lọc ngày quay từ
   const [khoTo, setKhoTo] = useState('');           // lọc ngày quay đến
   const [khoStale, setKhoStale] = useState(0);      // lọc nguồn tồn đọng (chưa dựng > N ngày); 0 = tắt
+  const [khoTag, setKhoTag] = useState('');         // lọc theo nhãn
   const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
@@ -382,9 +383,11 @@ const ContentProductionPage = ({ setActiveTab }) => {
     (!khoFrom || (s.shoot_date && s.shoot_date >= khoFrom)) &&
     (!khoTo || (s.shoot_date && s.shoot_date <= khoTo)) &&
     // Tồn đọng: chưa dựng clip nào & đã quá N ngày kể từ khi thêm nguồn
-    (!khoStale || (clipsOf(s.id).length === 0 && staleAgeDays(s) >= khoStale)));
+    (!khoStale || (clipsOf(s.id).length === 0 && staleAgeDays(s) >= khoStale)) &&
+    (!khoTag || (s.tags || []).includes(khoTag)));
   const phaseCount = (id) => id === 'all' ? phaseBase.length : phaseBase.filter(s => phaseOf(s) === id).length;
   const visStores = khoPhase === 'all' ? phaseBase : phaseBase.filter(s => phaseOf(s) === khoPhase);
+  const allTags = [...new Set(stores.flatMap(s => s.tags || []))].sort();
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
     const st = storeOf(c.media_customer_id);
@@ -472,7 +475,13 @@ const ContentProductionPage = ({ setActiveTab }) => {
               <option value={14}>Tồn đọng &gt; 14 ngày</option>
               <option value={30}>Tồn đọng &gt; 30 ngày</option>
             </select>
-            {(khoStatus || khoService || khoFrom || khoTo || khoStale) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            {allTags.length > 0 && (
+              <select value={khoTag} onChange={e => setKhoTag(e.target.value)} className={`flex-1 sm:flex-none min-w-[130px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border outline-none ${khoTag ? 'border-indigo-400 bg-indigo-50 text-indigo-700 font-semibold' : 'border-slate-200 bg-white'}`}>
+                <option value="">Mọi nhãn</option>
+                {allTags.map(t => <option key={t} value={t}>#{t}</option>)}
+              </select>
+            )}
+            {(khoStatus || khoService || khoFrom || khoTo || khoStale || khoTag) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); setKhoTag(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
             <div className="flex rounded-xl border border-slate-200 overflow-hidden">
               <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
               <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
@@ -766,6 +775,33 @@ const PermissionBadges = ({ s, size = 'md' }) => {
   );
 };
 
+// Nhập nhãn (tag) tự do
+const TagInput = ({ value = [], onChange }) => {
+  const [text, setText] = useState('');
+  const add = () => { const t = text.trim(); if (t && !value.includes(t)) onChange([...value, t]); setText(''); };
+  return (
+    <div>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {value.map(t => (
+            <span key={t} className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+              {t}<button type="button" onClick={() => onChange(value.filter(x => x !== t))} className="hover:text-indigo-900"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input value={text} onChange={e => setText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(); } }} onBlur={add}
+        placeholder="Nhập nhãn rồi Enter (vd: gấp, VIP, chờ feedback)" className={inpCls} />
+    </div>
+  );
+};
+const TagChips = ({ tags = [] }) => (tags || []).length === 0 ? null : (
+  <div className="flex flex-wrap gap-1">
+    {tags.map(t => <span key={t} className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">#{t}</span>)}
+  </div>
+);
+
 // Hiện đúng TÊN các thư mục con đọc được trong link Drive
 const FolderChips = ({ folders = [], max = 12 }) => {
   const list = folders || [];
@@ -982,6 +1018,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
           {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
           {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
           <div className="mt-2"><PermissionBadges s={s} /></div>
+          {(s.tags || []).length > 0 && <div className="mt-2"><TagChips tags={s.tags} /></div>}
           <div className="mt-2"><FolderChips folders={s.source_folders} /></div>
           {(s.source_video_count > 0 || s.source_image_count > 0) && (
             <div className="flex items-center gap-3 mt-2 text-xs font-semibold">
@@ -1109,6 +1146,7 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
   const [sourceStatus, setSourceStatus] = useState('chua_dung');
   const [noImage, setNoImage] = useState(false);
   const [hideFace, setHideFace] = useState(false);
+  const [tags, setTags] = useState([]);
   const [dupAck, setDupAck] = useState(false);
   const [mediaStaff, setMediaStaff] = useState([]);
   const [links, setLinks] = useState('');
@@ -1162,7 +1200,7 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
       source_id: sourceId.trim() || null, shoot_date: shootDate || null,
       media_in_charge_id: mediaChargeId || null, media_in_charge: chargeName,
       source_type: sourceType || null, source_status: sourceStatus || 'chua_dung',
-      no_image: noImage, hide_face: hideFace,
+      no_image: noImage, hide_face: hideFace, tags,
     };
     if (mode === 'existing') {
       if (!picked) { toast.error('Hãy TAG (chọn) khách hàng'); return; }
@@ -1274,6 +1312,7 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
               <button type="button" onClick={() => setHideFace(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${hideFace ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><EyeOff className="w-4 h-4" />Che mặt</button>
             </div>
           </Field>
+          <Field label="Nhãn (tag)"><TagInput value={tags} onChange={setTags} /></Field>
           <Field label="Trong link đã có những source nào?">
             <button type="button" onClick={doScan} disabled={scanning}
               className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
@@ -1300,6 +1339,7 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const [sourceStatus, setSourceStatus] = useState(store.source_status || 'chua_dung');
   const [noImage, setNoImage] = useState(!!store.no_image);
   const [hideFace, setHideFace] = useState(!!store.hide_face);
+  const [tags, setTags] = useState(store.tags || []);
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const doScan = async () => {
@@ -1320,7 +1360,7 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   const save = async () => {
     setSaving(true);
     const arr = parseLinks(links);
-    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung', no_image: noImage, hide_face: hideFace }).eq('id', store.id);
+    const { error } = await supabase.from('media_customers').update({ source_links: arr, note: note || null, source_type: sourceType || null, source_status: sourceStatus || 'chua_dung', no_image: noImage, hide_face: hideFace, tags }).eq('id', store.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Đã cập nhật nguồn');
