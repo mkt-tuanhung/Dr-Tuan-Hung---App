@@ -242,6 +242,7 @@ const ContentProductionPage = ({ setActiveTab }) => {
   const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
+  const [videoView, setVideoView] = useState('card'); // 'card' | 'grid' (xem lưới thumbnail)
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [addOpen, setAddOpen] = useState(false);
@@ -500,6 +501,10 @@ const ContentProductionPage = ({ setActiveTab }) => {
             </select>
             <DateRangeFilter from={videoFrom} to={videoTo} headerLabel="Lọc theo ngày dựng" onApply={(f, t) => { setVideoFrom(f); setVideoTo(t); }} />
             {(videoScore || videoService || videoFrom || videoTo) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
+            <div className="flex rounded-xl border border-slate-200 overflow-hidden ml-auto">
+              <button onClick={() => setVideoView('card')} title="Xem thẻ" className={`px-3 py-2 ${videoView === 'card' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setVideoView('grid')} title="Xem lưới" className={`px-3 py-2 ${videoView === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
+            </div>
           </>
         )}
       </div>
@@ -548,6 +553,26 @@ const ContentProductionPage = ({ setActiveTab }) => {
           {(canAds || isManager) && <FbAdsPanel />}
           {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
+        ) : videoView === 'grid' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5">
+            {reviewClips.map(c => {
+              const st = storeOf(c.media_customer_id);
+              const thumb = (c.thumb_links || [])[0];
+              const sc = scoreCat(c.score, c.win);
+              return (
+                <button key={c.id} onClick={() => setVideoFor(c)} className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900 text-left">
+                  {thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="absolute inset-0 grid place-items-center text-white/70"><PlayCircle className="w-8 h-8" /></span>}
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
+                    <span className="block text-white text-[11px] font-semibold truncate">{st?.customer_name || c.title || 'Clip'}</span>
+                  </span>
+                  <span className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded ${sc.cls}`}>{sc.label}</span>
+                  {c.approved_to_run && <span className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-white">RUN</span>}
+                  {(st?.no_image || st?.hide_face) && <span className="absolute bottom-1.5 right-1.5 text-white bg-rose-600 rounded-full p-1"><Ban className="w-3 h-3" /></span>}
+                  <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 grid place-items-center transition"><Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 fill-current" /></span>
+                </button>
+              );
+            })}
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {reviewClips.map(c => (
