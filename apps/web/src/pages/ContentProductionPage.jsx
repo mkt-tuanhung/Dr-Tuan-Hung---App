@@ -473,7 +473,9 @@ const ContentProductionPage = ({ setActiveTab }) => {
           </div>
         )
       ) : (
-        reviewClips.length === 0 ? (
+        <>
+          {(canAds || isManager) && <FbAdsPanel />}
+          {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
@@ -483,7 +485,8 @@ const ContentProductionPage = ({ setActiveTab }) => {
                 onSetAd={(ad_status) => patchClip(c.id, { ad_status, ads_id: me.id }, 'Đã cập nhật trạng thái chạy')} />
             ))}
           </div>
-        )
+        )}
+        </>
       )}
 
       {addOpen && <AddMediaModal me={me} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
@@ -685,6 +688,109 @@ const SourceTypeBadges = ({ types = [], showMissing = true }) => {
           <Circle className="w-2.5 h-2.5" />{t.label}
         </span>
       ))}
+    </div>
+  );
+};
+
+// ---------- Bảng hiệu quả Facebook Ads (Feature #1) ----------
+const FbAdsPanel = () => {
+  const [open, setOpen] = useState(false);
+  const [preset, setPreset] = useState('last_30d');
+  const [sortBy, setSortBy] = useState('messages'); // messages | leads | cpa | spend
+  const [loading, setLoading] = useState(false);
+  const [ads, setAds] = useState(null);
+  const [err, setErr] = useState('');
+
+  const sync = async () => {
+    setLoading(true); setErr('');
+    try {
+      const { data, error } = await supabase.functions.invoke('fb-ads-insights', { body: { date_preset: preset } });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Không lấy được dữ liệu');
+      setAds(data.ads || []);
+      if (!data.ads?.length) toast('Không có ad nào trong khoảng thời gian này', { icon: 'ℹ️' });
+    } catch (e) { setErr(e.message); }
+    setLoading(false);
+  };
+
+  const sorted = (ads || []).slice().sort((a, b) => {
+    if (sortBy === 'messages') return (b.messages || 0) - (a.messages || 0);
+    if (sortBy === 'leads') return (b.leads || 0) - (a.leads || 0);
+    if (sortBy === 'cpa') return (a.cpa ?? 1e15) - (b.cpa ?? 1e15);
+    return (b.spend || 0) - (a.spend || 0);
+  });
+  const totSpend = (ads || []).reduce((s, a) => s + (a.spend || 0), 0);
+  const totMsg = (ads || []).reduce((s, a) => s + (a.messages || 0), 0);
+  const totLead = (ads || []).reduce((s, a) => s + (a.leads || 0), 0);
+  const totRes = totMsg + totLead;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-4 overflow-hidden">
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50">
+        <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 grid place-items-center"><BarChart2 className="w-5 h-5" /></span>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-slate-800">Hiệu quả Facebook Ads</div>
+          <div className="text-xs text-slate-400">Clip nào “đẻ tiền” — chi phí, lead, CPA từ tài khoản Ads</div>
+        </div>
+        <ChevronRight className={`w-5 h-5 text-slate-300 transition ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 border-t border-slate-50 pt-3">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <select value={preset} onChange={e => setPreset(e.target.value)} className="h-10 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400">
+              <option value="today">Hôm nay</option>
+              <option value="last_7d">7 ngày</option>
+              <option value="last_30d">30 ngày</option>
+              <option value="last_90d">90 ngày</option>
+              <option value="this_month">Tháng này</option>
+            </select>
+            <button onClick={sync} disabled={loading} className="h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-bold inline-flex items-center gap-1.5 hover:bg-blue-700 disabled:opacity-60">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Đồng bộ số liệu
+            </button>
+            {ads && ads.length > 0 && (
+              <div className="ml-auto flex items-center gap-1 text-xs">
+                <span className="text-slate-400 mr-1">Sắp xếp:</span>
+                {[['messages', 'Nhắn tin'], ['leads', 'Lead'], ['cpa', 'CPA rẻ'], ['spend', 'Chi nhiều']].map(([k, l]) => (
+                  <button key={k} onClick={() => setSortBy(k)} className={`px-2.5 py-1 rounded-lg font-semibold ${sortBy === k ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>{l}</button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {err && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
+              {err}
+              <div className="text-amber-600 mt-1">Cần cấu hình <b>FB_ADS_TOKEN</b> + <b>FB_AD_ACCOUNT_ID</b> và deploy function <b>fb-ads-insights</b>.</div>
+            </div>
+          )}
+
+          {ads && ads.length > 0 && (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+                <div className="bg-slate-50 rounded-xl p-3"><div className="text-lg font-bold text-slate-800">{fmtM(totSpend)}</div><div className="text-[11px] text-slate-400">Tổng chi</div></div>
+                <div className="bg-blue-50 rounded-xl p-3"><div className="text-lg font-bold text-blue-700">{totMsg}</div><div className="text-[11px] text-slate-400">Lượt nhắn tin</div></div>
+                <div className="bg-teal-50 rounded-xl p-3"><div className="text-lg font-bold text-teal-700">{totLead}</div><div className="text-[11px] text-slate-400">Lead xin được</div></div>
+                <div className="bg-amber-50 rounded-xl p-3"><div className="text-lg font-bold text-amber-700">{totRes ? fmtM(Math.round(totSpend / totRes)) : '—'}</div><div className="text-[11px] text-slate-400">Chi phí / kết quả</div></div>
+              </div>
+              <div className="space-y-2">
+                {sorted.map((a, i) => (
+                  <div key={a.ad_id} className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100">
+                    <span className={`w-6 text-center font-bold ${i < 3 ? 'text-amber-500' : 'text-slate-300'}`}>{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-700 text-sm truncate">{a.ad_name || a.ad_id}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{a.campaign_name}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-bold text-slate-800">💬 {a.messages} · 📩 {a.leads}</div>
+                      <div className="text-[11px] text-slate-400">CPA {a.cpa != null ? fmtM(a.cpa) : '—'} · chi {fmtM(a.spend)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
