@@ -2786,6 +2786,8 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
 // ---------- Modal: Tự động thêm nguồn từ Drive ----------
 const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
   const [links, setLinks] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [scanning, setScanning] = useState(false);
   const [rows, setRows] = useState(null);
   const [sel, setSel] = useState({});
@@ -2799,6 +2801,14 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
   }, []);
 
   const existingLinks = new Set(stores.flatMap(s => s.source_links || []));
+  const norm = (x) => (x || '').trim().toLowerCase();
+  // Phân loại 1 nguồn quét được: đã có (trùng link) / nghi trùng (trùng tên + gần ngày) / mới
+  const classify = (p) => {
+    if (existingLinks.has(p.link)) return { kind: 'exists' };
+    const dup = stores.find(s => norm(s.customer_name) === norm(p.name) && !(s.source_links || []).includes(p.link)
+      && s.shoot_date && p.date && Math.abs((new Date(s.shoot_date) - new Date(p.date)) / 86400000) <= 10);
+    return dup ? { kind: 'dup', store: dup } : { kind: 'new' };
+  };
 
   const doScan = async () => {
     const arr = parseLinks(links);
@@ -2809,7 +2819,8 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
       const seen = new Set();
       const parsed = (d.sources || []).map(parseSourceCandidate).filter(p => { if (seen.has(p.link)) return false; seen.add(p.link); return true; });
       setRows(parsed);
-      const s = {}; parsed.forEach(p => { s[p.driveId] = !existingLinks.has(p.link); });
+      // mặc định: nguồn MỚI được tick, nghi trùng / đã có KHÔNG tick
+      const s = {}; parsed.forEach(p => { s[p.driveId] = classify(p).kind === 'new'; });
       setSel(s);
       if (!parsed.length) toast('Không tìm thấy thư mục nguồn nào (tên dạng "DD.MM Tên khách…")', { icon: 'ℹ️' });
       else toast.success(`Tìm thấy ${parsed.length} nguồn`);
@@ -2817,7 +2828,13 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
     setScanning(false);
   };
 
-  const chosen = (rows || []).filter(p => sel[p.driveId] && !existingLinks.has(p.link));
+  const inRange = (p) => (!from || (p.date && p.date >= from)) && (!to || (p.date && p.date <= to));
+  const all = (rows || []).map(p => ({ ...p, ...classify(p) })).filter(inRange);
+  const news = all.filter(p => p.kind === 'new');
+  const dups = all.filter(p => p.kind === 'dup');
+  const existsN = all.filter(p => p.kind === 'exists').length;
+  const chosen = all.filter(p => p.kind !== 'exists' && sel[p.driveId]);
+
   const doImport = async () => {
     if (!chosen.length) { toast.error('Chọn ít nhất 1 nguồn để thêm'); return; }
     setSaving(true);
@@ -2834,40 +2851,63 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
     onSaved();
   };
 
-  const allSel = rows && rows.length > 0 && rows.filter(p => !existingLinks.has(p.link)).every(p => sel[p.driveId]);
-  const toggleAll = () => { const s = { ...sel }; (rows || []).forEach(p => { if (!existingLinks.has(p.link)) s[p.driveId] = !allSel; }); setSel(s); };
+  const Row = ({ p, warn }) => (
+    <label className="flex items-start gap-2.5 p-2.5 text-sm hover:bg-slate-50 cursor-pointer">
+      <input type="checkbox" checked={!!sel[p.driveId]} onChange={e => setSel(s => ({ ...s, [p.driveId]: e.target.checked }))} className="mt-1" />
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold text-slate-700 truncate">{p.name || '(không rõ tên)'}</div>
+        <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-2">
+          <span>ID: {p.source_id || '—'}</span><span>· Ngày: {p.date || '—'}</span><span>· DV: {p.service || '—'}</span>
+        </div>
+        {warn && p.store && <div className="text-[11px] text-amber-600 mt-0.5">⚠️ Giống nguồn đã có: <b>{p.store.customer_name}</b> · {p.store.shoot_date || '—'}</div>}
+      </div>
+    </label>
+  );
+  const toggleGroup = (grp, val) => setSel(s => { const n = { ...s }; grp.forEach(p => { n[p.driveId] = val; }); return n; });
 
   return (
     <Modal title="Tự động thêm nguồn từ Drive" onClose={onClose} wide>
-      <p className="text-sm text-slate-500 mb-2">Dán link <b>thư mục gốc</b> (thư mục dịch vụ như “Xương hàm mặt”, hoặc thư mục tổng chứa nhiều dịch vụ). Hệ thống quét sâu tìm các thư mục nguồn dạng <b>“DD.MM Tên khách…”</b> rồi tự điền tên · dịch vụ · ngày · ID · link.</p>
+      <p className="text-sm text-slate-500 mb-2">Dán link <b>thư mục gốc</b> (thư mục dịch vụ như “Xương hàm mặt”, hoặc thư mục tổng). Hệ thống quét sâu tìm các thư mục nguồn dạng <b>“DD.MM Tên khách…”</b> rồi tự điền tên · dịch vụ · ngày · ID · link.</p>
       <textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/drive/folders/... (mỗi dòng 1 link)" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-2" />
-      <button onClick={doScan} disabled={scanning} className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60 mb-3">{scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Quét thư mục</button>
+      <div className="flex items-end gap-2 flex-wrap mb-3">
+        <div><label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Từ ngày</label><input type="date" value={from} onChange={e => setFrom(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none focus:border-teal-400" /></div>
+        <div><label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Đến ngày</label><input type="date" value={to} onChange={e => setTo(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none focus:border-teal-400" /></div>
+        <button onClick={doScan} disabled={scanning} className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">{scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Quét thư mục</button>
+        {rows && <span className="text-[11px] text-slate-400 pb-2.5">Media mặc định: <b>{defMediaName}</b></span>}
+      </div>
 
-      {rows && rows.length > 0 && (
+      {rows && (
         <>
-          <div className="flex items-center justify-between mb-2">
-            <button onClick={toggleAll} className="text-xs font-semibold text-teal-600">{allSel ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}</button>
-            <span className="text-xs text-slate-400">Media phụ trách mặc định: <b>{defMediaName}</b></span>
-          </div>
-          <div className="border border-slate-100 rounded-xl divide-y divide-slate-50 max-h-[46vh] overflow-y-auto">
-            {rows.map(p => {
-              const exists = existingLinks.has(p.link);
-              return (
-                <label key={p.driveId} className={`flex items-start gap-2.5 p-2.5 text-sm ${exists ? 'opacity-50' : 'hover:bg-slate-50 cursor-pointer'}`}>
-                  <input type="checkbox" disabled={exists} checked={!!sel[p.driveId] && !exists} onChange={e => setSel(s => ({ ...s, [p.driveId]: e.target.checked }))} className="mt-1" />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-700 truncate">{p.name || '(không rõ tên)'} {exists && <span className="text-[10px] font-bold text-slate-400">· đã có</span>}</div>
-                    <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-2">
-                      <span>ID: {p.source_id || '—'}</span>
-                      <span>· Ngày: {p.date || '—'}</span>
-                      <span>· DV: {p.service || '—'}</span>
-                    </div>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
+          {rows.length > 0 && (from || to) && <p className="text-[11px] text-slate-400 mb-2">Đang lọc theo khoảng ngày — hiện {all.length}/{rows.length} nguồn.</p>}
+
+          {news.length > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <h4 className="text-sm font-bold text-teal-700 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" />Nguồn mới ({news.length})</h4>
+                <div className="flex gap-2 text-[11px] font-semibold"><button onClick={() => toggleGroup(news, true)} className="text-teal-600">Chọn hết</button><button onClick={() => toggleGroup(news, false)} className="text-slate-400">Bỏ chọn</button></div>
+              </div>
+              <div className="border border-slate-100 rounded-xl divide-y divide-slate-50 max-h-[32vh] overflow-y-auto">
+                {news.map(p => <Row key={p.driveId} p={p} />)}
+              </div>
+            </div>
+          )}
+
+          {dups.length > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <h4 className="text-sm font-bold text-amber-600 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />Nghi trùng ({dups.length}) — trùng tên &amp; gần ngày với nguồn đã có</h4>
+                <button onClick={() => toggleGroup(dups, true)} className="text-[11px] font-semibold text-amber-600">Vẫn thêm tất cả</button>
+              </div>
+              <div className="border-2 border-amber-200 bg-amber-50/40 rounded-xl divide-y divide-amber-100 max-h-[28vh] overflow-y-auto">
+                {dups.map(p => <Row key={p.driveId} p={p} warn />)}
+              </div>
+            </div>
+          )}
+
+          {news.length === 0 && dups.length === 0 && <p className="text-sm text-slate-400 py-4 text-center">Không có nguồn mới trong khoảng đã chọn.{existsN > 0 ? ` (${existsN} nguồn đã có sẵn)` : ''}</p>}
+          {existsN > 0 && <p className="text-[11px] text-slate-400 mb-2">{existsN} nguồn đã có sẵn trong kho — đã bỏ qua.</p>}
+
+          <div className="flex justify-end gap-2 mt-2">
             <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
             <button onClick={doImport} disabled={saving || !chosen.length} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 inline-flex items-center gap-1.5">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}Thêm {chosen.length} nguồn</button>
           </div>
