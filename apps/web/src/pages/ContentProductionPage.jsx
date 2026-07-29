@@ -469,6 +469,10 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       () => patchClip(c.id, { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ'),
       { okLabel: 'Duyệt chạy Ads' });
   };
+  // Bật/tắt nhãn "Đăng ngay" — hệ thống ngoài đọc cờ này để tự đăng video lên page
+  const markPostNow = (c, on) => patchClip(c.id,
+    { post_now: on, post_now_at: on ? new Date().toISOString() : null, post_status: on ? 'queued' : null, ads_id: me.id },
+    on ? 'Đã bật ĐĂNG NGAY — hệ thống sẽ tự đăng lên page' : 'Đã huỷ Đăng ngay');
   // Mở thẳng link Google Drive nguồn (thư mục tổng) trong tab mới
   const openSource = (s) => {
     const links = (s.source_links || []).filter(Boolean);
@@ -863,7 +867,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           <div className="space-y-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} editorAvg={editorAvg(c.editor_id)}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip} />
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip} onPostNow={markPostNow} />
             ))}
           </div>
         )}
@@ -1872,7 +1876,7 @@ const LeaderboardCard = ({ lb, now, onSeeAll }) => (
 );
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onPostNow }) => {
   const mine = c.editor_id === me?.id;
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
@@ -1890,6 +1894,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
   const clipUrl = (c.clip_links || [])[0];
   const menuItems = [
     canAds && !c.approved_to_run && { label: 'Duyệt chạy Ads', icon: <CheckCircle2 className="w-4 h-4" />, onClick: onApproveRun },
+    canAds && c.post_now && c.post_status !== 'posted' && { label: 'Huỷ Đăng ngay', icon: <X className="w-4 h-4" />, onClick: () => onPostNow?.(c, false) },
     canAds && { label: c.approved_to_run ? 'Ghi chú / đánh giá' : 'Xem & góp ý', icon: <Pencil className="w-4 h-4" />, onClick: onReview },
     (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
     (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
@@ -1971,6 +1976,8 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
           ? <span className={`text-sm font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap ${cat.cls}`}>{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
           : <span className="text-xs text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
         {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
+        {c.post_status === 'posted' ? <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full whitespace-nowrap">✅ Đã đăng page</span>
+          : c.post_now ? <span className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full whitespace-nowrap">⚡ Chờ đăng page</span> : null}
 
         <span className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="text-xs text-slate-400">Điểm Editor</span>
@@ -1987,6 +1994,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
 
         <div className="ml-auto flex items-center gap-2">
           {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-3 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>}
+          {canAds && c.approved_to_run && !c.post_now && <button onClick={() => onPostNow?.(c, true)} title="Gắn nhãn Đăng ngay để hệ thống tự đăng lên page" className="text-xs font-bold text-white px-3 h-9 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 inline-flex items-center gap-1 whitespace-nowrap">⚡ Đăng ngay</button>}
           <button onClick={onView} className="text-sm font-semibold text-white px-4 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 whitespace-nowrap">Xem chi tiết</button>
           <ActionMenu items={menuItems} />
         </div>
@@ -2408,6 +2416,7 @@ const WinRuleModal = ({ rule, onClose, onSave }) => {
 // KHÔNG chấm điểm tay ở đây — điểm/Win do hệ thống tự tính từ chỉ số Ads sau khi chạy.
 const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
   const [feedback, setFeedback] = useState(clip.ads_feedback || '');
+  const [postNow, setPostNow] = useState(clip.post_now || false);
   const [saving, setSaving] = useState(false);
 
   const submit = async (action) => {
@@ -2420,6 +2429,7 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
       approved_to_run: approve,
       evaluated_at: approve ? new Date().toISOString() : null,
     };
+    if (approve && postNow && !clip.post_now) { payload.post_now = true; payload.post_now_at = new Date().toISOString(); payload.post_status = 'queued'; }
     await onSaved(payload);
     setSaving(false);
   };
@@ -2434,7 +2444,15 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
 
       <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý cho editor</label>
       <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={3} placeholder="VD: đổi hook 3 giây đầu, chỉnh lại nhạc…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-2" />
-      <p className="text-[11px] text-slate-400 mb-4 flex items-start gap-1"><BarChart2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />Điểm &amp; Win sẽ do hệ thống tự chấm theo chỉ số Ads sau khi clip chạy (không cần chấm tay).</p>
+      <p className="text-[11px] text-slate-400 mb-3 flex items-start gap-1"><BarChart2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />Điểm &amp; Win sẽ do hệ thống tự chấm theo chỉ số Ads sau khi clip chạy (không cần chấm tay).</p>
+
+      <label className="flex items-start gap-2.5 p-3 rounded-xl border-2 border-orange-200 bg-orange-50/50 cursor-pointer mb-4">
+        <input type="checkbox" checked={postNow} onChange={e => setPostNow(e.target.checked)} className="mt-0.5" />
+        <span className="text-sm">
+          <span className="font-bold text-orange-700">⚡ Đăng ngay lên page</span>
+          <span className="block text-[11px] text-slate-500">Gắn nhãn để hệ thống tự quét video này và đăng lên page ngay sau khi duyệt.</span>
+        </span>
+      </label>
 
       <div className="flex justify-end gap-2">
         <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa — gửi lại editor</button>
