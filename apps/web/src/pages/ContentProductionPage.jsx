@@ -46,6 +46,19 @@ async function scanDrive(links) {
   if (!data?.ok) throw new Error(data?.error || 'Soi Drive thất bại');
   return { ...data, linkCount: valid.length };
 }
+// Quét TỪNG FILE (video/ảnh) trong Drive — trả về danh sách chi tiết (mode: 'files')
+async function scanDriveFiles(links) {
+  const valid = (links || []).filter(l => typeof l === 'string' && /^https?:\/\//i.test(l));
+  if (!valid.length) return { ok: true, files: [] };
+  const { data, error } = await supabase.functions.invoke('scan-drive-folder', { body: { links: valid, mode: 'files' } });
+  if (error) throw new Error(error.message || 'Lỗi gọi quét file');
+  if (!data?.ok) throw new Error(data?.error || 'Quét file thất bại');
+  return data;
+}
+// Helper hiển thị cho kho tài sản
+const fmtSize = (b) => { const n = Number(b) || 0; if (n >= 1073741824) return (n / 1073741824).toFixed(1) + ' GB'; if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB'; if (n >= 1024) return (n / 1024).toFixed(0) + ' KB'; return n + ' B'; };
+const fmtDur = (ms) => { if (!ms) return null; const s = Math.round(ms / 1000); const m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
+const assetThumb = (a) => a?.drive_id ? `https://drive.google.com/thumbnail?id=${a.drive_id}&sz=w400` : (a?.thumb_link || null);
 // Soi rồi tự lưu danh sách TÊN thư mục con (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
   try {
@@ -264,6 +277,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
 
   const [stores, setStores] = useState([]);
   const [clips, setClips] = useState([]);
+  const [assets, setAssets] = useState([]);   // kho tài sản media (từng file Drive)
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
   const [search, setSearch] = useState('');
@@ -276,6 +290,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const [khoTag, setKhoTag] = useState('');         // lọc theo nhãn
   const [khoUndone, setKhoUndone] = useState(false); // chỉ nguồn chưa dựng clip nào
   const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
+  const [khoMode, setKhoMode] = useState('library'); // 'library' (kho tài sản) | 'sources' (quản lý nguồn)
+  const [scanningFiles, setScanningFiles] = useState(false);
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
   const [videoView, setVideoView] = useState('card'); // 'card' | 'grid' (xem lưới thumbnail)
@@ -301,14 +317,16 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
-    const [scRes, clRes, wrRes] = await Promise.all([
+    const [scRes, clRes, wrRes, maRes] = await Promise.all([
       supabase.from('media_customers').select('*, media:profiles!media_id(full_name)').order('updated_at', { ascending: false }),
       supabase.from('media_clips').select('*, editor:profiles!editor_id(full_name), ads:profiles!ads_id(full_name)').order('updated_at', { ascending: false }),
       supabase.from('ads_win_rule').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('media_assets').select('*').order('created_time', { ascending: false, nullsFirst: false }).limit(5000),
     ]);
     setStores(scRes.data || []);
     setClips(clRes.data || []);
     if (wrRes.data) setWinRule(wrRes.data);
+    if (maRes.data) setAssets(maRes.data);
     didLoad.current = true;
     setLoading(false);
   }, []);
@@ -464,6 +482,39 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       }
     } catch (e) { toast.error('Soi lỗi: ' + e.message, { id: 'scan-' + s.id }); }
   };
+  // Quét TỪNG FILE từ Drive vào kho tài sản (media_assets)
+  const scanAllFiles = async () => {
+    const targets = stores.filter(s => (s.source_links || []).length > 0);
+    if (!targets.length) { toast.error('Không có khách nào có link Drive'); return; }
+    setScanningFiles(true);
+    const tid = 'scan-files';
+    let done = 0, totalFiles = 0, failCol = false;
+    toast.loading(`Đang quét file Drive 0/${targets.length}…`, { id: tid });
+    for (const s of targets) {
+      try {
+        const d = await scanDriveFiles(s.source_links);
+        const rows = (d.files || []).map(f => ({
+          drive_id: f.drive_id, media_customer_id: s.id, name: f.name, kind: f.kind, mime: f.mime,
+          size_bytes: f.size || 0, duration_ms: f.duration_ms ?? null, folder: f.folder || null,
+          web_link: f.link, thumb_link: f.thumb, created_time: f.created,
+        }));
+        if (rows.length) {
+          const { error } = await supabase.from('media_assets').upsert(rows, { onConflict: 'drive_id' });
+          if (error) failCol = true; else totalFiles += rows.length;
+        }
+      } catch { /* bỏ qua khách lỗi */ }
+      done++;
+      toast.loading(`Đang quét file Drive ${done}/${targets.length}… (${totalFiles} file)`, { id: tid });
+    }
+    setScanningFiles(false);
+    if (failCol) toast.error('Lưu lỗi — cần chạy media_assets.sql', { id: tid, duration: 9000 });
+    else toast.success(`Đã quét ${totalFiles} file từ ${targets.length} nguồn`, { id: tid, duration: 6000 });
+    loadData();
+  };
+  const toggleFav = async (a) => {
+    setAssets(prev => prev.map(x => x.id === a.id ? { ...x, favorite: !x.favorite } : x));
+    await supabase.from('media_assets').update({ favorite: !a.favorite }).eq('id', a.id);
+  };
   const delClip = (id) => ask('Xoá clip này?', async () => {
     setClips(prev => prev.filter(c => c.id !== id));
     const { error } = await supabase.from('media_clips').delete().eq('id', id);
@@ -492,6 +543,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     return a;
   }, {});
   const editorAvg = (id) => { const e = editorAvgMap[id]; return e && e.n ? e.sum / e.n : null; };
+  const builtCustomerIds = new Set(clips.map(c => c.media_customer_id));
 
   // Danh sách "Việc cần xử lý" (dùng chung cho panel & trang Tổng quan)
   const clearKhoFilters = () => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoTag(''); setKhoPhase('all'); };
@@ -571,10 +623,18 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           </p>
         </div>
         {tab === 'kho' && (canAddMedia || canEdit) && (
-          <div className="flex items-center gap-2">
-            <button onClick={rescanAll} disabled={scanningAll} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">
-              {scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả Drive
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {khoMode === 'library' ? (
+              <>
+                <button onClick={() => setKhoMode('sources')} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><FolderOpen className="w-4 h-4" /> Quản lý nguồn</button>
+                <button onClick={scanAllFiles} disabled={scanningFiles} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">{scanningFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Kết nối Drive</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setKhoMode('library')} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><LayoutGrid className="w-4 h-4" /> Thư viện</button>
+                <button onClick={rescanAll} disabled={scanningAll} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">{scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả Drive</button>
+              </>
+            )}
             {canAddMedia && (
               <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
                 <Plus className="w-4 h-4" /> Thêm media
@@ -589,8 +649,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         )}
       </div>
 
-      {/* Kho media: Việc cần xử lý full-width */}
-      {tab === 'kho' && <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} />}
+      {/* Kho media (chế độ Quản lý nguồn): Việc cần xử lý full-width */}
+      {tab === 'kho' && khoMode === 'sources' && <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} />}
 
       {/* Video Ads: Việc cần xử lý + Bảng điểm Editor cạnh nhau (theo mockup) */}
       {tab === 'video' && (
@@ -600,7 +660,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         </div>
       )}
 
-      <div className={`gap-2 flex-wrap ${tab === 'overview' ? 'hidden' : 'flex'}`}>
+      <div className={`gap-2 flex-wrap ${(tab === 'overview' || (tab === 'kho' && khoMode === 'library')) ? 'hidden' : 'flex'}`}>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
@@ -656,8 +716,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         )}
       </div>
 
-      {/* Chip lọc theo giai đoạn — Kho media */}
-      {tab === 'kho' && (
+      {/* Chip lọc theo giai đoạn — Kho media (chế độ Quản lý nguồn) */}
+      {tab === 'kho' && khoMode === 'sources' && (
         <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
           {KHO_PHASES.map(p => {
             const active = khoPhase === p.id;
@@ -677,6 +737,9 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         <AdsOverview clips={clips} stores={stores} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} />
       ) : tab === 'images' ? (
         <ImageLibrary me={me} canWrite={canDesign} />
+      ) : tab === 'kho' && khoMode === 'library' ? (
+        <MediaVault assets={assets} storeOf={storeOf} builtCustomerIds={builtCustomerIds} scanning={scanningFiles} onScan={scanAllFiles}
+          onToggleFav={toggleFav} canAddMedia={canAddMedia} onAddMedia={() => setAddOpen(true)} onManageSources={() => setKhoMode('sources')} />
       ) : tab === 'kho' ? (
         visStores.length === 0 ? (
           <Empty icon={FolderOpen} title="Kho media trống"
@@ -1481,6 +1544,214 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ================= KHO TÀI SẢN MEDIA (thư viện file Drive) =================
+const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onToggleFav, canAddMedia, onAddMedia, onManageSources }) => {
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState('all');       // all | video | image | fav | unused | recent
+  const [sort, setSort] = useState('new');     // new | size | name
+  const [view, setView] = useState('grid');    // grid | list
+  const [page, setPage] = useState(1);
+  const [preview, setPreview] = useState(null);
+  const PER = 16;
+
+  const isUnused = (a) => !builtCustomerIds.has(a.media_customer_id);
+  const recentTs = Date.now() - 30 * 86400000;
+  const counts = {
+    all: assets.length,
+    video: assets.filter(a => a.kind === 'video').length,
+    image: assets.filter(a => a.kind === 'image').length,
+    fav: assets.filter(a => a.favorite).length,
+    unused: assets.filter(isUnused).length,
+    recent: assets.filter(a => a.scanned_at && new Date(a.scanned_at).getTime() > recentTs).length,
+  };
+  const totalSize = assets.reduce((s, a) => s + (Number(a.size_bytes) || 0), 0);
+
+  const ql = q.trim().toLowerCase();
+  const list = assets.filter(a => {
+    if (cat === 'video' && a.kind !== 'video') return false;
+    if (cat === 'image' && a.kind !== 'image') return false;
+    if (cat === 'fav' && !a.favorite) return false;
+    if (cat === 'unused' && !isUnused(a)) return false;
+    if (ql) {
+      const cust = storeOf(a.media_customer_id)?.customer_name || '';
+      if (!((a.name || '').toLowerCase().includes(ql) || cust.toLowerCase().includes(ql) || (a.folder || '').toLowerCase().includes(ql))) return false;
+    }
+    return true;
+  }).sort((x, y) => {
+    if (sort === 'size') return (Number(y.size_bytes) || 0) - (Number(x.size_bytes) || 0);
+    if (sort === 'name') return (x.name || '').localeCompare(y.name || '');
+    return new Date(y.created_time || y.scanned_at || 0) - new Date(x.created_time || x.scanned_at || 0);
+  });
+  const pages = Math.max(1, Math.ceil(list.length / PER));
+  const cur = Math.min(page, pages);
+  const shown = list.slice((cur - 1) * PER, cur * PER);
+  const reset = (fn) => { fn(); setPage(1); };
+
+  const kpis = [
+    { icon: Film, tone: 'bg-violet-50 text-violet-600', value: counts.all, label: 'Tổng media', sub: 'file trong kho' },
+    { icon: PlayCircle, tone: 'bg-blue-50 text-blue-600', value: counts.video, label: 'Video', sub: counts.all ? `${Math.round(counts.video / counts.all * 100)}% tổng media` : '—' },
+    { icon: Image, tone: 'bg-teal-50 text-teal-600', value: counts.image, label: 'Hình ảnh', sub: counts.all ? `${Math.round(counts.image / counts.all * 100)}% tổng media` : '—' },
+    { icon: FolderOpen, tone: 'bg-orange-50 text-orange-600', value: fmtSize(totalSize), label: 'Dung lượng', sub: 'đã quét' },
+    { icon: Star, tone: 'bg-amber-50 text-amber-600', value: counts.unused, label: 'Chưa khai thác', sub: 'cần dựng clip' },
+  ];
+  const CATS = [
+    ['all', 'Tất cả media', counts.all], ['video', 'Video', counts.video], ['image', 'Hình ảnh', counts.image],
+    ['unused', 'Chưa khai thác', counts.unused], ['fav', 'Yêu thích', counts.fav],
+  ];
+  const chips = [];
+  if (cat !== 'all') chips.push({ label: CATS.find(c => c[0] === cat)?.[1] || cat, clear: () => reset(() => setCat('all')) });
+  if (ql) chips.push({ label: `Tìm: "${q}"`, clear: () => reset(() => setQ('')) });
+
+  if (assets.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
+        <span className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-500 grid place-items-center mx-auto mb-3"><FolderOpen className="w-8 h-8" /></span>
+        <h3 className="font-bold text-slate-800 text-lg">Kho tài sản còn trống</h3>
+        <p className="text-sm text-slate-400 mt-1 mb-4 max-w-md mx-auto">Bấm “Kết nối Drive” để quét toàn bộ video &amp; ảnh trong các nguồn Drive về đây (ảnh thu nhỏ, dung lượng, thư mục).</p>
+        <button onClick={onScan} disabled={scanning} className="inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 disabled:opacity-60">{scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />}Kết nối &amp; quét Drive</button>
+        <button onClick={onManageSources} className="block mx-auto mt-3 text-xs font-semibold text-slate-400 hover:text-slate-600">Quản lý nguồn theo khách hàng →</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* KPI */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {kpis.map((k, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex items-center gap-2.5">
+              <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${k.tone}`}><k.icon className="w-5 h-5" /></span>
+              <span className="text-[13px] font-semibold text-slate-500 leading-tight">{k.label}</span>
+            </div>
+            <div className="text-[24px] font-extrabold text-slate-800 mt-2 tabular-nums leading-none">{k.value}</div>
+            <div className="text-[11px] text-slate-400 mt-1.5">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
+        {/* Cột trái */}
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide px-2 mb-1.5">Danh mục nhanh</h4>
+            {CATS.map(([k, l, n]) => (
+              <button key={k} onClick={() => reset(() => setCat(k))} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-medium transition ${cat === k ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                <span className="inline-flex items-center gap-2">{k === 'video' ? <PlayCircle className="w-4 h-4" /> : k === 'image' ? <Image className="w-4 h-4" /> : k === 'fav' ? <Star className="w-4 h-4" /> : k === 'unused' ? <Star className="w-4 h-4" /> : <Film className="w-4 h-4" />}{l}</span>
+                <span className="text-xs text-slate-400">{n}</span>
+              </button>
+            ))}
+          </div>
+          {chips.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1 mb-2">Bộ lọc đã chọn</h4>
+              <div className="flex flex-col gap-1.5">
+                {chips.map((c, i) => (
+                  <button key={i} onClick={c.clear} className="flex items-center justify-between gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-2.5 py-1.5 hover:bg-slate-100">
+                    <span className="truncate">{c.label}</span><X className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                  </button>
+                ))}
+                <button onClick={() => reset(() => { setCat('all'); setQ(''); })} className="text-xs font-semibold text-rose-500 hover:underline text-left px-1 mt-1">Xóa tất cả</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Cột phải */}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input value={q} onChange={e => reset(() => setQ(e.target.value))} placeholder="Tìm theo tên file, khách hàng, thư mục…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
+            </div>
+            <select value={sort} onChange={e => setSort(e.target.value)} className="h-9 px-3 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-teal-400">
+              <option value="new">Sắp xếp: Mới nhất</option>
+              <option value="size">Dung lượng lớn</option>
+              <option value="name">Tên A→Z</option>
+            </select>
+            <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+              <button onClick={() => setView('grid')} className={`w-9 h-9 grid place-items-center ${view === 'grid' ? 'bg-teal-600 text-white' : 'text-slate-400'}`}><LayoutGrid className="w-4 h-4" /></button>
+              <button onClick={() => setView('list')} className={`w-9 h-9 grid place-items-center ${view === 'list' ? 'bg-teal-600 text-white' : 'text-slate-400'}`}><List className="w-4 h-4" /></button>
+            </div>
+          </div>
+
+          {shown.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400 text-sm">Không có file khớp bộ lọc.</div>
+          ) : view === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+              {shown.map(a => {
+                const st = storeOf(a.media_customer_id); const dur = fmtDur(a.duration_ms); const thumb = assetThumb(a);
+                return (
+                  <div key={a.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
+                    <button onClick={() => setPreview(a)} className="relative block w-full aspect-video bg-slate-900">
+                      {thumb ? <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+                      <span className="absolute inset-0 grid place-items-center"><span className="w-10 h-10 rounded-full bg-black/40 grid place-items-center group-hover:bg-black/60 transition">{a.kind === 'video' ? <Play className="w-4 h-4 text-white fill-white ml-0.5" /> : <ZoomIn className="w-4 h-4 text-white" />}</span></span>
+                      {dur && <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">{dur}</span>}
+                      {a.kind === 'image' && <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5"><Image className="w-2.5 h-2.5" />Ảnh</span>}
+                    </button>
+                    <div className="p-2.5">
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="text-sm font-semibold text-slate-700 truncate">{a.name || 'Không tên'}</div>
+                        <button onClick={() => onToggleFav(a)} className="shrink-0 text-slate-300 hover:text-amber-400"><Star className={`w-4 h-4 ${a.favorite ? 'fill-amber-400 text-amber-400' : ''}`} /></button>
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}</div>
+                      <div className="flex items-center gap-1 flex-wrap mt-1.5">
+                        {a.folder && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 truncate max-w-[110px]">{a.folder}</span>}
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{fmtSize(a.size_bytes)}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-300 mt-1">{a.created_time ? new Date(a.created_time).toLocaleDateString('vi-VN') : ''}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
+              {shown.map(a => {
+                const st = storeOf(a.media_customer_id); const dur = fmtDur(a.duration_ms); const thumb = assetThumb(a);
+                return (
+                  <div key={a.id} className="flex items-center gap-3 p-2.5 hover:bg-slate-50">
+                    <button onClick={() => setPreview(a)} className="relative w-16 h-12 rounded-lg overflow-hidden bg-slate-900 shrink-0">
+                      {thumb ? <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+                      <span className="absolute inset-0 grid place-items-center text-white/70">{a.kind === 'video' ? <Play className="w-4 h-4 fill-white" /> : <Image className="w-4 h-4" />}</span>
+                      {dur && <span className="absolute bottom-0.5 right-0.5 text-[9px] font-bold text-white bg-black/60 px-1 rounded">{dur}</span>}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-slate-700 truncate">{a.name || 'Không tên'}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}{a.folder ? ` · ${a.folder}` : ''}</div>
+                    </div>
+                    <span className="text-[11px] text-slate-400 shrink-0 hidden sm:block">{fmtSize(a.size_bytes)}</span>
+                    <button onClick={() => onToggleFav(a)} className="shrink-0 text-slate-300 hover:text-amber-400"><Star className={`w-4 h-4 ${a.favorite ? 'fill-amber-400 text-amber-400' : ''}`} /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Phân trang */}
+          {pages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 mt-4">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={cur === 1} className="w-8 h-8 grid place-items-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
+              <span className="text-sm text-slate-500 px-2">Trang {cur}/{pages}</span>
+              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={cur === pages} className="w-8 h-8 grid place-items-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {preview && (
+        <Modal title={preview.name || 'Xem media'} onClose={() => setPreview(null)}>
+          <VideoPreview url={preview.web_link || `https://drive.google.com/file/d/${preview.drive_id}/view`} className="w-full aspect-video" />
+          <div className="flex items-center justify-between mt-3 text-sm">
+            <span className="text-slate-500">{storeOf(preview.media_customer_id)?.customer_name || ''}{preview.folder ? ` · ${preview.folder}` : ''} · {fmtSize(preview.size_bytes)}</span>
+            <a href={preview.web_link || `https://drive.google.com/file/d/${preview.drive_id}/view`} target="_blank" rel="noopener noreferrer" className="text-teal-600 font-semibold inline-flex items-center gap-1 hover:underline"><ExternalLink className="w-4 h-4" />Mở Drive</a>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -131,11 +131,17 @@ Deno.serve(async (req) => {
 
     const token = await getAccessToken(sa);
 
+    // mode: 'files' -> trả về danh sách TỪNG file (ảnh thu nhỏ, dung lượng, thời lượng, thư mục)
+    const wantFiles = body.mode === "files";
+    const fileFields = wantFiles
+      ? "files(id,name,mimeType,size,thumbnailLink,webViewLink,createdTime,videoMediaMetadata)"
+      : "files(id,name,mimeType)";
+
     // Liệt kê con của 1 thư mục
-    const listChildren = async (fid: string): Promise<{ ok: boolean; status: number; files: { id: string; name: string; mimeType: string }[] }> => {
+    const listChildren = async (fid: string): Promise<{ ok: boolean; status: number; files: Record<string, any>[] }> => {
       const params = new URLSearchParams({
         q: `'${fid}' in parents and trashed = false`,
-        fields: "files(id,name,mimeType)", pageSize: "1000",
+        fields: fileFields, pageSize: "1000",
         supportsAllDrives: "true", includeItemsFromAllDrives: "true",
       });
       const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -146,8 +152,23 @@ Deno.serve(async (req) => {
     const FOLDER = "application/vnd.google-apps.folder";
 
     const names: string[] = [];
+    const files: Record<string, unknown>[] = [];
+    const MAX_FILES = 3000;
     let readable = 0, priv = 0, noId = 0, videoCount = 0, imageCount = 0;
     const diag: string[] = [];
+    const pushFile = (f: Record<string, any>, folder: string) => {
+      const kind = (f.mimeType || "").startsWith("video/") ? "video" : "image";
+      if (kind === "video") videoCount++; else imageCount++;
+      if (wantFiles && files.length < MAX_FILES) {
+        files.push({
+          drive_id: f.id, name: f.name || "", kind, mime: f.mimeType || "",
+          size: Number(f.size) || 0,
+          duration_ms: f.videoMediaMetadata?.durationMillis ? Number(f.videoMediaMetadata.durationMillis) : null,
+          thumb: f.thumbnailLink || null, link: f.webViewLink || null,
+          created: f.createdTime || null, folder,
+        });
+      }
+    };
     for (const link of links) {
       const rootId = extractFolderId(link);
       if (!rootId) { noId++; diag.push("no-id"); continue; }
@@ -155,29 +176,29 @@ Deno.serve(async (req) => {
       if (!first.ok) { priv++; diag.push("http" + first.status); continue; }
       readable++;
       diag.push("ok:" + first.files.length);
-      // BFS đếm video/ảnh toàn bộ cây con (giới hạn ~80 thư mục để tránh quá tải)
-      const queue: string[] = [];
+      // BFS toàn bộ cây con (giới hạn số thư mục để tránh quá tải)
+      const queue: { id: string; name: string }[] = [];
       let guard = 0;
+      const maxFolders = wantFiles ? 250 : 80;
       for (const f of first.files) {
-        if (f.mimeType === FOLDER) { names.push(f.name || ""); queue.push(f.id); }
-        else if ((f.mimeType || "").startsWith("video/")) videoCount++;
-        else if ((f.mimeType || "").startsWith("image/")) imageCount++;
+        if (f.mimeType === FOLDER) { names.push(f.name || ""); queue.push({ id: f.id, name: f.name || "" }); }
+        else if ((f.mimeType || "").startsWith("video/") || (f.mimeType || "").startsWith("image/")) pushFile(f, "");
       }
-      while (queue.length && guard < 80) {
+      while (queue.length && guard < maxFolders) {
         guard++;
-        const fid = queue.shift()!;
-        const sub = await listChildren(fid);
+        const cur = queue.shift()!;
+        const sub = await listChildren(cur.id);
         if (!sub.ok) continue;
         for (const f of sub.files) {
-          if (f.mimeType === FOLDER) queue.push(f.id);
-          else if ((f.mimeType || "").startsWith("video/")) videoCount++;
-          else if ((f.mimeType || "").startsWith("image/")) imageCount++;
+          if (f.mimeType === FOLDER) queue.push({ id: f.id, name: f.name || "" });
+          else if ((f.mimeType || "").startsWith("video/") || (f.mimeType || "").startsWith("image/")) pushFile(f, cur.name);
         }
       }
     }
 
-    const types = [...new Set([...keywordTypes(names), ...(await geminiTypes(names))])];
-    return json({ ok: true, types, folders: names.slice(0, 100), videoCount, imageCount, readableLinks: readable, privateLinks: priv, noId, diag });
+    // Chế độ 'files' KHÔNG gọi AI (miễn phí) — phân loại thư mục chỉ dùng ở chế độ đếm.
+    const types = wantFiles ? keywordTypes(names) : [...new Set([...keywordTypes(names), ...(await geminiTypes(names))])];
+    return json({ ok: true, types, folders: names.slice(0, 100), videoCount, imageCount, files: wantFiles ? files : undefined, fileCount: files.length, readableLinks: readable, privateLinks: priv, noId, diag });
   } catch (e) {
     console.error("scan-drive-folder error", e);
     return json({ ok: false, error: String((e as Error)?.message || e) });
