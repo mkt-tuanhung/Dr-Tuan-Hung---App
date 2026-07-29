@@ -1377,36 +1377,26 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
             <button onClick={onGoVideo} className="text-xs font-semibold text-teal-600 hover:underline">Xem tất cả →</button>
           </div>
           {recent.length === 0 ? <p className="text-sm text-slate-400 py-6 text-center">Chưa có clip nào</p> : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="text-[10px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
-                  <th className="text-left font-semibold py-2">Video Ads</th>
-                  <th className="text-left font-semibold py-2">Khách hàng</th>
-                  <th className="text-left font-semibold py-2">Trạng thái</th>
-                  <th className="text-right font-semibold py-2">Cập nhật</th>
-                </tr></thead>
-                <tbody>
-                  {recent.map(c => {
-                    const st = storeOf(c.media_customer_id); const thumb = (c.thumb_links || [])[0];
-                    const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; const fb = fbStatusInfo(c.fb_status);
-                    const badge = fb || { label: STAGE[eff]?.label || eff, cls: STAGE[eff]?.cls || 'bg-slate-100 text-slate-500' };
-                    const d = c.fb_synced_at || c.submitted_at || c.created_at;
-                    return (
-                      <tr key={c.id} onClick={() => onOpenClip(c)} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer">
-                        <td className="py-2 pr-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-9 h-9 rounded-lg overflow-hidden bg-slate-800 grid place-items-center shrink-0">{thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" /> : <PlayCircle className="w-4 h-4 text-white/60" />}</span>
-                            <span className="font-semibold text-slate-700 truncate max-w-[170px]">{c.title || st?.customer_name || 'Clip'}</span>
-                          </div>
-                        </td>
-                        <td className="py-2 pr-2 text-slate-500 truncate max-w-[130px]">{st?.customer_name || '—'}</td>
-                        <td className="py-2 pr-2"><span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span></td>
-                        <td className="py-2 text-right text-[11px] text-slate-400 whitespace-nowrap">{d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="divide-y divide-slate-50">
+              {recent.map(c => {
+                const st = storeOf(c.media_customer_id); const thumb = (c.thumb_links || [])[0];
+                const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; const fb = fbStatusInfo(c.fb_status);
+                const badge = fb || { label: STAGE[eff]?.label || eff, cls: STAGE[eff]?.cls || 'bg-slate-100 text-slate-500' };
+                const d = c.fb_synced_at || c.submitted_at || c.created_at;
+                return (
+                  <button key={c.id} onClick={() => onOpenClip(c)} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-slate-50 rounded-lg px-1 -mx-1">
+                    <span className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 grid place-items-center shrink-0">{thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" /> : <PlayCircle className="w-4 h-4 text-white/60" />}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-slate-700 truncate">{c.title || st?.customer_name || 'Clip'}</span>
+                      <span className="block text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}</span>
+                    </span>
+                    <span className="shrink-0 flex flex-col items-end gap-0.5">
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badge.cls}`}>{badge.label}</span>
+                      <span className="text-[11px] text-slate-400 whitespace-nowrap">{d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '—'}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
