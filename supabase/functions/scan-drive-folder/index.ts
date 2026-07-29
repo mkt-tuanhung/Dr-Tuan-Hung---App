@@ -137,23 +137,31 @@ Deno.serve(async (req) => {
       ? "files(id,name,mimeType,size,thumbnailLink,webViewLink,createdTime,videoMediaMetadata)"
       : "files(id,name,mimeType)";
 
-    // Liệt kê con của 1 thư mục
+    // Liệt kê con của 1 thư mục — CÓ lật trang (pageToken) để lấy HẾT file, không dừng ở 1000
     const listChildren = async (fid: string): Promise<{ ok: boolean; status: number; files: Record<string, any>[] }> => {
-      const params = new URLSearchParams({
-        q: `'${fid}' in parents and trashed = false`,
-        fields: fileFields, pageSize: "1000",
-        supportsAllDrives: "true", includeItemsFromAllDrives: "true",
-      });
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return { ok: false, status: res.status, files: [] };
-      const data = await res.json();
-      return { ok: true, status: 200, files: data.files || [] };
+      const out: Record<string, any>[] = [];
+      let pageToken = "";
+      for (let p = 0; p < 30; p++) { // tối đa 30 trang = 30.000 file / thư mục
+        const params = new URLSearchParams({
+          q: `'${fid}' in parents and trashed = false`,
+          fields: `nextPageToken,${fileFields}`, pageSize: "1000",
+          supportsAllDrives: "true", includeItemsFromAllDrives: "true",
+        });
+        if (pageToken) params.set("pageToken", pageToken);
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { if (p === 0) return { ok: false, status: res.status, files: [] }; break; }
+        const data = await res.json();
+        if (Array.isArray(data.files)) out.push(...data.files);
+        if (!data.nextPageToken) break;
+        pageToken = data.nextPageToken;
+      }
+      return { ok: true, status: 200, files: out };
     };
     const FOLDER = "application/vnd.google-apps.folder";
 
     const names: string[] = [];
     const files: Record<string, unknown>[] = [];
-    const MAX_FILES = 3000;
+    const MAX_FILES = 20000;
     let readable = 0, priv = 0, noId = 0, videoCount = 0, imageCount = 0;
     const diag: string[] = [];
     const pushFile = (f: Record<string, any>, folder: string) => {
@@ -179,7 +187,7 @@ Deno.serve(async (req) => {
       // BFS toàn bộ cây con (giới hạn số thư mục để tránh quá tải)
       const queue: { id: string; name: string }[] = [];
       let guard = 0;
-      const maxFolders = wantFiles ? 250 : 80;
+      const maxFolders = wantFiles ? 600 : 80;
       for (const f of first.files) {
         if (f.mimeType === FOLDER) { names.push(f.name || ""); queue.push({ id: f.id, name: f.name || "" }); }
         else if ((f.mimeType || "").startsWith("video/") || (f.mimeType || "").startsWith("image/")) pushFile(f, "");

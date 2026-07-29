@@ -317,16 +317,23 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
-    const [scRes, clRes, wrRes, maRes] = await Promise.all([
+    const [scRes, clRes, wrRes] = await Promise.all([
       supabase.from('media_customers').select('*, media:profiles!media_id(full_name)').order('updated_at', { ascending: false }),
       supabase.from('media_clips').select('*, editor:profiles!editor_id(full_name), ads:profiles!ads_id(full_name)').order('updated_at', { ascending: false }),
       supabase.from('ads_win_rule').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('media_assets').select('*').order('created_time', { ascending: false, nullsFirst: false }).limit(5000),
     ]);
     setStores(scRes.data || []);
     setClips(clRes.data || []);
     if (wrRes.data) setWinRule(wrRes.data);
-    if (maRes.data) setAssets(maRes.data);
+    // Kho tài sản: nạp phân trang (tránh giới hạn 1000 dòng của PostgREST)
+    const allAssets = [];
+    for (let from = 0; from < 60000; from += 1000) {
+      const { data } = await supabase.from('media_assets').select('*').order('created_time', { ascending: false, nullsFirst: false }).range(from, from + 999);
+      if (!data || !data.length) break;
+      allAssets.push(...data);
+      if (data.length < 1000) break;
+    }
+    setAssets(allAssets);
     didLoad.current = true;
     setLoading(false);
   }, []);
@@ -499,8 +506,12 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           web_link: f.link, thumb_link: f.thumb, created_time: f.created,
         }));
         if (rows.length) {
-          const { error } = await supabase.from('media_assets').upsert(rows, { onConflict: 'drive_id' });
-          if (error) failCol = true; else totalFiles += rows.length;
+          let rowErr = false;
+          for (let i = 0; i < rows.length; i += 500) {
+            const { error } = await supabase.from('media_assets').upsert(rows.slice(i, i + 500), { onConflict: 'drive_id' });
+            if (error) { rowErr = true; failCol = true; }
+          }
+          if (!rowErr) totalFiles += rows.length;
         }
       } catch { /* bỏ qua khách lỗi */ }
       done++;
