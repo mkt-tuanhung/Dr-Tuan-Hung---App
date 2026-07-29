@@ -75,6 +75,19 @@ const AdsReportPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const [syncingCost, setSyncingCost] = useState(false);
+  const syncDailyCost = async () => {
+    setSyncingCost(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fb-daily-cost', { body: {} });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Lỗi lấy chi phí');
+      toast.success(`Đã cập nhật chi phí ${data.date}: ${new Intl.NumberFormat('vi-VN').format(data.spend)}đ`);
+      loadData();
+    } catch (e) { toast.error('Lỗi: ' + e.message); }
+    setSyncingCost(false);
+  };
+
   // Gộp theo ngày: chi tiêu (Marketing nhập) + lead (Trực page nhập)
   const rows = useMemo(() => {
     const byDate = {};
@@ -302,8 +315,13 @@ const AdsReportPage = () => {
 
       {/* Data Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-800 text-white flex justify-between items-center">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-800 text-white flex justify-between items-center gap-2">
           <h3 className="font-bold">Chi tiết theo ngày</h3>
+          {['admin', 'marketing', 'accountant'].includes(profile?.role) && (
+            <button onClick={syncDailyCost} disabled={syncingCost} className="shrink-0 inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">
+              <BarChart2 className={`w-4 h-4 ${syncingCost ? 'animate-pulse' : ''}`} />{syncingCost ? 'Đang lấy…' : 'Lấy chi phí hôm qua'}
+            </button>
+          )}
         </div>
         <div className="px-5 py-2 text-[11px] text-slate-400 bg-slate-50 border-b border-slate-100">Chi tiêu do Marketing nhập · SĐT/Quan tâm/Tin nhắn lấy từ báo cáo Trực page (theo ngày)</div>
         {/* Mobile: dạng thẻ */}
