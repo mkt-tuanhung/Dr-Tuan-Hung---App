@@ -130,6 +130,58 @@ Deno.serve(async (req) => {
     if (!links.length) return json({ ok: false, error: "Không có link Drive hợp lệ" });
 
     const token = await getAccessToken(sa);
+    const FOLDER = "application/vnd.google-apps.folder";
+
+    // ---- mode: 'sources' -> tìm các THƯ MỤC NGUỒN (khách hàng) để tự tạo record ----
+    // Thư mục nguồn = tên bắt đầu bằng "DD.MM ...". Trả kèm ancestors (dịch vụ/năm/tháng).
+    if (body.mode === "sources") {
+      const listF = async (fid: string): Promise<{ ok: boolean; files: Record<string, any>[] }> => {
+        const out: Record<string, any>[] = [];
+        let pageToken = "";
+        for (let p = 0; p < 30; p++) {
+          const params = new URLSearchParams({
+            q: `'${fid}' in parents and trashed = false and mimeType = '${FOLDER}'`,
+            fields: "nextPageToken,files(id,name,mimeType,createdTime,webViewLink)", pageSize: "1000",
+            supportsAllDrives: "true", includeItemsFromAllDrives: "true",
+          });
+          if (pageToken) params.set("pageToken", pageToken);
+          const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+          if (!res.ok) { if (p === 0) return { ok: false, files: [] }; break; }
+          const data = await res.json();
+          if (Array.isArray(data.files)) out.push(...data.files);
+          if (!data.nextPageToken) break;
+          pageToken = data.nextPageToken;
+        }
+        return { ok: true, files: out };
+      };
+      const DATE_RE = /^\s*\d{1,2}\s*[.\-/]\s*\d{1,2}(\D|$)/;
+      const sources: Record<string, unknown>[] = [];
+      const guard = { n: 0 };
+      const walk = async (fid: string, path: string[], depth: number) => {
+        if (guard.n > 2000 || depth > 6) return;
+        const r = await listF(fid);
+        if (!r.ok) return;
+        for (const f of r.files) {
+          guard.n++;
+          if (DATE_RE.test(f.name || "")) {
+            sources.push({ id: f.id, name: f.name || "", link: f.webViewLink || `https://drive.google.com/drive/folders/${f.id}`, created: f.createdTime || null, ancestors: path });
+          } else {
+            await walk(f.id, [...path, f.name || ""], depth + 1);
+          }
+        }
+      };
+      for (const link of links) {
+        const rootId = extractFolderId(link);
+        if (!rootId) continue;
+        let rootName = "";
+        try {
+          const rm = await fetch(`https://www.googleapis.com/drive/v3/files/${rootId}?fields=name&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${token}` } });
+          if (rm.ok) rootName = (await rm.json()).name || "";
+        } catch { /* bỏ qua */ }
+        await walk(rootId, rootName ? [rootName] : [], 0);
+      }
+      return json({ ok: true, sources, count: sources.length });
+    }
 
     // mode: 'files' -> trả về danh sách TỪNG file (ảnh thu nhỏ, dung lượng, thời lượng, thư mục)
     const wantFiles = body.mode === "files";
@@ -157,7 +209,6 @@ Deno.serve(async (req) => {
       }
       return { ok: true, status: 200, files: out };
     };
-    const FOLDER = "application/vnd.google-apps.folder";
 
     const names: string[] = [];
     const files: Record<string, unknown>[] = [];
