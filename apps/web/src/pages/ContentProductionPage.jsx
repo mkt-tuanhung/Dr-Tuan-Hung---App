@@ -59,6 +59,41 @@ async function scanDriveFiles(links) {
 const fmtSize = (b) => { const n = Number(b) || 0; if (n >= 1073741824) return (n / 1073741824).toFixed(1) + ' GB'; if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB'; if (n >= 1024) return (n / 1024).toFixed(0) + ' KB'; return n + ' B'; };
 const fmtDur = (ms) => { if (!ms) return null; const s = Math.round(ms / 1000); const m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
 const assetThumb = (a) => a?.drive_id ? `https://drive.google.com/thumbnail?id=${a.drive_id}&sz=w400` : (a?.thumb_link || null);
+// Quét THƯ MỤC NGUỒN (khách hàng) để tự tạo record (mode: 'sources')
+async function scanDriveSources(links) {
+  const valid = (links || []).filter(l => typeof l === 'string' && /^https?:\/\//i.test(l));
+  if (!valid.length) return { ok: true, sources: [] };
+  const { data, error } = await supabase.functions.invoke('scan-drive-folder', { body: { links: valid, mode: 'sources' } });
+  if (error) throw new Error(error.message || 'Lỗi gọi quét nguồn');
+  if (!data?.ok) throw new Error(data?.error || 'Quét nguồn thất bại');
+  return data;
+}
+// Đoán dịch vụ từ tên thư mục cha (dịch vụ) + phần mô tả sau tên khách
+function detectService(ancestors, detail) {
+  const hay = (ancestors || []).map(a => noDiacritics(a).toLowerCase()).join(' ') + ' ' + noDiacritics(detail || '').toLowerCase();
+  const has = (arr) => arr.some(k => hay.includes(k));
+  const svc = [];
+  if (has(['ham mat', 'xuong ham', 'got ham', 'ha go', 'ha ham', 'don cam', 'truot cam', 'vline', 'v-line', 'v line', 'midface', 'mid face', 'go ma', 'nang co'])) svc.push('Hàm mặt');
+  if (has(['body', 'nang nguc', 'nang mong', 'nguc', 'mong', 'hut mo', 'cay mo', 'thanh bung', 'tao hinh bung'])) svc.push('Body');
+  if (has(['tieu phau', 'cat mi', 'mi mat', 'nang mui', 'sua mui', 'nang mui', 'moi'])) svc.push('Tiểu phẫu');
+  return svc.join(', ');
+}
+// Phân tích 1 thư mục nguồn -> {name, date, service, source_id, link, driveId}
+function parseSourceCandidate(c) {
+  const raw = c.name || '';
+  const m = raw.match(/^\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})/);
+  const dd = m ? m[1].padStart(2, '0') : null;
+  const mm = m ? m[2].padStart(2, '0') : null;
+  const rest = raw.replace(/^\s*\d{1,2}\s*[.\-/]\s*\d{1,2}\s*[-–—]?\s*/, '');
+  const name = (rest.split(/\s[-–—(]|[(,]/)[0] || rest).trim().replace(/\s+/g, ' ');
+  const detail = rest.slice(name.length);
+  let year = null;
+  for (const a of (c.ancestors || [])) { const ym = String(a).match(/(20\d{2})/); if (ym) { year = ym[1]; break; } }
+  if (!year && c.created) year = String(new Date(c.created).getFullYear());
+  if (!year) year = String(new Date().getFullYear());
+  const date = (dd && mm) ? `${year}-${mm}-${dd}` : (c.created ? c.created.slice(0, 10) : '');
+  return { name, date, service: detectService(c.ancestors, detail), source_id: suggestSourceId(name, date), link: c.link, driveId: c.id };
+}
 // Soi rồi tự lưu danh sách TÊN thư mục con (chạy nền, không chặn lưu)
 async function scanDriveAndUpdate(id, links) {
   try {
@@ -292,6 +327,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const [khoView, setKhoView] = useState('card');   // 'list' | 'card'
   const [khoMode, setKhoMode] = useState('library'); // 'library' (kho tài sản) | 'sources' (quản lý nguồn)
   const [scanningFiles, setScanningFiles] = useState(false);
+  const [autoImportOpen, setAutoImportOpen] = useState(false);
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
   const [videoView, setVideoView] = useState('card'); // 'card' | 'grid' (xem lưới thumbnail)
@@ -643,7 +679,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             ) : (
               <>
                 <button onClick={() => setKhoMode('library')} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><LayoutGrid className="w-4 h-4" /> Thư viện</button>
-                <button onClick={rescanAll} disabled={scanningAll} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">{scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả Drive</button>
+                {canAddMedia && <button onClick={() => setAutoImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600"><FolderOpen className="w-4 h-4" /> Tự động thêm nguồn</button>}
+                <button onClick={rescanAll} disabled={scanningAll} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">{scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả</button>
               </>
             )}
             {canAddMedia && (
@@ -834,6 +871,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       )}
 
       {addOpen && <AddMediaModal me={me} stores={stores} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
+      {autoImportOpen && <AutoImportModal me={me} stores={stores} onClose={() => setAutoImportOpen(false)} onSaved={() => { setAutoImportOpen(false); loadData(); }} />}
       {addVideoOpen && <AddVideoModal me={me} onClose={() => setAddVideoOpen(false)} onSaved={() => { setAddVideoOpen(false); loadData(); }} />}
       {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
       {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
@@ -2745,9 +2783,103 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
 };
 
 // ---------- Khung modal chung ----------
-const Modal = ({ title, onClose, children }) => (
+// ---------- Modal: Tự động thêm nguồn từ Drive ----------
+const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
+  const [links, setLinks] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [rows, setRows] = useState(null);
+  const [sel, setSel] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [defMediaId, setDefMediaId] = useState(null);
+  const [defMediaName, setDefMediaName] = useState('Đặng Hồng Khôi');
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, full_name').ilike('full_name', '%Đặng Hồng Khôi%').limit(1).maybeSingle()
+      .then(({ data }) => { if (data) { setDefMediaId(data.id); setDefMediaName(data.full_name); } });
+  }, []);
+
+  const existingLinks = new Set(stores.flatMap(s => s.source_links || []));
+
+  const doScan = async () => {
+    const arr = parseLinks(links);
+    if (!arr.length) { toast.error('Dán link thư mục gốc (dịch vụ / master) trước'); return; }
+    setScanning(true);
+    try {
+      const d = await scanDriveSources(arr);
+      const seen = new Set();
+      const parsed = (d.sources || []).map(parseSourceCandidate).filter(p => { if (seen.has(p.link)) return false; seen.add(p.link); return true; });
+      setRows(parsed);
+      const s = {}; parsed.forEach(p => { s[p.driveId] = !existingLinks.has(p.link); });
+      setSel(s);
+      if (!parsed.length) toast('Không tìm thấy thư mục nguồn nào (tên dạng "DD.MM Tên khách…")', { icon: 'ℹ️' });
+      else toast.success(`Tìm thấy ${parsed.length} nguồn`);
+    } catch (e) { toast.error('Quét lỗi: ' + e.message); }
+    setScanning(false);
+  };
+
+  const chosen = (rows || []).filter(p => sel[p.driveId] && !existingLinks.has(p.link));
+  const doImport = async () => {
+    if (!chosen.length) { toast.error('Chọn ít nhất 1 nguồn để thêm'); return; }
+    setSaving(true);
+    const payload = chosen.map(p => ({
+      customer_name: p.name || 'Chưa rõ', source_links: [p.link], source_id: p.source_id || null,
+      shoot_date: p.date || null, service: p.service || null,
+      media_id: me.id, media_in_charge_id: defMediaId, media_in_charge: defMediaName,
+      source_status: 'chua_dung',
+    }));
+    const { error } = await supabase.from('media_customers').insert(payload);
+    setSaving(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success(`Đã thêm ${payload.length} nguồn từ Drive`);
+    onSaved();
+  };
+
+  const allSel = rows && rows.length > 0 && rows.filter(p => !existingLinks.has(p.link)).every(p => sel[p.driveId]);
+  const toggleAll = () => { const s = { ...sel }; (rows || []).forEach(p => { if (!existingLinks.has(p.link)) s[p.driveId] = !allSel; }); setSel(s); };
+
+  return (
+    <Modal title="Tự động thêm nguồn từ Drive" onClose={onClose} wide>
+      <p className="text-sm text-slate-500 mb-2">Dán link <b>thư mục gốc</b> (thư mục dịch vụ như “Xương hàm mặt”, hoặc thư mục tổng chứa nhiều dịch vụ). Hệ thống quét sâu tìm các thư mục nguồn dạng <b>“DD.MM Tên khách…”</b> rồi tự điền tên · dịch vụ · ngày · ID · link.</p>
+      <textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/drive/folders/... (mỗi dòng 1 link)" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-2" />
+      <button onClick={doScan} disabled={scanning} className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60 mb-3">{scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Quét thư mục</button>
+
+      {rows && rows.length > 0 && (
+        <>
+          <div className="flex items-center justify-between mb-2">
+            <button onClick={toggleAll} className="text-xs font-semibold text-teal-600">{allSel ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}</button>
+            <span className="text-xs text-slate-400">Media phụ trách mặc định: <b>{defMediaName}</b></span>
+          </div>
+          <div className="border border-slate-100 rounded-xl divide-y divide-slate-50 max-h-[46vh] overflow-y-auto">
+            {rows.map(p => {
+              const exists = existingLinks.has(p.link);
+              return (
+                <label key={p.driveId} className={`flex items-start gap-2.5 p-2.5 text-sm ${exists ? 'opacity-50' : 'hover:bg-slate-50 cursor-pointer'}`}>
+                  <input type="checkbox" disabled={exists} checked={!!sel[p.driveId] && !exists} onChange={e => setSel(s => ({ ...s, [p.driveId]: e.target.checked }))} className="mt-1" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-700 truncate">{p.name || '(không rõ tên)'} {exists && <span className="text-[10px] font-bold text-slate-400">· đã có</span>}</div>
+                    <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-2">
+                      <span>ID: {p.source_id || '—'}</span>
+                      <span>· Ngày: {p.date || '—'}</span>
+                      <span>· DV: {p.service || '—'}</span>
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
+            <button onClick={doImport} disabled={saving || !chosen.length} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 inline-flex items-center gap-1.5">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}Thêm {chosen.length} nguồn</button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+};
+
+const Modal = ({ title, onClose, children, wide }) => (
   <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-    <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className={`bg-white rounded-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-md'} shadow-xl max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
       <div className="px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
         <h3 className="font-bold text-slate-800">{title}</h3>
         <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
