@@ -2800,12 +2800,14 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
       .then(({ data }) => { if (data) { setDefMediaId(data.id); setDefMediaName(data.full_name); } });
   }, []);
 
-  const existingLinks = new Set(stores.flatMap(s => s.source_links || []));
   const norm = (x) => (x || '').trim().toLowerCase();
-  // Phân loại 1 nguồn quét được: đã có (trùng link) / nghi trùng (trùng tên + gần ngày) / mới
+  const folderId = (l) => { const m = (l || '').match(/\/folders\/([\w-]+)/) || (l || '').match(/[?&]id=([\w-]+)/) || (l || '').match(/\/d\/([\w-]+)/); return m ? m[1] : null; };
+  // Tập ID thư mục đã có (từ nguồn thêm tay) — so khớp theo ID nên bỏ qua khác biệt định dạng URL
+  const existingIds = new Set(stores.flatMap(s => (s.source_links || []).map(folderId).filter(Boolean)));
+  // Phân loại: đã có (trùng ID thư mục Drive) / nghi trùng (trùng tên + gần ngày) / mới
   const classify = (p) => {
-    if (existingLinks.has(p.link)) return { kind: 'exists' };
-    const dup = stores.find(s => norm(s.customer_name) === norm(p.name) && !(s.source_links || []).includes(p.link)
+    if ((p.driveId && existingIds.has(p.driveId)) || existingIds.has(folderId(p.link))) return { kind: 'exists' };
+    const dup = stores.find(s => norm(s.customer_name) === norm(p.name)
       && s.shoot_date && p.date && Math.abs((new Date(s.shoot_date) - new Date(p.date)) / 86400000) <= 10);
     return dup ? { kind: 'dup', store: dup } : { kind: 'new' };
   };
