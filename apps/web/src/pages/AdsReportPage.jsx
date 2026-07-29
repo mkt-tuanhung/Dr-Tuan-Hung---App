@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { Plus, X, BarChart2, Edit, Save, Trash2, Search, DollarSign, Target, TrendingUp, AlertCircle, Phone } from 'lucide-react';
+import { Plus, X, BarChart2, Edit, Save, Trash2, Search, DollarSign, Target, TrendingUp, AlertCircle, Phone, Loader2 } from 'lucide-react';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
 const AdsReportPage = () => {
@@ -315,11 +315,11 @@ const AdsReportPage = () => {
 
       {/* Data Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-800 text-white flex justify-between items-center gap-2">
-          <h3 className="font-bold">Chi tiết theo ngày</h3>
+        <div className="px-5 py-4 border-b border-slate-100 bg-white flex justify-between items-center gap-2 flex-wrap">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><BarChart2 className="w-4 h-4 text-blue-600" />Chi tiết theo ngày</h3>
           {['admin', 'marketing', 'accountant'].includes(profile?.role) && (
-            <button onClick={syncDailyCost} disabled={syncingCost} className="shrink-0 inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">
-              <BarChart2 className={`w-4 h-4 ${syncingCost ? 'animate-pulse' : ''}`} />{syncingCost ? 'Đang lấy…' : 'Lấy chi phí hôm qua'}
+            <button onClick={syncDailyCost} disabled={syncingCost} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60 shadow-sm">
+              {syncingCost ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart2 className="w-4 h-4" />}{syncingCost ? 'Đang lấy…' : 'Lấy chi phí hôm qua'}
             </button>
           )}
         </div>
