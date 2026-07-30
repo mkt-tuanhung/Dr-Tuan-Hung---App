@@ -148,7 +148,11 @@ const AppointmentManagementPage = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
-  useFocusHighlight('appointments', 'appt-', !loading);
+  useFocusHighlight('appointments', 'appt-', !loading, () => {
+    // Bỏ tìm kiếm + về tab Lịch hẹn để chắc chắn thẻ hiện ra rồi mới cuộn tới
+    setSearchQuery('');
+    setActiveViewTab('appointments');
+  });
   useRealtimeReload('customer_appointments', loadData);
 
   // Derived state
