@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft, Send, CheckCircle2 } from 'lucide-react';
+import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft, Send, CheckCircle2, BellRing } from 'lucide-react';
 import TwoFactorSettings from '@/components/TwoFactorSettings.jsx';
+import { pushSupported, enablePush, disablePush, isPushOn } from '@/lib/webpush';
 
 export default function ProfileMenu({ children, mobile = false }) {
   const { profile, refreshProfile } = useAuth();
@@ -23,6 +24,34 @@ export default function ProfileMenu({ children, mobile = false }) {
 
   // Pink Mode Toggle
   const [isPinkMode, setIsPinkMode] = useState(() => localStorage.getItem('theme') === 'pink');
+
+  // Thông báo đẩy (Web Push) về điện thoại
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  React.useEffect(() => {
+    let alive = true;
+    if (pushSupported()) isPushOn().then(v => { if (alive) setPushOn(v); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const togglePush = async (e) => {
+    e.stopPropagation();
+    setPushBusy(true);
+    try {
+      if (pushOn) {
+        await disablePush();
+        setPushOn(false);
+        toast.success('Đã tắt thông báo đẩy');
+      } else {
+        await enablePush(profile.id);
+        setPushOn(true);
+        toast.success('Đã bật! Thông báo sẽ hiện lên máy của bạn.');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Không bật được thông báo');
+    }
+    setPushBusy(false);
+  };
 
   React.useEffect(() => {
     if (isPinkMode) {
@@ -198,6 +227,16 @@ export default function ProfileMenu({ children, mobile = false }) {
               <button onClick={() => { setMenuOpen(false); toast.info('Kho tài liệu trống'); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
                 <FileText className="w-4 h-4 text-blue-400" /> Giấy tờ & Tài liệu
               </button>
+
+              {pushSupported() && (
+                <button onClick={togglePush} disabled={pushBusy} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left disabled:opacity-60">
+                  <div className="flex items-center gap-3">
+                    <BellRing className="w-4 h-4 text-teal-500" />
+                    <span>{pushOn ? 'Thông báo về máy đã bật' : 'Bật thông báo về máy'}</span>
+                  </div>
+                  {pushBusy ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : (pushOn && <CheckCircle2 className="w-4 h-4 text-teal-500" />)}
+                </button>
+              )}
 
               <button onClick={linkTelegram} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors text-left">
                 <div className="flex items-center gap-3">

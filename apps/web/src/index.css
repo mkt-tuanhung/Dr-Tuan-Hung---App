@@ -353,3 +353,15 @@ body.pink-mode stop[offset="100%"] {
   stop-color: #ff477e !important;
 }
 /* deploy: hau-phau-redesign + phase2 (build marker) */
+
+/* Làm nổi bật item khi mở từ thông báo (deep-link focus) */
+@keyframes focusFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.55); }
+  30%  { box-shadow: 0 0 0 5px rgba(13, 148, 136, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+}
+.focus-flash {
+  animation: focusFlash 1.3s ease-out 2;
+  border-color: #0d9488 !important;
+  scroll-margin-top: 90px;
+}

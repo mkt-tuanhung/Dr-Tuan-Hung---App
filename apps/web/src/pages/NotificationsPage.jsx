@@ -1,17 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Bell, Check, MessageCircle, Wallet, UserPlus, Heart, Loader2 } from 'lucide-react';
-
-const ICON_OF = {
-  expense_approved: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
-  expense_paid: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
-  community_post: { Icon: MessageCircle, cls: 'bg-blue-100 text-blue-600' },
-  community_comment: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
-  community_reply: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
-  community_like: { Icon: Heart, cls: 'bg-pink-100 text-pink-600' },
-  member_added: { Icon: UserPlus, cls: 'bg-violet-100 text-violet-600' },
-};
+import { Bell, Check, Loader2 } from 'lucide-react';
+import { NOTIF_ICON, NOTIF_FALLBACK, resolveNotifLink } from '@/lib/notif';
 
 const fullTime = (d) => new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -44,7 +35,8 @@ export default function NotificationsPage() {
       setItems(prev => prev.map(i => i.id === n.id ? { ...i, is_read: true } : i));
       await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
     }
-    if (n.link) window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: n.link }));
+    const dest = resolveNotifLink(n.link, n.type);
+    if (dest) window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: dest }));
   };
 
   return (
@@ -72,7 +64,7 @@ export default function NotificationsPage() {
         ) : (
           <div className="divide-y divide-slate-50">
             {items.map(n => {
-              const conf = ICON_OF[n.type] || { Icon: Bell, cls: 'bg-slate-100 text-slate-500' };
+              const conf = NOTIF_ICON[n.type] || NOTIF_FALLBACK;
               const { Icon } = conf;
               return (
                 <button key={n.id} onClick={() => openItem(n)}

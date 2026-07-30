@@ -39,6 +39,7 @@ import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
+import { parseNav, setPendingFocus } from '@/lib/notif';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -308,7 +309,13 @@ const ComingSoon = ({ label }) => (
 const StaffDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview')));
+  const [activeTab, setActiveTab] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    const t = q.get('tab');
+    const f = q.get('focus');
+    if (f) setPendingFocus({ tab: t || 'overview', id: f });
+    return t || (q.get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview'));
+  });
 
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
@@ -321,7 +328,12 @@ const StaffDashboard = () => {
   };
 
   useEffect(() => {
-    const handleNav = (e) => setActiveTab(e.detail);
+    const handleNav = (e) => {
+      const { tab, focus } = parseNav(e.detail);
+      if (focus) setPendingFocus({ tab, id: focus });
+      setActiveTab(tab);
+      if (focus) setTimeout(() => window.dispatchEvent(new CustomEvent('FOCUS_ITEM', { detail: { tab, id: focus } })), 60);
+    };
     window.addEventListener('NAVIGATE', handleNav);
     return () => window.removeEventListener('NAVIGATE', handleNav);
   }, []);

@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import MoneyInput from '@/components/MoneyInput.jsx';
+import { useFocusHighlight } from '@/lib/useFocusHighlight';
 
 const AppointmentManagementPage = () => {
   const { profile } = useAuth();
@@ -147,6 +148,7 @@ const AppointmentManagementPage = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useFocusHighlight('appointments', 'appt-', !loading);
   useRealtimeReload('customer_appointments', loadData);
 
   // Derived state
@@ -597,7 +599,7 @@ const AppointmentManagementPage = () => {
                     </div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {apps.map(app => (
-                        <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                        <div key={app.id} id={`appt-${app.id}`} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
                           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <User className="w-5 h-5 text-orange-600" />
@@ -681,7 +683,7 @@ const AppointmentManagementPage = () => {
                   </div>
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {groupedByDate[dateStr].map(app => (
-                      <div key={app.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                      <div key={app.id} id={`appt-${app.id}`} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
                         <div className="p-4 border-b border-slate-100 flex items-start justify-between">
                           <div className="flex items-start gap-2 min-w-0">
                             <User className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" />
