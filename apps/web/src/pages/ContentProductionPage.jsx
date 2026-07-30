@@ -328,6 +328,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const [khoMode, setKhoMode] = useState('library'); // 'library' (kho tài sản) | 'sources' (quản lý nguồn)
   const [scanningFiles, setScanningFiles] = useState(false);
   const [autoImportOpen, setAutoImportOpen] = useState(false);
+  const [approveFor, setApproveFor] = useState(null); // clip đang mở popup Duyệt & Đăng ngay
   const [videoScore, setVideoScore] = useState(''); // lọc theo điểm Ads
   const [videoService, setVideoService] = useState(''); // lọc dịch vụ (Video Ads)
   const [videoView, setVideoView] = useState('card'); // 'card' | 'grid' (xem lưới thumbnail)
@@ -463,11 +464,12 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     toast.success(`Đã lưu định nghĩa Win — tự chấm lại ${n} clip`);
     setWinModal(false); loadData();
   };
-  const approveRun = (c) => {
-    if (c.approved_to_run) return;
-    ask('Duyệt cho clip này chạy Ads? Editor sẽ được thưởng 500.000đ.',
-      () => patchClip(c.id, { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() }, 'Đã duyệt chạy Ads — Editor +500.000đ'),
-      { okLabel: 'Duyệt chạy Ads' });
+  // Duyệt chạy Ads + tuỳ chọn "Đăng ngay" — thực thi từ popup ApproveModal
+  const doApprove = async (c, postNow) => {
+    const payload = { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() };
+    if (postNow) { payload.post_now = true; payload.post_now_at = new Date().toISOString(); payload.post_status = 'queued'; }
+    await patchClip(c.id, payload, postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads — Editor +500.000đ');
+    setApproveFor(null);
   };
   // Bật/tắt nhãn "Đăng ngay" — hệ thống ngoài đọc cờ này để tự đăng video lên page
   const markPostNow = (c, on) => patchClip(c.id,
@@ -867,7 +869,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           <div className="space-y-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} editorAvg={editorAvg(c.editor_id)}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => approveRun(c)} onSyncFb={syncFbClip} onPostNow={markPostNow} />
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onPostNow={markPostNow} />
             ))}
           </div>
         )}
@@ -876,6 +878,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
 
       {addOpen && <AddMediaModal me={me} stores={stores} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
       {autoImportOpen && <AutoImportModal me={me} stores={stores} onClose={() => setAutoImportOpen(false)} onSaved={() => { setAutoImportOpen(false); loadData(); }} />}
+      {approveFor && <ApproveModal clip={approveFor} store={storeOf(approveFor.media_customer_id)} onClose={() => setApproveFor(null)} onConfirm={(postNow) => doApprove(approveFor, postNow)} />}
       {addVideoOpen && <AddVideoModal me={me} onClose={() => setAddVideoOpen(false)} onSaved={() => { setAddVideoOpen(false); loadData(); }} />}
       {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
       {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
@@ -1875,6 +1878,38 @@ const LeaderboardCard = ({ lb, now, onSeeAll }) => (
   </div>
 );
 
+// ---------- Popup: Duyệt chạy Ads + hỏi Đăng ngay ----------
+const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
+  const [saving, setSaving] = useState(false);
+  const go = async (postNow) => { setSaving(true); await onConfirm(postNow); /* parent tự đóng */ };
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="p-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-600 grid place-items-center mx-auto mb-3"><CheckCircle2 className="w-7 h-7" /></div>
+          <h3 className="text-lg font-extrabold text-slate-800">Duyệt cho chạy Ads?</h3>
+          <p className="text-sm text-slate-500 mt-1">Clip <b className="text-slate-700">{clip.title || store?.customer_name || 'này'}</b> sẽ được duyệt chạy. Editor +500.000đ.</p>
+
+          <div className="mt-4 rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white grid place-items-center mx-auto mb-2 shadow-md text-xl">⚡</div>
+            <div className="font-bold text-orange-700">Đăng ngay lên page luôn?</div>
+            <p className="text-[12px] text-slate-500 mt-1 leading-snug">Chọn <b>“Đăng ngay”</b> — sau khi duyệt, hệ thống sẽ tự quét &amp; đăng video này lên page.<br />Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+          </div>
+        </div>
+        <div className="px-6 pb-6 space-y-2.5">
+          <button onClick={() => go(true)} disabled={saving} className="w-full h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold hover:from-orange-600 hover:to-amber-600 disabled:opacity-60 inline-flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-lg">⚡</span>} Duyệt &amp; Đăng ngay
+          </button>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button onClick={onClose} disabled={saving} className="h-11 rounded-2xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 disabled:opacity-60">Huỷ</button>
+            <button onClick={() => go(false)} disabled={saving} className="h-11 rounded-2xl bg-teal-600 text-white font-bold hover:bg-teal-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><CheckCircle2 className="w-4 h-4" />Chỉ duyệt</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
 const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onPostNow }) => {
   const mine = c.editor_id === me?.id;
@@ -1894,6 +1929,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
   const clipUrl = (c.clip_links || [])[0];
   const menuItems = [
     canAds && !c.approved_to_run && { label: 'Duyệt chạy Ads', icon: <CheckCircle2 className="w-4 h-4" />, onClick: onApproveRun },
+    canAds && c.approved_to_run && !c.post_now && c.post_status !== 'posted' && { label: '⚡ Đăng ngay lên page', icon: <Send className="w-4 h-4" />, onClick: () => onPostNow?.(c, true) },
     canAds && c.post_now && c.post_status !== 'posted' && { label: 'Huỷ Đăng ngay', icon: <X className="w-4 h-4" />, onClick: () => onPostNow?.(c, false) },
     canAds && { label: c.approved_to_run ? 'Ghi chú / đánh giá' : 'Xem & góp ý', icon: <Pencil className="w-4 h-4" />, onClick: onReview },
     (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
@@ -1994,7 +2030,6 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
 
         <div className="ml-auto flex items-center gap-2">
           {canAds && !c.approved_to_run && <button onClick={onApproveRun} className="text-xs font-semibold text-white px-3 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>}
-          {canAds && c.approved_to_run && !c.post_now && <button onClick={() => onPostNow?.(c, true)} title="Gắn nhãn Đăng ngay để hệ thống tự đăng lên page" className="text-xs font-bold text-white px-3 h-9 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 inline-flex items-center gap-1 whitespace-nowrap">⚡ Đăng ngay</button>}
           <button onClick={onView} className="text-sm font-semibold text-white px-4 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 whitespace-nowrap">Xem chi tiết</button>
           <ActionMenu items={menuItems} />
         </div>
