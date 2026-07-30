@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 import ImageLibrary from '@/components/ImageLibrary.jsx';
+import { useFocusHighlight } from '@/lib/useFocusHighlight';
 
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
 const parseLinks = (t) => (t || '').split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s));
@@ -376,6 +377,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   }, []);
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('media_customers,media_clips', loadData);
+  useFocusHighlight('content_video', 'clip-', !loading);
 
   const clipsOf = (storeId) => clips.filter(c => c.media_customer_id === storeId);
   const storeOf = (id) => stores.find(s => s.id === id);
@@ -1942,7 +1944,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
     </div>
   );
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+    <div id={`clip-${c.id}`} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
       <div className="flex flex-col md:flex-row gap-4">
         {/* Clip bên trái */}
         <div className="md:w-[300px] shrink-0 rounded-xl overflow-hidden bg-slate-900 aspect-video">

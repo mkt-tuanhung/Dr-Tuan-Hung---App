@@ -15,10 +15,32 @@ function fallbackLink(type) {
   return null;
 }
 
-// Trả về tab id hợp lệ để dispatch NAVIGATE.
+// Trả về link hợp lệ để dispatch NAVIGATE. Giữ nguyên phần "#<id>" (nếu có)
+// để trang đích focus đúng item; chỉ chuẩn hoá phần tab đứng trước dấu #.
 export function resolveNotifLink(link, type) {
-  if (link) return LINK_ALIAS[link] || link;
-  return fallbackLink(type);
+  if (!link) return fallbackLink(type);
+  const [tab, ...rest] = String(link).split('#');
+  const mapped = LINK_ALIAS[tab] || tab;
+  return rest.length ? `${mapped}#${rest.join('#')}` : mapped;
+}
+
+// Tách "tab#id" -> { tab, focus }
+export function parseNav(detail) {
+  const [tab, ...rest] = String(detail || '').split('#');
+  return { tab, focus: rest.length ? rest.join('#') : null };
+}
+
+// ----- Deep focus: nhớ item cần focus khi chuyển trang -----
+// (trang đích có thể mount sau khi NAVIGATE bắn ra nên cần "hàng chờ")
+let pendingFocus = null;
+export function setPendingFocus(f) { pendingFocus = f; }          // { tab, id }
+export function takePendingFocus(tab) {
+  if (pendingFocus && (!tab || pendingFocus.tab === tab)) {
+    const f = pendingFocus;
+    pendingFocus = null;
+    return f;
+  }
+  return null;
 }
 
 // Icon + màu theo loại thông báo (dùng chung cho chuông & trang Thông báo).
