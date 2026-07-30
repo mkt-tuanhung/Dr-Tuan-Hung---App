@@ -336,6 +336,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const [videoTab, setVideoTab] = useState('all'); // all | pending | running | off
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
+  const [focusClipId, setFocusClipId] = useState(null); // clip cần focus khi mở từ thông báo (luôn hiện dù đang lọc)
   const [addOpen, setAddOpen] = useState(false);
   const [scanningAll, setScanningAll] = useState(false);
   const [winRule, setWinRule] = useState(null);      // định nghĩa Ads Win
@@ -377,7 +378,12 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   }, []);
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('media_customers,media_clips', loadData);
-  useFocusHighlight('content_video', 'clip-', !loading);
+  useFocusHighlight('content_video', 'clip-', !loading, (id) => {
+    // Bỏ mọi bộ lọc + ép hiện đúng clip để cuộn tới được, rồi trả lại bình thường
+    setSearch(''); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo('');
+    setFocusClipId(id);
+    setTimeout(() => setFocusClipId(null), 6000);
+  });
 
   const clipsOf = (storeId) => clips.filter(c => c.media_customer_id === storeId);
   const storeOf = (id) => stores.find(s => s.id === id);
@@ -636,6 +642,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const allTags = [...new Set(stores.flatMap(s => s.tags || []))].sort();
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
+    if (c.id === focusClipId) return true; // clip mở từ thông báo -> luôn hiện dù đang lọc
     const st = storeOf(c.media_customer_id);
     if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
     // Sub-tab theo trạng thái campaign (lấy từ Ads Manager)
