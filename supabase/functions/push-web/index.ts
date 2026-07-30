@@ -7,8 +7,10 @@
 // Cần các secret:
 //   VAPID_PUBLIC_KEY   (khoá công khai VAPID)
 //   VAPID_PRIVATE_KEY  (khoá bí mật VAPID)
-//   VAPID_SUBJECT      (tuỳ chọn, vd "mailto:admin@drhung.app")
-//   WEBHOOK_SECRET     (tuỳ chọn, để chặn gọi trái phép)
+//   VAPID_SUBJECT       (tuỳ chọn, vd "mailto:admin@drhung.app")
+//   PUSH_WEBHOOK_SECRET (TUỲ CHỌN — nếu KHÔNG đặt thì bỏ qua kiểm tra.
+//                        Đặt secret riêng này, KHÔNG dùng chung WEBHOOK_SECRET
+//                        của Telegram để khỏi phải copy lại giá trị cũ.)
 // ============================================================
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -22,7 +24,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 }
 
-const SECRET = Deno.env.get("WEBHOOK_SECRET");
+const SECRET = Deno.env.get("PUSH_WEBHOOK_SECRET");
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });

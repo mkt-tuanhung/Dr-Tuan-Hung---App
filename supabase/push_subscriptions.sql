@@ -35,8 +35,10 @@ create policy "push_sub_delete" on push_subscriptions for delete using (user_id 
 -- Trigger: mỗi khi INSERT vào notifications -> gọi edge function push-web
 -- để đẩy thông báo về máy. Dùng pg_net (không chặn transaction).
 --
--- THAY <PROJECT_REF> và <ANON_KEY> (và <WEBHOOK_SECRET> nếu có bật) bên dưới.
+-- CHỈ CẦN THAY 2 CHỖ:
 --   <PROJECT_REF>: vd https://wlblywjdghjwwuumzecc.supabase.co -> wlblywjdghjwwuumzecc
+--   <ANON_KEY>   : Project Settings -> API -> anon public key
+-- (KHÔNG cần secret nào cả — bản dưới đã bỏ x-webhook-secret cho gọn.)
 -- ============================================================
 create extension if not exists pg_net;
 
@@ -46,8 +48,7 @@ begin
     url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/push-web',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer <ANON_KEY>',
-      'x-webhook-secret', '<WEBHOOK_SECRET>'   -- bỏ dòng này nếu không đặt WEBHOOK_SECRET
+      'Authorization', 'Bearer <ANON_KEY>'
     ),
     body    := to_jsonb(NEW)
   );
