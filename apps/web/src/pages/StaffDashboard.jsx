@@ -308,7 +308,10 @@ const ComingSoon = ({ label }) => (
 const StaffDashboard = () => {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview')));
+  const [activeTab, setActiveTab] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    return q.get('tab') || (q.get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview'));
+  });
 
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
