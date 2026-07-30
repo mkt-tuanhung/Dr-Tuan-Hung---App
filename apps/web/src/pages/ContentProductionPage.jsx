@@ -2013,7 +2013,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
           : <span className="text-xs text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
         {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
         {c.post_status === 'posted' ? <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full whitespace-nowrap">✅ Đã đăng page</span>
-          : c.post_now ? <span className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full whitespace-nowrap">⚡ Chờ đăng page</span> : null}
+          : c.post_now ? <span title="Đã gửi lệnh đăng cho hệ thống đăng bài — hệ thống đó sẽ tự đăng lên page" className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full whitespace-nowrap">⚡ Đã gửi đăng page</span> : null}
 
         <span className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="text-xs text-slate-400">Điểm Editor</span>
