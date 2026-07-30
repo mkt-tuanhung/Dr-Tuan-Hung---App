@@ -2,17 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { Bell, Check, MessageCircle, Wallet, UserPlus, Heart } from 'lucide-react';
-
-const ICON_OF = {
-  expense_approved: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
-  expense_paid: { Icon: Wallet, cls: 'bg-teal-100 text-teal-600' },
-  community_post: { Icon: MessageCircle, cls: 'bg-blue-100 text-blue-600' },
-  community_comment: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
-  community_reply: { Icon: MessageCircle, cls: 'bg-indigo-100 text-indigo-600' },
-  community_like: { Icon: Heart, cls: 'bg-pink-100 text-pink-600' },
-  member_added: { Icon: UserPlus, cls: 'bg-violet-100 text-violet-600' },
-};
+import { Bell, Check } from 'lucide-react';
+import { NOTIF_ICON, NOTIF_FALLBACK, resolveNotifLink } from '@/lib/notif';
 
 // Chống hiện toast trùng khi có nhiều instance bell (header desktop + mobile)
 const shownToasts = new Set();
@@ -91,11 +82,12 @@ export default function NotificationBell() {
       await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
     }
     setOpen(false);
-    if (n.link) window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: n.link }));
+    const dest = resolveNotifLink(n.link, n.type);
+    if (dest) window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: dest }));
   };
 
   const Avatar = ({ n }) => {
-    const conf = ICON_OF[n.type] || { Icon: Bell, cls: 'bg-slate-100 text-slate-500' };
+    const conf = NOTIF_ICON[n.type] || NOTIF_FALLBACK;
     const { Icon } = conf;
     if (n.actor?.avatar_url) {
       return (
