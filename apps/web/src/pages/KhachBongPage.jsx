@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft } from 'lucide-react';
+import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft, Wallet } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
@@ -38,11 +38,13 @@ const KhachBongPage = ({ isNested = false }) => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [showRevertModal, setShowRevertModal] = useState(false);
   const [showSurgeryModal, setShowSurgeryModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Forms
   const [careForm, setCareForm] = useState({ care_status: 'Đang chăm sóc', care_notes: '' });
   const [revertForm, setRevertForm] = useState({ appointment_date: '', appointment_time: '09:00', notes: '' });
+  const [depositForm, setDepositForm] = useState({ deposit_amount: '', deposit_date: '', expected_surgery_date: '', service: '', notes: '' });
   const [surgeryForm, setSurgeryForm] = useState({
     expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '',
     service_group: 'Tiểu phẫu', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
@@ -141,7 +143,37 @@ const KhachBongPage = ({ isNested = false }) => {
     setSaving(false);
   };
 
+  const handleDepositSubmit = async (e) => {
+    e.preventDefault();
+    const amount = Number(String(depositForm.deposit_amount).replace(/\D/g, '')) || 0;
+    if (!amount) { toast.error('Nhập số tiền cọc'); return; }
+    if (!depositForm.deposit_date) { toast.error('Chọn ngày cọc'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('customer_appointments')
+      .update({
+        status: 'coc',
+        deposit_amount: amount,
+        deposit_date: depositForm.deposit_date,
+        appointment_date: depositForm.deposit_date,
+        expected_surgery_date: depositForm.expected_surgery_date || null,
+        service: depositForm.service || selectedApp.service || null,
+        notes: (selectedApp.notes || '') + `\n[${new Date().toLocaleDateString('vi-VN')}] [Chốt cọc] ${amount.toLocaleString('vi-VN')}đ` + (depositForm.notes ? ` — ${depositForm.notes}` : ''),
+      }).eq('id', selectedApp.id);
+
+    if (error) toast.error(error.message);
+    else { toast.success('Đã chốt cọc — khách chuyển sang mục Khách cọc!'); setShowDepositModal(false); setCareApp(null); loadData(); }
+    setSaving(false);
+  };
+
   const openCare = (app) => { setCareApp(app); setSelectedApp(app); setCareForm({ care_status: app.care_status || 'Đang chăm sóc', care_notes: '' }); };
+  const openDeposit = (app) => {
+    setSelectedApp(app);
+    setDepositForm({
+      deposit_amount: '', deposit_date: new Date().toISOString().split('T')[0],
+      expected_surgery_date: app.expected_surgery_date || '', service: app.service || '', notes: '',
+    });
+    setShowDepositModal(true);
+  };
   const openRevert = (app) => { setSelectedApp(app); setRevertForm({ appointment_date: new Date().toISOString().split('T')[0], appointment_time: '09:00', notes: '' }); setShowRevertModal(true); };
   const openSurgery = (app) => {
     setSelectedApp(app);
@@ -219,6 +251,9 @@ const KhachBongPage = ({ isNested = false }) => {
               <ConsultButton app={careApp} />
               <button type="button" onClick={() => openRevert(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
                 <RotateCcw className="w-4 h-4" /> Quay lại lịch hẹn
+              </button>
+              <button type="button" onClick={() => openDeposit(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200">
+                <Wallet className="w-4 h-4" /> Chốt cọc
               </button>
               <button type="button" onClick={() => openSurgery(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200">
                 <ArrowUpCircle className="w-4 h-4" /> Chốt phẫu thuật
@@ -430,6 +465,47 @@ const KhachBongPage = ({ isNested = false }) => {
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end">
               <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal: Chốt Cọc */}
+      {showDepositModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleDepositSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50">
+              <h3 className="font-bold text-indigo-800 flex items-center gap-2"><Wallet className="w-5 h-5" /> Chốt cọc: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowDepositModal(false)}><X className="w-5 h-5 text-indigo-400" /></button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Số tiền cọc (VNĐ)</label>
+                  <MoneyInput required value={depositForm.deposit_amount} onChange={v => setDepositForm({ ...depositForm, deposit_amount: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: 5.000.000" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Ngày cọc</label>
+                  <input required type="date" value={depositForm.deposit_date} onChange={e => setDepositForm({ ...depositForm, deposit_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Dịch vụ dự kiến</label>
+                  <input type="text" value={depositForm.service} onChange={e => setDepositForm({ ...depositForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Nâng mũi..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Ngày dự kiến PT (tuỳ chọn)</label>
+                  <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Ghi chú (tuỳ chọn)</label>
+                <input type="text" value={depositForm.notes} onChange={e => setDepositForm({ ...depositForm, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: cọc giữ suất tuần sau làm" />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end">
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700">{saving ? 'Đang lưu...' : 'Chốt cọc & chuyển sang Khách cọc'}</button>
             </div>
           </form>
         </div>
