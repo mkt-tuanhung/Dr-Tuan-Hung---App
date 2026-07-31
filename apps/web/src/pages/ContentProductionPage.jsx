@@ -644,7 +644,14 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const reviewClips = clips.filter(c => {
     if (c.id === focusClipId) return true; // clip mở từ thông báo -> luôn hiện dù đang lọc
     const st = storeOf(c.media_customer_id);
-    if (q && !((st?.customer_name || '').toLowerCase().includes(q) || (st?.customer_phone || '').includes(q) || (c.title || '').toLowerCase().includes(q))) return false;
+    if (q) {
+      const matchQ = (st?.customer_name || '').toLowerCase().includes(q)
+        || (st?.customer_phone || '').includes(q)
+        || (c.title || '').toLowerCase().includes(q)
+        || String(c.fb_campaign_id || '').toLowerCase().includes(q);
+      if (!matchQ) return false;
+      return true; // đang tìm kiếm -> tìm xuyên tất cả sub-tab & không giới hạn tháng
+    }
     // Sub-tab theo trạng thái campaign (lấy từ Ads Manager)
     const k = fbKind(c);
     if (videoTab === 'pending') return c.stage === 'submitted' && !c.approved_to_run;
@@ -726,7 +733,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       <div className={`gap-2 flex-wrap ${(tab === 'overview' || (tab === 'kho' && khoMode === 'library')) ? 'hidden' : 'flex'}`}>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên / SĐT khách…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'video' ? 'Tìm theo tên / SĐT / ID chiến dịch…' : 'Tìm theo tên / SĐT khách…'} className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
         </div>
         {tab === 'kho' && (
           <>
