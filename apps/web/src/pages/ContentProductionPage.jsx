@@ -661,9 +661,10 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     return a;
   }, {})).map(e => ({ ...e, avg: e.sc ? e.sum / e.sc : null })).sort((x, y) => (y.avg ?? -1) - (x.avg ?? -1)).slice(0, 5);
 
-  // Điểm trung bình tháng của từng editor (clip chưa chấm bỏ qua) — dùng cho "Điểm Editor" trên thẻ clip
-  const editorAvgMap = evalC.reduce((a, c) => {
-    if (c.win || (Number(c.score) || 0) > 0) {
+  // "Điểm Editor" trên thẻ clip = trung bình TÍCH LŨY mọi thời gian (không reset
+  // theo tháng như bảng điểm) — để luôn thấy trình độ editor; clip chưa chấm bỏ qua.
+  const editorAvgMap = clips.reduce((a, c) => {
+    if (c.editor_id && (c.win || (Number(c.score) || 0) > 0)) {
       const pts = c.win ? 10 : (Number(c.score) || 0);
       a[c.editor_id] = a[c.editor_id] || { sum: 0, n: 0 };
       a[c.editor_id].sum += pts; a[c.editor_id].n++;
@@ -2176,9 +2177,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
 
       {/* Điểm Editor · Ghi chú */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
-        <span className="flex items-center gap-2 whitespace-nowrap">
+        <span className="flex items-center gap-2 whitespace-nowrap" title="Điểm trung bình tích lũy của editor (tính trên mọi clip đã được chấm, không reset theo tháng)">
           <span className="text-[13px] text-slate-500">Điểm Editor</span>
-          <span className="text-sm font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">{editorAvg != null ? editorAvg.toFixed(1) : '—'}</span>
+          <span className="text-sm font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">{editorAvg != null ? `${editorAvg.toFixed(1)}/10` : '—'}</span>
         </span>
         <span className="flex items-center gap-1.5 text-[13px] min-w-0">
           <span className="text-slate-500 shrink-0">Ghi chú:</span>
