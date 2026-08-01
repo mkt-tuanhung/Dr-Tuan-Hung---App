@@ -181,6 +181,10 @@ const fbKind = (c) => {
   return null;
 };
 
+// Tên khách từ thư mục kho thường có tiền tố ngày ("27.02.2026 Phan Thị Minh…")
+// — bỏ phần số đằng trước khi hiển thị cho gọn.
+const cleanName = (s) => String(s || '').replace(/^[\d.\-/\s]+/, '').trim() || String(s || '');
+
 // Nhãn theo CHI PHÍ/SĐT khi clip còn đang chạy & chưa tiêu quá ngân sách Win.
 const cpaTier = (cpa) => {
   if (cpa == null) return { text: 'Đang chạy — chưa đủ dữ liệu', cls: 'bg-slate-100 text-slate-500' };
@@ -957,7 +961,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
                 <button key={c.id} onClick={() => setVideoFor(c)} className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900 text-left">
                   {thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="absolute inset-0 grid place-items-center text-white/70"><PlayCircle className="w-8 h-8" /></span>}
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
-                    <span className="block text-white text-[11px] font-semibold truncate">{st?.customer_name || c.title || 'Clip'}</span>
+                    <span className="block text-white text-[11px] font-semibold truncate">{cleanName(st?.customer_name) || c.title || 'Clip'}</span>
                   </span>
                   <span className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded ${sc.cls}`}>{sc.label}</span>
                   {c.approved_to_run && <span className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-white">RUN</span>}
@@ -2038,7 +2042,11 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
     (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
     (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
   ];
-  const syncedAt = c.fb_synced_at ? new Date(c.fb_synced_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+  // "19:30 - 01/08" — bỏ năm cho gọn
+  const syncedAt = c.fb_synced_at ? (() => {
+    const d = new Date(c.fb_synced_at);
+    return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
+  })() : null;
   const thumb = (c.thumb_links || [])[0];
   const MetaItem = ({ Icon, label, children }) => (
     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -2098,7 +2106,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         {store?.customer_name && (
           <div className="shrink-0 w-32 sm:w-44 rounded-2xl bg-slate-50 border border-slate-100 p-2 sm:p-2.5">
             <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400"><CalendarDays className="w-3.5 h-3.5" />Khách hàng</div>
-            <div className="font-bold text-slate-800 text-[12px] sm:text-[13px] mt-0.5 leading-snug line-clamp-2">{store.customer_name}</div>
+            <div className="font-bold text-slate-800 text-[12px] sm:text-[13px] mt-0.5 leading-snug line-clamp-2">{cleanName(store.customer_name)}</div>
             {store?.service && <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 line-clamp-1">{store.service}</div>}
           </div>
         )}
