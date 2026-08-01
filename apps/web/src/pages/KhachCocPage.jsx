@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft, ChevronRight, Users, Wallet, CalendarDays, Clock } from 'lucide-react';
+import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft, ChevronRight, Users, Wallet, CalendarDays, Clock, Undo2 } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 
@@ -59,12 +59,14 @@ const KhachCocPage = ({ isNested = false }) => {
   const [careApp, setCareApp] = useState(null);
   const [selectedApp, setSelectedApp] = useState(null);
   const [showBongModal, setShowBongModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
   const [showSurgeryModal, setShowSurgeryModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Forms
   const [careForm, setCareForm] = useState({ care_status: 'Đang chăm sóc', care_notes: '' });
   const [bongForm, setBongForm] = useState({ notes: '' });
+  const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_date: '', notes: '' });
   const [surgeryForm, setSurgeryForm] = useState({
     expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '',
     service_group: 'Tiểu phẫu', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
@@ -194,6 +196,25 @@ const KhachCocPage = ({ isNested = false }) => {
     setSaving(false);
   };
 
+  const handleRefundSubmit = async (e) => {
+    e.preventDefault();
+    const amount = Number(String(refundForm.refund_amount).replace(/\D/g, '')) || 0;
+    if (!amount) { toast.error('Nhập số tiền hoàn cọc'); return; }
+    if (!refundForm.refund_date) { toast.error('Chọn ngày hoàn cọc'); return; }
+    setSaving(true);
+    const line = `\n[${new Date().toLocaleDateString('vi-VN')}] [Hoàn cọc] ${amount.toLocaleString('vi-VN')}đ (ngày ${new Date(refundForm.refund_date).toLocaleDateString('vi-VN')})` + (refundForm.notes ? ` — ${refundForm.notes}` : '');
+    const { error } = await supabase.from('customer_appointments')
+      .update({
+        status: 'bong',
+        bong_date: refundForm.refund_date,
+        notes: (selectedApp.notes || '') + line,
+      }).eq('id', selectedApp.id);
+
+    if (error) toast.error(error.message);
+    else { toast.success('Đã hoàn cọc — khách chuyển sang danh sách Bong!'); setShowRefundModal(false); setCareApp(null); loadData(); }
+    setSaving(false);
+  };
+
   const handleSurgerySubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -218,6 +239,11 @@ const KhachCocPage = ({ isNested = false }) => {
 
   const openCare = (app) => { setCareApp(app); setSelectedApp(app); setCareForm({ care_status: app.care_status || 'Đang chăm sóc', care_notes: '' }); };
   const openBong = (app) => { setSelectedApp(app); setBongForm({ notes: '' }); setShowBongModal(true); };
+  const openRefund = (app) => {
+    setSelectedApp(app);
+    setRefundForm({ refund_amount: String(app.deposit_amount || ''), refund_date: new Date().toISOString().split('T')[0], notes: '' });
+    setShowRefundModal(true);
+  };
   const openSurgery = (app) => {
     setSelectedApp(app);
     setSurgeryForm({
@@ -312,6 +338,9 @@ const KhachCocPage = ({ isNested = false }) => {
               <ConsultButton app={careApp} />
               <button type="button" onClick={() => openSurgery(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200">
                 <ArrowUpCircle className="w-4 h-4" /> Lên phẫu thuật
+              </button>
+              <button type="button" onClick={() => openRefund(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
+                <Undo2 className="w-4 h-4" /> Hoàn cọc
               </button>
               <button type="button" onClick={() => openBong(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
                 <AlertCircle className="w-4 h-4" /> Hủy cọc
@@ -470,6 +499,41 @@ const KhachCocPage = ({ isNested = false }) => {
             </div>
             <div className="p-4 border-t bg-slate-50 flex justify-end">
               <button type="submit" disabled={saving} className="px-6 py-2 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700">{saving ? 'Đang lưu...' : 'Xác nhận hủy cọc'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal: Hoàn Cọc */}
+      {showRefundModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleRefundSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-orange-50">
+              <h3 className="font-bold text-orange-800 flex items-center gap-2"><Undo2 className="w-5 h-5" /> Hoàn cọc: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowRefundModal(false)}><X className="w-5 h-5 text-orange-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="text-sm bg-slate-50 rounded-xl p-3 flex justify-between">
+                <span className="text-slate-500">Đã cọc</span>
+                <span className="font-bold text-blue-600">{Number(selectedApp?.deposit_amount || 0).toLocaleString('vi-VN')}đ</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Số tiền hoàn (VNĐ)</label>
+                  <MoneyInput required value={refundForm.refund_amount} onChange={v => setRefundForm({ ...refundForm, refund_amount: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Ngày hoàn cọc</label>
+                  <input required type="date" value={refundForm.refund_date} onChange={e => setRefundForm({ ...refundForm, refund_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Lý do hoàn cọc</label>
+                <input type="text" value={refundForm.notes} onChange={e => setRefundForm({ ...refundForm, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500" placeholder="Khách đổi ý, kẹt lịch..." />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end">
+              <button type="submit" disabled={saving} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700">{saving ? 'Đang lưu...' : 'Hoàn cọc & chuyển sang Bong'}</button>
             </div>
           </form>
         </div>
