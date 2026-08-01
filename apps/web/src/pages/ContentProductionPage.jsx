@@ -2048,13 +2048,22 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
   const MetricCol = ({ Icon, label, value, ring, chip }) => (
     <div className="flex flex-col items-center text-center px-2 py-3.5">
       <div className={`w-10 h-10 rounded-full grid place-items-center ${ring}`}><Icon className="w-5 h-5" /></div>
-      <div className="text-[11px] text-slate-400 mt-2 leading-tight">{label}</div>
-      <div className="font-extrabold text-slate-800 text-lg mt-0.5 whitespace-nowrap">{value}</div>
+      <div className="text-[11px] text-slate-400 mt-1.5 leading-tight">{label}</div>
+      <div className="font-bold text-slate-800 text-[16px] mt-0.5 whitespace-nowrap">{value}</div>
       {chip && <div className={`mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${chip.cls}`}>{chip.text}</div>}
     </div>
   );
   return (
     <div id={`clip-${c.id}`} className="bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-3.5 sm:p-5 max-w-2xl mx-auto">
+      {/* Hàng đầu: nhãn thẻ · Xem chi tiết · menu (giống mockup) */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="font-bold text-slate-800 text-[15px]">Chiến dịch</span>
+        <div className="flex items-center gap-2">
+          <button onClick={onView} className="text-[13px] font-bold text-white px-4 h-9 rounded-xl bg-[#12274a] hover:bg-[#1b3866] whitespace-nowrap">Xem chi tiết</button>
+          <ActionMenu items={menuItems} />
+        </div>
+      </div>
+
       {/* Video — poster + nút play (bấm để xem), phủ kín khung, không viền đen */}
       <button onClick={onView} className="group relative block w-full rounded-2xl overflow-hidden bg-slate-900 aspect-video ring-1 ring-slate-200/60 shadow-sm">
         {thumb
@@ -2078,7 +2087,10 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
 
       {/* Tiêu đề + ô khách hàng */}
       <div className="flex items-start justify-between gap-3 mt-2">
-        <h3 className="font-extrabold text-slate-800 text-lg sm:text-xl leading-snug min-w-0">{c.title || '(Chưa đặt tiêu đề)'}</h3>
+        <div className="min-w-0">
+          <h3 className="font-bold text-slate-800 text-[17px] leading-snug">{c.title || '(Chưa đặt tiêu đề)'}</h3>
+          <div className="w-7 h-[3px] bg-slate-200 rounded-full mt-2" />
+        </div>
         {store?.customer_name && (
           <div className="shrink-0 w-36 sm:w-44 rounded-2xl bg-slate-50 border border-slate-100 p-2.5">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400"><CalendarDays className="w-3.5 h-3.5" />Khách hàng</div>
@@ -2103,19 +2115,19 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         </div>
       </div>
 
-      {/* ID chiến dịch + nút Đồng bộ / Gỡ ID */}
+      {/* ID chiến dịch: avatar · label + số · nút copy vuông · Đồng bộ / Gỡ ID bên phải */}
       {c.fb_campaign_id ? (
-        <div className="flex items-center gap-2 flex-wrap mt-3">
-          {thumb && <img src={thumbSrc(thumb)} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0" loading="lazy" />}
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-full pl-2.5 pr-1.5 py-1.5">
-            <LinkIcon className="w-3.5 h-3.5 text-slate-400" /><span className="text-slate-400">ID chiến dịch</span>
-            <span className="font-mono text-slate-600 font-semibold">{c.fb_campaign_id}</span>
-            <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
-          </span>
+        <div className="flex items-center gap-3 flex-wrap mt-3.5">
+          {thumb && <img src={thumbSrc(thumb)} alt="" className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0" loading="lazy" />}
+          <div className="min-w-0">
+            <div className="text-[11px] text-slate-400 leading-none mb-1">ID chiến dịch</div>
+            <div className="font-bold text-slate-800 text-[13px] tracking-wide truncate">{c.fb_campaign_id}</div>
+          </div>
+          <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="w-9 h-9 rounded-xl border border-slate-200 grid place-items-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 shrink-0"><Copy className="w-4 h-4" /></button>
           {canAds && (
             <span className="flex items-center gap-2 ml-auto">
-              <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 border border-blue-200 rounded-full px-3.5 py-1.5 hover:bg-blue-50 transition-colors"><RotateCcw className="w-3.5 h-3.5" />Đồng bộ</button>
-              <button onClick={() => onRemoveFb?.(c)} className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 border border-rose-200 rounded-full px-3.5 py-1.5 hover:bg-rose-50 transition-colors"><X className="w-3.5 h-3.5" />Gỡ ID</button>
+              <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 border border-blue-200 rounded-full px-3.5 py-2 hover:bg-blue-50 transition-colors"><RotateCcw className="w-3.5 h-3.5" />Đồng bộ</button>
+              <button onClick={() => onRemoveFb?.(c)} className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 border border-rose-200 rounded-full px-3.5 py-2 hover:bg-rose-50 transition-colors"><X className="w-3.5 h-3.5" />Gỡ ID</button>
             </span>
           )}
         </div>
@@ -2143,39 +2155,35 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3">Chưa gán ID chiến dịch Facebook.</div>
       )}
 
-      {/* Dải điểm hệ thống — nền tối, 1 hàng: nhãn · điểm · trạng thái */}
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-4 sm:px-5 py-3.5 mt-4 flex items-center gap-2">
-        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-300 whitespace-nowrap shrink-0">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
+      {/* Dải điểm hệ thống — nền navy 1 hàng: nhãn · điểm giữa · trạng thái phải */}
+      <div className="rounded-2xl bg-[#0f2140] px-4 sm:px-5 py-3 mt-4 flex items-center gap-2">
+        <span className="text-xs font-semibold text-white/85 whitespace-nowrap shrink-0">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
         <span className="flex-1 flex justify-center min-w-0 px-1">
           {verdict.potential
-            ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full whitespace-nowrap ${verdict.tier.cls}`}>{verdict.tier.text}</span>
+            ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap ${verdict.tier.cls}`}>{verdict.tier.text}</span>
             : (c.win || c.score > 0)
-              ? <span className={`text-lg sm:text-2xl font-black inline-flex items-center gap-1.5 whitespace-nowrap ${c.win ? 'text-amber-300' : 'text-white'}`}>{c.win && <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />}{c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
+              ? <span className={`text-lg font-extrabold inline-flex items-center gap-1.5 whitespace-nowrap ${c.win ? 'text-amber-400' : 'text-white'}`}>{c.win && <Trophy className="w-5 h-5 text-amber-400" />}{c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
               : <span className="text-sm font-semibold text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
         </span>
         {c.approved_to_run
-          ? <span className="text-[11px] sm:text-xs font-bold text-emerald-300 bg-emerald-500/15 ring-1 ring-emerald-400/30 px-2.5 sm:px-3 py-1 rounded-full inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-3.5 h-3.5" />Đã duyệt chạy</span>
+          ? <span className="text-[11px] sm:text-xs font-bold text-white bg-emerald-600 px-3 py-1.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-3.5 h-3.5" />Đã duyệt chạy</span>
           : canAds ? <button onClick={(e) => { e.stopPropagation(); onApproveRun(); }} className="text-[11px] sm:text-xs font-bold text-white px-3 py-1.5 rounded-full bg-teal-500 hover:bg-teal-400 inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>
             : <span className="shrink-0 w-1" />}
       </div>
 
-      {/* Điểm Editor · Ghi chú · hành động */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
-        <span className="flex items-center gap-1.5 whitespace-nowrap">
-          <span className="text-xs text-slate-400">Điểm Editor</span>
-          <span className="text-sm font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700">{editorAvg != null ? `${editorAvg.toFixed(1)}/10` : '—'}</span>
+      {/* Điểm Editor · Ghi chú */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          <span className="text-[13px] text-slate-500">Điểm Editor</span>
+          <span className="text-sm font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">{editorAvg != null ? editorAvg.toFixed(1) : '—'}</span>
         </span>
-        <span className="flex items-center gap-1 text-xs min-w-0">
-          <span className="text-slate-400 shrink-0">Ghi chú:</span>
+        <span className="flex items-center gap-1.5 text-[13px] min-w-0">
+          <span className="text-slate-500 shrink-0">Ghi chú:</span>
           {c.ads_feedback
             ? <span className="text-slate-600 truncate max-w-[220px]">{c.ads_feedback}</span>
             : <span className="text-slate-300">chưa có</span>}
-          {canAds && <button onClick={onReview} className="text-slate-400 hover:text-violet-600 shrink-0"><Pencil className="w-3.5 h-3.5" /></button>}
+          {canAds && <button onClick={onReview} className="text-slate-400 hover:text-violet-600 shrink-0"><Pencil className="w-4 h-4" /></button>}
         </span>
-        <div className="ml-auto flex items-center gap-2">
-          <button onClick={onView} className="text-sm font-bold text-white px-4 h-9 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm whitespace-nowrap">Xem chi tiết</button>
-          <ActionMenu items={menuItems} />
-        </div>
       </div>
     </div>
   );
