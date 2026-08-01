@@ -484,6 +484,18 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     await patchClip(c.id, payload, postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads — Editor +500.000đ');
     setApproveFor(null);
   };
+  // Gỡ ID chiến dịch (gán nhầm) — xoá chỉ số FB & điểm tự chấm để tránh chấm nhầm
+  const removeFbCampaign = (c) => ask(
+    'Gỡ ID chiến dịch khỏi clip này? Chỉ số Facebook và điểm tự chấm sẽ bị xoá để tránh chấm nhầm điểm.',
+    async () => {
+      await patchClip(c.id, {
+        fb_campaign_id: null, fb_spend: 0, fb_messages: 0, fb_leads: 0, fb_purchases: 0,
+        fb_reach: 0, fb_impressions: 0, fb_results: 0, fb_status: null, fb_synced_at: null,
+        win: false, score: null,
+      }, 'Đã gỡ ID chiến dịch — clip trở về "Chưa chấm"');
+    },
+    { okLabel: 'Gỡ ID', danger: true }
+  );
   // Bật/tắt nhãn "Đăng ngay" — hệ thống ngoài đọc cờ này để tự đăng video lên page
   const markPostNow = (c, on) => patchClip(c.id,
     { post_now: on, post_now_at: on ? new Date().toISOString() : null, post_status: on ? 'queued' : null, ads_id: me.id },
@@ -888,7 +900,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           <div className="space-y-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} editorAvg={editorAvg(c.editor_id)}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onPostNow={markPostNow} />
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onRemoveFb={removeFbCampaign} onPostNow={markPostNow} />
             ))}
           </div>
         )}
@@ -1930,7 +1942,7 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
 };
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onPostNow }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onRemoveFb, onPostNow }) => {
   const mine = c.editor_id === me?.id;
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
@@ -1998,7 +2010,12 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
             <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
               <LinkIcon className="w-3 h-3" />ID chiến dịch: <span className="font-mono text-slate-500">{c.fb_campaign_id}</span>
               <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3 h-3" /></button>
-              {canAds && <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="ml-auto text-blue-600 font-semibold inline-flex items-center gap-0.5 hover:underline"><RotateCcw className="w-3 h-3" />Đồng bộ</button>}
+              {canAds && (
+                <span className="ml-auto flex items-center gap-2.5">
+                  <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="text-blue-600 font-semibold inline-flex items-center gap-0.5 hover:underline"><RotateCcw className="w-3 h-3" />Đồng bộ</button>
+                  <button onClick={() => onRemoveFb?.(c)} className="text-rose-500 font-semibold inline-flex items-center gap-0.5 hover:underline"><X className="w-3 h-3" />Gỡ ID</button>
+                </span>
+              )}
             </div>
           )}
 
