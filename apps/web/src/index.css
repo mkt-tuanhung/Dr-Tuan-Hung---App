@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
 @import './styles/design-system.css';
 
 @tailwind base;
@@ -37,7 +36,8 @@
     --ring: 173 70% 35%;
     
     --radius: 1.25rem;
-    --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;
+    /* Font hệ thống: iPhone/Mac dùng San Francisco, Android dùng Roboto — hiển thị tiếng Việt chuẩn, tải tức thì */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
     /* Dashboard & KPI Colors */
     --chart-1: 173 70% 35%;
