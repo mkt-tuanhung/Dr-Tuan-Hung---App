@@ -2685,7 +2685,7 @@ const TikTokPlayer = ({ url, onLike }) => {
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
         onTimeUpdate={e => { const v = e.target; setCur(v.currentTime); setProg(v.duration ? v.currentTime / v.duration : 0); }}
         onLoadedMetadata={e => setDur(e.target.duration)}
-        className="w-full h-full object-contain" />
+        className="w-full h-full object-cover" />
 
       {burst && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><Heart className="w-24 h-24 text-rose-500 fill-rose-500 animate-ping" /></div>}
       {!playing && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center"><Play className="w-8 h-8 text-white fill-white ml-1" /></div></div>}
@@ -2771,18 +2771,30 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
     </button>
   );
 
+  const thumb = (clip.thumb_links || [])[0];
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center sm:p-4" onClick={onClose}>
-      <div className="relative w-full h-full sm:h-auto sm:max-w-sm sm:rounded-2xl overflow-hidden bg-black flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-3 bg-gradient-to-b from-black/60 to-transparent">
-          <h3 className="text-white font-semibold text-sm truncate pr-2">{title}</h3>
-          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full bg-black/40 text-white shrink-0"><X className="w-5 h-5" /></button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      {/* Nền: ảnh clip làm mờ cho sang, không còn nền đen thô */}
+      <div className="absolute inset-0 overflow-hidden bg-slate-950">
+        {thumb && <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover opacity-40 blur-3xl scale-125" />}
+        <div className="absolute inset-0 bg-black/55" />
+      </div>
 
-        <div className="relative flex-1 sm:flex-none sm:aspect-[9/16] w-full min-h-0">
+      {/* Nút đóng nổi góc trên */}
+      <button onClick={onClose} className="absolute top-4 right-4 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-white/15 backdrop-blur text-white hover:bg-white/25 transition"><X className="w-5 h-5" /></button>
+
+      {/* Thẻ video dạng reel 9:16 bo tròn, canh giữa */}
+      <div className="relative z-10 w-full flex justify-center px-3 sm:px-0" onClick={e => e.stopPropagation()}>
+        <div className="relative w-full max-w-[400px] aspect-[9/16] max-h-[90vh] bg-black rounded-[26px] overflow-hidden shadow-2xl ring-1 ring-white/10">
           <TikTokPlayer key={cur} url={cur} onLike={doubleTapLike} />
 
-          <div className="absolute right-2.5 bottom-24 sm:bottom-16 flex flex-col items-center gap-4 z-20">
+          {/* Tiêu đề trên cùng */}
+          <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-3.5 pb-6 bg-gradient-to-b from-black/55 to-transparent pointer-events-none">
+            <h3 className="text-white font-bold text-sm truncate drop-shadow pr-10">{clip.title || title}</h3>
+          </div>
+
+          {/* Rail thao tác bên phải */}
+          <div className="absolute right-3 bottom-24 flex flex-col items-center gap-4 z-20">
             {socialId && <RailBtn onClick={toggleLike} active={liked} icon={<Heart className={`w-6 h-6 ${liked ? 'fill-rose-500' : ''}`} />} label={String(likeCount)} />}
             {socialId && <RailBtn onClick={() => setShowComments(true)} icon={<MessageCircle className="w-6 h-6" />} label={String(comments.length)} />}
             {canScore && onScore && <RailBtn onClick={onScore} active={!!(clip.win || clip.score)} activeCls="text-amber-400" icon={<Star className={`w-6 h-6 ${clip.win || clip.score ? 'fill-amber-400 text-amber-400' : ''}`} />} label={clip.win ? '10' : (clip.score ? String(clip.score) : 'Chấm')} />}
@@ -2790,7 +2802,7 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
           </div>
 
           {links.length > 1 && (
-            <div className="absolute left-2.5 bottom-24 sm:bottom-16 flex flex-col gap-1.5 z-20">
+            <div className="absolute left-3 bottom-24 flex flex-col gap-1.5 z-20">
               {links.map((l, i) => (
                 <button key={i} onClick={() => setCi(i)} title={isDirect(l) ? 'Video trực tiếp (TikTok)' : 'Link Google Drive'}
                   className={`w-8 h-8 rounded-full text-[11px] font-bold flex items-center justify-center ${i === ci ? 'bg-white text-black' : 'bg-black/40 text-white'} ${isDirect(l) ? 'ring-2 ring-rose-500' : ''}`}>
@@ -2799,34 +2811,35 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
               ))}
             </div>
           )}
-        </div>
 
-        {showComments && (
-          <div className="absolute inset-0 z-30 flex flex-col justify-end" onClick={() => setShowComments(false)}>
-            <div className="bg-white rounded-t-2xl max-h-[70%] flex flex-col" onClick={e => e.stopPropagation()}>
-              <div className="px-4 py-3 border-b flex items-center justify-between">
-                <span className="font-bold text-slate-800 text-sm">{comments.length} bình luận</span>
-                <button onClick={() => setShowComments(false)}><X className="w-5 h-5 text-slate-400" /></button>
-              </div>
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                {comments.length === 0 ? <div className="text-center text-slate-400 text-sm py-8">Chưa có bình luận — hãy là người đầu tiên!</div>
-                  : comments.map(c => (
-                    <div key={c.id} className="flex gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">{(c.user?.full_name || '?').charAt(0)}</div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-700">{c.user?.full_name || 'Ẩn danh'}</div>
-                        <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">{c.content}</div>
+          {showComments && (
+            <div className="absolute inset-0 z-30 flex flex-col justify-end" onClick={() => setShowComments(false)}>
+              <div className="bg-white rounded-t-3xl max-h-[70%] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="pt-2 flex justify-center"><span className="w-10 h-1 rounded-full bg-slate-300" /></div>
+                <div className="px-4 py-2.5 border-b flex items-center justify-between">
+                  <span className="font-bold text-slate-800 text-sm">{comments.length} bình luận</span>
+                  <button onClick={() => setShowComments(false)}><X className="w-5 h-5 text-slate-400" /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                  {comments.length === 0 ? <div className="text-center text-slate-400 text-sm py-8">Chưa có bình luận — hãy là người đầu tiên!</div>
+                    : comments.map(c => (
+                      <div key={c.id} className="flex gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">{(c.user?.full_name || '?').charAt(0)}</div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-700">{c.user?.full_name || 'Ẩn danh'}</div>
+                          <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">{c.content}</div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
-              <div className="p-3 border-t flex items-center gap-2">
-                <input value={cmt} onChange={e => setCmt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendComment(); }} placeholder="Thêm bình luận..." className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm outline-none" />
-                <button onClick={sendComment} disabled={sending || !cmt.trim()} className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 shrink-0"><Send className="w-4 h-4" /></button>
+                    ))}
+                </div>
+                <div className="p-3 border-t flex items-center gap-2">
+                  <input value={cmt} onChange={e => setCmt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendComment(); }} placeholder="Thêm bình luận..." className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm outline-none" />
+                  <button onClick={sendComment} disabled={sending || !cmt.trim()} className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 shrink-0"><Send className="w-4 h-4" /></button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
