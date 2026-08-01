@@ -942,12 +942,6 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
               {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
             </div>
           </div>
-          {winRule && winRule.win_phones > 0 && (
-            <div className="text-xs text-slate-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 leading-relaxed">
-              <Trophy className="w-3.5 h-3.5 text-amber-500 inline align-[-2px] mr-1" />
-              Định nghĩa Win: chi <b>{fmtM(winRule.win_budget)}</b> ra <b>{winRule.win_phones} SĐT</b> (CPA ≤ <b>{fmtM(Math.round(winRule.win_budget / winRule.win_phones))}</b>/SĐT) → tự chấm.
-            </div>
-          )}
           {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : videoView === 'grid' ? (
