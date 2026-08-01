@@ -181,6 +181,43 @@ const fbKind = (c) => {
   return null;
 };
 
+// Nhãn theo CHI PHÍ/SĐT khi clip còn đang chạy & chưa tiêu quá ngân sách Win.
+const cpaTier = (cpa) => {
+  if (cpa == null) return { text: 'Đang chạy — chưa đủ dữ liệu', cls: 'bg-slate-100 text-slate-500' };
+  if (cpa < 800000) return { text: 'Chỉ số Tốt', cls: 'bg-emerald-100 text-emerald-700' };
+  if (cpa < 1000000) return { text: 'Tiềm năng', cls: 'bg-teal-100 text-teal-700' };
+  if (cpa <= 1200000) return { text: 'Bình thường', cls: 'bg-amber-100 text-amber-700' };
+  return { text: 'Báo động', cls: 'bg-rose-100 text-rose-700' };
+};
+
+// Clip MỚI chạy chỉ số còn ít -> chưa vội chấm. Chỉ chấm điểm khi:
+//   - đã tiêu ≥ ngân sách Win, HOẶC
+//   - campaign đã TẮT (không còn chạy/duyệt).
+// Còn đang chạy & chưa tiêu quá ngân sách -> "tiềm năng" (hiện nhãn theo CPA).
+const clipVerdict = (c, rule) => {
+  const wb = Number(rule?.win_budget) || 0;
+  const hasRule = wb > 0 && Number(rule?.win_phones) > 0;
+  const kind = fbKind(c);
+  const inProgress = kind === 'running' || kind === 'review';
+  const reachedBudget = wb > 0 && Number(c.fb_spend) >= wb;
+  if (c.fb_campaign_id && hasRule && inProgress && !reachedBudget) {
+    const phones = phonesOf(c);
+    const cpa = phones > 0 ? Math.round(Number(c.fb_spend) / phones) : null;
+    return { potential: true, tier: cpaTier(cpa) };
+  }
+  return { potential: false };
+};
+
+// Tự chấm có điều kiện (dùng khi đồng bộ chỉ số). Trả null nếu CHƯA đến lúc chấm.
+function autoScore(spend, phones, status, rule) {
+  const wb = Number(rule?.win_budget) || 0;
+  if (!wb || !(Number(rule?.win_phones) > 0)) return null; // chưa định nghĩa Win
+  const kind = status ? fbStatusInfo(status)?.kind : null;
+  const inProgress = kind === 'running' || kind === 'review';
+  if (inProgress && Number(spend) < wb) return null; // đang chạy & chưa đủ ngân sách -> chưa chấm
+  return scoreByRule(spend, phones, rule);
+}
+
 // ----- Xem trước video / ảnh từ link (Google Drive, YouTube, file trực tiếp) -----
 const driveId = (url) => {
   const m = (url || '').match(/\/d\/([a-zA-Z0-9_-]+)/) || (url || '').match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -425,7 +462,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
       };
       const mPhones = (m.leads ?? 0) + (m.purchases ?? 0);
-      const v = scoreByRule(m.spend ?? 0, mPhones, winRule); // tự chấm theo định nghĩa
+      const v = autoScore(m.spend ?? 0, mPhones, m.status, winRule); // chỉ chấm khi đủ điều kiện
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
@@ -452,7 +489,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
             fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
           };
-          const v = scoreByRule(m.spend ?? 0, (m.leads ?? 0) + (m.purchases ?? 0), winRule);
+          const v = autoScore(m.spend ?? 0, (m.leads ?? 0) + (m.purchases ?? 0), m.status, winRule);
           if (v) { upd.win = v.win; upd.score = v.score; }
           const { error } = await supabase.from('media_clips').update(upd).eq('id', c.id);
           if (error) fail = true; else ok++;
@@ -473,7 +510,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     setWinRule({ id: 1, ...rule });
     const targets = clips.filter(c => c.fb_campaign_id && (Number(c.fb_spend) > 0 || phonesOf(c) > 0));
     let n = 0;
-    for (const c of targets) { const v = scoreByRule(c.fb_spend, phonesOf(c), rule); if (v) { await supabase.from('media_clips').update({ win: v.win, score: v.score }).eq('id', c.id); n++; } }
+    for (const c of targets) { const v = autoScore(c.fb_spend, phonesOf(c), c.fb_status, rule); if (v) { await supabase.from('media_clips').update({ win: v.win, score: v.score }).eq('id', c.id); n++; } }
     toast.success(`Đã lưu định nghĩa Win — tự chấm lại ${n} clip`);
     setWinModal(false); loadData();
   };
@@ -881,7 +918,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             {reviewClips.map(c => {
               const st = storeOf(c.media_customer_id);
               const thumb = (c.thumb_links || [])[0];
-              const sc = scoreCat(c.score, c.win);
+              const vd = clipVerdict(c, winRule);
+              const sc = vd.potential ? { label: vd.tier.text, cls: vd.tier.cls } : scoreCat(c.score, c.win);
               return (
                 <button key={c.id} onClick={() => setVideoFor(c)} className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900 text-left">
                   {thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="absolute inset-0 grid place-items-center text-white/70"><PlayCircle className="w-8 h-8" /></span>}
@@ -899,7 +937,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         ) : (
           <div className="space-y-3">
             {reviewClips.map(c => (
-              <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} editorAvg={editorAvg(c.editor_id)}
+              <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} winRule={winRule} editorAvg={editorAvg(c.editor_id)}
                 onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onRemoveFb={removeFbCampaign} onPostNow={markPostNow} />
             ))}
           </div>
@@ -1942,7 +1980,8 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
 };
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onRemoveFb, onPostNow }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onRemoveFb, onPostNow }) => {
+  const verdict = clipVerdict(c, winRule);
   const mine = c.editor_id === me?.id;
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
@@ -2045,10 +2084,12 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
 
       {/* Dải điểm dưới cùng */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 pt-3 border-t border-slate-100">
-        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 whitespace-nowrap">Điểm hệ thống</span>
-        {(c.win || c.score > 0)
-          ? <span className={`text-sm font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap ${cat.cls}`}>{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
-          : <span className="text-xs text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
+        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 whitespace-nowrap">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
+        {verdict.potential
+          ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`text-sm font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${verdict.tier.cls}`}>{verdict.tier.text}</span>
+          : (c.win || c.score > 0)
+            ? <span className={`text-sm font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap ${cat.cls}`}>{c.win ? '🏆' : ''} {c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
+            : <span className="text-xs text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
         {c.approved_to_run && <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3" />Đã duyệt chạy</span>}
         {c.post_status === 'posted' ? <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full whitespace-nowrap">✅ Đã đăng page</span>
           : c.post_now ? <span title="Đã gửi lệnh đăng cho hệ thống đăng bài — hệ thống đó sẽ tự đăng lên page" className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full whitespace-nowrap">⚡ Đã gửi đăng page</span> : null}

@@ -54,6 +54,25 @@ function scoreByRule(spend: number, phones: number, rule: { win_budget?: number;
   return { win: score >= 10, score };
 }
 
+// Trạng thái FB -> nhóm (giống fbStatusInfo ở web)
+const FB_REVIEW = ["IN_PROCESS", "PENDING_REVIEW", "PREAPPROVED", "PENDING_BILLING_INFO", "WITH_ISSUES"];
+function kindOf(status: string | null): "running" | "review" | "off" | null {
+  if (!status) return null;
+  if (status === "ACTIVE") return "running";
+  if (FB_REVIEW.includes(status)) return "review";
+  return "off";
+}
+
+// Chỉ chấm khi đã tiêu ≥ ngân sách Win HOẶC campaign đã tắt. Đang chạy & chưa đủ -> null.
+function autoScore(spend: number, phones: number, status: string | null, rule: { win_budget?: number; win_phones?: number } | null) {
+  const wb = Number(rule?.win_budget) || 0;
+  if (!wb || !(Number(rule?.win_phones) > 0)) return null;
+  const kind = kindOf(status);
+  const inProgress = kind === "running" || kind === "review";
+  if (inProgress && spend < wb) return null;
+  return scoreByRule(spend, phones, rule);
+}
+
 async function fetchCampaign(token: string, campaignId: string) {
   const p = new URLSearchParams({
     fields: "spend,impressions,reach,inline_link_clicks,ctr,actions,campaign_name",
@@ -107,7 +126,7 @@ Deno.serve(async (req) => {
           fb_reach: m.reach, fb_impressions: m.impressions, fb_results: m.results,
           fb_status: m.status, fb_synced_at: new Date().toISOString(),
         };
-        const v = scoreByRule(m.spend, m.leads + m.purchases, rule);
+        const v = autoScore(m.spend, m.leads + m.purchases, m.status, rule);
         if (v) { upd.win = v.win; upd.score = v.score; }
         const { error } = await sb.from("media_clips").update(upd).eq("id", c.id);
         if (error) throw error;
