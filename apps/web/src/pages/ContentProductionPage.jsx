@@ -208,6 +208,19 @@ const clipVerdict = (c, rule) => {
   return { potential: false };
 };
 
+// Độ hiệu quả để xếp bài Ads tốt lên TRÊN: WIN > điểm cao > nhiều SĐT & CPA thấp.
+const adEffValue = (c) => {
+  const phones = phonesOf(c);
+  const spend = Number(c.fb_spend) || 0;
+  const cpa = phones > 0 ? spend / phones : null;
+  let v = 0;
+  if (c.win) v += 1000000;                       // WIN ưu tiên cao nhất
+  v += (Number(c.score) || 0) * 10000;           // điểm hệ thống
+  v += phones * 100;                              // nhiều SĐT hơn = hiệu quả hơn
+  if (cpa != null) v += Math.max(0, 1500000 - cpa) / 1500; // CPA thấp -> cộng thêm (tối đa ~1000)
+  return v;
+};
+
 // Tự chấm có điều kiện (dùng khi đồng bộ chỉ số). Trả null nếu CHƯA đến lúc chấm.
 function autoScore(spend, phones, status, rule) {
   const wb = Number(rule?.win_budget) || 0;
@@ -706,24 +719,24 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       if (!matchQ) return false;
       return true; // đang tìm kiếm -> tìm xuyên tất cả sub-tab & không giới hạn tháng
     }
-    // Sub-tab theo trạng thái campaign (lấy từ Ads Manager)
+    // Sub-tab theo trạng thái campaign — "Đang chạy"/"Đã tắt" = ĐÃ GÁN ID chiến dịch + trạng thái tương ứng
     const k = fbKind(c);
     if (videoTab === 'pending') return c.stage === 'submitted' && !c.approved_to_run;
-    if (videoTab === 'running') return c.approved_to_run && k === 'running';
-    if (videoTab === 'review') return c.approved_to_run && k === 'review';
-    if (videoTab === 'off') return c.approved_to_run && k === 'off';
+    if (videoTab === 'running') return !!c.fb_campaign_id && k === 'running';
+    if (videoTab === 'review') return !!c.fb_campaign_id && k === 'review';
+    if (videoTab === 'off') return !!c.fb_campaign_id && k === 'off';
     if (!matchScoreFilter(c, videoScore)) return false;
     if (videoService && !((st?.service || '').includes(videoService))) return false;
     const day = (c.submitted_at || c.created_at || '').slice(0, 10);
     if (videoFrom && day < videoFrom) return false;
     if (videoTo && day > videoTo) return false;
     return true; // hiện TẤT CẢ clip (không giới hạn theo tháng) — dùng sub-tab/lọc ngày để thu hẹp
-  });
+  }).sort((a, b) => adEffValue(b) - adEffValue(a)); // bài Ads hiệu quả ưu tiên lên trên
   const videoCounts = {
     pending: clips.filter(c => c.stage === 'submitted' && !c.approved_to_run).length,
-    running: clips.filter(c => c.approved_to_run && fbKind(c) === 'running').length,
-    review: clips.filter(c => c.approved_to_run && fbKind(c) === 'review').length,
-    off: clips.filter(c => c.approved_to_run && fbKind(c) === 'off').length,
+    running: clips.filter(c => c.fb_campaign_id && fbKind(c) === 'running').length,
+    review: clips.filter(c => c.fb_campaign_id && fbKind(c) === 'review').length,
+    off: clips.filter(c => c.fb_campaign_id && fbKind(c) === 'off').length,
   };
 
   return (
@@ -887,18 +900,34 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       ) : (
         <>
           {(canAds || isManager) && <FbSummaryStrip clips={clips} onReport={setActiveTab ? () => setActiveTab('ads_report') : null} />}
-          {/* Sub-tab trạng thái (pill nổi bật) + cập nhật chỉ số */}
+          {/* Sub-tab trạng thái — thiết kế nổi bật, "Đang chạy" có hiệu ứng live */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {[['all', 'Tất cả', reviewClips.length, 'teal'], ['pending', 'Chờ Ads duyệt', videoCounts.pending, 'violet'], ['running', 'Đang chạy', videoCounts.running, 'emerald'], ['review', 'Đang duyệt', videoCounts.review, 'amber'], ['off', 'Đã tắt', videoCounts.off, 'slate']].map(([k, l, n, col]) => {
+            <div className="flex gap-2 p-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-2xl border border-slate-200/70 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {[
+                { k: 'all', label: 'Tất cả', Icon: LayoutGrid, n: reviewClips.length, c: 'teal' },
+                { k: 'running', label: 'Đang chạy', Icon: PlayCircle, n: videoCounts.running, c: 'emerald', live: true },
+                { k: 'review', label: 'Đang duyệt', Icon: Clock, n: videoCounts.review, c: 'amber' },
+                { k: 'off', label: 'Đã tắt', Icon: PauseCircle, n: videoCounts.off, c: 'slate' },
+                { k: 'pending', label: 'Chờ duyệt', Icon: Clapperboard, n: videoCounts.pending, c: 'violet' },
+              ].map(({ k, label, Icon, n, c, live }) => {
                 const active = videoTab === k;
-                const txt = { teal: 'text-teal-600', violet: 'text-violet-600', emerald: 'text-emerald-600', amber: 'text-amber-600', slate: 'text-slate-700' }[col];
-                const bdg = active
-                  ? { teal: 'bg-teal-100 text-teal-700', violet: 'bg-violet-100 text-violet-700', emerald: 'bg-emerald-100 text-emerald-700', amber: 'bg-amber-100 text-amber-700', slate: 'bg-slate-200 text-slate-600' }[col]
-                  : 'bg-slate-200/70 text-slate-500';
+                const grad = { teal: 'from-teal-500 to-cyan-500', emerald: 'from-emerald-500 to-green-500', amber: 'from-amber-500 to-orange-500', slate: 'from-slate-500 to-slate-600', violet: 'from-violet-500 to-purple-500' }[c];
+                const iconCol = { teal: 'text-teal-500', emerald: 'text-emerald-500', amber: 'text-amber-500', slate: 'text-slate-500', violet: 'text-violet-500' }[c];
+                const inactive = live
+                  ? 'bg-white text-emerald-600 ring-1 ring-emerald-200 shadow-sm hover:ring-emerald-300'
+                  : 'bg-white text-slate-500 shadow-sm hover:text-slate-700 hover:shadow';
                 return (
-                  <button key={k} onClick={() => setVideoTab(k)} className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold transition ${active ? `bg-white shadow-sm ${txt}` : 'text-slate-500 hover:text-slate-700'}`}>
-                    {l}<span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${bdg}`}>{n}</span>
+                  <button key={k} onClick={() => setVideoTab(k)}
+                    className={`relative shrink-0 whitespace-nowrap inline-flex items-center gap-2 px-4 h-11 rounded-xl text-sm font-bold transition-all duration-200 ${active ? `bg-gradient-to-r ${grad} text-white shadow-lg ${live ? 'tab-live' : ''}` : inactive}`}>
+                    {live && (
+                      <span className="relative flex h-2.5 w-2.5">
+                        {n > 0 && <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${active ? 'bg-white' : 'bg-emerald-400'}`} />}
+                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${active ? 'bg-white' : 'bg-emerald-500'}`} />
+                      </span>
+                    )}
+                    <Icon className={`w-4 h-4 ${active ? 'text-white' : iconCol}`} />
+                    {label}
+                    <span className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
                   </button>
                 );
               })}
