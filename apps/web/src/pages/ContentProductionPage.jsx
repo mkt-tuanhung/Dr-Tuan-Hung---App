@@ -938,7 +938,10 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             </div>
           </div>
           {winRule && winRule.win_phones > 0 && (
-            <div className="text-[11px] text-slate-500 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 inline-flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-amber-500" />Định nghĩa Win: chi <b>{fmtM(winRule.win_budget)}</b> ra <b>{winRule.win_phones} SĐT</b> (CPA ≤ {fmtM(Math.round(winRule.win_budget / winRule.win_phones))}/SĐT) → tự chấm.</div>
+            <div className="text-xs text-slate-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 leading-relaxed">
+              <Trophy className="w-3.5 h-3.5 text-amber-500 inline align-[-2px] mr-1" />
+              Định nghĩa Win: chi <b>{fmtM(winRule.win_budget)}</b> ra <b>{winRule.win_phones} SĐT</b> (CPA ≤ <b>{fmtM(Math.round(winRule.win_budget / winRule.win_phones))}</b>/SĐT) → tự chấm.
+            </div>
           )}
           {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
