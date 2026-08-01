@@ -2035,112 +2035,128 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
     (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
   ];
   const syncedAt = c.fb_synced_at ? new Date(c.fb_synced_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
-  const MetricTile = ({ Icon, label, value, ring, chip }) => (
-    <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3 flex flex-col items-center text-center">
-      <div className={`w-9 h-9 rounded-full grid place-items-center ${ring}`}><Icon className="w-[18px] h-[18px]" /></div>
-      <div className="text-[10.5px] text-slate-400 mt-1.5 leading-tight">{label}</div>
-      <div className="font-extrabold text-slate-800 text-base sm:text-lg mt-0.5 whitespace-nowrap">{value}</div>
-      {chip && <div className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${chip.cls}`}>{chip.text}</div>}
+  const thumb = (c.thumb_links || [])[0];
+  const MetaItem = ({ Icon, label, children }) => (
+    <div className="flex items-center gap-2 min-w-0">
+      <Icon className="w-4 h-4 text-slate-400 shrink-0" />
+      <div className="min-w-0">
+        <div className="text-[11px] text-slate-400 leading-none mb-0.5">{label}</div>
+        <div className="text-[13px] font-bold text-slate-700 truncate">{children}</div>
+      </div>
+    </div>
+  );
+  const MetricCol = ({ Icon, label, value, ring, chip }) => (
+    <div className="flex flex-col items-center text-center px-2 py-3.5">
+      <div className={`w-10 h-10 rounded-full grid place-items-center ${ring}`}><Icon className="w-5 h-5" /></div>
+      <div className="text-[11px] text-slate-400 mt-2 leading-tight">{label}</div>
+      <div className="font-extrabold text-slate-800 text-lg mt-0.5 whitespace-nowrap">{value}</div>
+      {chip && <div className={`mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${chip.cls}`}>{chip.text}</div>}
     </div>
   );
   return (
-    <div id={`clip-${c.id}`} className="bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-4 sm:p-5">
-      <div className="flex flex-col md:flex-row gap-4 md:gap-5">
-        {/* Video */}
-        <div className="md:w-[320px] shrink-0 rounded-2xl overflow-hidden bg-slate-900 aspect-video ring-1 ring-slate-200/60 shadow-sm">
-          {clipUrl
-            ? <VideoPreview url={clipUrl} className="w-full h-full" />
-            : <button onClick={onView} className="w-full h-full grid place-items-center text-white/30"><PlayCircle className="w-12 h-12" /></button>}
-        </div>
-
-        {/* Thông tin */}
-        <div className="flex-1 min-w-0">
-          {/* Trạng thái */}
-          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${status.cls}`}>
-            {fbInfo?.kind === 'running' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
-            {status.label}
+    <div id={`clip-${c.id}`} className="bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-3.5 sm:p-5 max-w-2xl mx-auto">
+      {/* Video — poster + nút play (bấm để xem), phủ kín khung, không viền đen */}
+      <button onClick={onView} className="group relative block w-full rounded-2xl overflow-hidden bg-slate-900 aspect-video ring-1 ring-slate-200/60 shadow-sm">
+        {thumb
+          ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" loading="lazy" />
+          : <div className="w-full h-full grid place-items-center text-white/25"><PlayCircle className="w-14 h-14" /></div>}
+        <span className="absolute inset-0 grid place-items-center bg-black/5 group-hover:bg-black/15 transition-colors">
+          <span className="w-16 h-16 rounded-full bg-black/55 backdrop-blur-sm grid place-items-center group-hover:bg-black/70 group-hover:scale-105 transition"><Play className="w-7 h-7 text-white fill-current ml-1" /></span>
+        </span>
+        {(c.post_status === 'posted' || c.post_now) && (
+          <span className="absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur bg-black/45 text-white">
+            {c.post_status === 'posted' ? '✅ Đã đăng page' : '⚡ Đã gửi đăng page'}
           </span>
+        )}
+      </button>
 
-          <div className="flex items-start justify-between gap-3 mt-2">
-            <h3 className="font-extrabold text-slate-800 text-lg leading-snug min-w-0">{c.title || '(Chưa đặt tiêu đề)'}</h3>
-            {store?.customer_name && (
-              <div className="hidden sm:block shrink-0 w-44 rounded-2xl bg-slate-50 border border-slate-100 p-2.5">
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-400"><CalendarDays className="w-3.5 h-3.5" />Khách hàng</div>
-                <div className="font-bold text-slate-800 text-[13px] mt-0.5 leading-snug line-clamp-2">{store.customer_name}</div>
-                {store?.service && <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{store.service}</div>}
-              </div>
-            )}
+      {/* Trạng thái */}
+      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full mt-3.5 ${status.cls}`}>
+        {fbInfo?.kind === 'running' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+        {status.label}
+      </span>
+
+      {/* Tiêu đề + ô khách hàng */}
+      <div className="flex items-start justify-between gap-3 mt-2">
+        <h3 className="font-extrabold text-slate-800 text-lg sm:text-xl leading-snug min-w-0">{c.title || '(Chưa đặt tiêu đề)'}</h3>
+        {store?.customer_name && (
+          <div className="shrink-0 w-36 sm:w-44 rounded-2xl bg-slate-50 border border-slate-100 p-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400"><CalendarDays className="w-3.5 h-3.5" />Khách hàng</div>
+            <div className="font-bold text-slate-800 text-[13px] mt-0.5 leading-snug line-clamp-2">{store.customer_name}</div>
+            {store?.service && <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{store.service}</div>}
           </div>
+        )}
+      </div>
 
-          {/* Meta */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-2.5 text-xs">
-            <span className="inline-flex items-center gap-1.5"><CalendarDays className="w-4 h-4 text-slate-400" /><span className="text-slate-400">Cập nhật</span> <b className="text-slate-600">{syncedAt || '—'}</b></span>
-            <span className="inline-flex items-center gap-1.5"><User className="w-4 h-4 text-slate-400" /><span className="text-slate-400">Editor</span> <b className="text-slate-700">{c.editor?.full_name || '—'}</b></span>
-            <span className="inline-flex items-center gap-1.5">
-              <FolderOpen className="w-4 h-4 text-slate-400" /><span className="text-slate-400">Nguồn</span>
-              {(store?.source_links || []).length > 0
-                ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-teal-600 font-bold inline-flex items-center gap-1 hover:underline"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
-                : <span className="text-slate-300">—</span>}
-            </span>
-            <PermissionBadges s={store} size="sm" />
+      {/* Meta: Cập nhật · Editor · Nguồn */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5 mt-3">
+        <MetaItem Icon={CalendarDays} label="Cập nhật">{syncedAt || '—'}</MetaItem>
+        <MetaItem Icon={User} label="Editor">{c.editor?.full_name || '—'}</MetaItem>
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[11px] text-slate-400 leading-none mb-0.5">Nguồn</div>
+            {(store?.source_links || []).length > 0
+              ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-[13px] text-teal-600 font-bold inline-flex items-center gap-1 hover:underline"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
+              : <span className="text-[13px] text-slate-300 font-bold">—</span>}
           </div>
-
-          {/* ID chiến dịch + nút */}
-          {c.fb_campaign_id && (
-            <div className="flex items-center gap-2 flex-wrap mt-3">
-              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-full pl-2.5 pr-1.5 py-1">
-                <LinkIcon className="w-3.5 h-3.5 text-slate-400" /><span className="text-slate-400">ID chiến dịch</span>
-                <span className="font-mono text-slate-600 font-semibold">{c.fb_campaign_id}</span>
-                <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
-              </span>
-              {canAds && (
-                <span className="flex items-center gap-2 ml-auto">
-                  <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 border border-blue-200 rounded-full px-3 py-1.5 hover:bg-blue-50 transition-colors"><RotateCcw className="w-3.5 h-3.5" />Đồng bộ</button>
-                  <button onClick={() => onRemoveFb?.(c)} className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 border border-rose-200 rounded-full px-3 py-1.5 hover:bg-rose-50 transition-colors"><X className="w-3.5 h-3.5" />Gỡ ID</button>
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Dải chỉ số Ads — tile icon màu */}
-          {c.fb_campaign_id ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
-              <MetricTile Icon={Users} label="Khách hàng tiềm năng" value={contacts} ring="bg-teal-50 text-teal-600" />
-              <MetricTile Icon={ShoppingCart} label="Lượt mua (SĐT)" value={phones} ring="bg-violet-50 text-violet-600" />
-              <MetricTile Icon={CircleDollarSign} label="Chi phí" value={fmtM(c.fb_spend)} ring="bg-amber-50 text-amber-600" />
-              <MetricTile Icon={Wallet} label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} ring="bg-blue-50 text-blue-600" chip={verdict.potential ? verdict.tier : null} />
-            </div>
-          ) : canAds && c.approved_to_run ? (
-            <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3 mt-3">
-              <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> để kéo chỉ số về:</p>
-              <div className="flex gap-2">
-                <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
-                <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
-              </div>
-            </div>
-          ) : canAds ? (
-            <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-slate-300" />Duyệt chạy Ads trước, rồi mới gán ID chiến dịch.</div>
-          ) : (
-            <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3">Chưa gán ID chiến dịch Facebook.</div>
-          )}
         </div>
       </div>
 
-      {/* Dải điểm hệ thống — nền tối sang trọng */}
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-4 py-3 mt-4 flex flex-wrap items-center gap-3">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 whitespace-nowrap">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
-        <span className="flex-1 flex justify-center">
+      {/* ID chiến dịch + nút Đồng bộ / Gỡ ID */}
+      {c.fb_campaign_id ? (
+        <div className="flex items-center gap-2 flex-wrap mt-3">
+          {thumb && <img src={thumbSrc(thumb)} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0" loading="lazy" />}
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-full pl-2.5 pr-1.5 py-1.5">
+            <LinkIcon className="w-3.5 h-3.5 text-slate-400" /><span className="text-slate-400">ID chiến dịch</span>
+            <span className="font-mono text-slate-600 font-semibold">{c.fb_campaign_id}</span>
+            <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
+          </span>
+          {canAds && (
+            <span className="flex items-center gap-2 ml-auto">
+              <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 border border-blue-200 rounded-full px-3.5 py-1.5 hover:bg-blue-50 transition-colors"><RotateCcw className="w-3.5 h-3.5" />Đồng bộ</button>
+              <button onClick={() => onRemoveFb?.(c)} className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 border border-rose-200 rounded-full px-3.5 py-1.5 hover:bg-rose-50 transition-colors"><X className="w-3.5 h-3.5" />Gỡ ID</button>
+            </span>
+          )}
+        </div>
+      ) : null}
+
+      {/* Chỉ số Ads — 1 thẻ, 4 cột icon màu */}
+      {c.fb_campaign_id ? (
+        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm mt-3 grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100 [&>*:nth-child(3)]:border-t sm:[&>*:nth-child(3)]:border-t-0 [&>*:nth-child(4)]:border-t sm:[&>*:nth-child(4)]:border-t-0 [&>*:nth-child(3)]:border-slate-100 [&>*:nth-child(4)]:border-slate-100">
+          <MetricCol Icon={Users} label="Khách hàng tiềm năng" value={contacts} ring="bg-teal-50 text-teal-600" />
+          <MetricCol Icon={ShoppingCart} label="Lượt mua (SĐT)" value={phones} ring="bg-violet-50 text-violet-600" />
+          <MetricCol Icon={CircleDollarSign} label="Chi phí" value={fmtM(c.fb_spend)} ring="bg-amber-50 text-amber-600" />
+          <MetricCol Icon={Wallet} label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} ring="bg-blue-50 text-blue-600" chip={verdict.potential ? verdict.tier : null} />
+        </div>
+      ) : canAds && c.approved_to_run ? (
+        <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3 mt-3">
+          <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> để kéo chỉ số về:</p>
+          <div className="flex gap-2">
+            <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
+            <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
+          </div>
+        </div>
+      ) : canAds ? (
+        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-slate-300" />Duyệt chạy Ads trước, rồi mới gán ID chiến dịch.</div>
+      ) : (
+        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3">Chưa gán ID chiến dịch Facebook.</div>
+      )}
+
+      {/* Dải điểm hệ thống — nền tối, 1 hàng: nhãn · điểm · trạng thái */}
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-4 sm:px-5 py-3.5 mt-4 flex items-center gap-2">
+        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-300 whitespace-nowrap shrink-0">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
+        <span className="flex-1 flex justify-center min-w-0 px-1">
           {verdict.potential
-            ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`text-sm font-extrabold px-3.5 py-1 rounded-full whitespace-nowrap ${verdict.tier.cls}`}>{verdict.tier.text}</span>
+            ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full whitespace-nowrap ${verdict.tier.cls}`}>{verdict.tier.text}</span>
             : (c.win || c.score > 0)
-              ? <span className={`text-xl font-extrabold inline-flex items-center gap-2 whitespace-nowrap ${c.win ? 'text-amber-300' : 'text-white'}`}>{c.win && <Trophy className="w-5 h-5 text-amber-400" />}{c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
+              ? <span className={`text-lg sm:text-2xl font-black inline-flex items-center gap-1.5 whitespace-nowrap ${c.win ? 'text-amber-300' : 'text-white'}`}>{c.win && <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />}{c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
               : <span className="text-sm font-semibold text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
         </span>
-        {c.post_status === 'posted' ? <span className="text-xs font-bold text-emerald-300 bg-emerald-500/15 ring-1 ring-emerald-400/30 px-3 py-1 rounded-full whitespace-nowrap">✅ Đã đăng page</span>
-          : c.post_now ? <span title="Đã gửi lệnh đăng cho hệ thống đăng bài" className="text-xs font-bold text-orange-300 bg-orange-500/15 ring-1 ring-orange-400/30 px-3 py-1 rounded-full whitespace-nowrap">⚡ Đã gửi đăng page</span> : null}
         {c.approved_to_run
-          ? <span className="text-xs font-bold text-emerald-300 bg-emerald-500/15 ring-1 ring-emerald-400/30 px-3 py-1 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3.5 h-3.5" />Đã duyệt chạy</span>
-          : canAds ? <button onClick={onApproveRun} className="text-xs font-bold text-white px-3.5 py-1.5 rounded-full bg-teal-500 hover:bg-teal-400 inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button> : null}
+          ? <span className="text-[11px] sm:text-xs font-bold text-emerald-300 bg-emerald-500/15 ring-1 ring-emerald-400/30 px-2.5 sm:px-3 py-1 rounded-full inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-3.5 h-3.5" />Đã duyệt chạy</span>
+          : canAds ? <button onClick={(e) => { e.stopPropagation(); onApproveRun(); }} className="text-[11px] sm:text-xs font-bold text-white px-3 py-1.5 rounded-full bg-teal-500 hover:bg-teal-400 inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>
+            : <span className="shrink-0 w-1" />}
       </div>
 
       {/* Điểm Editor · Ghi chú · hành động */}
