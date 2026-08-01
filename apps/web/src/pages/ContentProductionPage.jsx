@@ -141,6 +141,10 @@ function scoreByRule(spend, phones, rule) {
   const score = ratio <= 1 ? 10 : ratio <= 1.3 ? 8 : ratio <= 2 ? 6 : 3;
   return { win: score >= 10, score };
 }
+// "Lượt mua (SĐT)" = lead (form/SĐT) + purchase (lượt mua trên Ads Manager).
+// Chiến dịch tối ưu theo Tin nhắn/Mua hàng có thể chỉ bắn "purchase" chứ không
+// bắn "lead" -> phải cộng cả hai để CRM khớp với Ads Manager.
+const phonesOf = (c) => (Number(c?.fb_leads) || 0) + (Number(c?.fb_purchases) || 0);
 const SCORE_FILTERS = { win: 'WIN (10đ)', tot: 'Tốt (≥8)', tb: 'Trung bình (5-7)', te: 'Tệ (<5)', chua: 'Chưa chấm' };
 const matchScoreFilter = (c, f) => {
   if (!f) return true;
@@ -420,11 +424,12 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
         fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
       };
-      const v = scoreByRule(m.spend ?? 0, m.leads ?? 0, winRule); // tự chấm theo định nghĩa
+      const mPhones = (m.leads ?? 0) + (m.purchases ?? 0);
+      const v = scoreByRule(m.spend ?? 0, mPhones, winRule); // tự chấm theo định nghĩa
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
-      toast.success(`Đã cập nhật: ${m.messages || 0} khách tiềm năng · ${m.leads || 0} lượt mua (SĐT)`, { id: 'fb-' + clipId, duration: 6000 });
+      toast.success(`Đã cập nhật: ${m.messages || 0} khách tiềm năng · ${mPhones} lượt mua (SĐT)`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
     } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
   };
@@ -447,7 +452,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
             fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
           };
-          const v = scoreByRule(m.spend ?? 0, m.leads ?? 0, winRule);
+          const v = scoreByRule(m.spend ?? 0, (m.leads ?? 0) + (m.purchases ?? 0), winRule);
           if (v) { upd.win = v.win; upd.score = v.score; }
           const { error } = await supabase.from('media_clips').update(upd).eq('id', c.id);
           if (error) fail = true; else ok++;
@@ -466,9 +471,9 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     const { error } = await supabase.from('ads_win_rule').upsert({ id: 1, ...rule, updated_by: me.id, updated_at: new Date().toISOString() });
     if (error) { toast.error('Lỗi lưu: ' + error.message); return; }
     setWinRule({ id: 1, ...rule });
-    const targets = clips.filter(c => c.fb_campaign_id && (Number(c.fb_spend) > 0 || Number(c.fb_leads) > 0));
+    const targets = clips.filter(c => c.fb_campaign_id && (Number(c.fb_spend) > 0 || phonesOf(c) > 0));
     let n = 0;
-    for (const c of targets) { const v = scoreByRule(c.fb_spend, c.fb_leads, rule); if (v) { await supabase.from('media_clips').update({ win: v.win, score: v.score }).eq('id', c.id); n++; } }
+    for (const c of targets) { const v = scoreByRule(c.fb_spend, phonesOf(c), rule); if (v) { await supabase.from('media_clips').update({ win: v.win, score: v.score }).eq('id', c.id); n++; } }
     toast.success(`Đã lưu định nghĩa Win — tự chấm lại ${n} clip`);
     setWinModal(false); loadData();
   };
@@ -663,9 +668,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     const day = (c.submitted_at || c.created_at || '').slice(0, 10);
     if (videoFrom && day < videoFrom) return false;
     if (videoTo && day > videoTo) return false;
-    if (videoFrom || videoTo) return true; // đã lọc ngày -> không giới hạn tháng
-    const d = new Date(c.submitted_at || c.created_at);
-    return c.stage !== 'done' || (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
+    return true; // hiện TẤT CẢ clip (không giới hạn theo tháng) — dùng sub-tab/lọc ngày để thu hẹp
   });
   const videoCounts = {
     pending: clips.filter(c => c.stage === 'submitted' && !c.approved_to_run).length,
@@ -1454,8 +1457,8 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
   const winCount = clips.filter(c => c.win).length;
   const winRate = approved.length ? Math.round(winCount / approved.length * 100) : 0;
   const recent = [...clips].sort((a, b) => new Date(b.fb_synced_at || b.submitted_at || b.created_at || 0) - new Date(a.fb_synced_at || a.submitted_at || a.created_at || 0)).slice(0, 6);
-  const topPhones = clips.filter(c => (c.fb_leads || 0) > 0).sort((a, b) => (b.fb_leads || 0) - (a.fb_leads || 0)).slice(0, 5);
-  const maxP = topPhones[0]?.fb_leads || 1;
+  const topPhones = clips.filter(c => phonesOf(c) > 0).sort((a, b) => phonesOf(b) - phonesOf(a)).slice(0, 5);
+  const maxP = (topPhones[0] ? phonesOf(topPhones[0]) : 0) || 1;
   // Chỉ số Kho media
   const sourcesN = stores.filter(s => (s.source_links || []).length > 0).length;
   const totalVideo = stores.reduce((s, x) => s + (Number(x.source_video_count) || 0), 0);
@@ -1544,12 +1547,12 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
           <div className="space-y-3">
             {topPhones.length === 0 && <p className="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu SĐT</p>}
             {topPhones.map((c, idx) => {
-              const st = storeOf(c.media_customer_id); const pct = Math.round((c.fb_leads || 0) / maxP * 100);
+              const st = storeOf(c.media_customer_id); const pct = Math.round(phonesOf(c) / maxP * 100);
               return (
                 <div key={c.id} className="flex items-center gap-3">
                   <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-slate-300 text-white' : idx === 2 ? 'bg-orange-200 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>{idx + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between text-[13px] mb-1"><span className="font-medium text-slate-600 truncate pr-2">{c.title || st?.customer_name || 'Clip'}</span><span className="font-bold text-teal-600 shrink-0">{c.fb_leads || 0} SĐT</span></div>
+                    <div className="flex items-center justify-between text-[13px] mb-1"><span className="font-medium text-slate-600 truncate pr-2">{c.title || st?.customer_name || 'Clip'}</span><span className="font-bold text-teal-600 shrink-0">{phonesOf(c)} SĐT</span></div>
                     <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-600" style={{ width: `${pct}%` }} /></div>
                   </div>
                 </div>
@@ -1837,7 +1840,7 @@ const Sparkline = ({ color }) => (
 const FbSummaryStrip = ({ clips, onReport }) => {
   const spend = clips.reduce((s, c) => s + (Number(c.fb_spend) || 0), 0);
   const contacts = clips.reduce((s, c) => s + (Number(c.fb_messages) || 0), 0);
-  const phones = clips.reduce((s, c) => s + (Number(c.fb_leads) || 0), 0);
+  const phones = clips.reduce((s, c) => s + phonesOf(c), 0);
   const cpa = phones > 0 ? Math.round(spend / phones) : null;
   const cells = [
     { label: 'Chi phí', value: fmtM(spend) },
@@ -1940,7 +1943,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
     onSyncFb?.(c.id, cid);
   };
   const contacts = c.fb_messages || 0;    // Khách hàng tiềm năng = khách nhắn tin + tương tác page
-  const phones = c.fb_leads || 0;         // Lượt mua (SĐT) = số điện thoại xin được (lead)
+  const phones = phonesOf(c);             // Lượt mua (SĐT) = lead + purchase (khớp Ads Manager)
   const cpa = phones > 0 ? Math.round(c.fb_spend / phones) : null; // Giá mỗi SĐT
   const clipUrl = (c.clip_links || [])[0];
   const menuItems = [
@@ -2007,7 +2010,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
               <Metric label="Chi phí" value={fmtM(c.fb_spend)} />
               <Metric label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} />
             </div>
-          ) : canAds ? (
+          ) : canAds && c.approved_to_run ? (
             <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 mt-3">
               <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> để kéo chỉ số về:</p>
               <div className="flex gap-2">
@@ -2015,6 +2018,8 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, editorAvg, onReview, on
                 <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
               </div>
             </div>
+          ) : canAds ? (
+            <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3 mt-3 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-slate-300" />Duyệt chạy Ads trước, rồi mới gán ID chiến dịch.</div>
           ) : (
             <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-3 mt-3">Chưa gán ID chiến dịch Facebook.</div>
           )}
