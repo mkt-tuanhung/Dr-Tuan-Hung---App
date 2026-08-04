@@ -78,7 +78,7 @@ const MyPayrollPage = () => {
     const isSeedingTarget = roleGuess?.role === 'seeding' || roleGuess?.role_2 === 'seeding';
 
     const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes, seedRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
+      supabase.from('profiles').select('id, full_name, employee_id, role, role_2, position, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
       supabase.from('payroll').select('*').eq('staff_id', tid),
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').eq('staff_id', tid).gte('date', ms).lte('date', meDay),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').or(orSale).gte('appointment_date', ms).lte('appointment_date', meDay),
