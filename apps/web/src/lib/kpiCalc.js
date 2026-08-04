@@ -310,9 +310,11 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
     if (role === 'seeding') return computeSeeding(seeding).tongHH;
     return 0;
   };
-  // Thưởng content cho editor: Win (win_amount) + Duyệt chạy Ads (500k/clip)
+  // Thưởng content cho editor: Win (win_amount) + Duyệt chạy Ads (500k/clip).
+  // Editor OUTSOURCE không nhận 500k/clip duyệt (đã trả theo hợp đồng ngoài).
+  const isOutsource = staff.position === 'Outsource';
   const winBonus = contentWins.filter(w => w.editor_id === staff.id)
-    .reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? CLIP_APPROVE_BONUS : 0), 0);
+    .reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run && !isOutsource ? CLIP_APPROVE_BONUS : 0), 0);
   // Mổ đối tác: BS 50% tiền đối tác + phụ mổ điều dưỡng (áp dụng cho mọi nhân sự được phân)
   const partnerHH = computePartner(partner, staff.id).tongHH;
   const commission = [staff.role, staff.role_2].filter(Boolean).reduce((sum, role) => sum + commissionForRole(role), 0) + winBonus + partnerHH;

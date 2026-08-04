@@ -535,7 +535,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const doApprove = async (c, postNow) => {
     const payload = { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() };
     if (postNow) { payload.post_now = true; payload.post_now_at = new Date().toISOString(); payload.post_status = 'queued'; }
-    await patchClip(c.id, payload, postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads — Editor +500.000đ');
+    await patchClip(c.id, payload, postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads');
     setApproveFor(null);
   };
   // Gỡ ID chiến dịch (gán nhầm) — xoá chỉ số FB & điểm tự chấm để tránh chấm nhầm
@@ -1988,7 +1988,7 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
         <div className="p-6 text-center">
           <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-600 grid place-items-center mx-auto mb-3"><CheckCircle2 className="w-7 h-7" /></div>
           <h3 className="text-lg font-extrabold text-slate-800">Duyệt cho chạy Ads?</h3>
-          <p className="text-sm text-slate-500 mt-1">Clip <b className="text-slate-700">{clip.title || store?.customer_name || 'này'}</b> sẽ được duyệt chạy. Editor +500.000đ.</p>
+          <p className="text-sm text-slate-500 mt-1">Clip <b className="text-slate-700">{clip.title || store?.customer_name || 'này'}</b> sẽ được duyệt chạy. Editor chính thức +500.000đ.</p>
 
           <div className="mt-4 rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white grid place-items-center mx-auto mb-2 shadow-md text-xl">⚡</div>

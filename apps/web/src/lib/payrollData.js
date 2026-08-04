@@ -13,8 +13,8 @@ export async function loadPayrollDetail(staffId, month, year) {
   const orSale = `telesale_id.eq.${tid},telesale_id_2.eq.${tid},sale_id.eq.${tid}`;
   const orSurg = `${orSale},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid},truc_dem_id.eq.${tid},truc_dem_id_2.eq.${tid},hau_phau_id.eq.${tid}`;
 
-  const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
+  const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes, seedRes] = await Promise.all([
+    supabase.from('profiles').select('id, full_name, employee_id, role, role_2, position, base_salary, allowance, employment_status, bank_name, bank_account').eq('id', tid).maybeSingle(),
     supabase.from('payroll').select('*').eq('staff_id', tid),
     supabase.from('attendance').select('staff_id, status, date, overtime_hours').eq('staff_id', tid).gte('date', ms).lte('date', meDay),
     supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').or(orSale).gte('appointment_date', ms).lte('appointment_date', meDay),
@@ -26,6 +26,8 @@ export async function loadPayrollDetail(staffId, month, year) {
     supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
     supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').eq('editor_id', tid).gte('evaluated_at', ms).lt('evaluated_at', meNext),
     supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, surgery_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').or(`bac_si_id.eq.${tid},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid}`).gte('surgery_date', ms).lte('surgery_date', meDay),
+    // Ca nguồn Seeding (kèm viện phí) — hoa hồng seeding = 20% × (DT − viện phí), tính trên TẤT CẢ ca
+    supabase.from('customer_appointments').select('customer_name, revenue, hospital_fee').eq('customer_source', 'Seeding').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay).limit(2000),
   ]);
 
   const profile = profRes.data;
@@ -36,7 +38,7 @@ export async function loadPayrollDetail(staffId, month, year) {
     att: attRes.data || [], appts: apptRes.data || [], surg: surgRes.data || [],
     bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
     adv: advRes.data || [], salAdv: salRes.data || [], contentWins: winRes.data || [],
-    partner: partnerRes.data || [],
+    partner: partnerRes.data || [], seeding: seedRes.data || [],
     saved: savedThisMonth,
   }) : null;
   const detail = savedThisMonth?.status === 'locked'

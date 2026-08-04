@@ -54,7 +54,7 @@ const PayrollPage = () => {
     const meNext = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
     const { data: staff } = await supabase.from('profiles')
-      .select('id, full_name, employee_id, role, role_2, base_salary, allowance, employment_status, fixed_salary, bank_name, bank_account, payslip_code')
+      .select('id, full_name, employee_id, role, role_2, position, base_salary, allowance, employment_status, fixed_salary, bank_name, bank_account, payslip_code')
       .eq('is_active', true).order('full_name');
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
@@ -62,7 +62,7 @@ const PayrollPage = () => {
     const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes, partnerRes] = await Promise.all([
       supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, hospital_fee, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
       supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', meDay),
       supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
@@ -78,7 +78,8 @@ const PayrollPage = () => {
     const bong = bongRes.data || [], coc = cocRes.data || [], pages = pageRes.data || [], partner = partnerRes.data || [];
     const adv = advRes.data || [], payroll = payRes.data || [], salAdv = salRes.data || [];
     const contentWins = winRes.data || [];
-    const winBonusOf = (id) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run ? 500000 : 0), 0);
+    // Editor OUTSOURCE không nhận 500k/clip duyệt (chỉ nhận thưởng Win nếu có)
+    const winBonusOf = (id, isOutsource) => contentWins.filter(w => w.editor_id === id).reduce((s, w) => s + (w.win ? Number(w.win_amount || 0) : 0) + (w.approved_to_run && !isOutsource ? 500000 : 0), 0);
 
     // Số công = tổng ngày chấm công CÓ MẶT (present/đi muộn/về sớm = 1 công; nghỉ nửa ngày = 0.5 công)
     const workingDaysOf = (id) => att.filter(a => a.staff_id === id)
@@ -120,7 +121,7 @@ const PayrollPage = () => {
       const partnerOff = computePartner(partner, s.id);
       // Team seeding dùng chung 1 tài khoản → hoa hồng tính trên TẤT CẢ ca nguồn "Seeding"
       const seedOff = rolesArr.includes('seeding') ? computeSeeding(surg.filter(a => a.customer_source === 'Seeding')) : null;
-      const wins = winBonusOf(s.id);
+      const wins = winBonusOf(s.id, s.position === 'Outsource');
 
       const commission = (saleOff?.tongHH || 0) + (teleOff?.tongHH || 0) + (ddOff?.tongHH || 0) + (trucOff?.hh || 0) + (bacSiOff?.tongHH || 0) + (partnerOff?.tongHH || 0) + (seedOff?.tongHH || 0) + wins;
 
