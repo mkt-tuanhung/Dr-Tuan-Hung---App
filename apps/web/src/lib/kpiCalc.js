@@ -291,7 +291,8 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
   const workingDays = att.filter(a => a.staff_id === staff.id)
     .reduce((s, a) => s + (['present', 'late', 'early_leave'].includes(a.status) ? 1 : a.status === 'half_day' ? 0.5 : 0), 0);
   const effectiveBase = Number(staff.base_salary || 0) * (staff.employment_status === 'probation' ? 0.85 : 1);
-  const luongCong = Math.round(effectiveBase / D * workingDays);
+  // Lương cố định: nhận đủ lương tháng, KHÔNG trừ theo ngày công (khớp Bảng lương admin)
+  const luongCong = staff.fixed_salary ? Math.round(effectiveBase) : Math.round(effectiveBase / D * workingDays);
   const phuCap = Number(staff.allowance || 0);
   // Tăng ca: số giờ × (CN:200% | thường:150%) × lương cơ bản/26/8
   const overtime = Math.round(att.filter(a => a.staff_id === staff.id && Number(a.overtime_hours) > 0)
@@ -306,6 +307,7 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
     }
     if (role === 'truc_page') return computeTrucPage(pages.filter(p => p.staff_id === staff.id)).hh;
     if (role === 'dieu_duong') return computeDieuDuong(surg, staff.id).tongHH;
+    if (role === 'bac_si') return computeBacSi(surg, staff.id).tongHH; // công mổ (trước đây thiếu -> "Lương của tôi" lệch Bảng lương)
     // Team seeding dùng chung 1 tài khoản → hoa hồng tính trên TẤT CẢ ca nguồn Seeding
     if (role === 'seeding') return computeSeeding(seeding).tongHH;
     return 0;
