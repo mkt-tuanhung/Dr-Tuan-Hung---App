@@ -483,7 +483,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
-      toast.success(`Đã cập nhật: ${m.messages || 0} khách tiềm năng · ${mPhones} lượt mua (SĐT)`, { id: 'fb-' + clipId, duration: 6000 });
+      toast.success(`Đã cập nhật: ${m.leads || 0} KH tiềm năng · ${m.purchases || 0} lượt mua`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
     } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
   };
@@ -1920,13 +1920,14 @@ const Sparkline = ({ color }) => (
 );
 const FbSummaryStrip = ({ clips, onReport }) => {
   const spend = clips.reduce((s, c) => s + (Number(c.fb_spend) || 0), 0);
-  const contacts = clips.reduce((s, c) => s + (Number(c.fb_messages) || 0), 0);
+  const contacts = clips.reduce((s, c) => s + (Number(c.fb_leads) || 0), 0);       // = cột lead Ads Manager
+  const purchases = clips.reduce((s, c) => s + (Number(c.fb_purchases) || 0), 0);  // = cột purchase Ads Manager
   const phones = clips.reduce((s, c) => s + phonesOf(c), 0);
   const cpa = phones > 0 ? Math.round(spend / phones) : null;
   const cells = [
     { label: 'Chi phí', value: fmtM(spend) },
     { label: 'Khách hàng tiềm năng', value: contacts, spark: '#14b8a6' },
-    { label: 'Lượt mua (SĐT)', value: phones, spark: '#3b82f6' },
+    { label: 'Lượt mua', value: purchases, spark: '#3b82f6' },
     { label: 'Giá/SĐT', value: cpa != null ? fmtM(cpa) : '—' },
   ];
   return (
@@ -2024,8 +2025,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
     if (!cid) { toast.error('Nhập ID chiến dịch Facebook'); return; }
     onSyncFb?.(c.id, cid);
   };
-  const contacts = c.fb_messages || 0;    // Khách hàng tiềm năng = khách nhắn tin + tương tác page
-  const phones = phonesOf(c);             // Lượt mua (SĐT) = lead + purchase (khớp Ads Manager)
+  const contacts = c.fb_leads || 0;       // "Khách hàng tiềm năng" = cột lead của Ads Manager
+  const purchases = c.fb_purchases || 0;  // "Lượt mua" = cột purchase của Ads Manager
+  const phones = phonesOf(c);             // SĐT (CPA/Win) = lead + purchase
   const cpa = phones > 0 ? Math.round(c.fb_spend / phones) : null; // Giá mỗi SĐT
   const clipUrl = (c.clip_links || [])[0];
   const menuItems = [
@@ -2143,7 +2145,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
       {c.fb_campaign_id ? (
         <div className="rounded-2xl bg-white border border-slate-100 shadow-sm mt-3 grid grid-cols-4 divide-x divide-slate-100">
           <MetricCol Icon={Users} label="KH tiềm năng" value={contacts} ring="bg-teal-50 text-teal-600" />
-          <MetricCol Icon={ShoppingCart} label="Lượt mua" value={phones} ring="bg-violet-50 text-violet-600" />
+          <MetricCol Icon={ShoppingCart} label="Lượt mua" value={purchases} ring="bg-violet-50 text-violet-600" />
           <MetricCol Icon={CircleDollarSign} label="Chi phí" value={fmtM(c.fb_spend)} ring="bg-amber-50 text-amber-600" />
           <MetricCol Icon={Wallet} label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} ring="bg-blue-50 text-blue-600" chip={verdict.potential ? verdict.tier : null} />
         </div>

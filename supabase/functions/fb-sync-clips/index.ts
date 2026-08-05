@@ -18,30 +18,34 @@ function json(body: unknown, status = 200) {
 }
 
 const API = "v21.0";
-const MSG_ACTIONS = [
-  "onsite_conversion.messaging_conversation_started_7d",
-  "onsite_conversion.total_messaging_connection",
-];
-const LEAD_ACTIONS = ["lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead"];
-
+// CHÚ Ý: action_type của Facebook CHỒNG NHAU ("lead" đã gộp lead_grouped + pixel_lead...)
+// -> phải CHỌN 1 nguồn chuẩn, cộng dồn sẽ cao gấp 2-3 lần Ads Manager.
 type Action = { action_type: string; value: string };
-function sumActions(actions: Action[] | undefined, keys: string[]): number {
+const getAct = (actions: Action[] | undefined, t: string) => {
   if (!Array.isArray(actions)) return 0;
-  let n = 0;
-  for (const a of actions) {
-    if (keys.includes(a.action_type)) n += Number(a.value) || 0;
-    else if (keys === MSG_ACTIONS && a.action_type.includes("messaging_conversation_started")) n += Number(a.value) || 0;
-  }
-  return n;
-}
+  const a = actions.find((x) => x.action_type === t);
+  return a ? Number(a.value) || 0 : 0;
+};
 function pickPurchases(actions: Action[] | undefined): number {
-  if (!Array.isArray(actions)) return 0;
-  const get = (t: string) => { const a = actions.find((x) => x.action_type === t); return a ? Number(a.value) || 0 : 0; };
-  const omni = get("omni_purchase");
+  const omni = getAct(actions, "omni_purchase");
   if (omni) return omni;
-  const plain = get("purchase");
+  const plain = getAct(actions, "purchase");
   if (plain) return plain;
-  return get("offsite_conversion.fb_pixel_purchase") + get("onsite_conversion.purchase") + get("onsite_web_purchase");
+  return getAct(actions, "offsite_conversion.fb_pixel_purchase") + getAct(actions, "onsite_conversion.purchase") + getAct(actions, "onsite_web_purchase");
+}
+function pickLeads(actions: Action[] | undefined): number {
+  const lead = getAct(actions, "lead");
+  if (lead) return lead;
+  return getAct(actions, "onsite_conversion.lead_grouped") + getAct(actions, "offsite_conversion.fb_pixel_lead");
+}
+function pickMessages(actions: Action[] | undefined): number {
+  const started = getAct(actions, "onsite_conversion.messaging_conversation_started_7d");
+  if (started) return started;
+  if (Array.isArray(actions)) {
+    const anyStarted = actions.find((x) => x.action_type.includes("messaging_conversation_started"));
+    if (anyStarted) return Number(anyStarted.value) || 0;
+  }
+  return getAct(actions, "onsite_conversion.total_messaging_connection");
 }
 
 // Tự chấm theo định nghĩa Win (giống scoreByRule ở web). phones = lead + purchase.
@@ -84,8 +88,8 @@ async function fetchCampaign(token: string, campaignId: string) {
   if (!r.ok || d.error) throw new Error(d?.error?.message || `HTTP ${r.status}`);
   const row = (d.data || [])[0] || {};
   const actions = row.actions as Action[];
-  const messages = sumActions(actions, MSG_ACTIONS);
-  const leads = sumActions(actions, LEAD_ACTIONS);
+  const messages = pickMessages(actions);
+  const leads = pickLeads(actions);
   const purchases = pickPurchases(actions);
   let status: string | null = null;
   try {
