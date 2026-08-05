@@ -24,36 +24,39 @@ function json(body: unknown, status = 200) {
 }
 
 const API = "v21.0";
-// Nhóm action: nhắn tin vs lead (form)
-const MSG_ACTIONS = [
-  "onsite_conversion.messaging_conversation_started_7d",
-  "onsite_conversion.total_messaging_connection",
-];
-const LEAD_ACTIONS = [
-  "lead",
-  "onsite_conversion.lead_grouped",
-  "offsite_conversion.fb_pixel_lead",
-];
-// Lượt mua (purchase). Lấy 1 nguồn "gộp" để tránh cộng trùng:
-// ưu tiên omni_purchase -> purchase -> (pixel + onsite).
-function pickPurchases(actions: { action_type: string; value: string }[] | undefined): number {
+// CHÚ Ý: các action_type của Facebook CHỒNG NHAU ("lead" đã gộp lead_grouped +
+// pixel_lead; total_messaging_connection đã gồm conversation_started...).
+// Phải CHỌN 1 nguồn chuẩn thay vì cộng dồn — cộng dồn sẽ ra số cao gấp 2-3 lần
+// Ads Manager (vd Ads Manager 28 lead mà app hiện 56).
+type Action = { action_type: string; value: string };
+const getAct = (actions: Action[] | undefined, t: string) => {
   if (!Array.isArray(actions)) return 0;
-  const get = (t: string) => { const a = actions.find((x) => x.action_type === t); return a ? Number(a.value) || 0 : 0; };
-  const omni = get("omni_purchase");
+  const a = actions.find((x) => x.action_type === t);
+  return a ? Number(a.value) || 0 : 0;
+};
+// Lượt mua (purchase): ưu tiên omni_purchase -> purchase -> (pixel + onsite).
+function pickPurchases(actions: Action[] | undefined): number {
+  const omni = getAct(actions, "omni_purchase");
   if (omni) return omni;
-  const plain = get("purchase");
+  const plain = getAct(actions, "purchase");
   if (plain) return plain;
-  return get("offsite_conversion.fb_pixel_purchase") + get("onsite_conversion.purchase") + get("onsite_web_purchase");
+  return getAct(actions, "offsite_conversion.fb_pixel_purchase") + getAct(actions, "onsite_conversion.purchase") + getAct(actions, "onsite_web_purchase");
 }
-
-function sumActions(actions: { action_type: string; value: string }[] | undefined, keys: string[]): number {
-  if (!Array.isArray(actions)) return 0;
-  let n = 0;
-  for (const a of actions) {
-    if (keys.includes(a.action_type)) n += Number(a.value) || 0;
-    else if (keys === MSG_ACTIONS && a.action_type.includes("messaging_conversation_started")) n += Number(a.value) || 0;
+// Khách hàng tiềm năng (lead): "lead" là số GỘP chuẩn của Ads Manager.
+function pickLeads(actions: Action[] | undefined): number {
+  const lead = getAct(actions, "lead");
+  if (lead) return lead;
+  return getAct(actions, "onsite_conversion.lead_grouped") + getAct(actions, "offsite_conversion.fb_pixel_lead");
+}
+// Tin nhắn: ưu tiên hội thoại bắt đầu (7d) -> tổng kết nối messaging.
+function pickMessages(actions: Action[] | undefined): number {
+  const started = getAct(actions, "onsite_conversion.messaging_conversation_started_7d");
+  if (started) return started;
+  if (Array.isArray(actions)) {
+    const anyStarted = actions.find((x) => x.action_type.includes("messaging_conversation_started"));
+    if (anyStarted) return Number(anyStarted.value) || 0;
   }
-  return n;
+  return getAct(actions, "onsite_conversion.total_messaging_connection");
 }
 
 function pickVideoViews(arr: { value: string }[] | undefined): number {
@@ -84,8 +87,8 @@ Deno.serve(async (req) => {
       if (!r.ok || d.error) return json({ ok: false, error: d?.error?.message || `Facebook lỗi HTTP ${r.status}`, code: d?.error?.code });
       const row = (d.data || [])[0] || {};
       const actions = row.actions as { action_type: string; value: string }[];
-      const messages = sumActions(actions, MSG_ACTIONS);
-      const leads = sumActions(actions, LEAD_ACTIONS);
+      const messages = pickMessages(actions);
+      const leads = pickLeads(actions);
       const purchases = pickPurchases(actions);
       const spend = Number(row.spend) || 0;
       const results = messages + leads;
@@ -137,8 +140,8 @@ Deno.serve(async (req) => {
     const ads = (data.data || []).map((r: Record<string, unknown>) => {
       const spend = Number(r.spend) || 0;
       const actions = r.actions as { action_type: string; value: string }[];
-      const messages = sumActions(actions, MSG_ACTIONS);
-      const leads = sumActions(actions, LEAD_ACTIONS);
+      const messages = pickMessages(actions);
+      const leads = pickLeads(actions);
       const purchases = pickPurchases(actions);
       const results = messages + leads; // tổng "kết quả xin được"
       return {
