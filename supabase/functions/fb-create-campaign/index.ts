@@ -30,6 +30,12 @@ async function fbPost(path: string, params: Record<string, string>, token: strin
   if (!r.ok || d.error) throw new Error(d?.error?.error_user_msg || d?.error?.message || `FB HTTP ${r.status} (${path})`);
   return d;
 }
+async function fbGet(path: string, fields: string, token: string) {
+  const r = await fetch(`https://graph.facebook.com/${API}/${path}?fields=${fields}&access_token=${token}`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.error) throw new Error(d?.error?.message || `FB HTTP ${r.status} (${path})`);
+  return d;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -42,6 +48,18 @@ Deno.serve(async (req) => {
     if (!cfg) return json({ ok: false, error: "Chưa có fb_ads_config (chạy fb_auto_campaign.sql)" });
     const acct = String(cfg.ad_account_id || Deno.env.get("FB_AD_ACCOUNT_ID") || "").replace(/^act_/, "");
     if (!acct) return json({ ok: false, error: "Chưa cấu hình ad_account_id" });
+
+    // Target: ưu tiên NHÂN BẢN từ nhóm quảng cáo mẫu (template_adset_id) —
+    // đọc target hiện tại của ad set đó và áp y hệt; không có thì dùng cfg.targeting.
+    let targetingSpec = cfg.targeting || { geo_locations: { countries: ["VN"] } };
+    if (cfg.template_adset_id) {
+      try {
+        const tpl = await fbGet(String(cfg.template_adset_id), "targeting", token);
+        if (tpl?.targeting) targetingSpec = tpl.targeting;
+      } catch (e) {
+        console.error("template adset targeting fail", (e as Error)?.message); // dùng cfg.targeting dự phòng
+      }
+    }
 
     const nowIso = new Date().toISOString();
     const { data: clips } = await sb.from("media_clips")
@@ -87,7 +105,7 @@ Deno.serve(async (req) => {
           daily_budget: String(cfg.daily_budget || 500000),
           billing_event: cfg.billing_event || "IMPRESSIONS",
           optimization_goal: cfg.optimization_goal || "POST_ENGAGEMENT",
-          targeting: JSON.stringify(cfg.targeting || { geo_locations: { countries: ["VN"] } }),
+          targeting: JSON.stringify(targetingSpec),
           status: cfg.campaign_status || "ACTIVE",
           start_time: new Date().toISOString(),
         };

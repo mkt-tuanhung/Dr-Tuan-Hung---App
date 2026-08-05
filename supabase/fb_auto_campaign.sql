@@ -31,6 +31,7 @@ create table if not exists fb_ads_config (
   billing_event     text not null default 'IMPRESSIONS',
   destination_type  text,                                     -- 'MESSENGER' nếu chạy tin nhắn
   targeting         jsonb not null default '{"geo_locations":{"countries":["VN"]},"custom_audiences":[]}'::jsonb,
+  template_adset_id text,                                     -- NHÂN BẢN target từ nhóm quảng cáo mẫu này (ưu tiên hơn targeting)
   campaign_prefix   text not null default 'Dungnt',
   campaign_status   text not null default 'ACTIVE',           -- 'PAUSED' nếu muốn duyệt tay trên Ads Manager trước khi tiêu tiền
   updated_at        timestamptz default now()
@@ -39,8 +40,12 @@ insert into fb_ads_config (id) values (1) on conflict (id) do nothing;
 alter table fb_ads_config enable row level security;
 drop policy if exists "fb_ads_config_read" on fb_ads_config;
 create policy "fb_ads_config_read" on fb_ads_config for select using (auth.uid() is not null);
--- Nạp tệp đối tượng (CUSTOM AUDIENCE ID — Saved Audience KHÔNG dùng được qua API):
---   update fb_ads_config set targeting = '{"geo_locations":{"countries":["VN"]},"custom_audiences":[{"id":"<AUDIENCE_ID>"}]}'::jsonb where id = 1;
+-- Nạp target — chọn 1 trong 2 cách:
+--   Cách 1 (khuyến nghị): NHÂN BẢN target từ 1 nhóm quảng cáo mẫu đang chạy tốt:
+--     update fb_ads_config set template_adset_id = '<ID_NHÓM_QUẢNG_CÁO_MẪU>' where id = 1;
+--   Cách 2: tự nạp spec + Custom Audience ID (Saved Audience KHÔNG dùng được qua API):
+--     update fb_ads_config set targeting = '{"geo_locations":{"countries":["VN"]},"custom_audiences":[{"id":"<AUDIENCE_ID>"}]}'::jsonb where id = 1;
+alter table fb_ads_config add column if not exists template_adset_id text;  -- (cho DB đã tạo bảng trước đó)
 
 -- 3) Cột theo dõi trên clip
 alter table media_clips
