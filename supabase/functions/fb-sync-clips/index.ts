@@ -130,7 +130,8 @@ Deno.serve(async (req) => {
           fb_reach: m.reach, fb_impressions: m.impressions, fb_results: m.results,
           fb_status: m.status, fb_synced_at: new Date().toISOString(),
         };
-        const v = autoScore(m.spend, m.leads + m.purchases, m.status, rule);
+        // SĐT = Lượt mua (purchase); chiến dịch không bắn purchase thì dùng lead
+        const v = autoScore(m.spend, m.purchases > 0 ? m.purchases : m.leads, m.status, rule);
         if (v) { upd.win = v.win; upd.score = v.score; }
         const { error } = await sb.from("media_clips").update(upd).eq("id", c.id);
         if (error) throw error;
