@@ -142,11 +142,8 @@ function scoreByRule(spend, phones, rule) {
   return { win: score >= 10, score };
 }
 // SĐT = "Lượt mua" của Ads Manager (purchase) — đây là số điện thoại xin được.
-// Giá/SĐT = Chi phí ÷ Lượt mua. Chiến dịch không bắn purchase thì dùng lead thay.
-const phonesOf = (c) => {
-  const p = Number(c?.fb_purchases) || 0;
-  return p > 0 ? p : (Number(c?.fb_leads) || 0);
-};
+// KHÔNG dùng lead thay thế (lead ≠ SĐT): Lượt mua = 0 thì Giá/SĐT phải là "—".
+const phonesOf = (c) => Number(c?.fb_purchases) || 0;
 const SCORE_FILTERS = { win: 'WIN (10đ)', tot: 'Tốt (≥8)', tb: 'Trung bình (5-7)', te: 'Tệ (<5)', chua: 'Chưa chấm' };
 const matchScoreFilter = (c, f) => {
   if (!f) return true;
@@ -480,7 +477,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
         fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
       };
-      const mPhones = (m.purchases ?? 0) > 0 ? m.purchases : (m.leads ?? 0); // SĐT = Lượt mua
+      const mPhones = m.purchases ?? 0; // SĐT = Lượt mua (không dùng lead thay)
       const v = autoScore(m.spend ?? 0, mPhones, m.status, winRule); // chỉ chấm khi đủ điều kiện
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
@@ -508,7 +505,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
             fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
           };
-          const v = autoScore(m.spend ?? 0, (m.purchases ?? 0) > 0 ? m.purchases : (m.leads ?? 0), m.status, winRule);
+          const v = autoScore(m.spend ?? 0, m.purchases ?? 0, m.status, winRule);
           if (v) { upd.win = v.win; upd.score = v.score; }
           const { error } = await supabase.from('media_clips').update(upd).eq('id', c.id);
           if (error) fail = true; else ok++;
