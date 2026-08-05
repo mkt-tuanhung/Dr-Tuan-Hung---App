@@ -1922,7 +1922,8 @@ const Sparkline = ({ color }) => (
 );
 const FbSummaryStrip = ({ clips, onReport }) => {
   const spend = clips.reduce((s, c) => s + (Number(c.fb_spend) || 0), 0);
-  const contacts = clips.reduce((s, c) => s + (Number(c.fb_leads) || 0), 0);       // = cột lead Ads Manager
+  // KH tiềm năng = quality_contacts (hệ thống ngoài đếm ib ≥3 tin) hoặc tạm fb_messages
+  const contacts = clips.reduce((s, c) => s + (Number(c.quality_contacts ?? c.fb_messages) || 0), 0);
   const purchases = clips.reduce((s, c) => s + (Number(c.fb_purchases) || 0), 0);  // = cột purchase Ads Manager
   const phones = clips.reduce((s, c) => s + phonesOf(c), 0);
   const cpa = phones > 0 ? Math.round(spend / phones) : null;
@@ -2027,7 +2028,10 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
     if (!cid) { toast.error('Nhập ID chiến dịch Facebook'); return; }
     onSyncFb?.(c.id, cid);
   };
-  const contacts = c.fb_leads || 0;       // "Khách hàng tiềm năng" = cột lead của Ads Manager
+  // "KH tiềm năng" theo định nghĩa nội bộ: khách ib page ≥3 tin không lặp.
+  // FB Ads API không đo được -> hệ thống ngoài đếm & ghi vào quality_contacts;
+  // chưa có thì tạm hiện fb_messages (số khách bắt đầu nhắn tin từ ads).
+  const contacts = c.quality_contacts ?? (c.fb_messages || 0);
   const purchases = c.fb_purchases || 0;  // "Lượt mua" = cột purchase của Ads Manager
   const phones = phonesOf(c);             // SĐT (CPA/Win) = lead + purchase
   const cpa = phones > 0 ? Math.round(c.fb_spend / phones) : null; // Giá mỗi SĐT
