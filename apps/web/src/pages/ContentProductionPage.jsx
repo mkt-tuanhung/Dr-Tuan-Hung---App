@@ -533,11 +533,21 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     toast.success(`Đã lưu định nghĩa Win — tự chấm lại ${n} clip`);
     setWinModal(false); loadData();
   };
-  // Duyệt chạy Ads + tuỳ chọn "Đăng ngay" — thực thi từ popup ApproveModal
-  const doApprove = async (c, postNow) => {
+  // Duyệt chạy Ads + tuỳ chọn "Đăng ngay" + tuỳ chọn TỰ LÊN CHIẾN DỊCH (popup ApproveModal)
+  // adsOpts = { pageId, pageName, runAt } khi Ads chọn "tự chạy ads sau khi đăng"
+  const doApprove = async (c, postNow, adsOpts = null) => {
     const payload = { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() };
     if (postNow) { payload.post_now = true; payload.post_now_at = new Date().toISOString(); payload.post_status = 'queued'; }
-    await patchClip(c.id, payload, postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads');
+    if (postNow && adsOpts) {
+      payload.ads_page_id = adsOpts.pageId;       // platform đăng lên đúng page này
+      payload.ads_page_name = adsOpts.pageName;
+      payload.ads_run_at = adsOpts.runAt;          // giờ tạo chiến dịch (≥ +15 phút)
+      payload.ads_auto_status = 'queued';          // cron fb-create-campaign sẽ xử lý
+      payload.fb_post_id = null; payload.ads_error = null;
+    }
+    await patchClip(c.id, payload,
+      adsOpts ? `Đã duyệt — sẽ đăng page "${adsOpts.pageName}" & tự lên chiến dịch lúc ${new Date(adsOpts.runAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+        : postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads');
     setApproveFor(null);
   };
   // Gỡ ID chiến dịch (gán nhầm) — xoá chỉ số FB & điểm tự chấm để tránh chấm nhầm
@@ -980,7 +990,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
 
       {addOpen && <AddMediaModal me={me} stores={stores} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
       {autoImportOpen && <AutoImportModal me={me} stores={stores} onClose={() => setAutoImportOpen(false)} onSaved={() => { setAutoImportOpen(false); loadData(); }} />}
-      {approveFor && <ApproveModal clip={approveFor} store={storeOf(approveFor.media_customer_id)} onClose={() => setApproveFor(null)} onConfirm={(postNow) => doApprove(approveFor, postNow)} />}
+      {approveFor && <ApproveModal clip={approveFor} store={storeOf(approveFor.media_customer_id)} onClose={() => setApproveFor(null)} onConfirm={(postNow, adsOpts) => doApprove(approveFor, postNow, adsOpts)} />}
       {addVideoOpen && <AddVideoModal me={me} onClose={() => setAddVideoOpen(false)} onSaved={() => { setAddVideoOpen(false); loadData(); }} />}
       {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
       {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
@@ -1985,11 +1995,37 @@ const LeaderboardCard = ({ lb, now, onSeeAll }) => (
 // ---------- Popup: Duyệt chạy Ads + hỏi Đăng ngay ----------
 const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
   const [saving, setSaving] = useState(false);
-  const go = async (postNow) => { setSaving(true); await onConfirm(postNow); /* parent tự đóng */ };
+  // Tự chạy ads: chọn page + giờ lên chiến dịch (≥ +15 phút để platform kịp đăng bài & lấy ID)
+  const [runAds, setRunAds] = useState(false);
+  const [pages, setPages] = useState(null); // null = đang tải
+  const [pageId, setPageId] = useState('');
+  const defRunAt = () => { const d = new Date(Date.now() + 20 * 60000); d.setSeconds(0, 0); return d; };
+  const toLocalInput = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const [runAt, setRunAt] = useState(() => toLocalInput(defRunAt()));
+  useEffect(() => {
+    if (!runAds || pages !== null) return;
+    supabase.from('fb_pages').select('page_id, name').eq('active', true).order('name')
+      .then(({ data }) => setPages(data || []));
+  }, [runAds, pages]);
+
+  const go = async (postNow) => {
+    let adsOpts = null;
+    if (postNow && runAds) {
+      if (!pageId) { toast.error('Chọn page cần chạy ads'); return; }
+      const t = new Date(runAt);
+      if (!(t instanceof Date) || isNaN(t) || t.getTime() < Date.now() + 15 * 60000) {
+        toast.error('Giờ lên chiến dịch phải cách hiện tại ít nhất 15 phút'); return;
+      }
+      adsOpts = { pageId, pageName: (pages || []).find(p => p.page_id === pageId)?.name || pageId, runAt: t.toISOString() };
+    }
+    setSaving(true);
+    await onConfirm(postNow, adsOpts); /* parent tự đóng */
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-6 text-center">
+      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-6 pb-4 text-center">
           <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-600 grid place-items-center mx-auto mb-3"><CheckCircle2 className="w-7 h-7" /></div>
           <h3 className="text-lg font-extrabold text-slate-800">Duyệt cho chạy Ads?</h3>
           <p className="text-sm text-slate-500 mt-1">Clip <b className="text-slate-700">{clip.title || store?.customer_name || 'này'}</b> sẽ được duyệt chạy. Editor chính thức +500.000đ.</p>
@@ -1997,12 +2033,52 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
           <div className="mt-4 rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white grid place-items-center mx-auto mb-2 shadow-md text-xl">⚡</div>
             <div className="font-bold text-orange-700">Đăng ngay lên page luôn?</div>
-            <p className="text-[12px] text-slate-500 mt-1 leading-snug">Chọn <b>“Đăng ngay”</b> — sau khi duyệt, hệ thống sẽ tự quét &amp; đăng video này lên page.<br />Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+            <p className="text-[12px] text-slate-500 mt-1 leading-snug">Chọn <b>“Đăng ngay”</b> — hệ thống sẽ tự quét &amp; đăng video này lên page.<br />Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+          </div>
+
+          {/* Tự chạy ads sau khi đăng */}
+          <div className={`mt-3 rounded-2xl border-2 p-4 text-left transition-colors ${runAds ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200'}`}>
+            <button type="button" onClick={() => setRunAds(v => !v)} className="w-full flex items-center justify-between gap-2">
+              <span className="font-bold text-slate-700 inline-flex items-center gap-2"><span className="text-lg">🚀</span> Tự chạy ads cho video này?</span>
+              <span className={`w-11 h-6 rounded-full p-0.5 transition-colors ${runAds ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${runAds ? 'translate-x-5' : ''}`} />
+              </span>
+            </button>
+            {runAds && (
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Chọn page chạy ads</div>
+                  {pages === null ? (
+                    <div className="text-sm text-slate-400 flex items-center gap-2 py-1"><Loader2 className="w-4 h-4 animate-spin" />Đang tải danh sách page…</div>
+                  ) : pages.length === 0 ? (
+                    <div className="text-xs text-slate-400 bg-slate-50 rounded-xl p-2.5">Chưa có page nào được cấp token. Thêm page vào bảng <b>fb_pages</b> trước.</div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {pages.map(p => (
+                        <button type="button" key={p.page_id} onClick={() => setPageId(p.page_id)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left text-sm transition-colors ${pageId === p.page_id ? 'border-blue-400 bg-white font-bold text-blue-700 shadow-sm' : 'border-slate-200 text-slate-600 hover:bg-white'}`}>
+                          <span className={`w-4 h-4 rounded-full border-2 grid place-items-center shrink-0 ${pageId === p.page_id ? 'border-blue-600' : 'border-slate-300'}`}>
+                            {pageId === p.page_id && <span className="w-2 h-2 rounded-full bg-blue-600" />}
+                          </span>
+                          <span className="truncate">{p.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Giờ lên chiến dịch (≥ 15 phút nữa)</div>
+                  <input type="datetime-local" value={runAt} min={toLocalInput(new Date(Date.now() + 15 * 60000))} onChange={e => setRunAt(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-blue-400 outline-none bg-white" />
+                  <p className="text-[11px] text-slate-400 mt-1 leading-snug">Trong thời gian chờ, hệ thống đăng bài lên page &amp; lấy ID bài đăng; đến giờ sẽ tự tạo chiến dịch với tệp target đã cấu hình sẵn.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="px-6 pb-6 space-y-2.5">
           <button onClick={() => go(true)} disabled={saving} className="w-full h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold hover:from-orange-600 hover:to-amber-600 disabled:opacity-60 inline-flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25">
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-lg">⚡</span>} Duyệt &amp; Đăng ngay
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-lg">{runAds ? '🚀' : '⚡'}</span>} {runAds ? 'Duyệt · Đăng · Chạy ads' : 'Duyệt & Đăng ngay'}
           </button>
           <div className="grid grid-cols-2 gap-2.5">
             <button onClick={onClose} disabled={saving} className="h-11 rounded-2xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 disabled:opacity-60">Huỷ</button>
@@ -2093,11 +2169,21 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         )}
       </button>
 
-      {/* Trạng thái */}
-      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full mt-2.5 ${status.cls}`}>
-        {fbInfo?.kind === 'running' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
-        {status.label}
-      </span>
+      {/* Trạng thái + tiến trình tự chạy ads */}
+      <div className="flex items-center gap-2 flex-wrap mt-2.5">
+        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${status.cls}`}>
+          {fbInfo?.kind === 'running' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+          {status.label}
+        </span>
+        {c.ads_auto_status === 'queued' && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700" title={`Page: ${c.ads_page_name || c.ads_page_id || ''}`}>
+            🚀 {c.fb_post_id ? 'Lên chiến dịch' : 'Chờ đăng bài → chiến dịch'} {c.ads_run_at ? new Date(c.ads_run_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : ''}
+          </span>
+        )}
+        {c.ads_auto_status === 'failed' && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700" title={c.ads_error || ''}>⚠️ Lỗi tạo chiến dịch</span>
+        )}
+      </div>
 
       {/* Tiêu đề + ô khách hàng */}
       <div className="flex items-start justify-between gap-2.5 sm:gap-3 mt-1.5">
