@@ -50,7 +50,7 @@ export default function PLPage() {
     const allRisk = riskRes.data || [];
     const inMonth = allRisk.filter(r => r.date >= startDate && r.date <= endDate);
     setRisk({
-      entries: inMonth,
+      entries: allRisk, // hiển thị TOÀN BỘ lịch sử (không lọc tháng) — tháng chỉ dùng cho số liệu trích/rút
       monthDep: inMonth.filter(r => r.kind !== 'withdraw').reduce((s, r) => s + Number(r.amount || 0), 0),
       monthWit: inMonth.filter(r => r.kind === 'withdraw').reduce((s, r) => s + Number(r.amount || 0), 0),
       totalFund: allRisk.reduce((s, r) => s + (r.kind === 'withdraw' ? -1 : 1) * Number(r.amount || 0), 0),
@@ -219,12 +219,12 @@ export default function PLPage() {
 
           {/* Danh sách bút toán tháng */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-              <h3 className="font-bold text-slate-700">Bút toán tháng {month}/{year}</h3>
-              <span className="text-sm font-bold text-indigo-600">Trích ròng: {fmt(riskNet)}</span>
+            <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="font-bold text-slate-700">Lịch sử bút toán (toàn bộ)</h3>
+              <span className="text-sm font-bold text-indigo-600">Trích ròng tháng {month}/{year}: {fmt(riskNet)}</span>
             </div>
             {risk.entries.length === 0 ? (
-              <div className="py-10 text-center text-slate-400 text-sm">Chưa có bút toán nào trong tháng</div>
+              <div className="py-10 text-center text-slate-400 text-sm">Chưa có bút toán nào</div>
             ) : (
               <div className="divide-y divide-slate-50">
                 {risk.entries.map(r => (
