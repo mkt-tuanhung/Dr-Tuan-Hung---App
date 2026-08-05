@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import { 
   Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, X, Trash2, 
-  ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users, PackageOpen, TrendingUp, Activity, Wallet
+  ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users, PackageOpen, TrendingUp, Activity, Wallet, Shield
 } from 'lucide-react';
 
 export default function CashFlowPage() {
@@ -28,6 +28,8 @@ export default function CashFlowPage() {
   const [dashboardStats, setDashboardStats] = useState({
     revenue: 0, hospitalFee: 0, payroll: 0, advance: 0, material: 0
   });
+  // Quỹ rủi ro trích trong tháng (trích − rút) — vốn lưu động tự trừ khoản này
+  const [riskNet, setRiskNet] = useState(0);
 
   // Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -59,7 +61,7 @@ export default function CashFlowPage() {
     else setData(flowsData || []);
 
     try {
-      const [payrollRes, appRes, expRes, partnerRes] = await Promise.all([
+      const [payrollRes, appRes, expRes, partnerRes, riskRes] = await Promise.all([
         supabase.from('payroll').select('net_salary').eq('month', filterMonth).eq('year', filterYear),
         supabase.from('customer_appointments').select('revenue, upsale_revenue, hospital_fee, surgery_date, hospital_fee_date')
           .or(`surgery_date.gte.${startDate},hospital_fee_date.gte.${startDate}`),
@@ -68,7 +70,9 @@ export default function CashFlowPage() {
           .gte('date', startDate).lte('date', endDate),
         supabase.from('partner_surgeries').select('partner_fee, surgery_date')
           .eq('partner_paid', true)
-          .gte('surgery_date', startDate).lte('surgery_date', endDate)
+          .gte('surgery_date', startDate).lte('surgery_date', endDate),
+        supabase.from('risk_fund').select('amount, kind, date')
+          .gte('date', startDate).lte('date', endDate)
       ]);
 
       let rev = 0, fee = 0, pr = 0, adv = 0, mat = 0;
@@ -91,6 +95,7 @@ export default function CashFlowPage() {
       });
 
       setDashboardStats({ revenue: rev, hospitalFee: fee, payroll: pr, advance: adv, material: mat });
+      setRiskNet((riskRes.data || []).reduce((s, r) => s + (r.kind === 'withdraw' ? -1 : 1) * Number(r.amount || 0), 0));
     } catch (e) {
       console.error('Lỗi lấy dữ liệu tổng quan:', e);
     }
@@ -101,7 +106,7 @@ export default function CashFlowPage() {
   useEffect(() => {
     if (profile) loadData();
   }, [loadData, profile]);
-  useRealtimeReload('cash_flows,customer_appointments,expenses,payroll', loadData);
+  useRealtimeReload('cash_flows,customer_appointments,expenses,payroll,risk_fund', loadData);
 
   if (!canRead) {
     return <div className="p-8 text-center text-slate-500">Bạn không có quyền truy cập trang này.</div>;
@@ -162,7 +167,8 @@ export default function CashFlowPage() {
     if (d.flow_type === 'in') totalIn += Number(d.amount);
     if (d.flow_type === 'out') totalOut += Number(d.amount);
   });
-  const workingCapital = totalIn - totalOut;
+  // Vốn lưu động = thu − chi − trích quỹ rủi ro (nhập vào quỹ là dòng tiền tự trừ)
+  const workingCapital = totalIn - totalOut - riskNet;
 
   // Render Table
   const renderTable = (list) => (
@@ -251,7 +257,7 @@ export default function CashFlowPage() {
         <h3 className="font-bold text-slate-700 flex items-center gap-2 text-lg">
           <Activity className="w-5 h-5 text-indigo-500" /> Báo cáo tổng quan Tháng {filterMonth}/{filterYear}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <div className="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm mb-2"><TrendingUp className="w-4 h-4"/> Tổng Doanh thu</div>
             <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.revenue)}</div>
@@ -292,6 +298,15 @@ export default function CashFlowPage() {
             </div>
             <div className="text-xl font-black text-slate-800">{fmt(dashboardStats.material)}</div>
           </div>
+
+          <div onClick={() => window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'pl' }))}
+               className="bg-white rounded-2xl p-4 border border-indigo-100 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between text-indigo-600 font-semibold text-sm mb-2">
+              <span className="flex items-center gap-2"><Shield className="w-4 h-4"/> Trích quỹ rủi ro</span>
+              <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-black text-slate-800">{fmt(riskNet)}</div>
+          </div>
         </div>
       </div>
 
@@ -311,6 +326,7 @@ export default function CashFlowPage() {
           <div className="absolute top-0 right-0 p-4 opacity-10"><Coins className="w-16 h-16 text-white" /></div>
           <div className="text-indigo-100 text-sm font-bold flex items-center gap-2 mb-2">VỐN LƯU ĐỘNG</div>
           <div className="text-3xl font-black">{fmt(workingCapital)}</div>
+          {riskNet !== 0 && <div className="text-indigo-100 text-xs mt-1">đã trừ trích quỹ rủi ro {fmt(riskNet)}</div>}
         </div>
       </div>
 
