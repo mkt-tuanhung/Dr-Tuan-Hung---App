@@ -25,8 +25,11 @@ export default function PLPage() {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = lastDay(year, month);
-    const [apptRes, adsRes, expRes, prRes, partnerRes, matRes, riskRes] = await Promise.all([
-      supabase.from('customer_appointments').select('revenue, hospital_fee, surgery_date, hospital_fee_date').eq('status', 'phau_thuat'),
+    const [apptRes, feeRes, adsRes, expRes, prRes, partnerRes, matRes, riskRes] = await Promise.all([
+      // Doanh thu ca mổ: chỉ khách đã phẫu thuật
+      supabase.from('customer_appointments').select('revenue, surgery_date').eq('status', 'phau_thuat'),
+      // Viện phí: MỌI khách có viện phí trong tháng (bất kể trạng thái) — khớp module Viện phí
+      supabase.from('customer_appointments').select('hospital_fee, hospital_fee_date').not('hospital_fee', 'is', null).gte('hospital_fee_date', startDate).lte('hospital_fee_date', endDate + 'T23:59:59'),
       supabase.from('marketing_ads_performance').select('amount_spent, date').gte('date', startDate).lte('date', endDate),
       supabase.from('expenses').select('amount, date, status').eq('status', 'paid').gte('date', startDate).lte('date', endDate),
       supabase.from('payroll').select('net_salary, unpaid_advance').eq('month', month).eq('year', year),
@@ -38,8 +41,9 @@ export default function PLPage() {
     let revenue = 0, hospitalFee = 0, cases = 0;
     (apptRes.data || []).forEach(a => {
       if (a.surgery_date && a.surgery_date >= startDate && a.surgery_date <= endDate) { revenue += Number(a.revenue || 0); cases++; }
-      if (a.hospital_fee_date && a.hospital_fee_date >= startDate && a.hospital_fee_date <= endDate) hospitalFee += Number(a.hospital_fee || 0);
     });
+    // Viện phí = mọi khách có viện phí trong tháng (đã lọc theo hospital_fee_date ở truy vấn)
+    (feeRes.data || []).forEach(a => { hospitalFee += Number(a.hospital_fee || 0); });
     // Thu nhập thêm từ mổ đối tác → cộng vào doanh thu (công BS/phụ mổ đã nằm trong chi phí lương)
     (partnerRes.data || []).forEach(p => { revenue += Number(p.partner_fee || 0); cases++; });
     const ads = (adsRes.data || []).reduce((s, x) => s + Number(x.amount_spent || 0), 0);
