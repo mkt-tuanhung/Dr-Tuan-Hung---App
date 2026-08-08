@@ -33,6 +33,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState(null);
+  const [timesheet, setTimesheet] = useState(null); // { html, name }
+  const tsRef = React.useRef(null);
   const [saving, setSaving] = useState(false);
   const [isMultiSelect, setIsMultiSelect] = useState(false);
   const [selectedCells, setSelectedCells] = useState(new Set());
@@ -159,15 +161,10 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         <div style="text-align:center">Người lập bảng<br/><br/><br/>………………………</div>
         <div style="text-align:center">Xác nhận<br/><br/><br/>………………………</div>
       </div>
-      <div class="noprint" style="margin-top:20px;text-align:center">
-        <button onclick="window.print()" style="background:#0d9488;color:#fff;border:0;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">🖨️ In / Lưu PDF</button>
-      </div>
-      <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script>
       </body></html>`;
-    const w = window.open('', '_blank');
-    if (!w) { toast.error('Trình duyệt chặn cửa sổ — cho phép popup để xuất bảng công'); return; }
-    w.document.write(html); w.document.close();
+    setTimesheet({ html, name: `Bang-cong_${(s.employee_id || s.full_name || '').replace(/\s+/g, '')}_${month}-${year}` });
   };
+  const printTimesheet = () => { try { tsRef.current?.contentWindow?.focus(); tsRef.current?.contentWindow?.print(); } catch { toast.error('Không in được — thử lại'); } };
 
   const stats = {
     total: staff.length,
@@ -571,6 +568,22 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       </div>
 
       {/* Edit modal */}
+      {/* Modal xem/xuất Bảng công cá nhân */}
+      {timesheet && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-3 sm:p-6" onClick={() => setTimesheet(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl h-[90vh] shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+              <h3 className="font-bold text-slate-800">Bảng chấm công cá nhân</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={printTimesheet} className="px-4 h-9 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 inline-flex items-center gap-1.5"><Download className="w-4 h-4" />In / Lưu PDF</button>
+                <button onClick={() => setTimesheet(null)} className="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 flex items-center justify-center"><X className="w-5 h-5" /></button>
+              </div>
+            </div>
+            <iframe ref={tsRef} title="timesheet" srcDoc={timesheet.html} className="flex-1 w-full border-0" />
+          </div>
+        </div>
+      )}
+
       {editModal && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl">
