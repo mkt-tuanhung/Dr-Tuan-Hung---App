@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download } from 'lucide-react';
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 
 const STATUS_CONFIG = {
@@ -75,6 +75,95 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     s.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     s.employee_id?.toLowerCase().includes(search.toLowerCase())
   );
+
+  // ---------- Xuất BẢNG CÔNG cá nhân (cửa sổ in đẹp — lưu PDF được) ----------
+  const openTimesheet = (s) => {
+    const STL = {
+      present: ['Có mặt', '#0d9488', '#ccfbf1'], late: ['Đi trễ', '#b45309', '#fef3c7'],
+      early_leave: ['Về sớm', '#c2410c', '#ffedd5'], half_day: ['Nửa ngày', '#1d4ed8', '#dbeafe'],
+      leave: ['Nghỉ phép', '#7c3aed', '#ede9fe'], absent: ['Vắng mặt', '#dc2626', '#fee2e2'],
+    };
+    const recs = {};
+    attendance.filter(a => a.staff_id === s.id).forEach(a => { recs[new Date(a.date).getDate()] = a; });
+    const cnt = { cong: 0, present: 0, late: 0, early_leave: 0, half_day: 0, leave: 0, absent: 0, ot: 0 };
+    let rowsHtml = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month - 1, d);
+      const dow = date.getDay();
+      const weekend = dow === 0 || dow === 6;
+      const r = recs[d];
+      const st = r?.status;
+      if (st) {
+        if (['present', 'late', 'early_leave'].includes(st)) cnt.cong += 1;
+        else if (st === 'half_day') cnt.cong += 0.5;
+        if (cnt[st] !== undefined) cnt[st] += 1;
+        cnt.ot += Number(r.overtime_hours || 0);
+      }
+      const cfg = st ? STL[st] : null;
+      const badge = cfg ? `<span style="background:${cfg[2]};color:${cfg[1]};padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap">${cfg[0]}</span>` : '<span style="color:#cbd5e1">—</span>';
+      const ci = r?.check_in ? String(r.check_in).slice(0, 5) : '—';
+      const co = r?.check_out ? String(r.check_out).slice(0, 5) : '—';
+      const ot = Number(r?.overtime_hours || 0) > 0 ? `${r.overtime_hours}h` : '';
+      const note = (r?.note || '').replace(/</g, '&lt;');
+      rowsHtml += `<tr style="${weekend ? 'background:#f8fafc' : ''}">
+        <td style="text-align:center;font-weight:700;color:${weekend ? '#94a3b8' : '#334155'}">${d}</td>
+        <td style="text-align:center;color:${weekend ? '#cbd5e1' : '#64748b'}">${DAYS[dow]}</td>
+        <td style="text-align:center">${badge}</td>
+        <td style="text-align:center;font-variant-numeric:tabular-nums">${ci}</td>
+        <td style="text-align:center;font-variant-numeric:tabular-nums">${co}</td>
+        <td style="text-align:center;color:#0d9488;font-weight:700">${ot}</td>
+        <td style="color:#475569;font-size:11px">${note}</td>
+      </tr>`;
+    }
+    const chip = (label, val, color) => `<div style="flex:1;min-width:90px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px"><div style="font-size:11px;color:#94a3b8">${label}</div><div style="font-size:20px;font-weight:800;color:${color}">${val}</div></div>`;
+    const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Bảng công ${s.full_name} - ${MONTHS[month - 1]} ${year}</title>
+      <style>
+        *{box-sizing:border-box} body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;margin:0;padding:28px;color:#0f172a;background:#fff}
+        .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:3px solid #0d9488;padding-bottom:14px;margin-bottom:16px}
+        h1{font-size:20px;margin:0} .sub{color:#64748b;font-size:13px;margin-top:2px}
+        table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #e2e8f0;padding:6px 8px}
+        thead th{background:#0d9488;color:#fff;font-weight:700;font-size:11px}
+        .sum{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+        .foot{margin-top:22px;display:flex;justify-content:space-between;color:#64748b;font-size:12px}
+        @media print{ .noprint{display:none} body{padding:12px} }
+      </style></head><body>
+      <div class="head">
+        <div>
+          <h1>BẢNG CHẤM CÔNG CÁ NHÂN</h1>
+          <div class="sub">${MONTHS[month - 1]} năm ${year}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:800;font-size:16px">${s.full_name}</div>
+          <div class="sub">Mã NV: ${s.employee_id || '—'}${s.role ? ' · ' + s.role : ''}</div>
+        </div>
+      </div>
+      <div class="sum">
+        ${chip('Tổng công', cnt.cong, '#0d9488')}
+        ${chip('Đi trễ', cnt.late, '#b45309')}
+        ${chip('Về sớm', cnt.early_leave, '#c2410c')}
+        ${chip('Nửa ngày', cnt.half_day, '#1d4ed8')}
+        ${chip('Nghỉ phép', cnt.leave, '#7c3aed')}
+        ${chip('Vắng', cnt.absent, '#dc2626')}
+        ${chip('Tăng ca', cnt.ot + 'h', '#0d9488')}
+      </div>
+      <table>
+        <thead><tr><th>Ngày</th><th>Thứ</th><th>Trạng thái</th><th>Giờ vào</th><th>Giờ ra</th><th>Tăng ca</th><th>Ghi chú</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="foot">
+        <div>Xuất lúc ${new Date().toLocaleString('vi-VN')}</div>
+        <div style="text-align:center">Người lập bảng<br/><br/><br/>………………………</div>
+        <div style="text-align:center">Xác nhận<br/><br/><br/>………………………</div>
+      </div>
+      <div class="noprint" style="margin-top:20px;text-align:center">
+        <button onclick="window.print()" style="background:#0d9488;color:#fff;border:0;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">🖨️ In / Lưu PDF</button>
+      </div>
+      <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { toast.error('Trình duyệt chặn cửa sổ — cho phép popup để xuất bảng công'); return; }
+    w.document.write(html); w.document.close();
+  };
 
   const stats = {
     total: staff.length,
@@ -363,10 +452,11 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                             <span className="text-[10px] font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
                           )}
                         </div>
-                        <div>
-                          <div className="font-medium text-slate-700 text-xs">{s.full_name}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-700 text-xs truncate">{s.full_name}</div>
                           <div className="text-[10px] text-slate-400">{s.employee_id}</div>
                         </div>
+                        <button onClick={() => openTimesheet(s)} title="Xuất bảng công cá nhân" className="ml-auto shrink-0 w-7 h-7 rounded-lg border border-teal-200 text-teal-600 hover:bg-teal-50 flex items-center justify-center"><Download className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
                     {days.map(d => {
@@ -436,14 +526,12 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-slate-100 text-slate-400">Chưa chấm</span>
                     )}
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="text-xs text-slate-400">Có mặt tháng này: <span className="font-semibold text-slate-700">{monthCount} ngày</span></span>
-                    <button
-                      onClick={() => openEdit(s.id, today.getDate())}
-                      className="text-xs text-teal-600 font-medium hover:text-teal-700"
-                    >
-                      Chấm hôm nay →
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => openTimesheet(s)} className="text-xs text-teal-600 font-medium hover:text-teal-700 inline-flex items-center gap-1"><Download className="w-3.5 h-3.5" />Bảng công</button>
+                      <button onClick={() => openEdit(s.id, today.getDate())} className="text-xs text-teal-600 font-medium hover:text-teal-700">Chấm hôm nay →</button>
+                    </div>
                   </div>
                 </div>
               );
