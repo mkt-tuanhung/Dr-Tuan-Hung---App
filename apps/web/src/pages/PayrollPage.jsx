@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
-  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, computeSeeding, isRecheck, SALE_HALF_SOURCES,
+  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, computeSeeding, computeOvertime, isRecheck, SALE_HALF_SOURCES,
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
@@ -60,7 +60,7 @@ const PayrollPage = () => {
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
 
     const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes, partnerRes] = await Promise.all([
-      supabase.from('attendance').select('staff_id, status, date, overtime_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
+      supabase.from('attendance').select('staff_id, status, date, overtime_hours, late_early_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
       supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, hospital_fee, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
       supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', meDay),
@@ -86,13 +86,11 @@ const PayrollPage = () => {
       .reduce((s, a) => s + (['present', 'late', 'early_leave'].includes(a.status) ? 1 : a.status === 'half_day' ? 0.5 : 0), 0);
     const advanceOf = (id) => adv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
     const salaryAdvanceOf = (id) => salAdv.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.amount || 0), 0);
-    // Tăng ca: số giờ × (CN:200% | thường:150%) × lương cơ bản/26/8
-    const overtimeOf = (id, base) => att.filter(a => a.staff_id === id && Number(a.overtime_hours) > 0)
-      .reduce((s, a) => {
-        const rate = new Date(a.date).getDay() === 0 ? 2 : 1.5;
-        return s + Number(a.overtime_hours) * rate * (Number(base || 0) / STANDARD_DAYS / 8);
-      }, 0);
+    // Tăng ca (đã trừ giờ đi muộn/về sớm) — computeOvertime dùng chung
+    const overtimeOf = (id, base) => computeOvertime(att.filter(a => a.staff_id === id), base, STANDARD_DAYS).pay;
+    const overtimeInfoOf = (id, base) => computeOvertime(att.filter(a => a.staff_id === id), base, STANDARD_DAYS);
     const overtimeHoursOf = (id) => att.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.overtime_hours || 0), 0);
+    const lateEarlyHoursOf = (id) => att.filter(a => a.staff_id === id).reduce((s, a) => s + Number(a.late_early_hours || 0), 0);
 
     const computed = (staff || []).map(s => {
       const workingDays = workingDaysOf(s.id);
@@ -154,9 +152,11 @@ const PayrollPage = () => {
       const net = gross - salaryAdvance - otherDeduction;
 
       const overtimeHours = overtimeHoursOf(s.id);
+      const lateEarlyHours = lateEarlyHoursOf(s.id);
+      const otInfo = overtimeInfoOf(s.id, s.base_salary); // { otHours, leHours, netHours, ... }
       // Số ngày nghỉ = đếm theo bản ghi chấm công nghỉ thực tế (nửa ngày = 0.5), KHÔNG lấy 26 − công
       const daysOff = offDetail.reduce((sum, o) => sum + (o.status === 'half_day' ? 0.5 : 1), 0);
-      return { staff: s, workingDays, daysOff, overtimeHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, partnerOff, commDetail, otDetail, offDetail };
+      return { staff: s, workingDays, daysOff, overtimeHours, lateEarlyHours, otNetHours: otInfo.netHours, luongCong, phuCap, commission, overtime, otherBonus, otherDeduction, advance, salaryAdvance, gross, net, savedStatus: saved?.status, saleOff, teleOff, ddOff, bacSiOff, partnerOff, commDetail, otDetail, offDetail };
     });
 
     setRows(computed);
@@ -509,10 +509,10 @@ const PayrollPage = () => {
                         </button>
                       )}</td>
                     <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}
-                      {r.otDetail?.length > 0 && (
+                      {(r.otDetail?.length > 0 || r.lateEarlyHours > 0) && (
                         <button onClick={() => setSaleDetail(r)}
                           className="block ml-auto mt-0.5 text-[11px] font-normal text-blue-500 hover:underline">
-                          {r.overtimeHours}h · chi tiết
+                          {r.overtimeHours}h{r.lateEarlyHours > 0 ? ` − ${r.lateEarlyHours}h muộn/sớm = ${r.otNetHours}h` : ''} · chi tiết
                         </button>
                       )}</td>
                     <td className="text-right px-2 py-2.5">
