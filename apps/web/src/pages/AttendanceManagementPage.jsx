@@ -85,7 +85,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     };
     const recs = {};
     attendance.filter(a => a.staff_id === s.id).forEach(a => { recs[new Date(a.date).getDate()] = a; });
-    const cnt = { cong: 0, present: 0, late: 0, early_leave: 0, half_day: 0, leave: 0, absent: 0, ot: 0 };
+    const cnt = { cong: 0, present: 0, late: 0, early_leave: 0, half_day: 0, leave: 0, absent: 0, ot: 0, le: 0 };
     let rowsHtml = '';
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month - 1, d);
@@ -99,11 +99,13 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         if (cnt[st] !== undefined) cnt[st] += 1;
         cnt.ot += Number(r.overtime_hours || 0);
       }
+      cnt.le += Number(r?.late_early_hours || 0);
       const cfg = st ? STL[st] : null;
       const badge = cfg ? `<span style="background:${cfg[2]};color:${cfg[1]};padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap">${cfg[0]}</span>` : '<span style="color:#cbd5e1">—</span>';
       const ci = r?.check_in ? String(r.check_in).slice(0, 5) : '—';
       const co = r?.check_out ? String(r.check_out).slice(0, 5) : '—';
       const ot = Number(r?.overtime_hours || 0) > 0 ? `${r.overtime_hours}h` : '';
+      const le = Number(r?.late_early_hours || 0) > 0 ? `${r.late_early_hours}h` : '';
       const note = (r?.note || '').replace(/</g, '&lt;');
       rowsHtml += `<tr style="${weekend ? 'background:#f8fafc' : ''}">
         <td style="text-align:center;font-weight:700;color:${weekend ? '#94a3b8' : '#334155'}">${d}</td>
@@ -112,6 +114,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         <td style="text-align:center;font-variant-numeric:tabular-nums">${ci}</td>
         <td style="text-align:center;font-variant-numeric:tabular-nums">${co}</td>
         <td style="text-align:center;color:#0d9488;font-weight:700">${ot}</td>
+        <td style="text-align:center;color:#b45309;font-weight:700">${le}</td>
         <td style="color:#475569;font-size:11px">${note}</td>
       </tr>`;
     }
@@ -144,10 +147,11 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         ${chip('Nửa ngày', cnt.half_day, '#1d4ed8')}
         ${chip('Nghỉ phép', cnt.leave, '#7c3aed')}
         ${chip('Vắng', cnt.absent, '#dc2626')}
-        ${chip('Tăng ca', cnt.ot + 'h', '#0d9488')}
+        ${chip('Đi muộn/về sớm', cnt.le + 'h', '#b45309')}
+        ${chip('Tăng ca thực (đã trừ)', Math.max(0, cnt.ot - cnt.le) + 'h', '#0d9488')}
       </div>
       <table>
-        <thead><tr><th>Ngày</th><th>Thứ</th><th>Trạng thái</th><th>Giờ vào</th><th>Giờ ra</th><th>Tăng ca</th><th>Ghi chú</th></tr></thead>
+        <thead><tr><th>Ngày</th><th>Thứ</th><th>Trạng thái</th><th>Giờ vào</th><th>Giờ ra</th><th>Tăng ca</th><th>Muộn/sớm</th><th>Ghi chú</th></tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
       <div class="foot">
@@ -187,6 +191,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       status: record?.status || 'present',
       check_in: record?.check_in || '',
       check_out: record?.check_out || '',
+      overtime_hours: record?.overtime_hours ?? '',
+      late_early_hours: record?.late_early_hours ?? '',
       note: record?.note || '',
       id: record?.id || null,
       latitude: record?.latitude,
@@ -264,6 +270,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         status: editModal.status,
         check_in: editModal.check_in || null,
         check_out: editModal.check_out || null,
+        overtime_hours: Number(editModal.overtime_hours) || 0,
+        late_early_hours: Number(editModal.late_early_hours) || 0,
         note: editModal.note || null,
         updated_at: new Date().toISOString(),
       };
@@ -609,6 +617,30 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1.5">Tăng ca (giờ)</label>
+                  <input
+                    type="number" min="0" step="0.5"
+                    value={editModal.overtime_hours}
+                    onChange={e => setEditModal(m => ({ ...m, overtime_hours: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1.5">Đi muộn / về sớm (giờ)</label>
+                  <input
+                    type="number" min="0" step="0.5"
+                    value={editModal.late_early_hours}
+                    onChange={e => setEditModal(m => ({ ...m, late_early_hours: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-amber-100 bg-amber-50/40 text-sm text-slate-700 focus:outline-none focus:border-amber-400"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 -mt-1">Giờ đi muộn/về sớm sẽ tự trừ vào tổng giờ tăng ca khi tính lương.</p>
 
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1.5">Ghi chú</label>

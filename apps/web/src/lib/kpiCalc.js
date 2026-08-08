@@ -283,6 +283,24 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
 // Trả về đúng tên trường như bảng `payroll` để hiển thị thống nhất.
 // ============================================================
 export const PAYROLL_STANDARD_DAYS = 26;
+
+// Lương tăng ca: mỗi ngày tính theo hệ số (CN 200% | thường 150%).
+// TỔNG giờ đi muộn/về sớm trong tháng được TRỪ khỏi tổng giờ tăng ca,
+// phần còn lại tính theo hệ số trung bình của các ca tăng ca.
+//   VD: tăng ca 10h, đi muộn/về sớm 3h -> chỉ trả 7h tăng ca.
+export const computeOvertime = (records = [], base = 0, D = PAYROLL_STANDARD_DAYS) => {
+  const unit = Number(base || 0) / D / 8; // lương 1 giờ thường
+  let otHours = 0, weighted = 0, leHours = 0;
+  for (const a of records) {
+    const ot = Number(a.overtime_hours || 0);
+    if (ot > 0) { const rate = new Date(a.date).getDay() === 0 ? 2 : 1.5; otHours += ot; weighted += ot * rate; }
+    leHours += Number(a.late_early_hours || 0);
+  }
+  const netHours = Math.max(0, otHours - leHours);
+  const avgRate = otHours > 0 ? weighted / otHours : 0;
+  const pay = Math.round(netHours * avgRate * unit);
+  return { otHours, leHours, netHours, avgRate, unit, pay };
+};
 export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip được Ads duyệt chạy Ads
 
 export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], seeding = [], saved = null }) => {
@@ -294,9 +312,8 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
   // Lương cố định: nhận đủ lương tháng, KHÔNG trừ theo ngày công (khớp Bảng lương admin)
   const luongCong = staff.fixed_salary ? Math.round(effectiveBase) : Math.round(effectiveBase / D * workingDays);
   const phuCap = Number(staff.allowance || 0);
-  // Tăng ca: số giờ × (CN:200% | thường:150%) × lương cơ bản/26/8
-  const overtime = Math.round(att.filter(a => a.staff_id === staff.id && Number(a.overtime_hours) > 0)
-    .reduce((s, a) => s + Number(a.overtime_hours) * (new Date(a.date).getDay() === 0 ? 2 : 1.5) * (Number(staff.base_salary || 0) / D / 8), 0));
+  // Tăng ca (đã trừ giờ đi muộn/về sớm) — xem computeOvertime
+  const overtime = computeOvertime(att.filter(a => a.staff_id === staff.id), staff.base_salary, D).pay;
 
   const commissionForRole = (role) => {
     if (role === 'sale_offline') return computeSaleOffline(appts.filter(a => a.sale_id === staff.id && !isRecheck(a)), surg.filter(a => a.sale_id === staff.id)).tongHH;
