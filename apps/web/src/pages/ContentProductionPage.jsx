@@ -495,7 +495,10 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       const okc = data.ok_count ?? ids.length, badc = ids.length - okc;
       toast.success(`Đã cộng ${okc} quảng cáo: ${m.messages || 0} tin nhắn · ${m.purchases || 0} lượt mua${badc ? ` · ${badc} id lỗi` : ''}`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
-    } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
+    } catch (e) {
+      const rate = /request limit|rate limit|#4|#17|giới hạn/i.test(e.message || '');
+      toast.error(rate ? 'Facebook đang giới hạn tần suất — chờ 5–10 phút rồi bấm Đồng bộ lại nhé' : 'Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 });
+    }
   };
   // Đồng bộ chỉ số tất cả clip đã gán ID quảng cáo
   const [syncingAll, setSyncingAll] = useState(false);
@@ -525,6 +528,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         } else fail = true;
       } catch { fail = true; }
       done++; toast.loading(`Đang cập nhật ${done}/${targets.length}…`, { id: 'fb-all' });
+      await new Promise(r => setTimeout(r, 350)); // giãn nhịp -> tránh chạm giới hạn tần suất Facebook
     }
     setSyncingAll(false);
     toast[fail && ok === 0 ? 'error' : 'success'](`Đã cập nhật ${ok}/${targets.length} clip`, { id: 'fb-all', duration: 6000 });
