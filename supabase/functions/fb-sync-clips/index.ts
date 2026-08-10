@@ -77,13 +77,14 @@ function autoScore(spend: number, phones: number, status: string | null, rule: {
   return scoreByRule(spend, phones, rule);
 }
 
-async function fetchCampaign(token: string, campaignId: string) {
+// Kéo chỉ số + trạng thái của 1 id (chiến dịch / nhóm QC / quảng cáo đều được).
+async function fetchOne(token: string, id: string) {
   const p = new URLSearchParams({
     fields: "spend,impressions,reach,inline_link_clicks,ctr,actions,campaign_name",
     date_preset: "maximum",
     access_token: token,
   });
-  const r = await fetch(`https://graph.facebook.com/${API}/${campaignId}/insights?${p.toString()}`);
+  const r = await fetch(`https://graph.facebook.com/${API}/${id}/insights?${p.toString()}`);
   const d = await r.json().catch(() => ({}));
   if (!r.ok || d.error) throw new Error(d?.error?.message || `HTTP ${r.status}`);
   const row = (d.data || [])[0] || {};
@@ -93,7 +94,7 @@ async function fetchCampaign(token: string, campaignId: string) {
   const purchases = pickPurchases(actions);
   let status: string | null = null;
   try {
-    const sr = await fetch(`https://graph.facebook.com/${API}/${campaignId}?fields=effective_status&access_token=${token}`);
+    const sr = await fetch(`https://graph.facebook.com/${API}/${id}?fields=effective_status&access_token=${token}`);
     const sd = await sr.json().catch(() => ({}));
     if (sr.ok && !sd.error) status = sd.effective_status || null;
   } catch { /* bỏ qua */ }
@@ -106,6 +107,31 @@ async function fetchCampaign(token: string, campaignId: string) {
     status,
   };
 }
+// Gộp trạng thái nhiều quảng cáo: còn ACTIVE -> ACTIVE; còn đang duyệt -> duyệt; hết -> đã tắt.
+function mergeStatus(list: (string | null)[]): string | null {
+  if (list.some((s) => s === "ACTIVE")) return "ACTIVE";
+  const rev = list.find((s) => s && FB_REVIEW.includes(s));
+  if (rev) return rev;
+  return list.find((s) => s) ?? null;
+}
+// Cộng tổng chỉ số của NHIỀU id gán vào 1 clip.
+async function fetchMany(token: string, ids: string[]) {
+  const parts = [] as Awaited<ReturnType<typeof fetchOne>>[];
+  const errors: string[] = [];
+  for (const id of ids) {
+    try { parts.push(await fetchOne(token, id)); }
+    catch (e) { errors.push((e as Error)?.message || "lỗi"); }
+  }
+  if (!parts.length) throw new Error(errors[0] || "Không kéo được id nào");
+  const sum = parts.reduce((a, x) => ({
+    spend: a.spend + x.spend, messages: a.messages + x.messages, leads: a.leads + x.leads,
+    purchases: a.purchases + x.purchases, reach: a.reach + x.reach, impressions: a.impressions + x.impressions,
+  }), { spend: 0, messages: 0, leads: 0, purchases: 0, reach: 0, impressions: 0 });
+  return {
+    ...sum, results: sum.messages + sum.leads,
+    status: mergeStatus(parts.map((p) => p.status)),
+  };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -114,17 +140,20 @@ Deno.serve(async (req) => {
     if (!token) return json({ ok: false, error: "Chưa cấu hình FB_ADS_TOKEN" });
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: clips } = await sb.from("media_clips").select("id, fb_campaign_id").not("fb_campaign_id", "is", null);
-    if (!clips?.length) return json({ ok: true, synced: 0, note: "Chưa có clip nào gán ID chiến dịch" });
+    const { data: clips } = await sb.from("media_clips").select("id, fb_campaign_id, fb_ad_ids");
+    // Chỉ lấy clip đã gán ít nhất 1 id (mảng fb_ad_ids mới hoặc fb_campaign_id cũ).
+    const targets = (clips || []).filter((c) => (Array.isArray(c.fb_ad_ids) && c.fb_ad_ids.length) || c.fb_campaign_id);
+    if (!targets.length) return json({ ok: true, synced: 0, note: "Chưa có clip nào gán ID quảng cáo" });
 
     const { data: rule } = await sb.from("ads_win_rule").select("*").eq("id", 1).maybeSingle();
 
     let synced = 0, failed = 0;
-    for (const c of clips) {
-      const cid = String(c.fb_campaign_id || "").replace(/\D/g, "");
-      if (!cid) continue;
+    for (const c of targets) {
+      const ids = ((Array.isArray(c.fb_ad_ids) && c.fb_ad_ids.length ? c.fb_ad_ids : [c.fb_campaign_id]) as string[])
+        .map((x) => String(x || "").replace(/\D/g, "")).filter(Boolean);
+      if (!ids.length) continue;
       try {
-        const m = await fetchCampaign(token, cid);
+        const m = await fetchMany(token, ids);
         const upd: Record<string, unknown> = {
           fb_spend: m.spend, fb_messages: m.messages, fb_leads: m.leads, fb_purchases: m.purchases,
           fb_reach: m.reach, fb_impressions: m.impressions, fb_results: m.results,

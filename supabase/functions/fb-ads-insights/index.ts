@@ -64,6 +64,52 @@ function pickVideoViews(arr: { value: string }[] | undefined): number {
   return Number(arr[0].value) || 0;
 }
 
+// Trạng thái đang duyệt của Facebook (giống web) — để gộp trạng thái nhiều quảng cáo.
+const FB_REVIEW = ["IN_PROCESS", "PENDING_REVIEW", "PREAPPROVED", "PENDING_BILLING_INFO", "WITH_ISSUES"];
+
+// Kéo chỉ số + trạng thái của MỘT id (chiến dịch / nhóm QC / quảng cáo đều được —
+// endpoint /{id}/insights tự gộp các con). Trả về 1 object chỉ số.
+async function fetchOne(token: string, id: string, datePreset: string, since?: string, until?: string) {
+  const p = new URLSearchParams({
+    fields: "spend,impressions,reach,inline_link_clicks,ctr,actions,ad_name,adset_name,campaign_name",
+    date_preset: datePreset,
+    access_token: token,
+  });
+  if (since && until) { p.delete("date_preset"); p.set("time_range", JSON.stringify({ since, until })); }
+  const r = await fetch(`https://graph.facebook.com/${API}/${id}/insights?${p.toString()}`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.error) return { ad_id: id, error: d?.error?.message || `HTTP ${r.status}`, code: d?.error?.code };
+  const row = (d.data || [])[0] || {};
+  const actions = row.actions as Action[];
+  const messages = pickMessages(actions);
+  const leads = pickLeads(actions);
+  const purchases = pickPurchases(actions);
+  const spend = Number(row.spend) || 0;
+  let status: string | null = null;
+  try {
+    const sr = await fetch(`https://graph.facebook.com/${API}/${id}?fields=effective_status&access_token=${token}`);
+    const sd = await sr.json().catch(() => ({}));
+    if (sr.ok && !sd.error) status = sd.effective_status || null;
+  } catch { /* bỏ qua */ }
+  return {
+    ad_id: id,
+    name: row.ad_name || row.adset_name || row.campaign_name || null,
+    spend, messages, leads, purchases,
+    reach: Number(row.reach) || 0,
+    impressions: Number(row.impressions) || 0,
+    results: messages + leads,
+    status,
+  };
+}
+// Gộp trạng thái nhiều quảng cáo: còn 1 cái ACTIVE -> ACTIVE; còn cái đang duyệt
+// -> đang duyệt; hết thì lấy trạng thái đầu tiên có (thường PAUSED = đã tắt).
+function mergeStatus(list: { status?: string | null }[]): string | null {
+  if (list.some((x) => x.status === "ACTIVE")) return "ACTIVE";
+  const rev = list.find((x) => x.status && FB_REVIEW.includes(x.status));
+  if (rev) return rev.status!;
+  return list.find((x) => x.status)?.status ?? null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -72,6 +118,34 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const datePreset = body.date_preset || "maximum";
+
+    // ---- Chế độ NHIỀU ID quảng cáo: cộng tổng chỉ số của tất cả id gán vào 1 clip ----
+    // 1 video chạy trên nhiều campaign -> nhiều quảng cáo, nhập hàng loạt id để gộp.
+    const adIds: string[] = Array.isArray(body.ad_ids)
+      ? [...new Set(body.ad_ids.map((x: unknown) => String(x).replace(/[^0-9]/g, "")).filter(Boolean))]
+      : [];
+    if (adIds.length) {
+      const per = [] as Array<Record<string, unknown>>;
+      for (const id of adIds) per.push(await fetchOne(token, id, datePreset, body.since, body.until));
+      const ok = per.filter((x) => !x.error);
+      // Tất cả id đều lỗi -> báo lỗi (id đầu tiên) để người dùng biết mà sửa.
+      if (!ok.length) return json({ ok: false, error: (per[0]?.error as string) || "Facebook lỗi", code: per[0]?.code, ads: per });
+      const sum = ok.reduce((a, x) => ({
+        spend: a.spend + (Number(x.spend) || 0),
+        messages: a.messages + (Number(x.messages) || 0),
+        leads: a.leads + (Number(x.leads) || 0),
+        purchases: a.purchases + (Number(x.purchases) || 0),
+        reach: a.reach + (Number(x.reach) || 0),
+        impressions: a.impressions + (Number(x.impressions) || 0),
+      }), { spend: 0, messages: 0, leads: 0, purchases: 0, reach: 0, impressions: 0 });
+      const results = sum.messages + sum.leads;
+      return json({ ok: true, metrics: {
+        status: mergeStatus(ok as { status?: string | null }[]),
+        spend: sum.spend, messages: sum.messages, leads: sum.leads, purchases: sum.purchases,
+        reach: sum.reach, impressions: sum.impressions, results,
+        cpa: results > 0 ? Math.round(sum.spend / results) : null,
+      }, ads: per, ok_count: ok.length, count: per.length });
+    }
 
     // ---- Chế độ 1 chiến dịch: lấy chỉ số theo campaign_id (gán vào 1 clip) ----
     const campaignId = (body.campaign_id || "").toString().trim().replace(/[^0-9]/g, "");
