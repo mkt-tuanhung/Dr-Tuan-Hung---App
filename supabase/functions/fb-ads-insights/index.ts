@@ -136,14 +136,6 @@ function mergeStatus(list: { status?: string | null }[]): string | null {
   if (rev) return rev.status!;
   return list.find((x) => x.status)?.status ?? null;
 }
-// Gộp trạng thái nhiều quảng cáo: còn 1 cái ACTIVE -> ACTIVE; còn cái đang duyệt
-// -> đang duyệt; hết thì lấy trạng thái đầu tiên có (thường PAUSED = đã tắt).
-function mergeStatus(list: { status?: string | null }[]): string | null {
-  if (list.some((x) => x.status === "ACTIVE")) return "ACTIVE";
-  const rev = list.find((x) => x.status && FB_REVIEW.includes(x.status));
-  if (rev) return rev.status!;
-  return list.find((x) => x.status)?.status ?? null;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
