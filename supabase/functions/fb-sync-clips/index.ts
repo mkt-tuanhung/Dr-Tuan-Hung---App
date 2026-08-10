@@ -77,35 +77,20 @@ function autoScore(spend: number, phones: number, status: string | null, rule: {
   return scoreByRule(spend, phones, rule);
 }
 
-// Kéo chỉ số + trạng thái của 1 id (chiến dịch / nhóm QC / quảng cáo đều được).
-async function fetchOne(token: string, id: string) {
-  const p = new URLSearchParams({
-    fields: "spend,impressions,reach,inline_link_clicks,ctr,actions,campaign_name",
-    date_preset: "maximum",
-    access_token: token,
-  });
-  const r = await fetch(`https://graph.facebook.com/${API}/${id}/insights?${p.toString()}`);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok || d.error) throw new Error(d?.error?.message || `HTTP ${r.status}`);
-  const row = (d.data || [])[0] || {};
-  const actions = row.actions as Action[];
-  const messages = pickMessages(actions);
-  const leads = pickLeads(actions);
-  const purchases = pickPurchases(actions);
-  let status: string | null = null;
-  try {
-    const sr = await fetch(`https://graph.facebook.com/${API}/${id}?fields=effective_status&access_token=${token}`);
-    const sd = await sr.json().catch(() => ({}));
-    if (sr.ok && !sd.error) status = sd.effective_status || null;
-  } catch { /* bỏ qua */ }
-  return {
-    spend: Number(row.spend) || 0,
-    messages, leads, purchases,
-    reach: Number(row.reach) || 0,
-    impressions: Number(row.impressions) || 0,
-    results: messages + leads,
-    status,
-  };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Mã lỗi giới hạn tần suất của Facebook -> nghỉ rồi thử lại.
+const RATE_CODES = [4, 17, 32, 613, 80000, 80004];
+async function fetchJson(url: string, tries = 3): Promise<{ ok: boolean; data: any }> {
+  let delay = 1500;
+  for (let i = 0; i < tries; i++) {
+    let r: Response; let d: any;
+    try { r = await fetch(url); d = await r.json().catch(() => ({})); }
+    catch (e) { if (i === tries - 1) return { ok: false, data: { error: { message: String((e as Error)?.message || e) } } }; await sleep(delay); delay *= 2; continue; }
+    const limited = RATE_CODES.includes(d?.error?.code);
+    if ((r.ok && !d.error) || !limited || i === tries - 1) return { ok: r.ok && !d.error, data: d };
+    await sleep(delay); delay *= 2;
+  }
+  return { ok: false, data: {} };
 }
 // Gộp trạng thái nhiều quảng cáo: còn ACTIVE -> ACTIVE; còn đang duyệt -> duyệt; hết -> đã tắt.
 function mergeStatus(list: (string | null)[]): string | null {
@@ -114,13 +99,39 @@ function mergeStatus(list: (string | null)[]): string | null {
   if (rev) return rev;
   return list.find((s) => s) ?? null;
 }
-// Cộng tổng chỉ số của NHIỀU id gán vào 1 clip.
+function metricsOf(obj: any) {
+  const row = obj?.insights?.data?.[0] || {};
+  const actions = row.actions as Action[];
+  const messages = pickMessages(actions);
+  const leads = pickLeads(actions);
+  const purchases = pickPurchases(actions);
+  return {
+    spend: Number(row.spend) || 0, messages, leads, purchases,
+    reach: Number(row.reach) || 0, impressions: Number(row.impressions) || 0,
+    status: (obj?.effective_status ?? null) as string | null,
+  };
+}
+// Cộng tổng chỉ số của NHIỀU id gán vào 1 clip — dùng ?ids= (1 request/50 id) để
+// hạn chế tối đa số lần gọi (tránh chạm giới hạn tần suất khi cron quét cả kho).
 async function fetchMany(token: string, ids: string[]) {
-  const parts = [] as Awaited<ReturnType<typeof fetchOne>>[];
+  const inner = "spend,impressions,reach,inline_link_clicks,actions";
+  const fields = `effective_status,insights.date_preset(maximum){${inner}}`;
+  const parts: ReturnType<typeof metricsOf>[] = [];
   const errors: string[] = [];
-  for (const id of ids) {
-    try { parts.push(await fetchOne(token, id)); }
-    catch (e) { errors.push((e as Error)?.message || "lỗi"); }
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const p = new URLSearchParams({ ids: chunk.join(","), fields, access_token: token });
+    const { ok, data } = await fetchJson(`https://graph.facebook.com/${API}/?${p.toString()}`);
+    if (ok && data && !data.error) {
+      for (const id of chunk) parts.push(metricsOf(data[id] || {}));
+    } else {
+      // batch hỏng (thường do 1 id sai) -> tách lẻ, backoff, bỏ id lỗi.
+      for (const id of chunk) {
+        const one = await fetchJson(`https://graph.facebook.com/${API}/${id}?${new URLSearchParams({ fields, access_token: token }).toString()}`);
+        if (one.ok && !one.data?.error) parts.push(metricsOf(one.data));
+        else errors.push(one.data?.error?.message || "lỗi");
+      }
+    }
   }
   if (!parts.length) throw new Error(errors[0] || "Không kéo được id nào");
   const sum = parts.reduce((a, x) => ({
@@ -169,8 +180,9 @@ Deno.serve(async (req) => {
         failed++;
         console.error("sync clip fail", c.id, (e as Error)?.message);
       }
+      await sleep(250); // nghỉ giữa các clip cho đỡ dồn request -> tránh chạm giới hạn tần suất
     }
-    return json({ ok: true, synced, failed, total: clips.length });
+    return json({ ok: true, synced, failed, total: targets.length });
   } catch (e) {
     console.error("fb-sync-clips error", e);
     return json({ ok: false, error: String((e as Error)?.message || e) });

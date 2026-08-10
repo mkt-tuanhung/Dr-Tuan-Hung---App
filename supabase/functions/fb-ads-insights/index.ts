@@ -67,39 +67,74 @@ function pickVideoViews(arr: { value: string }[] | undefined): number {
 // Trạng thái đang duyệt của Facebook (giống web) — để gộp trạng thái nhiều quảng cáo.
 const FB_REVIEW = ["IN_PROCESS", "PENDING_REVIEW", "PREAPPROVED", "PENDING_BILLING_INFO", "WITH_ISSUES"];
 
-// Kéo chỉ số + trạng thái của MỘT id (chiến dịch / nhóm QC / quảng cáo đều được —
-// endpoint /{id}/insights tự gộp các con). Trả về 1 object chỉ số.
-async function fetchOne(token: string, id: string, datePreset: string, since?: string, until?: string) {
-  const p = new URLSearchParams({
-    fields: "spend,impressions,reach,inline_link_clicks,ctr,actions,ad_name,adset_name,campaign_name",
-    date_preset: datePreset,
-    access_token: token,
-  });
-  if (since && until) { p.delete("date_preset"); p.set("time_range", JSON.stringify({ since, until })); }
-  const r = await fetch(`https://graph.facebook.com/${API}/${id}/insights?${p.toString()}`);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok || d.error) return { ad_id: id, error: d?.error?.message || `HTTP ${r.status}`, code: d?.error?.code };
-  const row = (d.data || [])[0] || {};
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Mã lỗi giới hạn tần suất của Facebook -> nghỉ rồi thử lại (tránh "Application request limit reached").
+const RATE_CODES = [4, 17, 32, 613, 80000, 80004];
+// GET có tự thử lại khi bị giới hạn tần suất (backoff 1.5s -> 3s -> 6s).
+async function fetchJson(url: string, tries = 3): Promise<{ ok: boolean; status: number; data: any }> {
+  let delay = 1500;
+  for (let i = 0; i < tries; i++) {
+    let r: Response; let d: any;
+    try { r = await fetch(url); d = await r.json().catch(() => ({})); }
+    catch (e) { if (i === tries - 1) return { ok: false, status: 0, data: { error: { message: String((e as Error)?.message || e) } } }; await sleep(delay); delay *= 2; continue; }
+    const limited = RATE_CODES.includes(d?.error?.code);
+    if ((r.ok && !d.error) || !limited || i === tries - 1) return { ok: r.ok && !d.error, status: r.status, data: d };
+    await sleep(delay); delay *= 2;
+  }
+  return { ok: false, status: 0, data: {} };
+}
+// Trường insights lồng (subfield) để lấy chỉ số kèm object trong 1 request.
+function insightsField(datePreset: string, since?: string, until?: string) {
+  const inner = "spend,impressions,reach,inline_link_clicks,actions";
+  if (since && until) return `insights.time_range(${JSON.stringify({ since, until })}){${inner}}`;
+  return `insights.date_preset(${datePreset}){${inner}}`;
+}
+function rowToMetrics(id: string, obj: any) {
+  const row = obj?.insights?.data?.[0] || {};
   const actions = row.actions as Action[];
   const messages = pickMessages(actions);
   const leads = pickLeads(actions);
   const purchases = pickPurchases(actions);
-  const spend = Number(row.spend) || 0;
-  let status: string | null = null;
-  try {
-    const sr = await fetch(`https://graph.facebook.com/${API}/${id}?fields=effective_status&access_token=${token}`);
-    const sd = await sr.json().catch(() => ({}));
-    if (sr.ok && !sd.error) status = sd.effective_status || null;
-  } catch { /* bỏ qua */ }
   return {
-    ad_id: id,
-    name: row.ad_name || row.adset_name || row.campaign_name || null,
-    spend, messages, leads, purchases,
-    reach: Number(row.reach) || 0,
-    impressions: Number(row.impressions) || 0,
+    ad_id: id, name: obj?.name ?? null, status: obj?.effective_status ?? null,
+    spend: Number(row.spend) || 0, messages, leads, purchases,
+    reach: Number(row.reach) || 0, impressions: Number(row.impressions) || 0,
     results: messages + leads,
-    status,
   };
+}
+// Kéo chỉ số + trạng thái của NHIỀU id trong ÍT request nhất:
+// dùng ?ids=... (tối đa 50/req) kèm subfield insights -> 1 request cho cả nhóm,
+// thay vì 2 request mỗi id (giảm mạnh nguy cơ chạm giới hạn tần suất).
+async function fetchMany(token: string, ids: string[], datePreset: string, since?: string, until?: string) {
+  const fields = `effective_status,name,${insightsField(datePreset, since, until)}`;
+  const out: Array<Record<string, any>> = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const p = new URLSearchParams({ ids: chunk.join(","), fields, access_token: token });
+    const { ok, data } = await fetchJson(`https://graph.facebook.com/${API}/?${p.toString()}`);
+    if (ok && data && !data.error) {
+      for (const id of chunk) out.push(rowToMetrics(id, data[id] || {}));
+    } else {
+      // 1 id sai làm hỏng cả batch -> tách lẻ để biết id nào lỗi (vẫn có backoff).
+      for (const id of chunk) out.push(await fetchOne(token, id, datePreset, since, until));
+    }
+  }
+  return out;
+}
+// Kéo lẻ 1 id (dự phòng khi batch lỗi) — cũng có backoff.
+async function fetchOne(token: string, id: string, datePreset: string, since?: string, until?: string) {
+  const p = new URLSearchParams({ fields: `effective_status,name,${insightsField(datePreset, since, until)}`, access_token: token });
+  const { ok, data } = await fetchJson(`https://graph.facebook.com/${API}/${id}?${p.toString()}`);
+  if (!ok || data?.error) return { ad_id: id, error: data?.error?.message || "Facebook lỗi", code: data?.error?.code };
+  return rowToMetrics(id, data);
+}
+// Gộp trạng thái nhiều quảng cáo: còn 1 cái ACTIVE -> ACTIVE; còn cái đang duyệt
+// -> đang duyệt; hết thì lấy trạng thái đầu tiên có (thường PAUSED = đã tắt).
+function mergeStatus(list: { status?: string | null }[]): string | null {
+  if (list.some((x) => x.status === "ACTIVE")) return "ACTIVE";
+  const rev = list.find((x) => x.status && FB_REVIEW.includes(x.status));
+  if (rev) return rev.status!;
+  return list.find((x) => x.status)?.status ?? null;
 }
 // Gộp trạng thái nhiều quảng cáo: còn 1 cái ACTIVE -> ACTIVE; còn cái đang duyệt
 // -> đang duyệt; hết thì lấy trạng thái đầu tiên có (thường PAUSED = đã tắt).
@@ -125,8 +160,7 @@ Deno.serve(async (req) => {
       ? [...new Set(body.ad_ids.map((x: unknown) => String(x).replace(/[^0-9]/g, "")).filter(Boolean))]
       : [];
     if (adIds.length) {
-      const per = [] as Array<Record<string, unknown>>;
-      for (const id of adIds) per.push(await fetchOne(token, id, datePreset, body.since, body.until));
+      const per = await fetchMany(token, adIds, datePreset, body.since, body.until);
       const ok = per.filter((x) => !x.error);
       // Tất cả id đều lỗi -> báo lỗi (id đầu tiên) để người dùng biết mà sửa.
       if (!ok.length) return json({ ok: false, error: (per[0]?.error as string) || "Facebook lỗi", code: per[0]?.code, ads: per });
@@ -156,9 +190,8 @@ Deno.serve(async (req) => {
         access_token: token,
       });
       if (body.since && body.until) { p.delete("date_preset"); p.set("time_range", JSON.stringify({ since: body.since, until: body.until })); }
-      const r = await fetch(`https://graph.facebook.com/${API}/${campaignId}/insights?${p.toString()}`);
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || d.error) return json({ ok: false, error: d?.error?.message || `Facebook lỗi HTTP ${r.status}`, code: d?.error?.code });
+      const { ok: r_ok, status: r_status, data: d } = await fetchJson(`https://graph.facebook.com/${API}/${campaignId}/insights?${p.toString()}`);
+      if (!r_ok || d.error) return json({ ok: false, error: d?.error?.message || `Facebook lỗi HTTP ${r_status}`, code: d?.error?.code });
       const row = (d.data || [])[0] || {};
       const actions = row.actions as { action_type: string; value: string }[];
       const messages = pickMessages(actions);
@@ -169,9 +202,8 @@ Deno.serve(async (req) => {
       // Lấy trạng thái chiến dịch (ACTIVE / PAUSED...)
       let status: string | null = null;
       try {
-        const sr = await fetch(`https://graph.facebook.com/${API}/${campaignId}?fields=effective_status&access_token=${token}`);
-        const sd = await sr.json().catch(() => ({}));
-        if (sr.ok && !sd.error) status = sd.effective_status || null;
+        const { ok: s_ok, data: sd } = await fetchJson(`https://graph.facebook.com/${API}/${campaignId}?fields=effective_status&access_token=${token}`);
+        if (s_ok && !sd.error) status = sd.effective_status || null;
       } catch { /* bỏ qua */ }
       return json({ ok: true, metrics: {
         campaign_name: row.campaign_name || null, status,
@@ -205,10 +237,9 @@ Deno.serve(async (req) => {
     }
 
     const url = `https://graph.facebook.com/${API}/act_${acct}/insights?${params.toString()}`;
-    const res = await fetch(url);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.error) {
-      return json({ ok: false, error: data?.error?.message || `Facebook lỗi HTTP ${res.status}`, code: data?.error?.code });
+    const { ok: res_ok, status: res_status, data } = await fetchJson(url);
+    if (!res_ok || data.error) {
+      return json({ ok: false, error: data?.error?.message || `Facebook lỗi HTTP ${res_status}`, code: data?.error?.code });
     }
 
     const ads = (data.data || []).map((r: Record<string, unknown>) => {
