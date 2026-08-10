@@ -144,6 +144,15 @@ function scoreByRule(spend, phones, rule) {
 // SĐT = "Lượt mua" của Ads Manager (purchase) — đây là số điện thoại xin được.
 // KHÔNG dùng lead thay thế (lead ≠ SĐT): Lượt mua = 0 thì Giá/SĐT phải là "—".
 const phonesOf = (c) => Number(c?.fb_purchases) || 0;
+// Danh sách ID quảng cáo đã gán (mảng mới fb_ad_ids; tương thích fb_campaign_id cũ).
+const adIdsOf = (c) => {
+  const arr = Array.isArray(c?.fb_ad_ids) ? c.fb_ad_ids.filter(Boolean) : [];
+  if (arr.length) return arr;
+  return c?.fb_campaign_id ? [String(c.fb_campaign_id)] : [];
+};
+const hasAds = (c) => adIdsOf(c).length > 0;
+// Tách chuỗi nhập hàng loạt -> mảng id số, bỏ trùng.
+const parseAdIds = (s) => [...new Set(String(s || '').split(/[^0-9]+/).filter(Boolean))];
 const SCORE_FILTERS = { win: 'WIN (10đ)', tot: 'Tốt (≥8)', tb: 'Trung bình (5-7)', te: 'Tệ (<5)', chua: 'Chưa chấm' };
 const matchScoreFilter = (c, f) => {
   if (!f) return true;
@@ -203,7 +212,7 @@ const clipVerdict = (c, rule) => {
   const kind = fbKind(c);
   const inProgress = kind === 'running' || kind === 'review';
   const reachedBudget = wb > 0 && Number(c.fb_spend) >= wb;
-  if (c.fb_campaign_id && hasRule && inProgress && !reachedBudget) {
+  if (hasAds(c) && hasRule && inProgress && !reachedBudget) {
     const phones = phonesOf(c);
     const cpa = phones > 0 ? Math.round(Number(c.fb_spend) / phones) : null;
     return { potential: true, tier: cpaTier(cpa) };
@@ -461,45 +470,49 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     if (error) { toast.error('Lỗi: ' + error.message); loadData(); return; }
     if (msg) toast.success(msg);
   };
-  // Kéo chỉ số Facebook theo ID chiến dịch, lưu vào clip
-  const syncFbClip = async (clipId, campaignId) => {
-    const cid = (campaignId || '').replace(/\D/g, '');
-    if (!cid) { toast.error('Chưa có ID chiến dịch Facebook'); return; }
-    toast.loading('Đang kéo chỉ số Facebook…', { id: 'fb-' + clipId });
+  // Kéo chỉ số Facebook theo NHIỀU ID quảng cáo (cộng tổng), lưu vào clip.
+  // adIds = mảng id muốn gán/đồng bộ cho clip này. Bỏ trống -> dùng id đã gán sẵn.
+  const syncFbClip = async (clipId, adIds) => {
+    const ids = Array.isArray(adIds) ? [...new Set(adIds.map(x => String(x).replace(/\D/g, '')).filter(Boolean))] : parseAdIds(adIds);
+    if (!ids.length) { toast.error('Chưa có ID quảng cáo Facebook'); return; }
+    toast.loading(`Đang kéo chỉ số ${ids.length} quảng cáo…`, { id: 'fb-' + clipId });
     try {
-      const { data, error } = await supabase.functions.invoke('fb-ads-insights', { body: { campaign_id: cid } });
+      const { data, error } = await supabase.functions.invoke('fb-ads-insights', { body: { ad_ids: ids } });
       if (error) throw new Error(error.message);
       if (!data?.ok) throw new Error(data?.error || 'Lỗi Facebook');
       const m = data.metrics || {};
       const upd = {
-        fb_campaign_id: cid, fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
+        fb_ad_ids: ids, fb_campaign_id: null,
+        fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
         fb_purchases: m.purchases ?? 0,
         fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
         fb_status: m.status ?? null, fb_synced_at: new Date().toISOString(),
       };
-      const mPhones = m.purchases ?? 0; // SĐT = Lượt mua (không dùng lead thay)
-      const v = autoScore(m.spend ?? 0, mPhones, m.status, winRule); // chỉ chấm khi đủ điều kiện
+      const v = autoScore(m.spend ?? 0, m.purchases ?? 0, m.status, winRule); // SĐT = Lượt mua
       if (v) { upd.win = v.win; upd.score = v.score; }
       const { error: upErr } = await supabase.from('media_clips').update(upd).eq('id', clipId);
       if (upErr) throw upErr;
-      toast.success(`Đã cập nhật: ${m.leads || 0} KH tiềm năng · ${m.purchases || 0} lượt mua`, { id: 'fb-' + clipId, duration: 6000 });
+      const okc = data.ok_count ?? ids.length, badc = ids.length - okc;
+      toast.success(`Đã cộng ${okc} quảng cáo: ${m.messages || 0} tin nhắn · ${m.purchases || 0} lượt mua${badc ? ` · ${badc} id lỗi` : ''}`, { id: 'fb-' + clipId, duration: 6000 });
       loadData();
     } catch (e) { toast.error('Facebook: ' + e.message, { id: 'fb-' + clipId, duration: 8000 }); }
   };
-  // Đồng bộ chỉ số tất cả clip đã gán ID chiến dịch
+  // Đồng bộ chỉ số tất cả clip đã gán ID quảng cáo
   const [syncingAll, setSyncingAll] = useState(false);
   const syncAllFb = async () => {
-    const targets = clips.filter(c => c.fb_campaign_id);
-    if (!targets.length) { toast.error('Chưa có clip nào gán ID chiến dịch'); return; }
+    const targets = clips.filter(hasAds);
+    if (!targets.length) { toast.error('Chưa có clip nào gán ID quảng cáo'); return; }
     setSyncingAll(true);
     let done = 0, ok = 0, fail = false;
     toast.loading(`Đang cập nhật 0/${targets.length}…`, { id: 'fb-all' });
     for (const c of targets) {
       try {
-        const { data } = await supabase.functions.invoke('fb-ads-insights', { body: { campaign_id: c.fb_campaign_id } });
+        const ids = adIdsOf(c).map(x => String(x).replace(/\D/g, '')).filter(Boolean);
+        const { data } = await supabase.functions.invoke('fb-ads-insights', { body: { ad_ids: ids } });
         if (data?.ok) {
           const m = data.metrics || {};
           const upd = {
+            fb_ad_ids: ids, fb_campaign_id: null,
             fb_spend: m.spend ?? 0, fb_messages: m.messages ?? 0, fb_leads: m.leads ?? 0,
             fb_purchases: m.purchases ?? 0,
             fb_reach: m.reach ?? 0, fb_impressions: m.impressions ?? 0, fb_results: m.results ?? 0,
@@ -524,7 +537,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     const { error } = await supabase.from('ads_win_rule').upsert({ id: 1, ...rule, updated_by: me.id, updated_at: new Date().toISOString() });
     if (error) { toast.error('Lỗi lưu: ' + error.message); return; }
     setWinRule({ id: 1, ...rule });
-    const targets = clips.filter(c => c.fb_campaign_id && (Number(c.fb_spend) > 0 || phonesOf(c) > 0));
+    const targets = clips.filter(c => hasAds(c) && (Number(c.fb_spend) > 0 || phonesOf(c) > 0));
     let n = 0;
     for (const c of targets) { const v = autoScore(c.fb_spend, phonesOf(c), c.fb_status, rule); if (v) { await supabase.from('media_clips').update({ win: v.win, score: v.score }).eq('id', c.id); n++; } }
     toast.success(`Đã lưu định nghĩa Win — tự chấm lại ${n} clip`);
@@ -547,18 +560,24 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         : postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads');
     setApproveFor(null);
   };
-  // Gỡ ID chiến dịch (gán nhầm) — xoá chỉ số FB & điểm tự chấm để tránh chấm nhầm
+  // Gỡ TẤT CẢ ID quảng cáo — xoá chỉ số FB & điểm tự chấm để tránh chấm nhầm
   const removeFbCampaign = (c) => ask(
-    'Gỡ ID chiến dịch khỏi clip này? Chỉ số Facebook và điểm tự chấm sẽ bị xoá để tránh chấm nhầm điểm.',
+    'Gỡ toàn bộ ID quảng cáo khỏi clip này? Chỉ số Facebook và điểm tự chấm sẽ bị xoá để tránh chấm nhầm điểm.',
     async () => {
       await patchClip(c.id, {
-        fb_campaign_id: null, fb_spend: 0, fb_messages: 0, fb_leads: 0, fb_purchases: 0,
+        fb_ad_ids: [], fb_campaign_id: null, fb_spend: 0, fb_messages: 0, fb_leads: 0, fb_purchases: 0,
         fb_reach: 0, fb_impressions: 0, fb_results: 0, fb_status: null, fb_synced_at: null,
         win: false, score: null,
-      }, 'Đã gỡ ID chiến dịch — clip trở về "Chưa chấm"');
+      }, 'Đã gỡ ID quảng cáo — clip trở về "Chưa chấm"');
     },
-    { okLabel: 'Gỡ ID', danger: true }
+    { okLabel: 'Gỡ tất cả', danger: true }
   );
+  // Gỡ 1 ID quảng cáo rồi kéo lại tổng của các id còn lại (hoặc xoá sạch nếu hết).
+  const removeOneAdId = async (c, id) => {
+    const rest = adIdsOf(c).filter(x => String(x) !== String(id));
+    if (!rest.length) { removeFbCampaign(c); return; }
+    await syncFbClip(c.id, rest);
+  };
   // Bật/tắt nhãn "Đăng ngay" — hệ thống ngoài đọc cờ này để tự đăng video lên page
   const markPostNow = (c, on) => patchClip(c.id,
     { post_now: on, post_now_at: on ? new Date().toISOString() : null, post_status: on ? 'queued' : null, ads_id: me.id },
@@ -729,16 +748,16 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       const matchQ = (st?.customer_name || '').toLowerCase().includes(q)
         || (st?.customer_phone || '').includes(q)
         || (c.title || '').toLowerCase().includes(q)
-        || String(c.fb_campaign_id || '').toLowerCase().includes(q);
+        || adIdsOf(c).some(id => String(id).toLowerCase().includes(q));
       if (!matchQ) return false;
       return true; // đang tìm kiếm -> tìm xuyên tất cả sub-tab & không giới hạn tháng
     }
     // Sub-tab theo trạng thái campaign — "Đang chạy"/"Đã tắt" = ĐÃ GÁN ID chiến dịch + trạng thái tương ứng
     const k = fbKind(c);
     if (videoTab === 'pending') return c.stage === 'submitted' && !c.approved_to_run;
-    if (videoTab === 'running') return !!c.fb_campaign_id && k === 'running';
-    if (videoTab === 'review') return !!c.fb_campaign_id && k === 'review';
-    if (videoTab === 'off') return !!c.fb_campaign_id && k === 'off';
+    if (videoTab === 'running') return hasAds(c) && k === 'running';
+    if (videoTab === 'review') return hasAds(c) && k === 'review';
+    if (videoTab === 'off') return hasAds(c) && k === 'off';
     if (!matchScoreFilter(c, videoScore)) return false;
     if (videoService && !((st?.service || '').includes(videoService))) return false;
     const day = (c.submitted_at || c.created_at || '').slice(0, 10);
@@ -748,9 +767,9 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   }).sort((a, b) => adEffValue(b) - adEffValue(a)); // bài Ads hiệu quả ưu tiên lên trên
   const videoCounts = {
     pending: clips.filter(c => c.stage === 'submitted' && !c.approved_to_run).length,
-    running: clips.filter(c => c.fb_campaign_id && fbKind(c) === 'running').length,
-    review: clips.filter(c => c.fb_campaign_id && fbKind(c) === 'review').length,
-    off: clips.filter(c => c.fb_campaign_id && fbKind(c) === 'off').length,
+    running: clips.filter(c => hasAds(c) && fbKind(c) === 'running').length,
+    review: clips.filter(c => hasAds(c) && fbKind(c) === 'review').length,
+    off: clips.filter(c => hasAds(c) && fbKind(c) === 'off').length,
   };
 
   return (
@@ -978,7 +997,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           <div className="space-y-3">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} winRule={winRule} editorAvg={editorAvg(c.editor_id)}
-                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onRemoveFb={removeFbCampaign} onPostNow={markPostNow} />
+                onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onRemoveFb={removeFbCampaign} onRemoveOneAdId={removeOneAdId} onPostNow={markPostNow} />
             ))}
           </div>
         )}
@@ -2088,18 +2107,22 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
 };
 
 // ---------- Thẻ clip (Video Ads: editor + ads) ----------
-const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onRemoveFb, onPostNow }) => {
+const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onReview, onEdit, onDelete, onView, onApproveRun, onSyncFb, onRemoveFb, onRemoveOneAdId, onPostNow }) => {
   const verdict = clipVerdict(c, winRule);
   const mine = c.editor_id === me?.id;
   const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage;
   const cat = scoreCat(c.score, c.win);
   const fbInfo = fbStatusInfo(c.fb_status);
   const status = fbInfo || { label: STAGE[eff]?.label || eff, cls: STAGE[eff]?.cls || 'bg-slate-100 text-slate-500' };
+  const adIds = adIdsOf(c);
   const [cidInput, setCidInput] = useState('');
+  // Gán/thêm: gộp id mới nhập với id đã có rồi kéo lại tổng.
   const doAssign = () => {
-    const cid = cidInput.replace(/\D/g, '');
-    if (!cid) { toast.error('Nhập ID chiến dịch Facebook'); return; }
-    onSyncFb?.(c.id, cid);
+    const fresh = parseAdIds(cidInput);
+    if (!fresh.length) { toast.error('Nhập ID quảng cáo Facebook (dán được nhiều id)'); return; }
+    const merged = [...new Set([...adIds.map(String), ...fresh])];
+    setCidInput('');
+    onSyncFb?.(c.id, merged);
   };
   // "KH tiềm năng" theo định nghĩa nội bộ: khách ib page ≥3 tin không lặp.
   // FB Ads API không đo được -> hệ thống ngoài đếm & ghi vào quality_contacts;
@@ -2212,26 +2235,39 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         </div>
       </div>
 
-      {/* ID chiến dịch: avatar · label + số · copy · Đồng bộ / Gỡ ID — GỌN 1 HÀNG */}
-      {c.fb_campaign_id ? (
-        <div className="flex items-center gap-2 sm:gap-3 mt-3">
-          {thumb && <img src={thumbSrc(thumb)} alt="" className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl object-cover border border-slate-200 shrink-0" loading="lazy" />}
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] sm:text-[11px] text-slate-400 leading-none mb-0.5 sm:mb-1">ID chiến dịch</div>
-            <div className="font-bold text-slate-800 text-[12px] sm:text-[13px] tracking-wide truncate">{c.fb_campaign_id}</div>
+      {/* ID quảng cáo: danh sách nhiều id (chip) · Đồng bộ tổng / Gỡ tất cả · thêm id */}
+      {adIds.length > 0 ? (
+        <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-2.5 sm:p-3 mt-3">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="text-[11px] sm:text-[12px] font-bold text-slate-500 inline-flex items-center gap-1.5">
+              <LinkIcon className="w-3.5 h-3.5 text-slate-400" />ID quảng cáo <span className="text-slate-400 font-semibold">({adIds.length})</span>
+            </div>
+            {canAds && (
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => onSyncFb?.(c.id, adIds)} title="Đồng bộ & cộng tổng chỉ số" className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-blue-600 border border-blue-200 rounded-full px-2.5 py-1 hover:bg-blue-50"><RotateCcw className="w-3.5 h-3.5" /><span className="hidden sm:inline">Đồng bộ</span></button>
+                <button onClick={() => onRemoveFb?.(c)} title="Gỡ tất cả ID quảng cáo" className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-rose-500 border border-rose-200 rounded-full px-2.5 py-1 hover:bg-rose-50"><X className="w-3.5 h-3.5" /><span className="hidden sm:inline">Gỡ hết</span></button>
+              </div>
+            )}
           </div>
-          <button onClick={() => { navigator.clipboard?.writeText(c.fb_campaign_id); toast.success('Đã copy ID chiến dịch'); }} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 grid place-items-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 shrink-0"><Copy className="w-4 h-4" /></button>
+          <div className="flex flex-wrap gap-1.5">
+            {adIds.map((id) => (
+              <span key={id} className="inline-flex items-center gap-1 bg-white border border-slate-200 rounded-full pl-2.5 pr-1 py-1 text-[11px] sm:text-xs font-bold text-slate-700 max-w-full">
+                <button onClick={() => { navigator.clipboard?.writeText(String(id)); toast.success('Đã copy ID'); }} title="Copy ID" className="tracking-wide truncate max-w-[130px] sm:max-w-[180px] hover:text-blue-600">{id}</button>
+                {canAds && <button onClick={() => onRemoveOneAdId?.(c, id)} title="Gỡ id này" className="w-4 h-4 grid place-items-center rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 shrink-0"><X className="w-3 h-3" /></button>}
+              </span>
+            ))}
+          </div>
           {canAds && (
-            <>
-              <button onClick={() => onSyncFb?.(c.id, c.fb_campaign_id)} title="Đồng bộ chỉ số" className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 border border-blue-200 rounded-full p-2 sm:px-3.5 sm:py-2 hover:bg-blue-50 transition-colors"><RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" /><span className="hidden sm:inline">Đồng bộ</span></button>
-              <button onClick={() => onRemoveFb?.(c)} title="Gỡ ID chiến dịch" className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 border border-rose-200 rounded-full p-2 sm:px-3.5 sm:py-2 hover:bg-rose-50 transition-colors"><X className="w-4 h-4 sm:w-3.5 sm:h-3.5" /><span className="hidden sm:inline">Gỡ ID</span></button>
-            </>
+            <div className="flex gap-1.5 mt-2">
+              <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="Thêm ID quảng cáo (dán nhiều id)…" className="flex-1 min-w-0 px-2.5 py-1.5 text-[13px] rounded-lg border border-slate-200 bg-white focus:border-blue-400 outline-none" />
+              <button onClick={doAssign} className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[13px] font-bold hover:bg-blue-700 inline-flex items-center gap-1"><Plus className="w-4 h-4" />Thêm</button>
+            </div>
           )}
         </div>
       ) : null}
 
-      {/* Chỉ số Ads — 1 thẻ, 4 cột GỌN 1 HÀNG cả trên mobile */}
-      {c.fb_campaign_id ? (
+      {/* Chỉ số Ads (cộng tổng của tất cả ID) — 1 thẻ, 4 cột GỌN 1 HÀNG cả trên mobile */}
+      {adIds.length > 0 ? (
         <div className="rounded-2xl bg-white border border-slate-100 shadow-sm mt-3 grid grid-cols-4 divide-x divide-slate-100">
           <MetricCol Icon={Users} label="KH tiềm năng" value={contacts} ring="bg-teal-50 text-teal-600" />
           <MetricCol Icon={ShoppingCart} label="Lượt mua" value={purchases} ring="bg-violet-50 text-violet-600" />
@@ -2240,16 +2276,16 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         </div>
       ) : canAds && c.approved_to_run ? (
         <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3 mt-3">
-          <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID chiến dịch Facebook</b> để kéo chỉ số về:</p>
+          <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID quảng cáo Facebook</b> (dán được nhiều id — mỗi campaign 1 id) để kéo &amp; cộng tổng chỉ số:</p>
           <div className="flex gap-2">
-            <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
+            <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000, 120219999900000…" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
             <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
           </div>
         </div>
       ) : canAds ? (
-        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-slate-300" />Duyệt chạy Ads trước, rồi mới gán ID chiến dịch.</div>
+        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-slate-300" />Duyệt chạy Ads trước, rồi mới gán ID quảng cáo.</div>
       ) : (
-        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3">Chưa gán ID chiến dịch Facebook.</div>
+        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3">Chưa gán ID quảng cáo Facebook.</div>
       )}
 
       {/* Dải điểm hệ thống — nền navy 1 hàng: nhãn · điểm giữa · trạng thái phải */}
