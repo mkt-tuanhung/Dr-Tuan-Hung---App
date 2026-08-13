@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft, ChevronRight, Users, Wallet, CalendarDays, Clock, Undo2 } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
+import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 
 const CAN_ADD_ROLES = ['sale_offline', 'telesale', 'admin', 'accountant'];
 const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
@@ -262,7 +263,7 @@ const KhachCocPage = ({ isNested = false }) => {
     const q = searchQuery.toLowerCase();
     filteredCustomers = filteredCustomers.filter(c =>
       (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
-      (c.phone && c.phone.toLowerCase().includes(q))
+      (!isSaleOffline(profile) && c.phone && c.phone.toLowerCase().includes(q))
     );
   }
 
@@ -316,7 +317,7 @@ const KhachCocPage = ({ isNested = false }) => {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
-                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {careApp.phone}</div>
+                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
               </div>
               <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
                 {careApp.care_status || 'Đang chăm sóc'}
@@ -464,7 +465,7 @@ const KhachCocPage = ({ isNested = false }) => {
                               <h4 className="font-bold text-slate-800 truncate">{app.customer_name}</h4>
                               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLE[st]}`}>{st}</span>
                             </div>
-                            <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {app.phone}</div>
+                            <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</div>
                             <div className="text-xs text-slate-500 mt-1 truncate"><span className="text-slate-400">Dịch vụ:</span> <span className="text-slate-700 font-medium">{app.service || 'Chưa chọn'}</span></div>
                             <div className="text-xs text-slate-500"><span className="text-slate-400">Đặt cọc:</span> <span className="text-teal-600 font-bold">{Number(app.deposit_amount || 0).toLocaleString('vi-VN')}đ</span></div>
                           </div>

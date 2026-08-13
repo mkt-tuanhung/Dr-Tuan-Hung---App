@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft, Wallet } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
+import { phoneFor } from '@/lib/phoneMask';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -233,7 +234,7 @@ const KhachBongPage = ({ isNested = false }) => {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
-                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {careApp.phone}</div>
+                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
               </div>
               <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
                 {careApp.care_status || 'Đang chăm sóc'}
@@ -343,7 +344,7 @@ const KhachBongPage = ({ isNested = false }) => {
                           <div className="flex justify-between items-start mb-3">
                             <div className="min-w-0">
                               <h4 className="font-bold text-slate-800 text-lg truncate">{app.customer_name}</h4>
-                              <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</div>
+                              <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</div>
                             </div>
                             <span className={`font-semibold px-2 py-1 rounded-lg text-xs border whitespace-nowrap shrink-0 ${STATUS_STYLE[st]}`}>{st}</span>
                           </div>

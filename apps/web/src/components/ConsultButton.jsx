@@ -1,8 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { ImagePlus, X, Plus, Minus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { phoneFor } from '@/lib/phoneMask';
 
 // Nút + modal xem Hồ sơ tư vấn (consult_note + consult_image_urls) + trình xem ảnh có zoom
 export default function ConsultButton({ app, className }) {
+  const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [viewIdx, setViewIdx] = useState(null); // ảnh đang xem (index)
   const [scale, setScale] = useState(1);
@@ -34,7 +37,7 @@ export default function ConsultButton({ app, className }) {
             <div className="flex items-center justify-between px-5 py-4 border-b bg-teal-50 shrink-0">
               <div>
                 <h3 className="font-bold text-teal-800">Hồ sơ tư vấn</h3>
-                <p className="text-xs text-teal-500 mt-0.5">{app.customer_name} · {app.phone}</p>
+                <p className="text-xs text-teal-500 mt-0.5">{app.customer_name} · {phoneFor(app.phone, profile)}</p>
               </div>
               <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
             </div>
