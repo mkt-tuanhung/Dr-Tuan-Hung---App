@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { ImagePlus, X, Plus, Minus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { phoneFor } from '@/lib/phoneMask';
+import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 
 // Nút + modal xem Hồ sơ tư vấn (consult_note + consult_image_urls) + trình xem ảnh có zoom
 export default function ConsultButton({ app, className }) {
@@ -12,6 +12,7 @@ export default function ConsultButton({ app, className }) {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const dragRef = useRef(null);
   const imgs = app?.consult_image_urls || [];
+  if (isSaleOffline(profile)) return null;   // Sale Offline không được xem hồ sơ tư vấn
   if (!imgs.length && !app?.consult_note) return null;
 
   const openViewer = (i) => { setViewIdx(i); setScale(1); setPos({ x: 0, y: 0 }); };
