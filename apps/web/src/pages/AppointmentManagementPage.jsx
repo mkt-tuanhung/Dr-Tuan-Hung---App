@@ -8,6 +8,7 @@ import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2,
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
+import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 
 const AppointmentManagementPage = () => {
   const { profile } = useAuth();
@@ -166,7 +167,7 @@ const AppointmentManagementPage = () => {
       const q = searchQuery.toLowerCase();
       filteredApps = filteredApps.filter(c =>
         (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
-        (c.phone && c.phone.toLowerCase().includes(q))
+        (!isSaleOffline(profile) && c.phone && c.phone.toLowerCase().includes(q))
       );
     }
 
@@ -693,7 +694,9 @@ const AppointmentManagementPage = () => {
                             <User className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" />
                             <div className="min-w-0">
                               <div className="font-bold text-slate-800 text-base truncate">{app.customer_name}</div>
-                              {app.phone && <a href={`tel:${app.phone}`} className="text-sm text-blue-600 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>}
+                              {app.phone && (isSaleOffline(profile)
+                                ? <span className="text-sm text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</span>
+                                : <a href={`tel:${app.phone}`} className="text-sm text-blue-600 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>)}
                             </div>
                           </div>
                           <StatusBadge status={app.status} />
@@ -1135,7 +1138,7 @@ const AppointmentManagementPage = () => {
             <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50 shrink-0">
               <div>
                 <h3 className="font-bold text-indigo-800 text-lg">Lịch sử tư vấn</h3>
-                <p className="text-xs text-indigo-400 mt-0.5">{careHistoryApp.customer_name} · {careHistoryApp.phone}</p>
+                <p className="text-xs text-indigo-400 mt-0.5">{careHistoryApp.customer_name} · {phoneFor(careHistoryApp.phone, profile)}</p>
               </div>
               <button onClick={() => setCareHistoryApp(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white">
                 <X className="w-4 h-4" />
@@ -1157,7 +1160,7 @@ const AppointmentManagementPage = () => {
             <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
               <div>
                 <h3 className="font-bold text-teal-800 text-lg">Hồ sơ tư vấn</h3>
-                <p className="text-xs text-teal-500 mt-0.5">{consultView.customer_name} · {consultView.phone}</p>
+                <p className="text-xs text-teal-500 mt-0.5">{consultView.customer_name} · {phoneFor(consultView.phone, profile)}</p>
               </div>
               <button onClick={() => setConsultView(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white"><X className="w-4 h-4" /></button>
             </div>

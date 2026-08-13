@@ -496,7 +496,7 @@ const EvalModal = ({ app, onClose, onSaved }) => {
   const STBtn = ({ k, label, on }) => <button onClick={() => setF({ ...f, status: k })} className={`flex-1 py-2.5 text-[15px] font-semibold rounded-full transition ${f.status === k ? on : 'text-slate-500 hover:bg-white/60'}`}>{label}</button>;
   return (
     <Modal title="Đánh giá khách" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-3">Khách: <b className="text-slate-700">{app.customer_name}</b> · {app.phone}</p>
+      <p className="text-sm text-slate-500 mb-3">Khách: <b className="text-slate-700">{app.customer_name}</b> · {maskPhone(app.phone)}</p>
       <div className="flex bg-slate-100 rounded-full p-1 mb-4">
         <STBtn k="bong" label="Bong" on="bg-orange-400 text-white shadow" />
         <STBtn k="coc" label="Cọc" on="bg-cyan-500 text-white shadow" />
