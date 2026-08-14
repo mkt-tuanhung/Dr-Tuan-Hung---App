@@ -642,16 +642,25 @@ const GetflyModal = ({ onClose, onDone }) => {
     setBusy('');
   };
   const doSync = async () => {
-    if (!confirm('Kéo toàn bộ khách từ GetFly về Data khách hàng? Trùng SĐT sẽ cập nhật tên/mô tả, giữ nguyên trạng thái & người phụ trách.')) return;
+    if (!confirm('Kéo TOÀN BỘ khách từ GetFly về Data khách hàng? Trùng SĐT sẽ cập nhật tên/mô tả, giữ nguyên trạng thái & người phụ trách.')) return;
     setBusy('sync'); setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('getfly-sync', { body: {} });
-      if (error) throw new Error(error.message);
-      if (!data?.ok) throw new Error(data?.error || 'Lỗi GetFly');
-      setResult(data);
-      toast.success(`Đã kéo ${data.upserted} khách (${data.pages} trang)${data.skipped_no_phone ? ` · bỏ ${data.skipped_no_phone} khách thiếu SĐT` : ''}`, { duration: 8000 });
+      // Kéo tới khi HẾT SẠCH: function trả next_page thì gọi tiếp từ trang đó.
+      let startPage = 1, total = 0, pages = 0, skipped = 0, round = 0;
+      for (;;) {
+        round++;
+        toast.loading(`Đang kéo GetFly — đợt ${round} (từ trang ${startPage})…`, { id: 'gf-sync' });
+        const { data, error } = await supabase.functions.invoke('getfly-sync', { body: { start_page: startPage } });
+        if (error) throw new Error(error.message);
+        if (!data?.ok) throw new Error(data?.error || 'Lỗi GetFly');
+        total += data.upserted || 0; pages += data.pages || 0; skipped += data.skipped_no_phone || 0;
+        setResult({ ...data, upserted: total, pages, skipped_no_phone: skipped });
+        if (!data.next_page) break;      // done = hết sạch dữ liệu
+        startPage = data.next_page;
+      }
+      toast.success(`Đã kéo HẾT: ${total.toLocaleString('vi-VN')} khách (${pages} trang)${skipped ? ` · bỏ ${skipped} khách thiếu SĐT` : ''}`, { id: 'gf-sync', duration: 10000 });
       onDone?.();
-    } catch (e) { toast.error('GetFly: ' + e.message, { duration: 8000 }); }
+    } catch (e) { toast.error('GetFly: ' + e.message, { id: 'gf-sync', duration: 8000 }); }
     setBusy('');
   };
 
