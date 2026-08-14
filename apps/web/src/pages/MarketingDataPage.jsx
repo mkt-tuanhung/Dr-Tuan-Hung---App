@@ -326,33 +326,43 @@ const MarketingDataPage = () => {
                   <th className="px-4 py-3 font-semibold">SĐT</th>
                   <th className="px-4 py-3 font-semibold">Ngày về</th>
                   <th className="px-4 py-3 font-semibold">Telesale</th>
+                  <th className="px-4 py-3 font-semibold">Phụ trách</th>
+                  <th className="px-4 py-3 font-semibold">Mô tả</th>
+                  <th className="px-4 py-3 font-semibold">Nguồn · Nhóm</th>
                   <th className="px-4 py-3 font-semibold">Trạng thái</th>
                   <th className="px-4 py-3 font-semibold">Nhắc gọi lại</th>
                   <th className="px-4 py-3 font-semibold">Trao đổi gần nhất</th>
+                  <th className="px-4 py-3 font-semibold">Đã tiếp cận</th>
                   <th className="px-4 py-3 font-semibold">Liên kết</th>
                   {canWrite && <th className="px-4 py-3 font-semibold text-right">Thao tác</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {paged.length === 0 ? <tr><td colSpan={canWrite ? 9 : 8} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
+                {paged.length === 0 ? <tr><td colSpan={canWrite ? 13 : 12} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
                   paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
                     <tr key={r.id} className="hover:bg-teal-50/40 cursor-pointer" onClick={() => setDetail(r)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
-                          <div className="min-w-0"><div className="font-semibold text-slate-800 truncate">{r.customer_name || '—'}</div>{(r.source || r.description) && <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{r.source ? `${r.source}${r.description ? ' · ' + r.description : ''}` : r.description}</div>}</div>
+                          <div className="min-w-0"><div className="font-semibold text-slate-800 truncate max-w-[140px]">{r.customer_name || '—'}</div>{r.getfly_code && <div className="text-[10px] text-slate-300 truncate">{r.getfly_code}</div>}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-slate-600 tabular-nums whitespace-nowrap">{r.phone}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`text-xs font-semibold tabular-nums ${dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600' : 'text-slate-500'}`} title={arrivedAt(r) ? new Date(arrivedAt(r)).toLocaleString('vi-VN') : ''}>
                           {dayKey(arrivedAt(r)) === todayKey() ? '🆕 Hôm nay' : fmtD(arrivedAt(r))}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600 tabular-nums">{r.phone}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         {canAssign
-                          ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-xs font-semibold rounded-lg border border-slate-200 px-1.5 py-1 bg-white outline-none max-w-[120px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
-                          : <span className="text-xs text-slate-500">{r.telesale?.full_name || '—'}</span>}
+                          ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-xs font-semibold rounded-lg border border-slate-200 px-1.5 py-1 bg-white outline-none max-w-[110px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
+                          : <span className="text-xs text-slate-500 whitespace-nowrap">{r.telesale?.full_name || '—'}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap max-w-[110px] truncate" title={r.manager_name}>{r.manager_name || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 max-w-[160px] truncate" title={r.description}>{r.description || '—'}</td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        <div className="text-slate-600 font-semibold">{r.source || '—'}</div>
+                        {r.customer_group && <div className="text-slate-400 text-[11px]">{r.customer_group}</div>}
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         {canWrite
@@ -361,6 +371,7 @@ const MarketingDataPage = () => {
                       </td>
                       <td className="px-4 py-3"><DueBadge r={r} /></td>
                       <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.last_exchange}>{r.last_exchange || '—'}</td>
+                      <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.reached_info}>{r.reached_info || '—'}</td>
                       <td className="px-4 py-3">{st ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span> : <span className="text-[11px] text-slate-300">—</span>}</td>
                       {canWrite && <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}><div className="flex justify-end gap-1.5"><a href={`tel:${r.phone}`} className="px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50 inline-flex items-center gap-1"><PhoneCall className="w-3.5 h-3.5" />Gọi</a><a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded-lg text-xs font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50">Zalo</a><button onClick={() => setDetail(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Mở</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
                     </tr>); })}
