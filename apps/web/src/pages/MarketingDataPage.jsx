@@ -41,11 +41,23 @@ const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); re
 const isDue = (iso) => !!iso && new Date(iso) <= endOfToday();
 const toLocalInput = (iso) => { if (!iso) return ''; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
+// Link Zalo theo SĐT (0xxx -> 84xxx)
+const zaloLink = (p) => { const d = String(p || '').replace(/\D/g, ''); return d ? `https://zalo.me/${d.startsWith('0') ? '84' + d.slice(1) : d}` : '#'; };
+// Độ ưu tiên gọi: tới hạn gọi lại -> nóng -> tiềm năng -> chưa gọi lần nào -> còn lại.
+const callPriority = (r) => {
+  if (isDue(r.next_call_at)) return 0;
+  if (r.status === 'nong') return 1;
+  if (r.status === 'tiem_nang') return 2;
+  if (!r.last_contact_at) return 3;
+  return 4;
+};
 
 const MarketingDataPage = () => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const canWrite = ['marketing', 'truc_page', 'telesale', 'admin'].some(r => roles.includes(r));
+  const isTele = roles.includes('telesale') && !roles.includes('admin');
+  const canAssign = ['marketing', 'admin'].some(r => roles.includes(r));
 
   const [rows, setRows] = useState([]);
   const [apptMap, setApptMap] = useState({});
@@ -61,11 +73,14 @@ const MarketingDataPage = () => {
   const [getflyOpen, setGetflyOpen] = useState(false);
   const [chip, setChip] = useState('all');
   const [page, setPage] = useState(1);
+  const [teleStaff, setTeleStaff] = useState([]);       // danh sách telesale để phân công
+  const [fTele, setFTele] = useState(isTele ? 'mine' : ''); // lọc theo telesale ('mine' = của tôi)
+  const [queue, setQueue] = useState(null);             // hàng đợi gọi: mảng id + vị trí
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     const { data } = await supabase.from('marketing_data')
-      .select('*, truc_page:profiles!truc_page_id(full_name)').order('updated_at', { ascending: false }).limit(1000);
+      .select('*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)').order('updated_at', { ascending: false }).limit(2000);
     const list = data || [];
     setRows(list);
     const phones = [...new Set(list.map(r => r.phone).filter(Boolean))];
@@ -81,6 +96,7 @@ const MarketingDataPage = () => {
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('marketing_data', loadData);
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.truc_page,role_2.eq.truc_page').order('full_name').then(({ data }) => setStaff(data || [])); }, []);
+  useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.telesale,role_2.eq.telesale').order('full_name').then(({ data }) => setTeleStaff(data || [])); }, []);
 
   // giữ khách đang mở đồng bộ với list sau khi ghi nhật ký
   useEffect(() => {
@@ -106,10 +122,65 @@ const MarketingDataPage = () => {
       default: return true;
     }
   };
+  const matchTele = (r) => {
+    if (!fTele) return true;
+    if (fTele === 'mine') return r.telesale_id === me?.id;
+    if (fTele === 'none') return !r.telesale_id;
+    return r.telesale_id === fTele;
+  };
   const visible = rows.filter(r =>
     (!q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q)) &&
     (!fStatus || r.status === fStatus) &&
-    (!fTruc || r.truc_page_id === fTruc) && matchChip(r));
+    (!fTruc || r.truc_page_id === fTruc) && matchTele(r) && matchChip(r));
+
+  // Đổi trạng thái nhanh ngay trên dòng
+  const quickStatus = async (r, status) => {
+    setRows(list => list.map(x => x.id === r.id ? { ...x, status } : x));
+    const { error } = await supabase.from('marketing_data').update({ status }).eq('id', r.id);
+    if (error) { toast.error('Lỗi: ' + error.message); loadData(); }
+  };
+  // Gán telesale cho 1 khách
+  const assignTele = async (r, telesale_id) => {
+    setRows(list => list.map(x => x.id === r.id ? { ...x, telesale_id: telesale_id || null, telesale: teleStaff.find(t => t.id === telesale_id) || null } : x));
+    const { error } = await supabase.from('marketing_data').update({ telesale_id: telesale_id || null }).eq('id', r.id);
+    if (error) { toast.error('Lỗi: ' + error.message); loadData(); }
+  };
+  // CHIA ĐỀU khách chưa có telesale cho toàn bộ telesale đang hoạt động
+  const [dividing, setDividing] = useState(false);
+  const divideTele = async () => {
+    if (!teleStaff.length) { toast.error('Chưa có nhân sự telesale nào'); return; }
+    const unassigned = rows.filter(r => !r.telesale_id);
+    if (!unassigned.length) { toast.error('Không còn khách nào chưa được phân công'); return; }
+    if (!confirm(`Chia đều ${unassigned.length} khách chưa phân công cho ${teleStaff.length} telesale?`)) return;
+    setDividing(true);
+    const buckets = {};
+    unassigned.forEach((r, i) => { const t = teleStaff[i % teleStaff.length].id; (buckets[t] = buckets[t] || []).push(r.id); });
+    let ok = 0;
+    for (const [tid, ids] of Object.entries(buckets)) {
+      const { error } = await supabase.from('marketing_data').update({ telesale_id: tid }).in('id', ids);
+      if (!error) ok += ids.length;
+    }
+    setDividing(false);
+    toast.success(`Đã chia ${ok}/${unassigned.length} khách cho ${teleStaff.length} telesale`);
+    loadData();
+  };
+  // HÀNG ĐỢI GỌI: sắp theo độ ưu tiên rồi mở lần lượt từng khách
+  const buildQueue = () => {
+    const mine = rows.filter(r => (isTele ? r.telesale_id === me?.id : matchTele(r)) && !['mat', 'da_lam_dv'].includes(r.status));
+    const ordered = [...mine].sort((a, b) => callPriority(a) - callPriority(b) || new Date(a.next_call_at || a.last_contact_at || 0) - new Date(b.next_call_at || b.last_contact_at || 0));
+    if (!ordered.length) { toast.error(isTele ? 'Bạn chưa được phân công khách nào cần gọi' : 'Không có khách nào cần gọi'); return; }
+    setQueue({ ids: ordered.map(r => r.id), pos: 0 });
+    setDetail(ordered[0]);
+  };
+  const queueNext = () => {
+    if (!queue) return;
+    const nextPos = queue.pos + 1;
+    if (nextPos >= queue.ids.length) { toast.success('🎉 Đã gọi hết danh sách!'); setQueue(null); setDetail(null); return; }
+    const nxt = rows.find(r => r.id === queue.ids[nextPos]);
+    setQueue({ ...queue, pos: nextPos });
+    if (nxt) setDetail(nxt); else queueNext();
+  };
+  const dueCount = rows.filter(r => (isTele ? r.telesale_id === me?.id : true) && isDue(r.next_call_at)).length;
   const stat = {
     total: rows.length,
     nong: rows.filter(r => r.status === 'nong').length,
@@ -152,7 +223,9 @@ const MarketingDataPage = () => {
           <p className="text-slate-400 text-sm mt-0.5">Telesale gọi · cập nhật thông tin · ghi nhật ký gọi & nhật ký chăm sóc (hợp nhất theo SĐT)</p>
         </div>
         {canWrite && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={buildQueue} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 shadow-sm"><PhoneCall className="w-4 h-4" /> Bắt đầu gọi{dueCount > 0 && <span className="bg-white/25 rounded-full px-2 text-xs">{dueCount}</span>}</button>
+            {canAssign && <button onClick={divideTele} disabled={dividing} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 disabled:opacity-50"><Users className="w-4 h-4" /> {dividing ? 'Đang chia…' : 'Chia đều'}</button>}
             {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
             {['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)) && <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>}
             <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
@@ -190,7 +263,20 @@ const MarketingDataPage = () => {
           <option value="">Mọi trực page</option>
           {staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
         </select>
+        <select value={fTele} onChange={e => setFTele(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none">
+          <option value="">Mọi telesale</option>
+          <option value="mine">📌 Của tôi</option>
+          <option value="none">Chưa phân công</option>
+          {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+        </select>
       </div>
+
+      {/* Mobile: nút Bắt đầu gọi nổi bật */}
+      {canWrite && (
+        <button onClick={buildQueue} className="lg:hidden w-full h-12 rounded-2xl bg-emerald-600 text-white font-bold text-[15px] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.99]">
+          <PhoneCall className="w-5 h-5" /> Bắt đầu gọi lần lượt{dueCount > 0 && <span className="bg-white/25 rounded-full px-2.5 py-0.5 text-sm">{dueCount} cần gọi</span>}
+        </button>
+      )}
 
       {/* Chips lọc nhanh */}
       <div className="flex items-center justify-between gap-2">
@@ -213,6 +299,7 @@ const MarketingDataPage = () => {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Khách hàng</th>
                   <th className="px-4 py-3 font-semibold">SĐT</th>
+                  <th className="px-4 py-3 font-semibold">Telesale</th>
                   <th className="px-4 py-3 font-semibold">Trạng thái</th>
                   <th className="px-4 py-3 font-semibold">Nhắc gọi lại</th>
                   <th className="px-4 py-3 font-semibold">Trao đổi gần nhất</th>
@@ -221,21 +308,30 @@ const MarketingDataPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {paged.length === 0 ? <tr><td colSpan={canWrite ? 7 : 6} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
+                {paged.length === 0 ? <tr><td colSpan={canWrite ? 8 : 7} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
                   paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
                     <tr key={r.id} className="hover:bg-teal-50/40 cursor-pointer" onClick={() => setDetail(r)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
-                          <div className="min-w-0"><div className="font-semibold text-slate-800 truncate">{r.customer_name || '—'}</div>{r.description && <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{r.description}</div>}</div>
+                          <div className="min-w-0"><div className="font-semibold text-slate-800 truncate">{r.customer_name || '—'}</div>{(r.source || r.description) && <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{r.source ? `${r.source}${r.description ? ' · ' + r.description : ''}` : r.description}</div>}</div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-600 tabular-nums">{r.phone}</td>
-                      <td className="px-4 py-3"><span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span></td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        {canAssign
+                          ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-xs font-semibold rounded-lg border border-slate-200 px-1.5 py-1 bg-white outline-none max-w-[120px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
+                          : <span className="text-xs text-slate-500">{r.telesale?.full_name || '—'}</span>}
+                      </td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        {canWrite
+                          ? <select value={r.status || 'tiep_can'} onChange={e => quickStatus(r, e.target.value)} className={`text-[11px] font-bold rounded-full px-2 py-1 outline-none border-0 cursor-pointer ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+                          : <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>}
+                      </td>
                       <td className="px-4 py-3"><DueBadge r={r} /></td>
                       <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.last_exchange}>{r.last_exchange || '—'}</td>
                       <td className="px-4 py-3">{st ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span> : <span className="text-[11px] text-slate-300">—</span>}</td>
-                      {canWrite && <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}><div className="flex justify-end gap-1.5"><a href={`tel:${r.phone}`} onClick={e => e.stopPropagation()} className="px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50 inline-flex items-center gap-1"><PhoneCall className="w-3.5 h-3.5" />Gọi</a><button onClick={() => setDetail(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Mở</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
+                      {canWrite && <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}><div className="flex justify-end gap-1.5"><a href={`tel:${r.phone}`} className="px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50 inline-flex items-center gap-1"><PhoneCall className="w-3.5 h-3.5" />Gọi</a><a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded-lg text-xs font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50">Zalo</a><button onClick={() => setDetail(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Mở</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
                     </tr>); })}
               </tbody>
             </table>
@@ -247,7 +343,7 @@ const MarketingDataPage = () => {
                 <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><div className="font-bold text-slate-800 truncate">{r.customer_name || '—'}</div><span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span></div>
-                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone}</div>
+                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone}{r.telesale?.full_name && <span className="text-slate-300">· {r.telesale.full_name}</span>}</div>
                   {r.next_call_at && <div className="mt-1"><DueBadge r={r} /></div>}
                   {r.last_exchange && <div className="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 shrink-0" /> {r.last_exchange}</div>}
                   {st && <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
@@ -272,7 +368,9 @@ const MarketingDataPage = () => {
         <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
       )}
 
-      {detail && <CustomerConsole row={detail} me={me} staff={staff} canWrite={canWrite} appt={apptOf(detail)} onClose={() => setDetail(null)} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
+      {detail && <CustomerConsole row={detail} me={me} staff={staff} teleStaff={teleStaff} canWrite={canWrite} canAssign={canAssign} appt={apptOf(detail)}
+        queuePos={queue ? { i: queue.pos + 1, n: queue.ids.length } : null} onNext={queue ? queueNext : null}
+        onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
@@ -281,7 +379,7 @@ const MarketingDataPage = () => {
 };
 
 // ================= Console gọi & chăm sóc 1 khách =================
-const CustomerConsole = ({ row, me, staff, canWrite, appt, onClose, onChanged, onDelete }) => {
+const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, appt, queuePos, onNext, onClose, onChanged, onDelete }) => {
   const [tab, setTab] = useState('call');   // 'call' | 'care' | 'info'
   const [acts, setActs] = useState([]);
   const [loadingActs, setLoadingActs] = useState(true);
@@ -301,11 +399,12 @@ const CustomerConsole = ({ row, me, staff, canWrite, appt, onClose, onChanged, o
   const [info, setInfo] = useState({
     customer_name: row.customer_name || '', description: row.description || '',
     reached_info: row.reached_info || '', truc_page_id: row.truc_page_id || '',
+    telesale_id: row.telesale_id || '',
   });
   const [savingInfo, setSavingInfo] = useState(false);
   const saveInfo = async () => {
     setSavingInfo(true);
-    const { error } = await supabase.from('marketing_data').update({ ...info, truc_page_id: info.truc_page_id || null }).eq('id', row.id);
+    const { error } = await supabase.from('marketing_data').update({ ...info, truc_page_id: info.truc_page_id || null, telesale_id: info.telesale_id || null }).eq('id', row.id);
     setSavingInfo(false);
     if (error) return toast.error('Lỗi: ' + error.message);
     toast.success('Đã lưu thông tin'); onChanged?.();
@@ -393,7 +492,10 @@ const CustomerConsole = ({ row, me, staff, canWrite, appt, onClose, onChanged, o
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {queuePos && <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap hidden sm:inline">{queuePos.i}/{queuePos.n}</span>}
             <a href={`tel:${row.phone}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"><PhoneCall className="w-4 h-4" /><span className="hidden sm:inline">Gọi</span></a>
+            <a href={zaloLink(row.phone)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 h-9 rounded-xl border border-blue-200 text-blue-600 text-sm font-bold hover:bg-blue-50">Zalo</a>
+            {onNext && <button onClick={onNext} className="inline-flex items-center gap-1 px-3 h-9 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-700 whitespace-nowrap">Tiếp <ChevronRight className="w-4 h-4" /></button>}
             <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded-xl text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button>
           </div>
         </div>
@@ -453,10 +555,31 @@ const CustomerConsole = ({ row, me, staff, canWrite, appt, onClose, onChanged, o
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Field label="Tên khách hàng"><input value={info.customer_name} onChange={e => setInfo({ ...info, customer_name: e.target.value })} disabled={!canWrite} className={inp} /></Field>
+                <Field label="Telesale phụ trách"><select value={info.telesale_id} onChange={e => setInfo({ ...info, telesale_id: e.target.value })} disabled={!canAssign} className={inp}><option value="">— Chưa phân công —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
                 <Field label="Trực page phụ trách"><select value={info.truc_page_id} onChange={e => setInfo({ ...info, truc_page_id: e.target.value })} disabled={!canWrite} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
               </div>
               <Field label="Mô tả / nhu cầu"><textarea value={info.description} onChange={e => setInfo({ ...info, description: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
-              <Field label="Thông tin đã tiếp cận"><textarea value={info.reached_info} onChange={e => setInfo({ ...info, reached_info: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
+              <Field label="Thông tin đã tiếp cận"><textarea value={info.reached_info} onChange={e => setInfo({ ...info, reached_info: e.target.value })} disabled={!canWrite} rows={3} className={inp} /></Field>
+              {/* Thông tin đồng bộ từ GetFly (chỉ xem) */}
+              {(row.getfly_id || row.source || row.customer_group || row.manager_name) && (
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3">
+                  <div className="text-[12px] font-bold text-indigo-700 mb-2">Thông tin GetFly (tự đồng bộ)</div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12.5px]">
+                    {row.customer_group && <div><span className="text-slate-400">Nhóm KH:</span> <b className="text-slate-700">{row.customer_group}</b></div>}
+                    {row.source && <div><span className="text-slate-400">Nguồn:</span> <b className="text-slate-700">{row.source}</b></div>}
+                    {row.manager_name && <div><span className="text-slate-400">Phụ trách:</span> <b className="text-slate-700">{row.manager_name}</b></div>}
+                    {row.relation_name && <div><span className="text-slate-400">Mối quan hệ:</span> <b className="text-slate-700">{row.relation_name}</b></div>}
+                    {row.email && <div className="col-span-2 truncate"><span className="text-slate-400">Email:</span> <b className="text-slate-700">{row.email}</b></div>}
+                    {row.gender && <div><span className="text-slate-400">Giới tính:</span> <b className="text-slate-700">{row.gender}</b></div>}
+                    {row.birthday && <div><span className="text-slate-400">Sinh nhật:</span> <b className="text-slate-700">{row.birthday}</b></div>}
+                    {row.address && <div className="col-span-2 truncate"><span className="text-slate-400">Địa chỉ:</span> <b className="text-slate-700">{row.address}</b></div>}
+                    {row.website && <div className="col-span-2 truncate"><span className="text-slate-400">Website:</span> <b className="text-slate-700">{row.website}</b></div>}
+                    {Number(row.total_revenue) > 0 && <div><span className="text-slate-400">Doanh thu:</span> <b className="text-teal-700">{Number(row.total_revenue).toLocaleString('vi-VN')}đ</b></div>}
+                    {row.getfly_code && <div><span className="text-slate-400">Mã KH:</span> <b className="text-slate-700">{row.getfly_code}</b></div>}
+                    {row.getfly_synced_at && <div className="col-span-2 text-[11px] text-slate-400">Đồng bộ GetFly lúc {fmtDT(row.getfly_synced_at)}</div>}
+                  </div>
+                </div>
+              )}
               {canWrite && (
                 <div className="flex justify-between items-center">
                   <button onClick={onDelete} className="text-sm font-semibold text-rose-500 hover:text-rose-600 inline-flex items-center gap-1"><Trash2 className="w-4 h-4" />Xoá khách</button>
