@@ -15,10 +15,8 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  // Pass all requests directly to network without caching
-  event.respondWith(fetch(event.request));
-});
+// KHÔNG can thiệp fetch: SW này chỉ phục vụ Web Push.
+// (Bản cũ có fetch handler chặn mọi request -> mạng nghẽn là app trắng trang.)
 
 // ---------- Web Push ----------
 // Nhận thông báo đẩy từ server (edge function push-web) rồi hiển thị lên máy.

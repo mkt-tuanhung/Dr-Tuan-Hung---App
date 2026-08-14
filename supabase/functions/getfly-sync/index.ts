@@ -230,17 +230,37 @@ Deno.serve(async (req) => {
 
       // PostgREST yêu cầu các dòng trong 1 lô có CÙNG bộ cột
       // -> tách lô "có status" và "không status" (mối quan hệ lạ thì không đè trạng thái).
-      const withStatus: Record<string, unknown>[] = [];
-      const noStatus: Record<string, unknown>[] = [];
+      // CHỈ GHI KHÁCH THỰC SỰ THAY ĐỔI — so với bản đã có trong DB.
+      // (Trước đây ghi đè toàn bộ mỗi lượt -> bảng realtime bắn hàng nghìn
+      //  sự kiện/phút làm app phía người dùng tải lại liên tục đến treo.)
+      const candidates: { row: Record<string, unknown>; hasStatus: boolean }[] = [];
       for (const c of res.records) {
         scanned++;
         const phone = findPhone(c);
         if (!phone) { skippedNoPhone++; continue; }
         if (seen.has(phone)) continue;
         seen.add(phone);
-        const { row, hasStatus } = rowFrom(c, phone);
-        (hasStatus ? withStatus : noStatus).push(row);
+        candidates.push(rowFrom(c, phone));
       }
+      const phones = candidates.map(x => String(x.row.phone));
+      const existing = new Map<string, any>();
+      for (let i = 0; i < phones.length; i += 200) {
+        const { data: ex } = await sb.from("marketing_data")
+          .select("phone, getfly_id, getfly_updated_at, customer_name, last_exchange, relation_name")
+          .in("phone", phones.slice(i, i + 200));
+        (ex || []).forEach((e: any) => existing.set(e.phone, e));
+      }
+      const changed = candidates.filter(({ row }) => {
+        const e = existing.get(String(row.phone));
+        if (!e) return true;                                   // khách mới
+        return e.getfly_updated_at !== row.getfly_updated_at   // có note/cập nhật mới
+          || e.customer_name !== row.customer_name
+          || e.last_exchange !== row.last_exchange
+          || e.relation_name !== row.relation_name
+          || !e.getfly_id;                                     // dòng cũ chưa từng có data GetFly
+      });
+      const withStatus = changed.filter(x => x.hasStatus).map(x => x.row);
+      const noStatus = changed.filter(x => !x.hasStatus).map(x => x.row);
       for (const batch of [withStatus, noStatus]) {
         if (!batch.length) continue;
         const { error } = await sb.from("marketing_data").upsert(batch, { onConflict: "phone" });
