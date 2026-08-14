@@ -25,15 +25,20 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 }
 
-// Các route lấy danh sách khách khả dĩ của GetFly (thử lần lượt tới khi trúng).
+// GetFly gọi khách hàng là "accounts" và API có VERSION trong path:
+//   https://<domain>/api/v6.1/accounts  (X-API-KEY ở header)
+// Thử nhiều version tới khi trúng.
 const LIST_PATHS = [
+  "/api/v6.1/accounts",
+  "/api/v6.0/accounts",
+  "/api/v6.2/accounts",
+  "/api/v5.0/accounts",
+  "/api/v4.0/accounts",
+  "/api/v3.0/accounts",
+  "/api/accounts",
+  "/api/v6.1/account",
   "/api/client/gets",
   "/api/client/list",
-  "/api/client",
-  "/api/clients",
-  "/api/customer/gets",
-  "/api/customer/list",
-  "/api/client/getlist",
 ];
 
 function normPhone(raw: unknown): string {
@@ -85,7 +90,7 @@ function extractTotalPage(d: any): number {
 
 // Gọi 1 route + phân trang. Gửi API key ở CẢ header lẫn query cho chắc.
 async function callList(domain: string, apiKey: string, path: string, page: number, pageSize: number) {
-  const url = `https://${domain}${path}?page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(apiKey)}`;
+  const url = `https://${domain}${path}?page=${page}&page_size=${pageSize}&per_page=${pageSize}&api_key=${encodeURIComponent(apiKey)}`;
   // Gửi key theo NHIỀU kiểu để hợp mọi bản GetFly.
   const r = await fetch(url, { headers: { "X-API-KEY": apiKey, "api_key": apiKey, "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" } });
   const text = await r.text();
