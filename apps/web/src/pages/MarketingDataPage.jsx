@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -191,7 +191,7 @@ const MarketingDataPage = () => {
   const queueNext = () => {
     if (!queue) return;
     const nextPos = queue.pos + 1;
-    if (nextPos >= queue.ids.length) { toast.success('🎉 Đã gọi hết danh sách!'); setQueue(null); setDetail(null); return; }
+    if (nextPos >= queue.ids.length) { toast.success('Đã gọi hết danh sách!'); setQueue(null); setDetail(null); return; }
     const nxt = rows.find(r => r.id === queue.ids[nextPos]);
     setQueue({ ...queue, pos: nextPos });
     if (nxt) setDetail(nxt); else queueNext();
@@ -282,7 +282,7 @@ const MarketingDataPage = () => {
         </select>
         <select value={fTele} onChange={e => setFTele(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none">
           <option value="">Mọi telesale</option>
-          <option value="mine">📌 Của tôi</option>
+          <option value="mine">Của tôi</option>
           <option value="none">Chưa phân công</option>
           {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
         </select>
@@ -350,7 +350,7 @@ const MarketingDataPage = () => {
                       <td className="px-4 py-3 text-slate-600 tabular-nums whitespace-nowrap">{r.phone}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`text-xs font-semibold tabular-nums ${dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600' : 'text-slate-500'}`} title={arrivedAt(r) ? new Date(arrivedAt(r)).toLocaleString('vi-VN') : ''}>
-                          {dayKey(arrivedAt(r)) === todayKey() ? '🆕 Hôm nay' : fmtD(arrivedAt(r))}
+                          {dayKey(arrivedAt(r)) === todayKey() ? <span className="inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />Hôm nay</span> : fmtD(arrivedAt(r))}
                         </span>
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -385,7 +385,7 @@ const MarketingDataPage = () => {
                 <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><div className="font-bold text-slate-800 truncate">{r.customer_name || '—'}</div><span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span></div>
-                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap"><Phone className="w-3.5 h-3.5" /> {r.phone}<span className={dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600 font-bold' : 'text-slate-300'}>· {dayKey(arrivedAt(r)) === todayKey() ? '🆕 Hôm nay' : fmtD(arrivedAt(r))}</span>{r.telesale?.full_name && <span className="text-slate-300">· {r.telesale.full_name}</span>}</div>
+                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap"><Phone className="w-3.5 h-3.5" /> {r.phone}<span className={dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600 font-bold' : 'text-slate-300'}>· {dayKey(arrivedAt(r)) === todayKey() ? <span className="inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />Hôm nay</span> : fmtD(arrivedAt(r))}</span>{r.telesale?.full_name && <span className="text-slate-300">· {r.telesale.full_name}</span>}</div>
                   {r.next_call_at && <div className="mt-1"><DueBadge r={r} /></div>}
                   {r.last_exchange && <div className="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 shrink-0" /> {r.last_exchange}</div>}
                   {st && <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
@@ -706,7 +706,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
 
   const copyReport = () => {
     const d = new Date(day + 'T12:00:00').toLocaleDateString('vi-VN');
-    const lines = [`📋 BÁO CÁO TELESALE NGÀY ${d}${whoName ? ' — ' + whoName : ''}`];
+    const lines = [`BÁO CÁO TELESALE NGÀY ${d}${whoName ? ' — ' + whoName : ''}`];
     lines.push(`• Cuộc gọi trong ngày: ${callRows.length}`);
     lines.push(`• Số mới tiếp nhận: ${newRows.length} (đã gọi ${newCalled.length} · chưa gọi ${newRows.length - newCalled.length})`);
     if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
@@ -756,7 +756,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
               </div>
 
               {/* CHI TIẾT CUỘC GỌI — tên · sđt · gọi lúc · nội dung */}
-              <div className="text-[13px] font-bold text-slate-700 mb-1.5">📞 Chi tiết cuộc gọi ({callRows.length})</div>
+              <div className="text-[13px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><PhoneCall className="w-4 h-4 text-emerald-600" /> Chi tiết cuộc gọi ({callRows.length})</div>
               <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-4">
                 {callRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có cuộc gọi nào</div> :
                   callRows.map((c, i) => (
@@ -774,7 +774,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
               </div>
 
               {/* SỐ MỚI TIẾP NHẬN trong ngày */}
-              <div className="text-[13px] font-bold text-slate-700 mb-1.5">🆕 Số mới tiếp nhận ({newRows.length})</div>
+              <div className="text-[13px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><UserPlus className="w-4 h-4 text-blue-600" /> Số mới tiếp nhận ({newRows.length})</div>
               <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-2">
                 {newRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Không có số mới trong ngày</div> :
                   newRows.map(r => (
@@ -782,7 +782,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
                       <b className="text-slate-800">{r.customer_name || '—'}</b>
                       <span className="text-slate-500 tabular-nums">{r.phone}</span>
                       {r.source && <span className="text-slate-400">· {r.source}</span>}
-                      <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${isCalled(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{isCalled(r) ? '✓ Đã gọi' : 'Chưa gọi'}</span>
+                      <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${isCalled(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{isCalled(r) ? <span className="inline-flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />Đã gọi</span> : 'Chưa gọi'}</span>
                     </div>
                   ))}
               </div>
@@ -977,7 +977,7 @@ const GetflyModal = ({ onClose, onDone }) => {
               <b className="text-slate-800">{s.customer_name || '(không tên)'}</b> · SĐT: {s.phone || <span className="text-rose-500">không đọc được</span>} {s.description && <span className="text-slate-400">· {s.description}</span>}
             </div>
           ))}
-          {probe.sample?.some(s => !s.phone) && <div className="text-[11px] text-amber-600 mt-1.5">⚠️ Có khách chưa đọc được SĐT — gửi ảnh này cho kỹ thuật để chỉnh map. Các trường thô: {(probe.sample?.[0]?._raw_keys || []).join(', ')}</div>}
+          {probe.sample?.some(s => !s.phone) && <div className="text-[11px] text-amber-600 mt-1.5">Có khách chưa đọc được SĐT — gửi ảnh này cho kỹ thuật để chỉnh map. Các trường thô: {(probe.sample?.[0]?._raw_keys || []).join(', ')}</div>}
         </div>
       )}
       {result && (
