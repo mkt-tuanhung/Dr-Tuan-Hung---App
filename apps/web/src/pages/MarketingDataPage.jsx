@@ -790,8 +790,11 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const newCalled = newRows.filter(isCalled);
   const cares = acts.filter(a => a.type === 'care');
   const nextCnt = acts.filter(a => a.next_at).length;
-  const pool = rows.filter(ofWho);
-  const byStatusData = Object.entries(STATUS).map(([k, v]) => ({ label: v.label, value: pool.filter(r => r.status === k).length, color: STATUS_COLORS[k] })).filter(d => d.value > 0);
+  // KHÁCH TRONG NGÀY = có cuộc gọi trong ngày HOẶC là số mới về trong ngày
+  const dayCustomerRows = rows.filter(r => ofWho(r) && (isCalled(r) || dayKey(arrivedAt(r)) === day));
+  const byStatusData = Object.entries(STATUS).map(([k, v]) => ({ label: v.label, value: dayCustomerRows.filter(r => r.status === k).length, color: STATUS_COLORS[k] })).filter(d => d.value > 0);
+  const callsNew = callRows.filter(c => c.isNew);
+  const callsOld = callRows.filter(c => !c.isNew);
   const byOutcome = {}; inAppCalls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
   const byOutcomeData = Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOMES[k]?.label || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' }));
   const srcMap = {}; newRows.forEach(r => { const s = r.source || 'Khác'; srcMap[s] = (srcMap[s] || 0) + 1; });
@@ -805,7 +808,8 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       old_calls: oldCallCnt, new_calls: newCallCnt,
     },
     by_outcome: byOutcomeData, by_status: byStatusData, by_source: bySourceData,
-    calls: callRows.slice(0, 300).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: !!c.isNew })),
+    calls_new: callsNew.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: true })),
+    calls_old: callsOld.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: false })),
     news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: r.phone, source: r.source || null, called: isCalled(r), status: STATUS[r.status]?.label || r.status })),
   });
 
@@ -843,7 +847,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       ['Cuộc gọi', p.stats.calls, '#059669'], ['Số mới', p.stats.new_count, '#2563eb'],
       ['Mới đã gọi', p.stats.new_called, '#0d9488'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
     ].map(([l, v, c]) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px">${l}</div></div>`).join('');
-    const callList = p.calls.map(c => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.is_new ? ' · <span style="color:#059669;font-weight:700">MỚI</span>' : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`).join('');
+    const callItem = (c) => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.is_new ? ' · <span style="color:#059669;font-weight:700">MỚI</span>' : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`;
     const newList = p.news.map(r => `<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(r.name || '—')}</b><span style="color:#64748b">${esc(r.phone)}</span>${r.source ? `<span style="color:#94a3b8">· ${esc(r.source)}</span>` : ''}<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${r.called ? '#d1fae5' : '#ffe4e6'};color:${r.called ? '#047857' : '#be123c'}">${r.called ? 'Đã gọi' : 'Chưa gọi'}</span></div>`).join('');
     const sec = (t, inner) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:16px;margin-bottom:12px"><div style="font-weight:700;font-size:13px;margin-bottom:10px">${t}</div>${inner}</div>`;
     const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(p.whoName)} — Báo cáo ${new Date(p.day + 'T12:00:00').toLocaleDateString('vi-VN')}</title></head>
@@ -852,10 +856,11 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
 <div style="max-width:640px;margin:-16px auto 0;padding:0 14px 40px">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">${tiles}</div>
 ${sec('Cuộc gọi: khách cũ ' + p.stats.old_calls + ' · khách mới ' + p.stats.new_calls, `<div style="display:flex;height:18px;border-radius:99px;overflow:hidden;background:#f1f5f9"><div style="background:#94a3b8;width:${(p.stats.old_calls / ((p.stats.old_calls + p.stats.new_calls) || 1)) * 100}%"></div><div style="background:#10b981;width:${(p.stats.new_calls / ((p.stats.old_calls + p.stats.new_calls) || 1)) * 100}%"></div></div>`)}
-${p.by_status.length ? sec('Tệp khách hàng (theo trạng thái)', donut(p.by_status)) : ''}
+${p.by_status.length ? sec('Khách trong ngày theo trạng thái', donut(p.by_status)) : ''}
 ${p.by_outcome.length ? sec('Kết quả cuộc gọi', bars(p.by_outcome)) : ''}
 ${p.by_source.length ? sec('Số mới theo nguồn', bars(p.by_source)) : ''}
-${sec('Chi tiết cuộc gọi (' + p.calls.length + ')', callList || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
+${sec('Cuộc gọi KHÁCH MỚI (' + p.calls_new.length + ')', p.calls_new.map(callItem).join('') || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
+${sec('Cuộc gọi KHÁCH CŨ (' + p.calls_old.length + ')', p.calls_old.map(callItem).join('') || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
 ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
 <div style="text-align:center;color:#cbd5e1;font-size:11px">Dr Tuấn Hùng — Internal System</div>
 </div></body></html>`;
@@ -875,6 +880,8 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
     if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
     if (nextCnt) lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
     if (share?.url) lines.push(`• Xem chi tiết: ${share.url}`);
+    if (callsNew.length) { lines.push('', `—— CUỘC GỌI KHÁCH MỚI (${callsNew.length}) ——`); callsNew.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
+    if (callsOld.length) { lines.push('', `—— CUỘC GỌI KHÁCH CŨ (${callsOld.length}) ——`); callsOld.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
     navigator.clipboard?.writeText(lines.join('\n'));
     toast.success('Đã copy báo cáo tóm tắt');
   };
@@ -941,28 +948,35 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
               </div>
 
               {/* Tệp khách + kết quả gọi + nguồn */}
-              {byStatusData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Tệp khách hàng (theo trạng thái)</div><Donut data={byStatusData} centerLabel="khách" /></div>}
+              {byStatusData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Khách trong ngày theo trạng thái</div><Donut data={byStatusData} centerLabel="khách/ngày" /><div className="flex flex-wrap gap-1.5 mt-2.5">{byStatusData.map((d, i) => <span key={i} className="text-[10px] font-bold px-2 py-1 rounded-full text-white" style={{ background: d.color }}>{d.label}: {d.value}</span>)}</div></div>}
               {byOutcomeData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Kết quả cuộc gọi</div><Bars data={byOutcomeData} /></div>}
               {bySourceData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Số mới theo nguồn</div><Bars data={bySourceData} /></div>}
 
-              {/* Chi tiết cuộc gọi */}
-              <div className="text-[13px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><PhoneCall className="w-4 h-4 text-emerald-600" /> Chi tiết cuộc gọi ({callRows.length})</div>
-              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-4">
-                {callRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có cuộc gọi nào</div> :
-                  callRows.map((c, i) => (
-                    <div key={i} className="px-3 py-2 text-[12px]">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <b className="text-slate-800">{c.name}</b>
-                        <span className="text-slate-500 tabular-nums">{c.phone}</span>
-                        <span className="text-slate-400">· {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                        {c.isNew && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">MỚI</span>}
-                        {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
-                        {who === 'all' && c.author && <span className="text-slate-400">· {c.author}</span>}
-                      </div>
-                      {c.content && <div className="text-slate-500 mt-0.5 line-clamp-2">{c.content}</div>}
-                    </div>
-                  ))}
-              </div>
+              {/* Chi tiết cuộc gọi — TÁCH RÕ KHÁCH MỚI / KHÁCH CŨ */}
+              {[{ title: 'Cuộc gọi KHÁCH MỚI', items: callsNew, tone: 'text-emerald-700', ring: 'border-emerald-200', badge: 'bg-emerald-600' },
+                { title: 'Cuộc gọi KHÁCH CŨ', items: callsOld, tone: 'text-slate-700', ring: 'border-slate-200', badge: 'bg-slate-500' }].map((g, gi) => (
+                <div key={gi} className="mb-4">
+                  <div className={`text-[13px] font-bold mb-1.5 flex items-center gap-1.5 ${g.tone}`}>
+                    <PhoneCall className="w-4 h-4" /> {g.title}
+                    <span className={`text-[10px] text-white px-2 py-0.5 rounded-full ${g.badge}`}>{g.items.length}</span>
+                  </div>
+                  <div className={`max-h-52 overflow-y-auto rounded-xl border ${g.ring} divide-y divide-slate-50`}>
+                    {g.items.length === 0 ? <div className="text-center py-5 text-slate-300 text-sm">Không có</div> :
+                      g.items.map((c, i) => (
+                        <div key={i} className="px-3 py-2 text-[12px]">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <b className="text-slate-800">{c.name}</b>
+                            <span className="text-slate-500 tabular-nums">{c.phone}</span>
+                            <span className="text-slate-400">· {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
+                            {who === 'all' && c.author && <span className="text-slate-400">· {c.author}</span>}
+                          </div>
+                          {c.content && <div className="text-slate-500 mt-0.5 line-clamp-2">{c.content}</div>}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
 
               {/* Số mới */}
               <div className="text-[13px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><UserPlus className="w-4 h-4 text-blue-600" /> Số mới tiếp nhận ({newRows.length})</div>
