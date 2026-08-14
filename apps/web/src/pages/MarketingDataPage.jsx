@@ -520,6 +520,22 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const calls = acts.filter(a => a.type === 'call');
   const cares = acts.filter(a => a.type === 'care');
 
+  // ----- Messenger: hội thoại fanpage khớp với khách này (theo data_id hoặc SĐT) -----
+  const [fbMsgs, setFbMsgs] = useState(null);   // null = đang tải
+  const loadFb = useCallback(async () => {
+    try {
+      const ors = [`data_id.eq.${row.id}`];
+      if (row.phone) ors.push(`phone.eq.${row.phone}`);
+      const { data: convs } = await supabase.from('fb_conversations').select('conv_key').or(ors.join(','));
+      if (!convs?.length) { setFbMsgs([]); return; }
+      const { data: msgs } = await supabase.from('fb_messages').select('*')
+        .in('conv_key', convs.map(c => c.conv_key)).order('created_time', { ascending: true }).limit(500);
+      setFbMsgs(msgs || []);
+    } catch { setFbMsgs([]); }
+  }, [row.id, row.phone]);
+  useEffect(() => { loadFb(); }, [loadFb]);
+  useRealtimeReload('fb_messages', loadFb);
+
   // ----- thông tin -----
   const [info, setInfo] = useState({
     customer_name: row.customer_name || '', description: row.description || '',
@@ -594,7 +610,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
 
   const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
   const st = APPT_STAGE(appt);
-  const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
+  const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'fb', label: 'Messenger', icon: MessageCircle, n: fbMsgs?.length ?? 0 }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
@@ -655,6 +671,28 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 </div>
               )}
               <Timeline items={calls} loading={loadingActs} me={me} onDelete={delAct} kind="call" />
+            </div>
+          )}
+
+          {/* ---- MESSENGER (hội thoại fanpage, realtime) ---- */}
+          {tab === 'fb' && (
+            <div className="space-y-1.5">
+              {fbMsgs === null ? <div className="text-center py-8 text-slate-300 text-sm">Đang tải hội thoại…</div>
+                : fbMsgs.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 text-[13px] leading-relaxed">
+                    Chưa có hội thoại Messenger nào khớp với khách này.<br />
+                    <span className="text-slate-300 text-[12px]">Hệ thống tự ghép khi quét được SĐT khách trong nội dung chat của fanpage.</span>
+                  </div>
+                ) : (
+                  fbMsgs.map(m => (
+                    <div key={m.id} className={`flex ${m.is_page ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[82%] rounded-2xl px-3 py-2 text-[13px] leading-snug break-words ${m.is_page ? 'bg-teal-600 text-white rounded-br-md' : 'bg-slate-100 text-slate-700 rounded-bl-md'}`}>
+                        {m.text || <i className="opacity-70">[hình ảnh / đính kèm]</i>}
+                        <div className={`text-[9.5px] mt-1 ${m.is_page ? 'text-white/70' : 'text-slate-400'}`}>{m.is_page ? 'Page' : (m.from_name || 'Khách')} · {fmtDT(m.created_time)}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
             </div>
           )}
 
