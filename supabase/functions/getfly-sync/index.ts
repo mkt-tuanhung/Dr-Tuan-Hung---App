@@ -2,11 +2,11 @@
 // Supabase Edge Function: getfly-sync
 // Kéo khách từ GetFly /api/v6.1/accounts -> marketing_data (hợp nhất theo SĐT).
 //
-// Cách gọi GetFly (đã xác nhận bằng curl thật):
-//   GET https://<domain>/api/v6.1/accounts?fields=<danh sách trường>&limit=..&offset=..
-//   Header: X-API-KEY. Bắt buộc truyền fields= — nếu không, GetFly mặc định lấy
-//   cả trường custom_fields và báo "Không thể lấy trường (custom_fields)".
-//   SĐT nằm ở phone_office (cấp khách) hoặc contacts[].phone_mobile.
+// Đã xác nhận bằng curl thật:
+//   GET https://<domain>/api/v6.1/accounts?fields=...&limit=..&offset=..
+//   Header X-API-KEY. BẮT BUỘC truyền fields= (không truyền -> lỗi custom_fields).
+//   SĐT: phone_office (cấp khách) hoặc contacts[].phone_home.
+//   Phân trang: has_more + offset (không có total_page).
 //
 // Secrets: GETFLY_DOMAIN, GETFLY_API_KEY, (tuỳ chọn) GETFLY_LIST_PATH
 // ============================================================
@@ -22,15 +22,12 @@ function json(body: unknown, status = 200) {
 }
 
 const LIST_PATHS = ["/api/v6.1/accounts", "/api/v6.0/accounts", "/api/v6.2/accounts"];
-// Trường lấy về — chọn từ available_fields GetFly trả trong thông báo lỗi.
+// Trường lấy về — theo available_fields của GetFly.
 const FIELDS = "id,account_code,account_name,description,phone_office,email,account_source,created_at,contacts";
-// Các kiểu query thử lần lượt (fields= là chìa khoá; limit/offset đã được chấp nhận).
 const QUERY_STYLES = [
   `fields=${FIELDS}&limit={s}&offset={o}`,
   "fields=id,account_name,phone_office,contacts&limit={s}&offset={o}",
   `fields=${FIELDS}`,
-  `select=${FIELDS}&limit={s}&offset={o}`,
-  "limit={s}&offset={o}",
 ];
 const fill = (t: string, page: number, size: number) =>
   t.replace(/\{p\}/g, String(page)).replace(/\{s\}/g, String(size)).replace(/\{o\}/g, String((page - 1) * size));
@@ -46,14 +43,14 @@ function pick(obj: Record<string, any>, keys: string[]): string {
   for (const k of keys) { const v = obj?.[k]; if (v != null && String(v).trim() !== "") return String(v).trim(); }
   return "";
 }
-// SĐT: phone_office (cấp khách) -> contacts[].phone_mobile -> các tên khác.
+// SĐT: phone_office (cấp khách) -> contacts[].phone_home / phone_mobile.
 function findPhone(c: Record<string, any>): string {
-  const direct = normPhone(pick(c, ["phone_office", "phone", "mobile", "phone_mobile", "tel", "hotline"]));
+  const direct = normPhone(pick(c, ["phone_office", "phone", "mobile", "phone_mobile", "phone_home", "tel", "hotline"]));
   if (direct) return direct;
   const contacts = c.contacts || c.contact || [];
   if (Array.isArray(contacts)) {
     for (const ct of contacts) {
-      const p = normPhone(pick(ct, ["phone_mobile", "mobile", "phone", "phone_office", "tel"]));
+      const p = normPhone(pick(ct, ["phone_home", "phone_mobile", "mobile", "phone", "phone_office", "tel"]));
       if (p) return p;
     }
   }
@@ -70,14 +67,9 @@ function buildDescription(c: Record<string, any>): string {
   return parts.join(" · ") || "";
 }
 function extractRecords(d: any): any[] {
-  const cands = [d?.records, d?.data?.records, d?.data?.accounts, d?.accounts, d?.data?.data, Array.isArray(d?.data) ? d.data : null, Array.isArray(d) ? d : null];
+  const cands = [d?.records, d?.accounts, d?.data?.records, d?.data?.accounts, d?.data?.data, Array.isArray(d?.data) ? d.data : null, Array.isArray(d) ? d : null];
   for (const c of cands) if (Array.isArray(c)) return c;
   return [];
-}
-function extractTotal(d: any): { totalPage: number; totalRecord: number } {
-  const totalPage = Number(d?.total_page ?? d?.data?.total_page ?? d?.total_pages ?? 0) || 0;
-  const totalRecord = Number(d?.total_record ?? d?.data?.total_record ?? d?.total ?? 0) || 0;
-  return { totalPage, totalRecord };
 }
 
 async function call(domain: string, apiKey: string, path: string, style: string, page: number, size: number) {
@@ -91,8 +83,10 @@ async function call(domain: string, apiKey: string, path: string, style: string,
   const msg = String(d?.message ?? d?.msg ?? "");
   const routeMissing = /not found|route/i.test(msg);
   const records = extractRecords(d);
-  const { totalPage, totalRecord } = extractTotal(d);
-  return { status: r.status, ok: r.ok && !routeMissing, msg, data: d, records, totalPage, totalRecord, snippet: text.slice(0, 140) };
+  const hasMore = d?.has_more === true;                  // GetFly phân trang bằng has_more
+  const totalPage = Number(d?.total_page ?? d?.data?.total_page ?? 0) || 0;
+  const totalRecord = Number(d?.total_record ?? d?.data?.total_record ?? d?.total ?? 0) || 0;
+  return { status: r.status, ok: r.ok && !routeMissing, msg, data: d, records, hasMore, totalPage, totalRecord, snippet: text.slice(0, 140) };
 }
 
 async function detect(domain: string, apiKey: string): Promise<{ path: string | null; style: string | null; tries: any[] }> {
@@ -105,7 +99,7 @@ async function detect(domain: string, apiKey: string): Promise<{ path: string | 
         const res = await call(domain, apiKey, p, style, 1, 5);
         tries.push({ path: p, style, status: res.status, records: res.records.length, msg: res.msg || res.snippet });
         if (res.ok && res.status === 200) return { path: p, style, tries };
-        if (res.status === 404) break; // route không tồn tại -> khỏi thử style khác
+        if (res.status === 404) break;
       } catch (e) { tries.push({ path: p, style, error: String((e as Error)?.message || e) }); }
     }
   }
@@ -134,14 +128,14 @@ Deno.serve(async (req) => {
       const res = await call(domain, apiKey, path, style, 1, Math.min(pageSize, 5));
       const sample = res.records.slice(0, 3).map((c: Record<string, any>) => ({
         customer_name: pick(c, ["account_name", "client_name", "name", "full_name"]),
-        phone: findPhone(c), description: buildDescription(c), _raw_keys: Object.keys(c || {}),
+        phone: findPhone(c), description: buildDescription(c),
       }));
-      return json({ ok: true, probe: true, path, style, total_page: res.totalPage, total_record: res.totalRecord, count_page1: res.records.length, sample, raw_first: res.records[0] ?? null });
+      return json({ ok: true, probe: true, path, style, has_more: res.hasMore, count_page1: res.records.length, sample });
     }
 
-    // ---- KÉO THẬT ----
+    // ---- KÉO THẬT: lặp theo has_more + offset ----
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const maxPages = Math.min(Number(body.max_pages) || 200, 500);
+    const maxPages = Math.min(Number(body.max_pages) || 300, 1000);
     let page = 1, scanned = 0, upserted = 0, skippedNoPhone = 0, failed = 0;
     const seen = new Set<string>();
     for (;;) {
@@ -159,7 +153,7 @@ Deno.serve(async (req) => {
         const { error } = await sb.from("marketing_data").upsert({ phone, customer_name: name, description }, { onConflict: "phone" });
         if (error) { failed++; console.error("upsert fail", phone, error.message); } else upserted++;
       }
-      if ((res.totalPage && page >= res.totalPage) || res.records.length < pageSize || page >= maxPages) break;
+      if (!res.hasMore || page >= maxPages) break;   // hết dữ liệu theo has_more
       page++;
       await new Promise((r) => setTimeout(r, 200));
     }
