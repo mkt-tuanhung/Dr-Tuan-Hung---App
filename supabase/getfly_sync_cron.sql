@@ -1,8 +1,7 @@
 -- ============================================================
 -- TỰ ĐỘNG đồng bộ GetFly -> Data khách hàng (không cần bấm nút)
---   1) MỖI 5 PHÚT : quét 2 trang MỚI NHẤT (400 khách mới nhất — GetFly sắp
---      id DESC nên khách mới luôn nằm đầu) -> khách mới lên GetFly tối đa
---      ~5 phút là có trong app (app realtime, tự hiện không cần reload).
+--   1) MỖI 1 PHÚT: đồng bộ FULL — mọi thay đổi trên GetFly (khách mới, note,
+--      đổi mối quan hệ…) về app trong tối đa ~1 phút.
 --   2) MỖI ĐÊM 2h SÁNG (giờ VN): kéo FULL toàn bộ để đồng bộ cả các khách
 --      cũ bị sửa tên/thông tin trên GetFly.
 --
@@ -19,17 +18,18 @@ create extension if not exists pg_net;
 
 -- Gỡ job cũ (nếu có) rồi tạo lại
 select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-5min';
+select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-1min';
 select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-full';
 
--- 1) Mỗi 5 phút: kéo 2 trang khách mới nhất
+-- 1) MỖI 1 PHÚT: đồng bộ FULL (kho ~1.5k khách nên chỉ vài giây/lượt)
 select cron.schedule(
-  'getfly-sync-5min',
-  '*/5 * * * *',
+  'getfly-sync-1min',
+  '* * * * *',
   $$
   select net.http_post(
     url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/getfly-sync',
     headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer <ANON_KEY>'),
-    body    := '{"max_pages": 2, "page_size": 200}'::jsonb
+    body    := '{}'::jsonb
   );
   $$
 );
