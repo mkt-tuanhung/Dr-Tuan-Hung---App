@@ -41,6 +41,7 @@ const MarketingDataPage = () => {
   const [fTruc, setFTruc] = useState('');
   const [edit, setEdit] = useState(null);     // row đang sửa / {} khi thêm mới
   const [importOpen, setImportOpen] = useState(false);
+  const [getflyOpen, setGetflyOpen] = useState(false);
   const [chip, setChip] = useState('all');
   const [page, setPage] = useState(1);
 
@@ -122,6 +123,7 @@ const MarketingDataPage = () => {
         </div>
         {canWrite && (
           <div className="flex gap-2">
+            {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
             <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>
             <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
           </div>
@@ -240,6 +242,7 @@ const MarketingDataPage = () => {
 
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
+      {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
     </div>
   );
 };
@@ -372,5 +375,64 @@ const Modal = ({ title, onClose, children }) => (
 const ModalActions = ({ onClose, onSave, saving }) => (
   <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : 'Lưu'}</button></div>
 );
+
+// ---------- Kéo dữ liệu từ GetFly CRM ----------
+const GetflyModal = ({ onClose, onDone }) => {
+  const [busy, setBusy] = useState('');       // 'probe' | 'sync' | ''
+  const [probe, setProbe] = useState(null);   // kết quả kiểm tra
+  const [result, setResult] = useState(null); // kết quả kéo thật
+
+  const doProbe = async () => {
+    setBusy('probe'); setProbe(null); setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('getfly-sync', { body: { probe: true } });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Lỗi GetFly');
+      setProbe(data);
+      toast.success(`Kết nối OK · trang 1 có ${data.count_page1} khách · ${data.total_page} trang`);
+    } catch (e) { toast.error('GetFly: ' + e.message, { duration: 8000 }); }
+    setBusy('');
+  };
+  const doSync = async () => {
+    if (!confirm('Kéo toàn bộ khách từ GetFly về Data khách hàng? Trùng SĐT sẽ cập nhật tên/mô tả, giữ nguyên trạng thái & người phụ trách.')) return;
+    setBusy('sync'); setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('getfly-sync', { body: {} });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Lỗi GetFly');
+      setResult(data);
+      toast.success(`Đã kéo ${data.upserted} khách (${data.pages} trang)${data.skipped_no_phone ? ` · bỏ ${data.skipped_no_phone} khách thiếu SĐT` : ''}`, { duration: 8000 });
+      onDone?.();
+    } catch (e) { toast.error('GetFly: ' + e.message, { duration: 8000 }); }
+    setBusy('');
+  };
+
+  return (
+    <Modal title="Kéo dữ liệu từ GetFly" onClose={onClose}>
+      <p className="text-[12px] text-slate-500 mb-3">Kéo danh sách khách từ GetFly CRM về module này, hợp nhất theo <b>số điện thoại</b>. Khách đã có sẽ được cập nhật tên/mô tả nhưng <b>giữ nguyên trạng thái & người phụ trách</b>. Nên bấm <b>Kiểm tra kết nối</b> trước để soi dữ liệu.</p>
+      <div className="flex gap-2 flex-wrap">
+        <button type="button" onClick={doProbe} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">{busy === 'probe' ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}</button>
+        <button type="button" onClick={doSync} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"><Download className="w-4 h-4" /> {busy === 'sync' ? 'Đang kéo…' : 'Kéo về'}</button>
+      </div>
+
+      {probe && (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="text-xs font-bold text-slate-600 mb-1.5">Xem trước map ({probe.count_page1} khách/trang · {probe.total_page} trang):</div>
+          {(probe.sample || []).map((s, i) => (
+            <div key={i} className="text-[12px] text-slate-600 border-b border-slate-100 py-1 last:border-0">
+              <b className="text-slate-800">{s.customer_name || '(không tên)'}</b> · SĐT: {s.phone || <span className="text-rose-500">không đọc được</span>} {s.description && <span className="text-slate-400">· {s.description}</span>}
+            </div>
+          ))}
+          {probe.sample?.some(s => !s.phone) && <div className="text-[11px] text-amber-600 mt-1.5">⚠️ Có khách chưa đọc được SĐT — gửi ảnh này cho kỹ thuật để chỉnh map. Các trường thô: {(probe.sample?.[0]?._raw_keys || []).join(', ')}</div>}
+        </div>
+      )}
+      {result && (
+        <div className="mt-3 text-sm text-teal-700 font-semibold">Đã quét {result.scanned} · cập nhật {result.upserted} · bỏ {result.skipped_no_phone} thiếu SĐT{result.failed ? ` · lỗi ${result.failed}` : ''}.</div>
+      )}
+
+      <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
+    </Modal>
+  );
+};
 
 export default MarketingDataPage;
