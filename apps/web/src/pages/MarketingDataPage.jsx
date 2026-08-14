@@ -79,18 +79,26 @@ const MarketingDataPage = () => {
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
-    const { data } = await supabase.from('marketing_data')
-      .select('*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)').order('updated_at', { ascending: false }).limit(2000);
-    const list = data || [];
+    // Supabase giới hạn 1.000 dòng/truy vấn -> tải theo LÔ tới khi hết sạch (tối đa 50.000).
+    const list = [];
+    for (let from = 0; from < 50000; from += 1000) {
+      const { data, error } = await supabase.from('marketing_data')
+        .select('*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)')
+        .order('updated_at', { ascending: false }).range(from, from + 999);
+      if (error || !data?.length) break;
+      list.push(...data);
+      if (data.length < 1000) break;
+    }
     setRows(list);
+    // Đối chiếu lịch hẹn theo SĐT — chia lô 400 SĐT/truy vấn (tránh URL quá dài)
     const phones = [...new Set(list.map(r => r.phone).filter(Boolean))];
-    if (phones.length) {
+    const map = {};
+    for (let i = 0; i < phones.length; i += 400) {
       const { data: appts } = await supabase.from('customer_appointments')
-        .select('id, phone, status, surgery_date, post_op_status').in('phone', phones);
-      const map = {};
+        .select('id, phone, status, surgery_date, post_op_status').in('phone', phones.slice(i, i + 400));
       (appts || []).forEach(a => { const k = phoneKey(a.phone); if (!map[k]) map[k] = a; });
-      setApptMap(map);
-    } else setApptMap({});
+    }
+    setApptMap(map);
     didLoad.current = true; setLoading(false);
   }, []);
   useEffect(() => { loadData(); }, [loadData]);
