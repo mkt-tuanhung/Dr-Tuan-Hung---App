@@ -6,7 +6,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -797,7 +797,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const callsOld = callRows.filter(c => !c.isNew);
   const byOutcome = {}; inAppCalls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
   const byOutcomeData = Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOMES[k]?.label || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' }));
-  const srcMap = {}; newRows.forEach(r => { const s = r.source || 'Khác'; srcMap[s] = (srcMap[s] || 0) + 1; });
+  const srcMap = {}; newRows.forEach(r => { const raw = String(r.source || '').trim(); const s = !raw ? 'Khác' : (/^\d+$/.test(raw) ? 'Nguồn #' + raw : raw); srcMap[s] = (srcMap[s] || 0) + 1; });
   const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#14b8a6', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
 
   const buildPayload = () => ({
@@ -813,7 +813,36 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
     news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: r.phone, source: r.source || null, called: isCalled(r), status: STATUS[r.status]?.label || r.status })),
   });
 
-  // Tạo LINK CÔNG KHAI + QR — sếp quét là vào /bao-cao/<mã>, không cần đăng nhập
+  // ẢNH POSTER QR: in kèm chữ "BÁO CÁO TELESALE NGÀY ... — DR TUẤN HÙNG"
+  const buildQrPoster = async (url) => {
+    const qrData = await QRCode.toDataURL(url, { width: 520, margin: 1, color: { dark: '#0f2140' } });
+    const W = 640, H = 860;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    // dải header xanh
+    ctx.fillStyle = '#0b3b34'; ctx.fillRect(0, 0, W, 156);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
+    ctx.font = `800 36px ${FONT}`;
+    ctx.fillText('BÁO CÁO TELESALE', W / 2, 66);
+    ctx.font = `800 30px ${FONT}`;
+    ctx.fillText(`NGÀY ${new Date(day + 'T12:00:00').toLocaleDateString('vi-VN')}`, W / 2, 114);
+    // QR giữa
+    const img = new Image();
+    await new Promise((res) => { img.onload = res; img.src = qrData; });
+    ctx.drawImage(img, (W - 520) / 2, 190, 520, 520);
+    // chân chữ
+    ctx.fillStyle = '#0f2140'; ctx.font = `800 32px ${FONT}`;
+    ctx.fillText('DR TUẤN HÙNG', W / 2, 776);
+    ctx.fillStyle = '#64748b'; ctx.font = `600 21px ${FONT}`;
+    ctx.fillText(whoName || 'Tất cả telesale', W / 2, 812);
+    ctx.font = `500 16px ${FONT}`; ctx.fillStyle = '#94a3b8';
+    ctx.fillText('Quét mã để xem báo cáo chi tiết', W / 2, 842);
+    return canvas.toDataURL('image/png');
+  };
+  // Tạo LINK CÔNG KHAI + poster QR — sếp quét là vào /bao-cao/<mã>, không cần đăng nhập
   const makeShare = async () => {
     setBusyShare(true);
     try {
@@ -822,11 +851,43 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       const { error } = await supabase.from('daily_reports').insert({ slug, day, title, payload: buildPayload(), created_by: me.id });
       if (error) throw error;
       const url = `${window.location.origin}/bao-cao/${slug}`;
-      const qr = await QRCode.toDataURL(url, { width: 320, margin: 1, color: { dark: '#0f2140' } });
+      const qr = await buildQrPoster(url);
       setShare({ url, qr });
-      toast.success('Đã tạo link báo cáo — gửi link hoặc cho sếp quét QR');
+      toast.success('Đã tạo báo cáo — tải ảnh QR hoặc bấm Gửi Zalo');
     } catch (e) { toast.error('Lỗi tạo link: ' + e.message + ' (đã chạy daily_reports.sql chưa?)'); }
     setBusyShare(false);
+  };
+  // Tải ảnh QR về máy
+  const downloadQr = () => {
+    if (!share) return;
+    const a = document.createElement('a');
+    a.href = share.qr;
+    a.download = `QR-bao-cao-telesale-${day}.png`;
+    a.click();
+    toast.success('Đã tải ảnh QR — gửi ảnh này qua Zalo cho sếp');
+  };
+  // Gửi Zalo: mở khay chia sẻ hệ thống (điện thoại) kèm ảnh QR + link; máy tính -> copy link
+  const shareZalo = async () => {
+    if (!share) return;
+    const d = new Date(day + 'T12:00:00').toLocaleDateString('vi-VN');
+    const text = `BÁO CÁO TELESALE NGÀY ${d} — DR TUẤN HÙNG${whoName ? ' (' + whoName + ')' : ''}\nXem chi tiết: ${share.url}`;
+    try {
+      const [meta, b64] = share.qr.split(',');
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const file = new File([arr], `bao-cao-${day}.png`, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Báo cáo telesale', text });
+        return;
+      }
+      if (navigator.share) { await navigator.share({ title: 'Báo cáo telesale', text, url: share.url }); return; }
+      throw new Error('no-share');
+    } catch (e) {
+      if (e?.name === 'AbortError') return;   // người dùng tự đóng khay chia sẻ
+      navigator.clipboard?.writeText(text);
+      toast.success('Máy này không có khay chia sẻ — đã copy nội dung + link, mở Zalo dán gửi sếp');
+    }
   };
 
   // Tải file HTML báo cáo (mở được trên mọi máy, gửi Zalo dạng file)
@@ -914,10 +975,14 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
           {share && (
             <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-4 mb-4 text-center">
               <div className="text-[13px] font-bold text-teal-800 mb-2">Sếp quét QR hoặc mở link là xem được (không cần đăng nhập)</div>
-              <img src={share.qr} alt="QR báo cáo" className="w-44 h-44 mx-auto rounded-xl border border-teal-100 bg-white" />
-              <div className="flex gap-2 mt-3">
+              <img src={share.qr} alt="QR báo cáo" className="w-56 mx-auto rounded-xl border border-teal-100 bg-white shadow-sm" />
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <button onClick={shareZalo} className="h-11 rounded-xl bg-blue-600 text-white text-[13px] font-bold hover:bg-blue-700 inline-flex items-center justify-center gap-1.5"><Send className="w-4 h-4" /> Gửi Zalo</button>
+                <button onClick={downloadQr} className="h-11 rounded-xl bg-teal-600 text-white text-[13px] font-bold hover:bg-teal-700 inline-flex items-center justify-center gap-1.5"><Download className="w-4 h-4" /> Tải ảnh QR</button>
+              </div>
+              <div className="flex gap-2 mt-2">
                 <input readOnly value={share.url} className="flex-1 min-w-0 px-3 py-2 text-[12px] rounded-lg border border-teal-200 bg-white text-slate-600 outline-none" onFocus={e => e.target.select()} />
-                <button onClick={() => { navigator.clipboard?.writeText(share.url); toast.success('Đã copy link'); }} className="shrink-0 px-3 py-2 rounded-lg bg-teal-600 text-white text-[12px] font-bold hover:bg-teal-700">Copy link</button>
+                <button onClick={() => { navigator.clipboard?.writeText(share.url); toast.success('Đã copy link'); }} className="shrink-0 px-3 py-2 rounded-lg border border-teal-300 text-teal-700 text-[12px] font-bold hover:bg-teal-50">Copy link</button>
                 <a href={share.url} target="_blank" rel="noopener noreferrer" className="shrink-0 px-3 py-2 rounded-lg border border-teal-300 text-teal-700 text-[12px] font-bold hover:bg-teal-50">Mở</a>
               </div>
             </div>
