@@ -27,6 +27,8 @@ const DailyReportPublicPage = () => {
 
   const p = rep.payload || {};
   const st = p.stats || {};
+  const callsNew = p.calls_new ?? (p.calls || []).filter(c => c.is_new);
+  const callsOld = p.calls_old ?? (p.calls || []).filter(c => !c.is_new);
   const Section = ({ title, icon: Icon, children }) => (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
       <div className="text-[13px] font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">{Icon && <Icon className="w-4 h-4 text-teal-600" />}{title}</div>
@@ -87,8 +89,11 @@ const DailyReportPublicPage = () => {
 
         {/* Tệp khách theo trạng thái */}
         {(p.by_status || []).length > 0 && (
-          <Section title="Tệp khách hàng (theo trạng thái)" icon={Users}>
-            <Donut data={p.by_status} centerLabel="khách" />
+          <Section title="Khách trong ngày theo trạng thái" icon={Users}>
+            <Donut data={p.by_status} centerLabel="khách/ngày" />
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {(p.by_status || []).map((d, i) => <span key={i} className="text-[10px] font-bold px-2 py-1 rounded-full text-white" style={{ background: d.color }}>{d.label}: {d.value}</span>)}
+            </div>
           </Section>
         )}
 
@@ -106,24 +111,30 @@ const DailyReportPublicPage = () => {
           </Section>
         )}
 
-        {/* Chi tiết cuộc gọi */}
-        <Section title={`Chi tiết cuộc gọi (${(p.calls || []).length})`} icon={PhoneCall}>
-          <div className="divide-y divide-slate-50 -mx-1">
-            {(p.calls || []).length === 0 ? <div className="text-center text-slate-300 text-sm py-4">Không có cuộc gọi</div> :
-              (p.calls || []).map((c, i) => (
-                <div key={i} className="px-1 py-2 text-[12.5px]">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <b className="text-slate-800">{c.name}</b>
-                    <span className="text-slate-500 tabular-nums">{c.phone}</span>
-                    <span className="text-slate-400">· {fmtT(c.time)}</span>
-                    {c.is_new && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">MỚI</span>}
-                    {c.author && <span className="text-slate-400">· {c.author}</span>}
+        {/* Cuộc gọi tách KHÁCH MỚI / KHÁCH CŨ */}
+        {[{ title: 'Cuộc gọi KHÁCH MỚI', items: callsNew, cls: 'text-emerald-700', badge: 'bg-emerald-600' },
+          { title: 'Cuộc gọi KHÁCH CŨ', items: callsOld, cls: 'text-slate-700', badge: 'bg-slate-500' }].map((g, gi) => (
+          <div key={gi} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
+            <div className={`text-[13px] font-bold mb-2.5 flex items-center gap-1.5 ${g.cls}`}>
+              <PhoneCall className="w-4 h-4" /> {g.title}
+              <span className={`text-[10px] text-white px-2 py-0.5 rounded-full ${g.badge}`}>{g.items.length}</span>
+            </div>
+            <div className="divide-y divide-slate-50 -mx-1">
+              {g.items.length === 0 ? <div className="text-center text-slate-300 text-sm py-4">Không có</div> :
+                g.items.map((c, i) => (
+                  <div key={i} className="px-1 py-2 text-[12.5px]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <b className="text-slate-800">{c.name}</b>
+                      <span className="text-slate-500 tabular-nums">{c.phone}</span>
+                      <span className="text-slate-400">· {fmtT(c.time)}</span>
+                      {c.author && <span className="text-slate-400">· {c.author}</span>}
+                    </div>
+                    {c.content && <div className="text-slate-500 mt-0.5 leading-snug">{c.content}</div>}
                   </div>
-                  {c.content && <div className="text-slate-500 mt-0.5 leading-snug">{c.content}</div>}
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
-        </Section>
+        ))}
 
         {/* Số mới tiếp nhận */}
         <Section title={`Số mới tiếp nhận (${(p.news || []).length})`} icon={UserPlus}>
