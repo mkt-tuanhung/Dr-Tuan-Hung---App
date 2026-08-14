@@ -628,16 +628,17 @@ const GetflyModal = ({ onClose, onDone }) => {
   const [busy, setBusy] = useState('');
   const [probe, setProbe] = useState(null);
   const [result, setResult] = useState(null);
+  const [diag, setDiag] = useState(null);   // danh sách route đã thử (khi dò không ra)
 
   const doProbe = async () => {
-    setBusy('probe'); setProbe(null); setResult(null);
+    setBusy('probe'); setProbe(null); setResult(null); setDiag(null);
     try {
       const { data, error } = await supabase.functions.invoke('getfly-sync', { body: { probe: true } });
       if (error) throw new Error(error.message);
-      if (!data?.ok) throw new Error(data?.error || 'Lỗi GetFly');
+      if (!data?.ok) { setDiag(data?.tries || null); throw new Error(data?.error || 'Lỗi GetFly'); }
       setProbe(data);
-      toast.success(`Kết nối OK · trang 1 có ${data.count_page1} khách · ${data.total_page} trang`);
-    } catch (e) { toast.error('GetFly: ' + e.message, { duration: 8000 }); }
+      toast.success(`Kết nối OK · route ${data.path} · trang 1 có ${data.count_page1} khách`);
+    } catch (e) { toast.error('GetFly: ' + e.message, { duration: 9000 }); }
     setBusy('');
   };
   const doSync = async () => {
@@ -675,6 +676,16 @@ const GetflyModal = ({ onClose, onDone }) => {
       )}
       {result && (
         <div className="mt-3 text-sm text-teal-700 font-semibold">Đã quét {result.scanned} · cập nhật {result.upserted} · bỏ {result.skipped_no_phone} thiếu SĐT{result.failed ? ` · lỗi ${result.failed}` : ''}.</div>
+      )}
+      {diag && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <div className="text-xs font-bold text-amber-700 mb-1.5">Không tìm được route API đúng — GetFly trả về cho từng route đã thử (chụp gửi kỹ thuật):</div>
+          {diag.map((t, i) => (
+            <div key={i} className="text-[11px] text-slate-600 font-mono border-b border-amber-100 py-1 last:border-0 break-all">
+              {t.path} → HTTP {t.status ?? '—'}{t.error ? ` · ${t.error}` : ''}{t.msg ? ` · ${String(t.msg).slice(0, 80)}` : ''}
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
