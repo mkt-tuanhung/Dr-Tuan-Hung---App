@@ -778,8 +778,8 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const inAppIds = new Set(inAppCalls.map(a => a.data_id));
   const gfCalls = rows.filter(r => ofWho(r) && r.last_exchange && dayKey(r.getfly_updated_at) === day && !inAppIds.has(r.id));
   const callRows = [
-    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name, isNew: isNewRow(rowById.get(a.data_id)) })),
-    ...gfCalls.map(r => ({ time: r.getfly_updated_at, name: r.customer_name || '—', phone: r.phone, content: r.last_exchange, author: r.manager_name, gf: true, isNew: isNewRow(r) })),
+    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name, isNew: isNewRow(rowById.get(a.data_id)), st: rowById.get(a.data_id)?.status || null })),
+    ...gfCalls.map(r => ({ time: r.getfly_updated_at, name: r.customer_name || '—', phone: r.phone, content: r.last_exchange, author: r.manager_name, gf: true, isNew: isNewRow(r), st: r.status || null })),
   ].sort((a, b) => new Date(a.time) - new Date(b.time));
   const newCallCnt = callRows.filter(c => c.isNew).length;
   const oldCallCnt = callRows.length - newCallCnt;
@@ -808,8 +808,8 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       old_calls: oldCallCnt, new_calls: newCallCnt,
     },
     by_outcome: byOutcomeData, by_status: byStatusData, by_source: bySourceData,
-    calls_new: callsNew.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: true })),
-    calls_old: callsOld.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: false })),
+    calls_new: callsNew.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: true, status_label: STATUS[c.st]?.label || null, status_color: STATUS_COLORS[c.st] || null })),
+    calls_old: callsOld.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: false, status_label: STATUS[c.st]?.label || null, status_color: STATUS_COLORS[c.st] || null })),
     news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: r.phone, source: r.source || null, called: isCalled(r), status: STATUS[r.status]?.label || r.status })),
   });
 
@@ -847,7 +847,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       ['Cuộc gọi', p.stats.calls, '#059669'], ['Số mới', p.stats.new_count, '#2563eb'],
       ['Mới đã gọi', p.stats.new_called, '#0d9488'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
     ].map(([l, v, c]) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px">${l}</div></div>`).join('');
-    const callItem = (c) => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.is_new ? ' · <span style="color:#059669;font-weight:700">MỚI</span>' : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`;
+    const callItem = (c) => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.status_label ? ` <span style="background:${c.status_color || '#94a3b8'};color:#fff;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:99px">${esc(c.status_label)}</span>` : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`;
     const newList = p.news.map(r => `<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(r.name || '—')}</b><span style="color:#64748b">${esc(r.phone)}</span>${r.source ? `<span style="color:#94a3b8">· ${esc(r.source)}</span>` : ''}<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${r.called ? '#d1fae5' : '#ffe4e6'};color:${r.called ? '#047857' : '#be123c'}">${r.called ? 'Đã gọi' : 'Chưa gọi'}</span></div>`).join('');
     const sec = (t, inner) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:16px;margin-bottom:12px"><div style="font-weight:700;font-size:13px;margin-bottom:10px">${t}</div>${inner}</div>`;
     const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(p.whoName)} — Báo cáo ${new Date(p.day + 'T12:00:00').toLocaleDateString('vi-VN')}</title></head>
@@ -880,8 +880,8 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
     if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
     if (nextCnt) lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
     if (share?.url) lines.push(`• Xem chi tiết: ${share.url}`);
-    if (callsNew.length) { lines.push('', `—— CUỘC GỌI KHÁCH MỚI (${callsNew.length}) ——`); callsNew.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
-    if (callsOld.length) { lines.push('', `—— CUỘC GỌI KHÁCH CŨ (${callsOld.length}) ——`); callsOld.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
+    if (callsNew.length) { lines.push('', `—— CUỘC GỌI KHÁCH MỚI (${callsNew.length}) ——`); callsNew.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone}${STATUS[c.st] ? ' [' + STATUS[c.st].label + ']' : ''} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
+    if (callsOld.length) { lines.push('', `—— CUỘC GỌI KHÁCH CŨ (${callsOld.length}) ——`); callsOld.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone}${STATUS[c.st] ? ' [' + STATUS[c.st].label + ']' : ''} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
     navigator.clipboard?.writeText(lines.join('\n'));
     toast.success('Đã copy báo cáo tóm tắt');
   };
@@ -968,6 +968,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
                             <b className="text-slate-800">{c.name}</b>
                             <span className="text-slate-500 tabular-nums">{c.phone}</span>
                             <span className="text-slate-400">· {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            {c.st && STATUS[c.st] && <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: STATUS_COLORS[c.st] || '#94a3b8' }}>{STATUS[c.st].label}</span>}
                             {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
                             {who === 'all' && c.author && <span className="text-slate-400">· {c.author}</span>}
                           </div>

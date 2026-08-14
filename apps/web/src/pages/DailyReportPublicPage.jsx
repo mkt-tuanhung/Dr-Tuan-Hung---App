@@ -127,6 +127,7 @@ const DailyReportPublicPage = () => {
                       <b className="text-slate-800">{c.name}</b>
                       <span className="text-slate-500 tabular-nums">{c.phone}</span>
                       <span className="text-slate-400">· {fmtT(c.time)}</span>
+                      {c.status_label && <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: c.status_color || '#94a3b8' }}>{c.status_label}</span>}
                       {c.author && <span className="text-slate-400">· {c.author}</span>}
                     </div>
                     {c.content && <div className="text-slate-500 mt-0.5 leading-snug">{c.content}</div>}
