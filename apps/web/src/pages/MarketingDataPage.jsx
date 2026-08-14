@@ -413,7 +413,7 @@ const MarketingDataPage = () => {
       {detail && <CustomerConsole row={detail} me={me} staff={staff} teleStaff={teleStaff} canWrite={canWrite} canAssign={canAssign} appt={apptOf(detail)}
         queuePos={queue ? { i: queue.pos + 1, n: queue.ids.length } : null} onNext={queue ? queueNext : null}
         onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
-      {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} onClose={() => setReportOpen(false)} />}
+      {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} rows={rows} onClose={() => setReportOpen(false)} />}
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
@@ -663,11 +663,11 @@ const Timeline = ({ items, loading, me, onDelete, kind }) => {
   );
 };
 
-// ---------- BÁO CÁO NGÀY (tổng hợp từ nhật ký gọi & chăm sóc) ----------
-const DailyReportModal = ({ me, teleStaff, isTele, onClose }) => {
+// ---------- BÁO CÁO NGÀY — cuộc gọi (note GetFly + trong app) & số mới tiếp nhận ----------
+const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const [day, setDay] = useState(todayKey());
   const [who, setWho] = useState(isTele ? me.id : 'all');
-  const [acts, setActs] = useState([]);
+  const [acts, setActs] = useState([]);   // nhật ký gọi/chăm sóc ghi TRONG APP
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -676,7 +676,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, onClose }) => {
       const from = new Date(day + 'T00:00:00').toISOString();
       const to = new Date(day + 'T23:59:59.999').toISOString();
       let q = supabase.from('marketing_activities')
-        .select('*, author:profiles!created_by(full_name), khach:marketing_data!data_id(customer_name, phone, status)')
+        .select('*, author:profiles!created_by(full_name), khach:marketing_data!data_id(customer_name, phone)')
         .gte('created_at', from).lte('created_at', to).order('created_at', { ascending: true });
       if (who !== 'all') q = q.eq('created_by', who);
       const { data } = await q;
@@ -684,97 +684,113 @@ const DailyReportModal = ({ me, teleStaff, isTele, onClose }) => {
     })();
   }, [day, who]);
 
-  const calls = acts.filter(a => a.type === 'call');
+  const whoName = who === 'all' ? '' : (who === me?.id ? (me?.full_name || '') : (teleStaff.find(t => t.id === who)?.full_name || ''));
+  // Khách thuộc người được chọn: đã gán telesale trong app HOẶC trùng tên phụ trách GetFly
+  const ofWho = (r) => who === 'all' ? true : (r.telesale_id === who || (r.manager_name && whoName && r.manager_name.trim().toLowerCase() === whoName.trim().toLowerCase()));
+
+  // CUỘC GỌI = note GetFly trong ngày (mỗi note = 1 cuộc) + nhật ký gọi trong app
+  const inAppCalls = acts.filter(a => a.type === 'call');
+  const inAppIds = new Set(inAppCalls.map(a => a.data_id));
+  const gfCalls = rows.filter(r => ofWho(r) && r.last_exchange && dayKey(r.getfly_updated_at) === day && !inAppIds.has(r.id));
+  const callRows = [
+    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name })),
+    ...gfCalls.map(r => ({ time: r.getfly_updated_at, name: r.customer_name || '—', phone: r.phone, content: r.last_exchange, author: r.manager_name, gf: true })),
+  ].sort((a, b) => new Date(a.time) - new Date(b.time));
+
+  // SỐ MỚI = khách được tạo trong ngày
+  const newRows = rows.filter(r => ofWho(r) && dayKey(arrivedAt(r)) === day);
+  const isCalled = (r) => inAppIds.has(r.id) || (r.last_exchange && dayKey(r.getfly_updated_at) === day);
+  const newCalled = newRows.filter(isCalled);
   const cares = acts.filter(a => a.type === 'care');
-  const byOutcome = {}; calls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
-  const customers = new Set(acts.map(a => a.data_id)).size;
   const nextCnt = acts.filter(a => a.next_at).length;
-  const byPerson = {};
-  acts.forEach(a => { const k = a.author?.full_name || '—'; const o = byPerson[k] = byPerson[k] || { calls: 0, cares: 0, cust: new Set() }; if (a.type === 'call') o.calls++; else o.cares++; o.cust.add(a.data_id); });
 
   const copyReport = () => {
     const d = new Date(day + 'T12:00:00').toLocaleDateString('vi-VN');
-    const lines = [`📋 BÁO CÁO TELESALE NGÀY ${d}`];
-    if (who === 'all') {
-      Object.entries(byPerson).forEach(([name, o]) => lines.push(`• ${name}: ${o.calls} cuộc gọi · ${o.cares} chăm sóc · ${o.cust.size} khách`));
-      lines.push(`—— Tổng: ${calls.length} cuộc gọi · ${cares.length} chăm sóc · ${customers} khách · ${nextCnt} hẹn liên hệ lại`);
-    } else {
-      const name = who === me?.id ? (me?.full_name || 'Tôi') : (teleStaff.find(t => t.id === who)?.full_name || '');
-      lines.push(`Nhân sự: ${name}`);
-      lines.push(`• Tổng cuộc gọi: ${calls.length}`);
-      Object.entries(byOutcome).forEach(([k, v]) => lines.push(`   - ${OUTCOMES[k]?.label || k}: ${v}`));
-      lines.push(`• Chăm sóc: ${cares.length}`);
-      lines.push(`• Khách đã tương tác: ${customers}`);
-      lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
+    const lines = [`📋 BÁO CÁO TELESALE NGÀY ${d}${whoName ? ' — ' + whoName : ''}`];
+    lines.push(`• Cuộc gọi trong ngày: ${callRows.length}`);
+    lines.push(`• Số mới tiếp nhận: ${newRows.length} (đã gọi ${newCalled.length} · chưa gọi ${newRows.length - newCalled.length})`);
+    if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
+    if (nextCnt) lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
+    if (callRows.length) {
+      lines.push('', '—— CHI TIẾT CUỘC GỌI ——');
+      callRows.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`));
+    }
+    const notCalled = newRows.filter(r => !isCalled(r));
+    if (notCalled.length) {
+      lines.push('', '—— SỐ MỚI CHƯA GỌI ——');
+      notCalled.slice(0, 100).forEach((r, i) => lines.push(`${i + 1}. ${r.customer_name || '—'} · ${r.phone}`));
     }
     navigator.clipboard?.writeText(lines.join('\n'));
     toast.success('Đã copy báo cáo — dán vào Zalo/nhóm để gửi');
   };
 
   return (
-    <Modal title="Báo cáo ngày — Telesale" onClose={onClose}>
-      <div className="flex gap-2 mb-3 flex-wrap">
-        <input type="date" value={day} onChange={e => setDay(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
-        {!isTele && (
-          <select value={who} onChange={e => setWho(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none flex-1 min-w-[140px]">
-            <option value="all">Tất cả telesale</option>
-            {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-          </select>
-        )}
-      </div>
+    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="px-4 sm:px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white sm:rounded-t-2xl rounded-t-3xl z-10">
+          <h3 className="font-bold text-slate-800">Báo cáo ngày — Telesale</h3>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+        </div>
+        <div className="p-4 sm:p-5 overflow-y-auto">
+          <div className="flex gap-2 mb-3 flex-wrap">
+            <input type="date" value={day} onChange={e => setDay(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
+            {!isTele && (
+              <select value={who} onChange={e => setWho(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none flex-1 min-w-[140px]">
+                <option value="all">Tất cả telesale</option>
+                {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+            )}
+            <button onClick={copyReport} className="ml-auto px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 inline-flex items-center gap-1.5"><Copy className="w-4 h-4" /> Copy báo cáo</button>
+          </div>
 
-      {loading ? <div className="text-center py-8 text-slate-300 text-sm">Đang tải…</div> : (
-        <>
-          {/* Tổng quan */}
-          <div className="grid grid-cols-4 gap-2 mb-3 text-center">
-            {[
-              { label: 'Cuộc gọi', value: calls.length, cls: 'bg-emerald-50 text-emerald-700' },
-              { label: 'Chăm sóc', value: cares.length, cls: 'bg-violet-50 text-violet-700' },
-              { label: 'Khách', value: customers, cls: 'bg-blue-50 text-blue-700' },
-              { label: 'Hẹn lại', value: nextCnt, cls: 'bg-amber-50 text-amber-700' },
-            ].map((c, i) => <div key={i} className={`rounded-xl py-2 ${c.cls}`}><div className="text-lg font-bold">{c.value}</div><div className="text-[10px] font-semibold">{c.label}</div></div>)}
-          </div>
-          {/* Kết quả gọi */}
-          {calls.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {Object.entries(byOutcome).map(([k, v]) => <span key={k} className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${OUTCOMES[k]?.cls || 'bg-slate-100 text-slate-500'}`}>{OUTCOMES[k]?.label || k}: {v}</span>)}
-            </div>
+          {loading ? <div className="text-center py-8 text-slate-300 text-sm">Đang tải…</div> : (
+            <>
+              {/* Tổng quan */}
+              <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+                {[
+                  { label: 'Cuộc gọi', value: callRows.length, cls: 'bg-emerald-50 text-emerald-700' },
+                  { label: 'Số mới', value: newRows.length, cls: 'bg-blue-50 text-blue-700' },
+                  { label: 'Mới đã gọi', value: newCalled.length, cls: 'bg-teal-50 text-teal-700' },
+                  { label: 'Mới chưa gọi', value: newRows.length - newCalled.length, cls: 'bg-rose-50 text-rose-700' },
+                ].map((c, i) => <div key={i} className={`rounded-xl py-2.5 ${c.cls}`}><div className="text-xl font-bold">{c.value}</div><div className="text-[10px] font-semibold">{c.label}</div></div>)}
+              </div>
+
+              {/* CHI TIẾT CUỘC GỌI — tên · sđt · gọi lúc · nội dung */}
+              <div className="text-[13px] font-bold text-slate-700 mb-1.5">📞 Chi tiết cuộc gọi ({callRows.length})</div>
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-4">
+                {callRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có cuộc gọi nào</div> :
+                  callRows.map((c, i) => (
+                    <div key={i} className="px-3 py-2 text-[12px]">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <b className="text-slate-800">{c.name}</b>
+                        <span className="text-slate-500 tabular-nums">{c.phone}</span>
+                        <span className="text-slate-400">· gọi lúc {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
+                        {who === 'all' && c.author && <span className="text-slate-400">· {c.author}</span>}
+                      </div>
+                      {c.content && <div className="text-slate-500 mt-0.5">{c.content}</div>}
+                    </div>
+                  ))}
+              </div>
+
+              {/* SỐ MỚI TIẾP NHẬN trong ngày */}
+              <div className="text-[13px] font-bold text-slate-700 mb-1.5">🆕 Số mới tiếp nhận ({newRows.length})</div>
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-2">
+                {newRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Không có số mới trong ngày</div> :
+                  newRows.map(r => (
+                    <div key={r.id} className="px-3 py-2 text-[12px] flex items-center gap-2 flex-wrap">
+                      <b className="text-slate-800">{r.customer_name || '—'}</b>
+                      <span className="text-slate-500 tabular-nums">{r.phone}</span>
+                      {r.source && <span className="text-slate-400">· {r.source}</span>}
+                      <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${isCalled(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{isCalled(r) ? '✓ Đã gọi' : 'Chưa gọi'}</span>
+                    </div>
+                  ))}
+              </div>
+            </>
           )}
-          {/* Theo từng telesale (chế độ Tất cả) */}
-          {who === 'all' && Object.keys(byPerson).length > 0 && (
-            <div className="rounded-xl border border-slate-100 divide-y divide-slate-50 mb-3">
-              {Object.entries(byPerson).map(([name, o]) => (
-                <div key={name} className="flex items-center justify-between px-3 py-2 text-[13px]">
-                  <b className="text-slate-700">{name}</b>
-                  <span className="text-slate-500">{o.calls} gọi · {o.cares} chăm sóc · {o.cust.size} khách</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {/* Chi tiết hoạt động */}
-          <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-3">
-            {acts.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có hoạt động nào trong ngày</div> :
-              acts.map(a => (
-                <div key={a.id} className="px-3 py-2 text-[12px]">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-slate-400 tabular-nums">{new Date(a.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                    <b className="text-slate-700">{a.khach?.customer_name || a.phone || '—'}</b>
-                    {a.type === 'call'
-                      ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${OUTCOMES[a.outcome]?.cls || 'bg-slate-100'}`}>{OUTCOMES[a.outcome]?.label || 'Gọi'}</span>
-                      : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Chăm sóc</span>}
-                    {who === 'all' && <span className="text-slate-400">· {a.author?.full_name}</span>}
-                  </div>
-                  {a.content && <div className="text-slate-500 mt-0.5 line-clamp-2">{a.content}</div>}
-                </div>
-              ))}
-          </div>
-          <div className="flex justify-end gap-2">
-            <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button>
-            <button onClick={copyReport} className="px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 inline-flex items-center gap-1.5"><Copy className="w-4 h-4" /> Copy báo cáo</button>
-          </div>
-        </>
-      )}
-    </Modal>
+        </div>
+      </div>
+    </div>
   );
 };
 
