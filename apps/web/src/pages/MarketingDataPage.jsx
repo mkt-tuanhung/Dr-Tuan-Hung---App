@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -17,6 +17,16 @@ const STATUS = {
   chot_fail: { label: 'Chốt Fail', cls: 'bg-orange-100 text-orange-700' },
   mat: { label: 'Mất', cls: 'bg-slate-200 text-slate-500' },
 };
+// Kết quả cuộc gọi (nhật ký gọi)
+const OUTCOMES = {
+  nghe_may: { label: 'Nghe máy', cls: 'bg-emerald-100 text-emerald-700' },
+  khong_nghe: { label: 'Không nghe máy', cls: 'bg-slate-100 text-slate-500' },
+  may_ban: { label: 'Máy bận', cls: 'bg-amber-100 text-amber-700' },
+  hen_goi_lai: { label: 'Hẹn gọi lại', cls: 'bg-blue-100 text-blue-700' },
+  can_nhac: { label: 'Đang cân nhắc', cls: 'bg-violet-100 text-violet-700' },
+  tu_choi: { label: 'Từ chối', cls: 'bg-rose-100 text-rose-700' },
+  sai_so: { label: 'Sai số / không liên lạc', cls: 'bg-slate-200 text-slate-500' },
+};
 const LABEL_TO_CODE = Object.fromEntries(Object.entries(STATUS).map(([k, v]) => [v.label.toLowerCase(), k]));
 const phoneKey = (p) => { let d = (p || '').replace(/\D/g, ''); if (d.startsWith('84')) d = '0' + d.slice(2); return d.slice(-9); };
 const APPT_STAGE = (a) => {
@@ -25,11 +35,17 @@ const APPT_STAGE = (a) => {
   return ({ scheduled: { label: 'Lịch hẹn', cls: 'bg-blue-100 text-blue-700' }, coc: { label: 'Cọc', cls: 'bg-violet-100 text-violet-700' }, bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' }, phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' }, cancelled: { label: 'Đã huỷ', cls: 'bg-slate-100 text-slate-400' } })[a.status] || { label: a.status, cls: 'bg-slate-100 text-slate-500' };
 };
 const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
+// "19:30 - 01/08"
+const fmtDT = (s) => { if (!s) return ''; const d = new Date(s); return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`; };
+const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); return d; };
+const isDue = (iso) => !!iso && new Date(iso) <= endOfToday();
+const toLocalInput = (iso) => { if (!iso) return ''; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
 
 const MarketingDataPage = () => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
-  const canWrite = ['marketing', 'truc_page', 'admin'].some(r => roles.includes(r));
+  const canWrite = ['marketing', 'truc_page', 'telesale', 'admin'].some(r => roles.includes(r));
 
   const [rows, setRows] = useState([]);
   const [apptMap, setApptMap] = useState({});
@@ -39,7 +55,8 @@ const MarketingDataPage = () => {
   const [search, setSearch] = useState('');
   const [fStatus, setFStatus] = useState('');
   const [fTruc, setFTruc] = useState('');
-  const [edit, setEdit] = useState(null);     // row đang sửa / {} khi thêm mới
+  const [edit, setEdit] = useState(null);       // thêm khách mới ({})
+  const [detail, setDetail] = useState(null);    // khách đang mở console gọi/chăm sóc
   const [importOpen, setImportOpen] = useState(false);
   const [getflyOpen, setGetflyOpen] = useState(false);
   const [chip, setChip] = useState('all');
@@ -51,7 +68,6 @@ const MarketingDataPage = () => {
       .select('*, truc_page:profiles!truc_page_id(full_name)').order('updated_at', { ascending: false }).limit(1000);
     const list = data || [];
     setRows(list);
-    // Liên kết động theo SĐT với lịch hẹn/khách
     const phones = [...new Set(list.map(r => r.phone).filter(Boolean))];
     if (phones.length) {
       const { data: appts } = await supabase.from('customer_appointments')
@@ -66,6 +82,11 @@ const MarketingDataPage = () => {
   useRealtimeReload('marketing_data', loadData);
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.truc_page,role_2.eq.truc_page').order('full_name').then(({ data }) => setStaff(data || [])); }, []);
 
+  // giữ khách đang mở đồng bộ với list sau khi ghi nhật ký
+  useEffect(() => {
+    if (detail?.id) { const fresh = rows.find(r => r.id === detail.id); if (fresh && fresh !== detail) setDetail(fresh); }
+  }, [rows]); // eslint-disable-line
+
   const del = async (r) => {
     if (!confirm('Xoá data khách này?')) return;
     setRows(p => p.filter(x => x.id !== r.id));
@@ -77,6 +98,7 @@ const MarketingDataPage = () => {
   const matchChip = (r) => {
     const a = apptOf(r);
     switch (chip) {
+      case 'can_goi': return isDue(r.next_call_at);
       case 'nong': return r.status === 'nong';
       case 'mat': return r.status === 'mat';
       case 'da_lam_dv': return r.status === 'da_lam_dv' || a?.status === 'phau_thuat';
@@ -91,26 +113,34 @@ const MarketingDataPage = () => {
   const stat = {
     total: rows.length,
     nong: rows.filter(r => r.status === 'nong').length,
+    due: rows.filter(r => isDue(r.next_call_at)).length,
     daDV: rows.filter(r => r.status === 'da_lam_dv' || apptOf(r)?.status === 'phau_thuat' || apptOf(r)?.post_op_status).length,
-    cskh: rows.filter(r => apptOf(r)?.post_op_status).length,
     mat: rows.filter(r => r.status === 'mat').length,
   };
   const totalPages = Math.max(1, Math.ceil(visible.length / 10));
   const curPage = Math.min(page, totalPages);
   const paged = visible.slice((curPage - 1) * 10, curPage * 10);
-  const CHIPS = [{ k: 'all', label: 'Tất cả' }, { k: 'nong', label: 'Nóng' }, { k: 'mat', label: 'Mất' }, { k: 'da_lam_dv', label: 'Đã làm DV' }, { k: 'cskh', label: 'CSKH' }];
+  const CHIPS = [{ k: 'all', label: 'Tất cả' }, { k: 'can_goi', label: 'Cần gọi' }, { k: 'nong', label: 'Nóng' }, { k: 'mat', label: 'Mất' }, { k: 'da_lam_dv', label: 'Đã làm DV' }, { k: 'cskh', label: 'CSKH' }];
   const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+
+  // Chip nhắc gọi lại trong danh sách
+  const DueBadge = ({ r }) => {
+    if (!r.next_call_at) return null;
+    const due = isDue(r.next_call_at);
+    return <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${due ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{due ? 'Cần gọi' : 'Gọi lại'} {fmtDT(r.next_call_at)}</span>;
+  };
 
   return (
     <div className="space-y-4">
-      {/* Header — MOBILE (xanh tối, tràn viền, có ô tìm kiếm) */}
+      {/* Header — MOBILE */}
       <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
         <div className="relative">
           <h2 className="text-2xl font-bold text-white">Data khách hàng</h2>
+          <p className="text-white/70 text-[13px] mt-0.5">Gọi · cập nhật · nhật ký gọi & chăm sóc</p>
           <div className="relative mt-3">
             <Search className="w-4 h-4 text-white/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm khách hàng, SĐT, link hệ thống…" className="w-full pl-10 pr-3 h-12 rounded-2xl bg-white/15 border border-white/20 text-white placeholder-white/60 text-sm outline-none focus:bg-white/20 transition" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm khách hàng, SĐT…" className="w-full pl-10 pr-3 h-12 rounded-2xl bg-white/15 border border-white/20 text-white placeholder-white/60 text-sm outline-none focus:bg-white/20 transition" />
           </div>
         </div>
       </div>
@@ -119,12 +149,12 @@ const MarketingDataPage = () => {
       <div className="hidden lg:flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Database className="w-6 h-6 text-teal-600" /> Data khách hàng</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Data Marketing → Lịch hẹn → Cọc/Bong → Phẫu → Hậu phẫu → CSKH (hợp nhất theo SĐT)</p>
+          <p className="text-slate-400 text-sm mt-0.5">Telesale gọi · cập nhật thông tin · ghi nhật ký gọi & nhật ký chăm sóc (hợp nhất theo SĐT)</p>
         </div>
         {canWrite && (
           <div className="flex gap-2">
             {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
-            <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>
+            {['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)) && <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>}
             <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
           </div>
         )}
@@ -134,9 +164,9 @@ const MarketingDataPage = () => {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
           { icon: Users, color: '#14b8a6', label: 'Tổng khách', value: stat.total },
+          { icon: CalendarClock, color: '#ef4444', label: 'Cần gọi hôm nay', value: stat.due },
           { icon: Flame, color: '#f43f5e', label: 'Khách nóng', value: stat.nong },
           { icon: CheckCircle2, color: '#3b82f6', label: 'Đã làm dịch vụ', value: stat.daDV },
-          { icon: Headphones, color: '#f59e0b', label: 'Cần CSKH', value: stat.cskh },
           { icon: UserX, color: '#64748b', label: 'Khách mất', value: stat.mat },
         ].map((c, i) => (
           <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
@@ -166,7 +196,7 @@ const MarketingDataPage = () => {
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {CHIPS.map(c => (
-            <button key={c.k} onClick={() => { setChip(c.k); setPage(1); }} className={`shrink-0 px-4 h-9 rounded-full text-sm font-semibold border transition ${chip === c.k ? 'bg-teal-600 text-white border-teal-600 shadow' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{c.label}</button>
+            <button key={c.k} onClick={() => { setChip(c.k); setPage(1); }} className={`shrink-0 px-4 h-9 rounded-full text-sm font-semibold border transition ${chip === c.k ? 'bg-teal-600 text-white border-teal-600 shadow' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{c.label}{c.k === 'can_goi' && stat.due > 0 && <span className={`ml-1.5 ${chip === c.k ? 'text-white/90' : 'text-rose-500'}`}>{stat.due}</span>}</button>
           ))}
         </div>
         <span className="text-xs text-slate-400 shrink-0">{visible.length} khách</span>
@@ -183,17 +213,17 @@ const MarketingDataPage = () => {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Khách hàng</th>
                   <th className="px-4 py-3 font-semibold">SĐT</th>
-                  <th className="px-4 py-3 font-semibold">Trực page</th>
                   <th className="px-4 py-3 font-semibold">Trạng thái</th>
+                  <th className="px-4 py-3 font-semibold">Nhắc gọi lại</th>
                   <th className="px-4 py-3 font-semibold">Trao đổi gần nhất</th>
-                  <th className="px-4 py-3 font-semibold">Liên kết hệ thống</th>
+                  <th className="px-4 py-3 font-semibold">Liên kết</th>
                   {canWrite && <th className="px-4 py-3 font-semibold text-right">Thao tác</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {paged.length === 0 ? <tr><td colSpan={canWrite ? 7 : 6} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
                   paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
-                    <tr key={r.id} className="hover:bg-slate-50/60">
+                    <tr key={r.id} className="hover:bg-teal-50/40 cursor-pointer" onClick={() => setDetail(r)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
@@ -201,11 +231,11 @@ const MarketingDataPage = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-600 tabular-nums">{r.phone}</td>
-                      <td className="px-4 py-3 text-slate-500">{r.truc_page?.full_name || '—'}</td>
                       <td className="px-4 py-3"><span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span></td>
+                      <td className="px-4 py-3"><DueBadge r={r} /></td>
                       <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.last_exchange}>{r.last_exchange || '—'}</td>
-                      <td className="px-4 py-3">{st ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span> : <span className="text-[11px] text-slate-300">Chưa có</span>}</td>
-                      {canWrite && <td className="px-4 py-3 text-right"><div className="flex justify-end gap-1.5"><button onClick={() => setEdit(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Sửa</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
+                      <td className="px-4 py-3">{st ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span> : <span className="text-[11px] text-slate-300">—</span>}</td>
+                      {canWrite && <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}><div className="flex justify-end gap-1.5"><a href={`tel:${r.phone}`} onClick={e => e.stopPropagation()} className="px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50 inline-flex items-center gap-1"><PhoneCall className="w-3.5 h-3.5" />Gọi</a><button onClick={() => setDetail(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Mở</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
                     </tr>); })}
               </tbody>
             </table>
@@ -213,14 +243,16 @@ const MarketingDataPage = () => {
           {/* Mobile */}
           <div className="md:hidden divide-y divide-slate-50">
             {paged.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); return (
-              <div key={r.id} className="p-3.5 flex items-center gap-3" onClick={() => canWrite && setEdit(r)}>
+              <div key={r.id} className="p-3.5 flex items-center gap-3" onClick={() => setDetail(r)}>
                 <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><div className="font-bold text-slate-800 truncate">{r.customer_name || '—'}</div><span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span></div>
-                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone}{r.truc_page?.full_name && <span className="text-slate-300">· {r.truc_page.full_name}</span>}</div>
+                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone}</div>
+                  {r.next_call_at && <div className="mt-1"><DueBadge r={r} /></div>}
                   {r.last_exchange && <div className="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 shrink-0" /> {r.last_exchange}</div>}
                   {st && <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
                 </div>
+                <a href={`tel:${r.phone}`} onClick={e => e.stopPropagation()} className="shrink-0 w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center border border-emerald-200"><PhoneCall className="w-5 h-5" /></a>
               </div>); })}
           </div>
           {/* Phân trang */}
@@ -240,6 +272,7 @@ const MarketingDataPage = () => {
         <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
       )}
 
+      {detail && <CustomerConsole row={detail} me={me} staff={staff} canWrite={canWrite} appt={apptOf(detail)} onClose={() => setDetail(null)} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
@@ -247,11 +280,228 @@ const MarketingDataPage = () => {
   );
 };
 
-// ---------- Thêm / Sửa ----------
+// ================= Console gọi & chăm sóc 1 khách =================
+const CustomerConsole = ({ row, me, staff, canWrite, appt, onClose, onChanged, onDelete }) => {
+  const [tab, setTab] = useState('call');   // 'call' | 'care' | 'info'
+  const [acts, setActs] = useState([]);
+  const [loadingActs, setLoadingActs] = useState(true);
+
+  const loadActs = useCallback(async () => {
+    setLoadingActs(true);
+    const { data } = await supabase.from('marketing_activities')
+      .select('*, author:profiles!created_by(full_name)').eq('data_id', row.id).order('created_at', { ascending: false });
+    setActs(data || []); setLoadingActs(false);
+  }, [row.id]);
+  useEffect(() => { loadActs(); }, [loadActs]);
+
+  const calls = acts.filter(a => a.type === 'call');
+  const cares = acts.filter(a => a.type === 'care');
+
+  // ----- thông tin -----
+  const [info, setInfo] = useState({
+    customer_name: row.customer_name || '', description: row.description || '',
+    reached_info: row.reached_info || '', truc_page_id: row.truc_page_id || '',
+  });
+  const [savingInfo, setSavingInfo] = useState(false);
+  const saveInfo = async () => {
+    setSavingInfo(true);
+    const { error } = await supabase.from('marketing_data').update({ ...info, truc_page_id: info.truc_page_id || null }).eq('id', row.id);
+    setSavingInfo(false);
+    if (error) return toast.error('Lỗi: ' + error.message);
+    toast.success('Đã lưu thông tin'); onChanged?.();
+  };
+  const changeStatus = async (status) => {
+    const { error } = await supabase.from('marketing_data').update({ status }).eq('id', row.id);
+    if (error) return toast.error('Lỗi: ' + error.message);
+    toast.success('Đã đổi trạng thái'); onChanged?.();
+  };
+
+  // ----- nhật ký gọi -----
+  const [call, setCall] = useState({ outcome: 'nghe_may', content: '', next: '', status: row.status || 'tiep_can' });
+  const [savingCall, setSavingCall] = useState(false);
+  const addCall = async () => {
+    if (!canWrite) return;
+    setSavingCall(true);
+    const nextIso = fromLocalInput(call.next);
+    const { error } = await supabase.from('marketing_activities').insert({
+      data_id: row.id, phone: row.phone, type: 'call', outcome: call.outcome,
+      content: call.content.trim() || null, next_at: nextIso, created_by: me.id,
+    });
+    if (!error) {
+      await supabase.from('marketing_data').update({
+        status: call.status, last_contact_at: new Date().toISOString(),
+        next_call_at: nextIso, last_exchange: `${OUTCOMES[call.outcome]?.label}${call.content ? ' · ' + call.content.trim() : ''}`,
+      }).eq('id', row.id);
+    }
+    setSavingCall(false);
+    if (error) return toast.error('Lỗi: ' + error.message);
+    toast.success('Đã lưu cuộc gọi');
+    setCall({ outcome: 'nghe_may', content: '', next: '', status: call.status });
+    loadActs(); onChanged?.();
+  };
+
+  // ----- nhật ký chăm sóc -----
+  const [care, setCare] = useState({ content: '', next: '' });
+  const [savingCare, setSavingCare] = useState(false);
+  const addCare = async () => {
+    if (!canWrite) return;
+    if (!care.content.trim()) return toast.error('Nhập nội dung chăm sóc');
+    setSavingCare(true);
+    const nextIso = fromLocalInput(care.next);
+    const { error } = await supabase.from('marketing_activities').insert({
+      data_id: row.id, phone: row.phone, type: 'care', content: care.content.trim(), next_at: nextIso, created_by: me.id,
+    });
+    if (!error) {
+      const upd = { last_contact_at: new Date().toISOString() };
+      if (nextIso) upd.next_call_at = nextIso;
+      await supabase.from('marketing_data').update(upd).eq('id', row.id);
+    }
+    setSavingCare(false);
+    if (error) return toast.error('Lỗi: ' + error.message);
+    toast.success('Đã lưu chăm sóc');
+    setCare({ content: '', next: '' }); loadActs(); onChanged?.();
+  };
+
+  const delAct = async (a) => {
+    if (!confirm('Xoá mục nhật ký này?')) return;
+    setActs(list => list.filter(x => x.id !== a.id));
+    await supabase.from('marketing_activities').delete().eq('id', a.id);
+  };
+
+  const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+  const st = APPT_STAGE(appt);
+  const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header khách */}
+        <div className="px-4 sm:px-5 py-3.5 border-b flex items-start gap-3 sticky top-0 bg-white sm:rounded-t-2xl rounded-t-3xl z-10">
+          <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(row.customer_name)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-slate-800 truncate">{row.customer_name || '(Chưa có tên)'}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-sm text-slate-500 tabular-nums">{row.phone}</span>
+              <button onClick={() => { navigator.clipboard?.writeText(row.phone || ''); toast.success('Đã copy SĐT'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
+              {st && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span>}
+            </div>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <select value={row.status} onChange={e => changeStatus(e.target.value)} disabled={!canWrite} className="text-[12px] font-semibold rounded-lg border border-slate-200 px-2 py-1 bg-white outline-none disabled:opacity-60">
+                {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+              {row.next_call_at && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isDue(row.next_call_at) ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{fmtDT(row.next_call_at)}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a href={`tel:${row.phone}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"><PhoneCall className="w-4 h-4" /><span className="hidden sm:inline">Gọi</span></a>
+            <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded-xl text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-3 sm:px-4 pt-2 border-b bg-white">
+          {TABS.map(t => (
+            <button key={t.k} onClick={() => setTab(t.k)} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border-b-2 -mb-px transition ${tab === t.k ? 'border-teal-500 text-teal-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+              <t.icon className="w-4 h-4" />{t.label}{t.n != null && <span className={`text-[10px] px-1.5 rounded-full ${tab === t.k ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-400'}`}>{t.n}</span>}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-4 sm:p-5 overflow-y-auto">
+          {/* ---- NHẬT KÝ GỌI ---- */}
+          {tab === 'call' && (
+            <div className="space-y-4">
+              {canWrite && (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-2.5">
+                  <div className="text-[13px] font-bold text-slate-600">Ghi cuộc gọi mới</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Kết quả gọi</label>
+                      <select value={call.outcome} onChange={e => setCall({ ...call, outcome: e.target.value })} className={inp}>{Object.entries(OUTCOMES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+                    <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Chuyển trạng thái</label>
+                      <select value={call.status} onChange={e => setCall({ ...call, status: e.target.value })} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+                  </div>
+                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Nội dung trao đổi</label>
+                    <textarea value={call.content} onChange={e => setCall({ ...call, content: e.target.value })} rows={2} placeholder="Khách quan tâm gì, báo giá, phản hồi…" className={inp} /></div>
+                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Hẹn gọi lại (nếu có)</label>
+                    <input type="datetime-local" value={call.next} onChange={e => setCall({ ...call, next: e.target.value })} className={inp} /></div>
+                  <button onClick={addCall} disabled={savingCall} className="w-full h-10 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCall ? 'Đang lưu…' : 'Lưu cuộc gọi'}</button>
+                </div>
+              )}
+              <Timeline items={calls} loading={loadingActs} me={me} onDelete={delAct} kind="call" />
+            </div>
+          )}
+
+          {/* ---- NHẬT KÝ CHĂM SÓC ---- */}
+          {tab === 'care' && (
+            <div className="space-y-4">
+              {canWrite && (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-2.5">
+                  <div className="text-[13px] font-bold text-slate-600">Ghi chăm sóc mới</div>
+                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Nội dung chăm sóc</label>
+                    <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Nhắn tin hỏi thăm, gửi ưu đãi, tư vấn thêm…" className={inp} /></div>
+                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Hẹn chăm sóc tiếp (nếu có)</label>
+                    <input type="datetime-local" value={care.next} onChange={e => setCare({ ...care, next: e.target.value })} className={inp} /></div>
+                  <button onClick={addCare} disabled={savingCare} className="w-full h-10 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCare ? 'Đang lưu…' : 'Lưu chăm sóc'}</button>
+                </div>
+              )}
+              <Timeline items={cares} loading={loadingActs} me={me} onDelete={delAct} kind="care" />
+            </div>
+          )}
+
+          {/* ---- THÔNG TIN ---- */}
+          {tab === 'info' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="Tên khách hàng"><input value={info.customer_name} onChange={e => setInfo({ ...info, customer_name: e.target.value })} disabled={!canWrite} className={inp} /></Field>
+                <Field label="Trực page phụ trách"><select value={info.truc_page_id} onChange={e => setInfo({ ...info, truc_page_id: e.target.value })} disabled={!canWrite} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
+              </div>
+              <Field label="Mô tả / nhu cầu"><textarea value={info.description} onChange={e => setInfo({ ...info, description: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
+              <Field label="Thông tin đã tiếp cận"><textarea value={info.reached_info} onChange={e => setInfo({ ...info, reached_info: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
+              {canWrite && (
+                <div className="flex justify-between items-center">
+                  <button onClick={onDelete} className="text-sm font-semibold text-rose-500 hover:text-rose-600 inline-flex items-center gap-1"><Trash2 className="w-4 h-4" />Xoá khách</button>
+                  <button onClick={saveInfo} disabled={savingInfo} className="px-5 h-10 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 disabled:opacity-60 inline-flex items-center gap-1.5"><Save className="w-4 h-4" />{savingInfo ? 'Đang lưu…' : 'Lưu thông tin'}</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Dòng thời gian nhật ký (gọi / chăm sóc)
+const Timeline = ({ items, loading, me, onDelete, kind }) => {
+  if (loading) return <div className="text-center py-8 text-slate-300 text-sm">Đang tải…</div>;
+  if (!items.length) return <div className="text-center py-8 text-slate-300 text-sm">{kind === 'call' ? 'Chưa có cuộc gọi nào' : 'Chưa có lần chăm sóc nào'}</div>;
+  return (
+    <div className="space-y-2">
+      {items.map(a => (
+        <div key={a.id} className="rounded-xl border border-slate-100 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {kind === 'call' && a.outcome && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${OUTCOMES[a.outcome]?.cls || 'bg-slate-100 text-slate-500'}`}>{OUTCOMES[a.outcome]?.label || a.outcome}</span>}
+              <span className="text-[11px] text-slate-400 inline-flex items-center gap-1"><Clock className="w-3 h-3" />{fmtDT(a.created_at)}</span>
+            </div>
+            {(a.created_by === me?.id || me?.role === 'admin') && <button onClick={() => onDelete(a)} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>}
+          </div>
+          {a.content && <div className="text-[13px] text-slate-700 mt-1.5 whitespace-pre-wrap break-words">{a.content}</div>}
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-[11px] text-slate-400">{a.author?.full_name || 'Nhân viên'}</span>
+            {a.next_at && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(a.next_at)}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ---------- Thêm khách mới ----------
 const EditModal = ({ row, me, staff, onClose, onSaved }) => {
   const [f, setF] = useState({
     customer_name: row.customer_name || '', phone: row.phone || '', truc_page_id: row.truc_page_id || '',
-    description: row.description || '', status: row.status || 'tiep_can', last_exchange: row.last_exchange || '', reached_info: row.reached_info || '',
+    description: row.description || '', status: row.status || 'tiep_can',
   });
   const [saving, setSaving] = useState(false);
   const save = async () => {
@@ -275,9 +525,7 @@ const EditModal = ({ row, me, staff, onClose, onSaved }) => {
         <Field label="Trực page phụ trách"><select value={f.truc_page_id} onChange={e => setF({ ...f, truc_page_id: e.target.value })} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
         <Field label="Trạng thái"><select value={f.status} onChange={e => setF({ ...f, status: e.target.value })} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></Field>
       </div>
-      <Field label="Mô tả"><textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} rows={2} className={inp} /></Field>
-      <Field label="Trao đổi gần nhất"><textarea value={f.last_exchange} onChange={e => setF({ ...f, last_exchange: e.target.value })} rows={2} className={inp} /></Field>
-      <Field label="Thông tin đã tiếp cận"><textarea value={f.reached_info} onChange={e => setF({ ...f, reached_info: e.target.value })} rows={2} className={inp} /></Field>
+      <Field label="Mô tả / nhu cầu"><textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} rows={2} className={inp} /></Field>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
@@ -316,7 +564,6 @@ const ImportModal = ({ me, onClose, onDone }) => {
         reached_info: iReach >= 0 ? (r[iReach] || '').trim() : null,
       });
     }
-    // dedupe theo phone (giữ dòng cuối)
     const byPhone = {}; out.forEach(o => { byPhone[phoneKey(o.phone)] = o; });
     setPreview(Object.values(byPhone));
   };
@@ -378,9 +625,9 @@ const ModalActions = ({ onClose, onSave, saving }) => (
 
 // ---------- Kéo dữ liệu từ GetFly CRM ----------
 const GetflyModal = ({ onClose, onDone }) => {
-  const [busy, setBusy] = useState('');       // 'probe' | 'sync' | ''
-  const [probe, setProbe] = useState(null);   // kết quả kiểm tra
-  const [result, setResult] = useState(null); // kết quả kéo thật
+  const [busy, setBusy] = useState('');
+  const [probe, setProbe] = useState(null);
+  const [result, setResult] = useState(null);
 
   const doProbe = async () => {
     setBusy('probe'); setProbe(null); setResult(null);
