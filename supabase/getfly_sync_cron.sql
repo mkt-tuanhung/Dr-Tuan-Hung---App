@@ -17,6 +17,7 @@ create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 -- Gỡ job cũ (nếu có) rồi tạo lại
+select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-5min';
 select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-1min';
 select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-full';
 
