@@ -22,16 +22,17 @@ const LIST_PATHS = [
   "/api/v5.0/accounts", "/api/v4.0/accounts", "/api/v3.0/accounts",
   "/api/accounts",
 ];
-// Nhiều kiểu tham số phân trang (GetFly mỗi bản khác nhau). {p}=trang, {s}=cỡ trang.
+// GetFly /accounts BẮT BUỘC có custom_fields. {p}=trang, {s}=cỡ trang.
 const QUERY_STYLES = [
+  "custom_fields=&page_size={s}&page={p}",
+  "custom_fields=0&page_size={s}&page={p}",
+  "custom_fields=1&page_size={s}&page={p}",
+  "custom_fields=&page={p}&page_size={s}",
+  "custom_fields=&per_page={s}&page={p}",
+  "custom_fields=&page={p}",
+  "custom_fields=",
+  "custom_fields=0",
   "page_size={s}&page={p}",
-  "page_size={s}&page_index={p}",
-  "page_size={s}&page_no={p}",
-  "per_page={s}&page={p}",
-  "limit={s}&page={p}",
-  "page_size={s}",
-  "page={p}",
-  "",
 ];
 const buildQuery = (style: string, page: number, size: number) => style.replace(/\{p\}/g, String(page)).replace(/\{s\}/g, String(size));
 
