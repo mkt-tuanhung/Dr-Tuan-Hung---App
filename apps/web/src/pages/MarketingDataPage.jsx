@@ -6,6 +6,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
+import { maskPhone } from '@/lib/phoneMask';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send } from 'lucide-react';
 
 const STATUS = {
@@ -808,9 +809,9 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       old_calls: oldCallCnt, new_calls: newCallCnt,
     },
     by_outcome: byOutcomeData, by_status: byStatusData, by_source: bySourceData,
-    calls_new: callsNew.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: true, status_label: STATUS[c.st]?.label || null, status_color: STATUS_COLORS[c.st] || null })),
-    calls_old: callsOld.slice(0, 200).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: false, status_label: STATUS[c.st]?.label || null, status_color: STATUS_COLORS[c.st] || null })),
-    news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: r.phone, source: r.source || null, called: isCalled(r), status: STATUS[r.status]?.label || r.status })),
+    calls_new: callsNew.slice(0, 200).map(c => ({ name: c.name, phone: maskPhone(c.phone), time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: true, status_label: STATUS[c.st]?.label || null, status_color: STATUS_COLORS[c.st] || null })),
+    calls_old: callsOld.slice(0, 200).map(c => ({ name: c.name, phone: maskPhone(c.phone), time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: false, status_label: STATUS[c.st]?.label || null, status_color: STATUS_COLORS[c.st] || null })),
+    news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: maskPhone(r.phone), source: r.source || null, called: isCalled(r), status: STATUS[r.status]?.label || r.status })),
   });
 
   // ẢNH POSTER QR: in kèm chữ "BÁO CÁO TELESALE NGÀY ... — DR TUẤN HÙNG"
@@ -941,8 +942,8 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
     if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
     if (nextCnt) lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
     if (share?.url) lines.push(`• Xem chi tiết: ${share.url}`);
-    if (callsNew.length) { lines.push('', `—— CUỘC GỌI KHÁCH MỚI (${callsNew.length}) ——`); callsNew.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone}${STATUS[c.st] ? ' [' + STATUS[c.st].label + ']' : ''} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
-    if (callsOld.length) { lines.push('', `—— CUỘC GỌI KHÁCH CŨ (${callsOld.length}) ——`); callsOld.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone}${STATUS[c.st] ? ' [' + STATUS[c.st].label + ']' : ''} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
+    if (callsNew.length) { lines.push('', `—— CUỘC GỌI KHÁCH MỚI (${callsNew.length}) ——`); callsNew.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${maskPhone(c.phone)}${STATUS[c.st] ? ' [' + STATUS[c.st].label + ']' : ''} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
+    if (callsOld.length) { lines.push('', `—— CUỘC GỌI KHÁCH CŨ (${callsOld.length}) ——`); callsOld.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${maskPhone(c.phone)}${STATUS[c.st] ? ' [' + STATUS[c.st].label + ']' : ''} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`)); }
     navigator.clipboard?.writeText(lines.join('\n'));
     toast.success('Đã copy báo cáo tóm tắt');
   };
@@ -1031,7 +1032,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
                         <div key={i} className="px-3 py-2 text-[12px]">
                           <div className="flex items-center gap-2 flex-wrap">
                             <b className="text-slate-800">{c.name}</b>
-                            <span className="text-slate-500 tabular-nums">{c.phone}</span>
+                            <span className="text-slate-500 tabular-nums">{maskPhone(c.phone)}</span>
                             <span className="text-slate-400">· {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                             {c.st && STATUS[c.st] && <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: STATUS_COLORS[c.st] || '#94a3b8' }}>{STATUS[c.st].label}</span>}
                             {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
@@ -1051,7 +1052,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
                   newRows.map(r => (
                     <div key={r.id} className="px-3 py-2 text-[12px] flex items-center gap-2 flex-wrap">
                       <b className="text-slate-800">{r.customer_name || '—'}</b>
-                      <span className="text-slate-500 tabular-nums">{r.phone}</span>
+                      <span className="text-slate-500 tabular-nums">{maskPhone(r.phone)}</span>
                       {r.source && <span className="text-slate-400">· {r.source}</span>}
                       <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${isCalled(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{isCalled(r) ? <span className="inline-flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />Đã gọi</span> : 'Chưa gọi'}</span>
                     </div>
