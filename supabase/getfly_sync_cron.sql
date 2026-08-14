@@ -1,0 +1,51 @@
+-- ============================================================
+-- TỰ ĐỘNG đồng bộ GetFly -> Data khách hàng (không cần bấm nút)
+--   1) MỖI 5 PHÚT : quét 2 trang MỚI NHẤT (400 khách mới nhất — GetFly sắp
+--      id DESC nên khách mới luôn nằm đầu) -> khách mới lên GetFly tối đa
+--      ~5 phút là có trong app (app realtime, tự hiện không cần reload).
+--   2) MỖI ĐÊM 2h SÁNG (giờ VN): kéo FULL toàn bộ để đồng bộ cả các khách
+--      cũ bị sửa tên/thông tin trên GetFly.
+--
+-- Trước khi chạy:
+--   1) Deploy function: supabase functions deploy getfly-sync
+--      (secrets GETFLY_DOMAIN + GETFLY_API_KEY đã đặt)
+--   2) THAY <PROJECT_REF> và <ANON_KEY>:
+--      <PROJECT_REF>: vd https://wlblywjdghjwwuumzecc.supabase.co -> wlblywjdghjwwuumzecc
+--      <ANON_KEY>   : Project Settings -> API -> anon public key
+-- Chạy trong Supabase SQL Editor. Idempotent.
+-- ============================================================
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+-- Gỡ job cũ (nếu có) rồi tạo lại
+select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-5min';
+select cron.unschedule(jobid) from cron.job where jobname = 'getfly-sync-full';
+
+-- 1) Mỗi 5 phút: kéo 2 trang khách mới nhất
+select cron.schedule(
+  'getfly-sync-5min',
+  '*/5 * * * *',
+  $$
+  select net.http_post(
+    url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/getfly-sync',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer <ANON_KEY>'),
+    body    := '{"max_pages": 2, "page_size": 200}'::jsonb
+  );
+  $$
+);
+
+-- 2) Mỗi đêm 2h sáng VN (19:00 UTC): kéo FULL toàn bộ
+select cron.schedule(
+  'getfly-sync-full',
+  '0 19 * * *',
+  $$
+  select net.http_post(
+    url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/getfly-sync',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer <ANON_KEY>'),
+    body    := '{}'::jsonb
+  );
+  $$
+);
+
+-- Kiểm tra:
+--   select jobname, schedule, active from cron.job where jobname like 'getfly%';

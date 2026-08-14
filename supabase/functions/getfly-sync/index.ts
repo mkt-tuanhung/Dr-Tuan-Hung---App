@@ -3,11 +3,18 @@
 // Kéo khách từ GetFly /api/v6.1/accounts -> marketing_data (hợp nhất theo SĐT).
 //
 // Đã xác nhận bằng curl thật:
-//   GET https://<domain>/api/v6.1/accounts?fields=...&limit=..&offset=..
-//   Header X-API-KEY. BẮT BUỘC truyền fields= (không truyền -> lỗi custom_fields).
+//   GET ?fields=...&limit=..&offset=.. — header X-API-KEY — phân trang has_more.
 //   SĐT: phone_office (cấp khách) hoặc contacts[].phone_home.
-//   Phân trang: has_more + offset (không có total_page).
+//   Danh sách sắp theo id DESC (khách MỚI NHẤT trước) -> đồng bộ định kỳ chỉ
+//   cần quét vài trang đầu là bắt được khách mới.
 //
+// Gọi:
+//   {}                     -> kéo FULL (mặc định tối đa 300 trang x 200 = 60.000 khách)
+//   { max_pages: 2 }       -> kéo nhanh N trang đầu (dùng cho cron 5 phút)
+//   { probe: true }        -> kiểm tra kết nối + xem trước, không ghi
+//   { start_page: 51 }     -> kéo tiếp từ trang 51 (nếu lần trước chưa hết)
+//
+// Ghi theo LÔ (1 upsert / trang 200 khách) -> kéo full rất nhanh.
 // Secrets: GETFLY_DOMAIN, GETFLY_API_KEY, (tuỳ chọn) GETFLY_LIST_PATH
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -22,7 +29,6 @@ function json(body: unknown, status = 200) {
 }
 
 const LIST_PATHS = ["/api/v6.1/accounts", "/api/v6.0/accounts", "/api/v6.2/accounts"];
-// Trường lấy về — theo available_fields của GetFly.
 const FIELDS = "id,account_code,account_name,description,phone_office,email,account_source,created_at,contacts";
 const QUERY_STYLES = [
   `fields=${FIELDS}&limit={s}&offset={o}`,
@@ -83,10 +89,8 @@ async function call(domain: string, apiKey: string, path: string, style: string,
   const msg = String(d?.message ?? d?.msg ?? "");
   const routeMissing = /not found|route/i.test(msg);
   const records = extractRecords(d);
-  const hasMore = d?.has_more === true;                  // GetFly phân trang bằng has_more
-  const totalPage = Number(d?.total_page ?? d?.data?.total_page ?? 0) || 0;
-  const totalRecord = Number(d?.total_record ?? d?.data?.total_record ?? d?.total ?? 0) || 0;
-  return { status: r.status, ok: r.ok && !routeMissing, msg, data: d, records, hasMore, totalPage, totalRecord, snippet: text.slice(0, 140) };
+  const hasMore = d?.has_more === true;
+  return { status: r.status, ok: r.ok && !routeMissing, msg, data: d, records, hasMore, snippet: text.slice(0, 140) };
 }
 
 async function detect(domain: string, apiKey: string): Promise<{ path: string | null; style: string | null; tries: any[] }> {
@@ -115,7 +119,9 @@ Deno.serve(async (req) => {
     if (!apiKey) return json({ ok: false, error: "Chưa cấu hình GETFLY_API_KEY" });
 
     const body = await req.json().catch(() => ({}));
-    const pageSize = Math.min(Number(body.page_size) || 100, 200);
+    const pageSize = Math.min(Number(body.page_size) || 200, 500);   // 200/trang cho kéo nhanh
+    const maxPages = Math.min(Number(body.max_pages) || 300, 1000);  // full: tới 60.000 khách
+    const startPage = Math.max(Number(body.start_page) || 1, 1);
 
     const { path, style, tries } = await detect(domain, apiKey);
     if (!path || !style) {
@@ -125,7 +131,7 @@ Deno.serve(async (req) => {
 
     // ---- KIỂM TRA: xem trước map, không ghi ----
     if (body.probe) {
-      const res = await call(domain, apiKey, path, style, 1, Math.min(pageSize, 5));
+      const res = await call(domain, apiKey, path, style, 1, 5);
       const sample = res.records.slice(0, 3).map((c: Record<string, any>) => ({
         customer_name: pick(c, ["account_name", "client_name", "name", "full_name"]),
         phone: findPhone(c), description: buildDescription(c),
@@ -133,32 +139,53 @@ Deno.serve(async (req) => {
       return json({ ok: true, probe: true, path, style, has_more: res.hasMore, count_page1: res.records.length, sample });
     }
 
-    // ---- KÉO THẬT: lặp theo has_more + offset ----
+    // ---- KÉO: ghi theo LÔ (1 upsert / trang) ----
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const maxPages = Math.min(Number(body.max_pages) || 300, 1000);
-    let page = 1, scanned = 0, upserted = 0, skippedNoPhone = 0, failed = 0;
+    let page = startPage, pagesDone = 0, scanned = 0, upserted = 0, skippedNoPhone = 0, failed = 0;
+    let stoppedEarly = false;
     const seen = new Set<string>();
+    const started = Date.now();
+    const TIME_BUDGET_MS = 110_000; // dừng an toàn trước giới hạn chạy của edge function
+
     for (;;) {
       const res = await call(domain, apiKey, path, style, page, pageSize);
       if (res.status !== 200 || !res.records.length) break;
+
+      const rows: Record<string, unknown>[] = [];
       for (const c of res.records) {
         scanned++;
         const phone = findPhone(c);
         if (!phone) { skippedNoPhone++; continue; }
-        if (seen.has(phone)) continue;
+        if (seen.has(phone)) continue;   // trùng trong cùng đợt kéo
         seen.add(phone);
-        const name = pick(c, ["account_name", "client_name", "name", "full_name"]) || null;
-        const description = buildDescription(c) || null;
-        // Chỉ set tên + mô tả -> giữ nguyên trạng thái & người phụ trách đã gán tay.
-        const { error } = await sb.from("marketing_data").upsert({ phone, customer_name: name, description }, { onConflict: "phone" });
-        if (error) { failed++; console.error("upsert fail", phone, error.message); } else upserted++;
+        rows.push({
+          phone,
+          customer_name: pick(c, ["account_name", "client_name", "name", "full_name"]) || null,
+          description: buildDescription(c) || null,
+        });
       }
-      if (!res.hasMore || page >= maxPages) break;   // hết dữ liệu theo has_more
+      if (rows.length) {
+        // Chỉ set tên + mô tả -> giữ nguyên trạng thái & người phụ trách đã gán tay.
+        const { error } = await sb.from("marketing_data").upsert(rows, { onConflict: "phone" });
+        if (error) { failed += rows.length; console.error("batch upsert fail", page, error.message); }
+        else upserted += rows.length;
+      }
+      pagesDone++;
+
+      if (!res.hasMore) break;                                   // đã hết dữ liệu
+      if (pagesDone >= maxPages) { stoppedEarly = true; break; } // chạm trần trang
+      if (Date.now() - started > TIME_BUDGET_MS) { stoppedEarly = true; break; } // hết giờ an toàn
       page++;
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 120));
     }
 
-    return json({ ok: true, path, style, scanned, upserted, skipped_no_phone: skippedNoPhone, failed, pages: page });
+    return json({
+      ok: true, path, style, scanned, upserted, skipped_no_phone: skippedNoPhone, failed,
+      pages: pagesDone, from_page: startPage,
+      // Chưa hết dữ liệu -> gọi lại với start_page này để kéo tiếp
+      next_page: stoppedEarly ? page + 1 : null,
+      done: !stoppedEarly,
+    });
   } catch (e) {
     console.error("getfly-sync error", e);
     return json({ ok: false, error: String((e as Error)?.message || e) });
