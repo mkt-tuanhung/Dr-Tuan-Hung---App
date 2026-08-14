@@ -4,14 +4,15 @@
 // (bảng marketing_data), hợp nhất theo SỐ ĐIỆN THOẠI (trùng thì cập nhật
 // tên/mô tả, KHÔNG ghi đè trạng thái & trực page đã gán tay).
 //
-// Secrets cần đặt (Supabase → Project Settings → Edge Functions → Secrets):
-//   GETFLY_DOMAIN   = drtuanhung.getflycrm.com   (chỉ tên miền, không http://)
-//   GETFLY_API_KEY  = <API Key lấy ở Getfly: Cài đặt → Tích hợp → Getfly API Key>
+// Secrets (Supabase → Project Settings → Edge Functions → Secrets):
+//   GETFLY_DOMAIN    = drtuanhung.getflycrm.com   (chỉ tên miền, không http://)
+//   GETFLY_API_KEY   = <API Key: Getfly → Cài đặt → Tích hợp → Getfly API Key>
+//   GETFLY_LIST_PATH = (tuỳ chọn) route lấy danh sách, vd /api/client/gets
+//                      — nếu để trống, function TỰ DÒ trong probe.
 //
 // Gọi:
-//   { probe: true }  -> kéo thử 1 trang, TRẢ VỀ dữ liệu thô để soi tên trường (KHÔNG ghi)
-//   {}               -> kéo hết, upsert vào marketing_data theo phone
-//   { max_pages: 5 } -> giới hạn số trang (mặc định 100)
+//   { probe: true } -> TỰ DÒ route đúng + trả dữ liệu thô (KHÔNG ghi)
+//   {}              -> kéo hết, upsert vào marketing_data theo phone
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -24,7 +25,17 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 }
 
-// Chuẩn hoá SĐT VN: bỏ ký tự thừa, 84xxxx -> 0xxxx.
+// Các route lấy danh sách khách khả dĩ của GetFly (thử lần lượt tới khi trúng).
+const LIST_PATHS = [
+  "/api/client/gets",
+  "/api/client/list",
+  "/api/client",
+  "/api/clients",
+  "/api/customer/gets",
+  "/api/customer/list",
+  "/api/client/getlist",
+];
+
 function normPhone(raw: unknown): string {
   let d = String(raw ?? "").replace(/\D/g, "");
   if (!d) return "";
@@ -32,7 +43,6 @@ function normPhone(raw: unknown): string {
   if (!d.startsWith("0") && d.length === 9) d = "0" + d;
   return d;
 }
-// Lấy field đầu tiên có giá trị trong nhiều tên khả dĩ (GetFly đặt tên khác nhau tuỳ bản).
 function pick(obj: Record<string, any>, keys: string[]): string {
   for (const k of keys) {
     const v = obj?.[k];
@@ -40,7 +50,6 @@ function pick(obj: Record<string, any>, keys: string[]): string {
   }
   return "";
 }
-// Tìm SĐT ở cấp khách hoặc trong danh bạ liên hệ (contacts).
 function findPhone(c: Record<string, any>): string {
   const direct = normPhone(pick(c, ["phone", "mobile", "phone_mobile", "tel", "hotline"]));
   if (direct) return direct;
@@ -64,18 +73,44 @@ function buildDescription(c: Record<string, any>): string {
   if (note) parts.push(note);
   return parts.join(" · ") || "";
 }
+// Dò mảng khách trong nhiều dạng response khác nhau của GetFly.
+function extractRecords(d: any): any[] {
+  const cands = [d?.records, d?.data?.records, d?.data?.clients, d?.clients, d?.data?.data, Array.isArray(d?.data) ? d.data : null, Array.isArray(d) ? d : null];
+  for (const c of cands) if (Array.isArray(c)) return c;
+  return [];
+}
+function extractTotalPage(d: any): number {
+  return Number(d?.total_page ?? d?.data?.total_page ?? d?.total_pages ?? d?.data?.total_pages ?? d?.data?.total_pages_count ?? 1) || 1;
+}
 
-async function fetchPage(domain: string, apiKey: string, page: number, pageSize: number) {
-  const url = `https://${domain}/api/client/list?page=${page}&page_size=${pageSize}`;
+// Gọi 1 route + phân trang. Gửi API key ở CẢ header lẫn query cho chắc.
+async function callList(domain: string, apiKey: string, path: string, page: number, pageSize: number) {
+  const url = `https://${domain}${path}?page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(apiKey)}`;
   const r = await fetch(url, { headers: { "X-API-KEY": apiKey, "Accept": "application/json" } });
   const text = await r.text();
   let d: any = {};
-  try { d = JSON.parse(text); } catch { /* để nguyên */ }
-  if (!r.ok) throw new Error(d?.message || d?.msg || `GetFly HTTP ${r.status}: ${text.slice(0, 200)}`);
-  // GetFly trả nhiều dạng khác nhau -> dò mảng khách + tổng trang.
-  const records = d.records || d.data?.records || d.data?.clients || d.clients || (Array.isArray(d.data) ? d.data : []) || [];
-  const totalPage = Number(d.total_page ?? d.data?.total_page ?? d.total_pages ?? d.data?.total_pages ?? 1) || 1;
-  return { records: Array.isArray(records) ? records : [], totalPage, raw: d };
+  try { d = JSON.parse(text); } catch { /* HTML/redirect */ }
+  const routeMissing = typeof (d?.message ?? d?.msg) === "string" && /not found|route|404/i.test(String(d?.message ?? d?.msg));
+  const ok = r.ok && !routeMissing;
+  return { status: r.status, ok, data: d, records: ok ? extractRecords(d) : [], totalPage: extractTotalPage(d), snippet: text.slice(0, 160) };
+}
+
+// Tìm route trả về danh sách hợp lệ (ưu tiên route đã cấu hình sẵn).
+async function detectPath(domain: string, apiKey: string): Promise<{ path: string | null; tries: any[] }> {
+  const forced = (Deno.env.get("GETFLY_LIST_PATH") || "").trim();
+  const paths = forced ? [forced] : LIST_PATHS;
+  const tries: any[] = [];
+  let best: string | null = null;
+  for (const p of paths) {
+    try {
+      const res = await callList(domain, apiKey, p, 1, 2);
+      tries.push({ path: p, status: res.status, ok: res.ok, records: res.records.length, msg: res.data?.message ?? res.data?.msg ?? res.snippet });
+      if (res.ok && (res.records.length > 0 || res.status === 200)) { best = p; break; }
+    } catch (e) {
+      tries.push({ path: p, error: String((e as Error)?.message || e) });
+    }
+  }
+  return { path: best, tries };
 }
 
 Deno.serve(async (req) => {
@@ -89,50 +124,51 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const pageSize = Math.min(Number(body.page_size) || 100, 200);
 
-    // ---- Chế độ KIỂM TRA: kéo thử trang 1, trả dữ liệu thô + xem trước map (không ghi) ----
+    // ---- Dò route đúng ----
+    const { path, tries } = await detectPath(domain, apiKey);
+    if (!path) {
+      return json({ ok: false, error: "Không tìm được route API GetFly đúng — xem 'tries' để biết route/HTTP nào GetFly trả về (gửi cho kỹ thuật).", tries });
+    }
+
+    // ---- KIỂM TRA: trả dữ liệu thô + xem trước map (không ghi) ----
     if (body.probe) {
-      const { records, totalPage, raw } = await fetchPage(domain, apiKey, 1, Math.min(pageSize, 5));
-      const sample = records.slice(0, 3).map((c: Record<string, any>) => ({
+      const res = await callList(domain, apiKey, path, 1, Math.min(pageSize, 5));
+      const sample = res.records.slice(0, 3).map((c: Record<string, any>) => ({
         customer_name: pick(c, ["account_name", "client_name", "name", "full_name"]),
         phone: findPhone(c),
         description: buildDescription(c),
         _raw_keys: Object.keys(c || {}),
       }));
-      return json({ ok: true, probe: true, total_page: totalPage, count_page1: records.length, sample, raw_first: records[0] ?? null, raw_shape_keys: Object.keys(raw || {}) });
+      return json({ ok: true, probe: true, path, total_page: res.totalPage, count_page1: res.records.length, sample, raw_first: res.records[0] ?? null, tries });
     }
 
-    // ---- Chế độ KÉO THẬT ----
+    // ---- KÉO THẬT ----
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const maxPages = Math.min(Number(body.max_pages) || 100, 500);
-
-    let page = 1, totalPage = 1;
-    let scanned = 0, upserted = 0, skippedNoPhone = 0, failed = 0;
+    let page = 1, totalPage = 1, scanned = 0, upserted = 0, skippedNoPhone = 0, failed = 0;
     const seen = new Set<string>();
 
     do {
-      const res = await fetchPage(domain, apiKey, page, pageSize);
+      const res = await callList(domain, apiKey, path, page, pageSize);
+      if (!res.ok) break;
       totalPage = res.totalPage;
       for (const c of res.records) {
         scanned++;
         const phone = findPhone(c);
         if (!phone) { skippedNoPhone++; continue; }
-        if (seen.has(phone)) continue;       // trùng trong cùng đợt kéo
+        if (seen.has(phone)) continue;
         seen.add(phone);
         const name = pick(c, ["account_name", "client_name", "name", "full_name"]) || null;
         const description = buildDescription(c) || null;
-        // CHỈ set customer_name + description: KHÔNG đụng status / truc_page_id / last_exchange
-        // -> khách đã có giữ nguyên phân loại & người phụ trách đã gán tay.
-        // (status mới sẽ nhận default 'tiep_can' của bảng khi là dòng insert)
-        const { error } = await sb.from("marketing_data")
-          .upsert({ phone, customer_name: name, description }, { onConflict: "phone" });
+        const { error } = await sb.from("marketing_data").upsert({ phone, customer_name: name, description }, { onConflict: "phone" });
         if (error) { failed++; console.error("upsert fail", phone, error.message); }
         else upserted++;
       }
       page++;
-      await new Promise((r) => setTimeout(r, 200)); // giãn nhịp cho đỡ dồn request
+      await new Promise((r) => setTimeout(r, 200));
     } while (page <= totalPage && page <= maxPages);
 
-    return json({ ok: true, scanned, upserted, skipped_no_phone: skippedNoPhone, failed, pages: Math.min(totalPage, maxPages) });
+    return json({ ok: true, path, scanned, upserted, skipped_no_phone: skippedNoPhone, failed, pages: Math.min(totalPage, maxPages) });
   } catch (e) {
     console.error("getfly-sync error", e);
     return json({ ok: false, error: String((e as Error)?.message || e) });
