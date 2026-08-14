@@ -22,19 +22,21 @@ const LIST_PATHS = [
   "/api/v5.0/accounts", "/api/v4.0/accounts", "/api/v3.0/accounts",
   "/api/accounts",
 ];
-// GetFly /accounts BẮT BUỘC có custom_fields. {p}=trang, {s}=cỡ trang.
+// GetFly v6.1 /accounts: phân trang bằng offset/limit (không phải page/page_size).
+// {o}=offset, {s}=limit(cỡ trang), {p}=trang. custom_fields thường bắt buộc.
 const QUERY_STYLES = [
-  "custom_fields=&page_size={s}&page={p}",
-  "custom_fields=0&page_size={s}&page={p}",
+  "limit={s}&offset={o}",
+  "custom_fields=1&limit={s}&offset={o}",
+  "custom_fields=&limit={s}&offset={o}",
+  "custom_fields=0&limit={s}&offset={o}",
+  "limit={s}",
+  "custom_fields=1&limit={s}",
   "custom_fields=1&page_size={s}&page={p}",
-  "custom_fields=&page={p}&page_size={s}",
-  "custom_fields=&per_page={s}&page={p}",
-  "custom_fields=&page={p}",
-  "custom_fields=",
-  "custom_fields=0",
+  "custom_fields=&page_size={s}&page={p}",
   "page_size={s}&page={p}",
 ];
-const buildQuery = (style: string, page: number, size: number) => style.replace(/\{p\}/g, String(page)).replace(/\{s\}/g, String(size));
+const buildQuery = (style: string, page: number, size: number) =>
+  style.replace(/\{p\}/g, String(page)).replace(/\{s\}/g, String(size)).replace(/\{o\}/g, String((page - 1) * size));
 
 function normPhone(raw: unknown): string {
   let d = String(raw ?? "").replace(/\D/g, "");
