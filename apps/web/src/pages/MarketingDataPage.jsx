@@ -6,7 +6,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -85,6 +85,7 @@ const MarketingDataPage = () => {
   const [queue, setQueue] = useState(null);             // hàng đợi gọi: mảng id + vị trí
   const [fDay, setFDay] = useState('');                 // lọc theo NGÀY data về (YYYY-MM-DD)
   const [reportOpen, setReportOpen] = useState(false);  // Báo cáo ngày
+  const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -219,6 +220,15 @@ const MarketingDataPage = () => {
     return <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${due ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{due ? 'Cần gọi' : 'Gọi lại'} {fmtDT(r.next_call_at)}</span>;
   };
 
+  const statCards = [
+    { icon: Users, color: '#14b8a6', label: 'Tổng khách', value: stat.total },
+    { icon: CalendarClock, color: '#ef4444', label: 'Cần gọi hôm nay', value: stat.due },
+    { icon: Flame, color: '#f43f5e', label: 'Khách nóng', value: stat.nong },
+    { icon: CheckCircle2, color: '#3b82f6', label: 'Đã làm dịch vụ', value: stat.daDV },
+    { icon: UserX, color: '#64748b', label: 'Khách mất', value: stat.mat },
+  ];
+  const activeFilters = [fStatus, fTruc, fDay, (fTele && fTele !== (isTele ? 'mine' : '')) ? fTele : ''].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
       {/* Header — MOBILE */}
@@ -252,19 +262,26 @@ const MarketingDataPage = () => {
         )}
       </div>
 
-      {/* Thẻ số liệu */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { icon: Users, color: '#14b8a6', label: 'Tổng khách', value: stat.total },
-          { icon: CalendarClock, color: '#ef4444', label: 'Cần gọi hôm nay', value: stat.due },
-          { icon: Flame, color: '#f43f5e', label: 'Khách nóng', value: stat.nong },
-          { icon: CheckCircle2, color: '#3b82f6', label: 'Đã làm dịch vụ', value: stat.daDV },
-          { icon: UserX, color: '#64748b', label: 'Khách mất', value: stat.mat },
-        ].map((c, i) => (
+      {/* Thẻ số liệu — desktop */}
+      <div className="hidden lg:grid lg:grid-cols-5 gap-3">
+        {statCards.map((c, i) => (
           <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
             <div className="text-xl font-bold text-slate-800">{c.value.toLocaleString('vi-VN')}</div>
             <div className="text-xs text-slate-500 mt-0.5">{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Số liệu — mobile: dải pill cuộn ngang, gọn 1 hàng */}
+      <div className="lg:hidden -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
+        {statCards.map((c, i) => (
+          <div key={i} className="shrink-0 flex items-center gap-2 bg-white border border-slate-100 shadow-sm rounded-2xl pl-2 pr-3.5 py-2">
+            <span className="w-8 h-8 rounded-xl grid place-items-center" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-4 h-4" style={{ color: c.color }} /></span>
+            <div>
+              <div className="text-[15px] font-bold text-slate-800 leading-none tabular-nums">{c.value.toLocaleString('vi-VN')}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">{c.label}</div>
+            </div>
           </div>
         ))}
       </div>
@@ -295,15 +312,19 @@ const MarketingDataPage = () => {
         </div>
       </div>
 
-      {/* Mobile: nút Bắt đầu gọi + Báo cáo ngày */}
-      {canWrite && (
-        <div className="lg:hidden flex gap-2">
+      {/* Mobile: Bắt đầu gọi (chính) · Báo cáo · Bộ lọc */}
+      <div className="lg:hidden flex gap-2">
+        {canWrite && (
           <button onClick={buildQueue} className="flex-1 h-12 rounded-2xl bg-emerald-600 text-white font-bold text-[15px] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.99]">
             <PhoneCall className="w-5 h-5" /> Bắt đầu gọi{dueCount > 0 && <span className="bg-white/25 rounded-full px-2.5 py-0.5 text-sm">{dueCount}</span>}
           </button>
-          <button onClick={() => setReportOpen(true)} className="shrink-0 h-12 px-4 rounded-2xl border border-amber-300 text-amber-700 font-bold text-sm bg-white flex items-center gap-1.5"><FileText className="w-4 h-4" /> Báo cáo</button>
-        </div>
-      )}
+        )}
+        {canWrite && <button onClick={() => setReportOpen(true)} className="shrink-0 h-12 w-12 rounded-2xl border border-amber-300 text-amber-600 bg-white grid place-items-center active:scale-95"><FileText className="w-5 h-5" /></button>}
+        <button onClick={() => setFilterOpen(true)} className="relative shrink-0 h-12 w-12 rounded-2xl border border-slate-200 text-slate-600 bg-white grid place-items-center active:scale-95">
+          <SlidersHorizontal className="w-5 h-5" />
+          {activeFilters > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] font-bold grid place-items-center">{activeFilters}</span>}
+        </button>
+      </div>
 
       {/* Chips lọc nhanh */}
       <div className="flex items-center justify-between gap-2">
@@ -380,19 +401,33 @@ const MarketingDataPage = () => {
               </tbody>
             </table>
           </div>
-          {/* Mobile */}
+          {/* Mobile — thẻ khách: rail màu trạng thái · Gọi/Zalo 1 chạm */}
           <div className="md:hidden divide-y divide-slate-50">
-            {paged.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); return (
-              <div key={r.id} className="p-3.5 flex items-center gap-3" onClick={() => setDetail(r)}>
-                <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
+            {paged.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); const isToday = dayKey(arrivedAt(r)) === todayKey(); return (
+              <div key={r.id} className="relative flex gap-3 pl-4 pr-3 py-3 active:bg-slate-50" onClick={() => setDetail(r)}>
+                <span className="absolute left-1 top-3 bottom-3 w-1 rounded-full" style={{ background: STATUS_COLORS[r.status] || '#cbd5e1' }} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2"><div className="font-bold text-slate-800 truncate">{r.customer_name || '—'}</div><span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span></div>
-                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap"><Phone className="w-3.5 h-3.5" /> {r.phone}<span className={dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600 font-bold' : 'text-slate-300'}>· {dayKey(arrivedAt(r)) === todayKey() ? <span className="inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />Hôm nay</span> : fmtD(arrivedAt(r))}</span>{r.telesale?.full_name && <span className="text-slate-300">· {r.telesale.full_name}</span>}</div>
-                  {r.next_call_at && <div className="mt-1"><DueBadge r={r} /></div>}
-                  {r.last_exchange && <div className="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 shrink-0" /> {r.last_exchange}</div>}
-                  {st && <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
+                  <div className="flex items-center gap-1.5">
+                    <div className="font-bold text-slate-800 text-[14.5px] truncate">{r.customer_name || '—'}</div>
+                    {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
+                  </div>
+                  <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-slate-600 tabular-nums">{r.phone}</span>
+                    <span className="text-slate-300">·</span><span>{isToday ? 'Hôm nay' : fmtD(arrivedAt(r))}</span>
+                    {r.source && <><span className="text-slate-300">·</span><span className="truncate max-w-[110px]">{r.source}</span></>}
+                  </div>
+                  {r.last_exchange && <div className="text-[11.5px] text-slate-400 mt-1 line-clamp-1">{r.last_exchange}</div>}
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>
+                    <DueBadge r={r} />
+                    {st && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
+                    {r.telesale?.full_name && <span className="text-[10px] text-slate-400">{r.telesale.full_name}</span>}
+                  </div>
                 </div>
-                <a href={`tel:${r.phone}`} onClick={e => e.stopPropagation()} className="shrink-0 w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center border border-emerald-200"><PhoneCall className="w-5 h-5" /></a>
+                <div className="shrink-0 flex flex-col items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
+                  <a href={`tel:${r.phone}`} className="w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center shadow-sm active:scale-95"><PhoneCall style={{ width: 18, height: 18 }} /></a>
+                  <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 border border-blue-100 grid place-items-center text-[10.5px] font-bold active:scale-95">Zalo</a>
+                </div>
               </div>); })}
           </div>
           {/* Phân trang */}
@@ -415,6 +450,50 @@ const MarketingDataPage = () => {
       {detail && <CustomerConsole row={detail} me={me} staff={staff} teleStaff={teleStaff} canWrite={canWrite} canAssign={canAssign} appt={apptOf(detail)}
         queuePos={queue ? { i: queue.pos + 1, n: queue.ids.length } : null} onNext={queue ? queueNext : null}
         onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
+      {/* Bottom-sheet BỘ LỌC (mobile) */}
+      {filterOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end justify-center backdrop-blur-sm" onClick={() => setFilterOpen(false)}>
+          <div className="bg-white w-full rounded-t-3xl shadow-xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-teal-600" /> Bộ lọc</h3>
+              <button onClick={() => setFilterOpen(false)}><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <div className="p-5">
+              <Field label="Trạng thái">
+                <select value={fStatus} onChange={e => { setFStatus(e.target.value); setPage(1); }} className={inp}>
+                  <option value="">Mọi trạng thái</option>
+                  {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Telesale">
+                <select value={fTele} onChange={e => { setFTele(e.target.value); setPage(1); }} className={inp}>
+                  <option value="">Mọi telesale</option>
+                  <option value="mine">Của tôi</option>
+                  <option value="none">Chưa phân công</option>
+                  {teleStaff.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </Field>
+              <Field label="Trực page">
+                <select value={fTruc} onChange={e => { setFTruc(e.target.value); setPage(1); }} className={inp}>
+                  <option value="">Mọi trực page</option>
+                  {staff.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </Field>
+              <Field label="Ngày data về">
+                <div className="flex gap-2">
+                  <input type="date" value={fDay} onChange={e => { setFDay(e.target.value); setPage(1); }} className={inp} />
+                  <button onClick={() => { setFDay(fDay === todayKey() ? '' : todayKey()); setPage(1); }} className={`shrink-0 px-4 rounded-xl text-sm font-semibold border ${fDay === todayKey() ? 'bg-teal-600 text-white border-teal-600' : 'border-slate-200 text-slate-500 bg-white'}`}>Hôm nay</button>
+                </div>
+              </Field>
+              <div className="flex gap-2 mt-1">
+                <button onClick={() => { setFStatus(''); setFTruc(''); setFDay(''); setFTele(isTele ? 'mine' : ''); setPage(1); }} className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-500 font-semibold text-sm">Xoá lọc</button>
+                <button onClick={() => setFilterOpen(false)} className="flex-1 h-11 rounded-xl bg-teal-600 text-white font-bold text-sm">Xong · {visible.length.toLocaleString('vi-VN')} khách</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} rows={rows} onClose={() => setReportOpen(false)} />}
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
