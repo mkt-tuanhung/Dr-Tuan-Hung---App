@@ -444,7 +444,7 @@ const MarketingDataPage = () => {
         </div>
       )}
 
-      {canWrite && (
+      {canWrite && !detail && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
         <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
       )}
 
@@ -453,13 +453,13 @@ const MarketingDataPage = () => {
         onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
       {/* Bottom-sheet BỘ LỌC (mobile) */}
       {filterOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end justify-center backdrop-blur-sm" onClick={() => setFilterOpen(false)}>
-          <div className="bg-white w-full rounded-t-3xl shadow-xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+        <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end justify-center backdrop-blur-sm" onClick={() => setFilterOpen(false)}>
+          <div className="bg-white w-full rounded-t-3xl shadow-xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="shrink-0 px-5 py-3.5 border-b flex justify-between items-center bg-white">
               <h3 className="font-bold text-slate-800 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-teal-600" /> Bộ lọc</h3>
               <button onClick={() => setFilterOpen(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-            <div className="p-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5">
               <Field label="Trạng thái">
                 <select value={fStatus} onChange={e => { setFStatus(e.target.value); setPage(1); }} className={inp}>
                   <option value="">Mọi trạng thái</option>
@@ -597,10 +597,10 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header khách */}
-        <div className="px-4 sm:px-5 py-3.5 border-b flex items-start gap-3 sticky top-0 bg-white sm:rounded-t-2xl rounded-t-3xl z-10">
+        <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b flex items-start gap-3 bg-white">
           <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(row.customer_name)}</span>
           <div className="min-w-0 flex-1">
             <div className="font-bold text-slate-800 truncate">{row.customer_name || '(Chưa có tên)'}</div>
@@ -626,7 +626,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 px-3 sm:px-4 pt-2 border-b bg-white">
+        <div className="shrink-0 flex gap-1 px-3 sm:px-4 pt-2 border-b bg-white">
           {TABS.map(t => (
             <button key={t.k} onClick={() => setTab(t.k)} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border-b-2 -mb-px transition ${tab === t.k ? 'border-teal-500 text-teal-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
               <t.icon className="w-4 h-4" />{t.label}{t.n != null && <span className={`text-[10px] px-1.5 rounded-full ${tab === t.k ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-400'}`}>{t.n}</span>}
@@ -634,7 +634,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
           ))}
         </div>
 
-        <div className="p-4 sm:p-5 overflow-y-auto">
+        <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto">
           {/* ---- NHẬT KÝ GỌI ---- */}
           {tab === 'call' && (
             <div className="space-y-4">
@@ -949,13 +949,13 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="px-4 sm:px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white sm:rounded-t-2xl rounded-t-3xl z-10">
+    <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b flex justify-between items-center bg-white">
           <h3 className="font-bold text-slate-800">Báo cáo ngày — Telesale</h3>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
         </div>
-        <div className="p-4 sm:p-5 overflow-y-auto">
+        <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto">
           <div className="flex gap-2 mb-3 flex-wrap">
             <input type="date" value={day} onChange={e => setDay(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
             {!isTele && (
@@ -1181,7 +1181,7 @@ const ImportModal = ({ me, onClose, onDone }) => {
 // ---------- chung ----------
 const Field = ({ label, children }) => (<div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>);
 const Modal = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+  <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
     <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
       <div className="px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl"><h3 className="font-bold text-slate-800">{title}</h3><button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button></div>
       <div className="p-5">{children}</div>
