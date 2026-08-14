@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -43,6 +43,11 @@ const toLocalInput = (iso) => { if (!iso) return ''; const d = new Date(iso); re
 const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
 // Link Zalo theo SĐT (0xxx -> 84xxx)
 const zaloLink = (p) => { const d = String(p || '').replace(/\D/g, ''); return d ? `https://zalo.me/${d.startsWith('0') ? '84' + d.slice(1) : d}` : '#'; };
+// Ngày data VỀ (ưu tiên ngày tạo bên GetFly)
+const arrivedAt = (r) => r.getfly_created_at || r.created_at;
+const dayKey = (iso) => { if (!iso) return ''; const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const todayKey = () => dayKey(new Date().toISOString());
+const fmtD = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }); };
 // Độ ưu tiên gọi: tới hạn gọi lại -> nóng -> tiềm năng -> chưa gọi lần nào -> còn lại.
 const callPriority = (r) => {
   if (isDue(r.next_call_at)) return 0;
@@ -76,6 +81,8 @@ const MarketingDataPage = () => {
   const [teleStaff, setTeleStaff] = useState([]);       // danh sách telesale để phân công
   const [fTele, setFTele] = useState(isTele ? 'mine' : ''); // lọc theo telesale ('mine' = của tôi)
   const [queue, setQueue] = useState(null);             // hàng đợi gọi: mảng id + vị trí
+  const [fDay, setFDay] = useState('');                 // lọc theo NGÀY data về (YYYY-MM-DD)
+  const [reportOpen, setReportOpen] = useState(false);  // Báo cáo ngày
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -139,7 +146,8 @@ const MarketingDataPage = () => {
   const visible = rows.filter(r =>
     (!q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q)) &&
     (!fStatus || r.status === fStatus) &&
-    (!fTruc || r.truc_page_id === fTruc) && matchTele(r) && matchChip(r));
+    (!fTruc || r.truc_page_id === fTruc) &&
+    (!fDay || dayKey(arrivedAt(r)) === fDay) && matchTele(r) && matchChip(r));
 
   // Đổi trạng thái nhanh ngay trên dòng
   const quickStatus = async (r, status) => {
@@ -233,6 +241,7 @@ const MarketingDataPage = () => {
         {canWrite && (
           <div className="flex gap-2 flex-wrap">
             <button onClick={buildQueue} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 shadow-sm"><PhoneCall className="w-4 h-4" /> Bắt đầu gọi{dueCount > 0 && <span className="bg-white/25 rounded-full px-2 text-xs">{dueCount}</span>}</button>
+            <button onClick={() => setReportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-amber-300 text-amber-700 font-semibold text-sm hover:bg-amber-50"><FileText className="w-4 h-4" /> Báo cáo ngày</button>
             {canAssign && <button onClick={divideTele} disabled={dividing} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 disabled:opacity-50"><Users className="w-4 h-4" /> {dividing ? 'Đang chia…' : 'Chia đều'}</button>}
             {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
             {['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)) && <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>}
@@ -277,13 +286,21 @@ const MarketingDataPage = () => {
           <option value="none">Chưa phân công</option>
           {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
         </select>
+        <div className="flex items-center gap-1">
+          <input type="date" value={fDay} onChange={e => { setFDay(e.target.value); setPage(1); }} title="Lọc theo ngày data về" className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
+          <button onClick={() => { setFDay(fDay === todayKey() ? '' : todayKey()); setPage(1); }} className={`px-3 py-2 text-sm font-semibold rounded-xl border ${fDay === todayKey() ? 'bg-teal-600 text-white border-teal-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50 bg-white'}`}>Hôm nay</button>
+          {fDay && <button onClick={() => setFDay('')} className="w-8 h-8 grid place-items-center rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>}
+        </div>
       </div>
 
-      {/* Mobile: nút Bắt đầu gọi nổi bật */}
+      {/* Mobile: nút Bắt đầu gọi + Báo cáo ngày */}
       {canWrite && (
-        <button onClick={buildQueue} className="lg:hidden w-full h-12 rounded-2xl bg-emerald-600 text-white font-bold text-[15px] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.99]">
-          <PhoneCall className="w-5 h-5" /> Bắt đầu gọi lần lượt{dueCount > 0 && <span className="bg-white/25 rounded-full px-2.5 py-0.5 text-sm">{dueCount} cần gọi</span>}
-        </button>
+        <div className="lg:hidden flex gap-2">
+          <button onClick={buildQueue} className="flex-1 h-12 rounded-2xl bg-emerald-600 text-white font-bold text-[15px] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.99]">
+            <PhoneCall className="w-5 h-5" /> Bắt đầu gọi{dueCount > 0 && <span className="bg-white/25 rounded-full px-2.5 py-0.5 text-sm">{dueCount}</span>}
+          </button>
+          <button onClick={() => setReportOpen(true)} className="shrink-0 h-12 px-4 rounded-2xl border border-amber-300 text-amber-700 font-bold text-sm bg-white flex items-center gap-1.5"><FileText className="w-4 h-4" /> Báo cáo</button>
+        </div>
       )}
 
       {/* Chips lọc nhanh */}
@@ -307,6 +324,7 @@ const MarketingDataPage = () => {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Khách hàng</th>
                   <th className="px-4 py-3 font-semibold">SĐT</th>
+                  <th className="px-4 py-3 font-semibold">Ngày về</th>
                   <th className="px-4 py-3 font-semibold">Telesale</th>
                   <th className="px-4 py-3 font-semibold">Trạng thái</th>
                   <th className="px-4 py-3 font-semibold">Nhắc gọi lại</th>
@@ -316,7 +334,7 @@ const MarketingDataPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {paged.length === 0 ? <tr><td colSpan={canWrite ? 8 : 7} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
+                {paged.length === 0 ? <tr><td colSpan={canWrite ? 9 : 8} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
                   paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
                     <tr key={r.id} className="hover:bg-teal-50/40 cursor-pointer" onClick={() => setDetail(r)}>
                       <td className="px-4 py-3">
@@ -324,6 +342,11 @@ const MarketingDataPage = () => {
                           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
                           <div className="min-w-0"><div className="font-semibold text-slate-800 truncate">{r.customer_name || '—'}</div>{(r.source || r.description) && <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{r.source ? `${r.source}${r.description ? ' · ' + r.description : ''}` : r.description}</div>}</div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold tabular-nums ${dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600' : 'text-slate-500'}`} title={arrivedAt(r) ? new Date(arrivedAt(r)).toLocaleString('vi-VN') : ''}>
+                          {dayKey(arrivedAt(r)) === todayKey() ? '🆕 Hôm nay' : fmtD(arrivedAt(r))}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-slate-600 tabular-nums">{r.phone}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -351,7 +374,7 @@ const MarketingDataPage = () => {
                 <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><div className="font-bold text-slate-800 truncate">{r.customer_name || '—'}</div><span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100'}`}>{STATUS[r.status]?.label || r.status}</span></div>
-                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone}{r.telesale?.full_name && <span className="text-slate-300">· {r.telesale.full_name}</span>}</div>
+                  <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap"><Phone className="w-3.5 h-3.5" /> {r.phone}<span className={dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600 font-bold' : 'text-slate-300'}>· {dayKey(arrivedAt(r)) === todayKey() ? '🆕 Hôm nay' : fmtD(arrivedAt(r))}</span>{r.telesale?.full_name && <span className="text-slate-300">· {r.telesale.full_name}</span>}</div>
                   {r.next_call_at && <div className="mt-1"><DueBadge r={r} /></div>}
                   {r.last_exchange && <div className="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 shrink-0" /> {r.last_exchange}</div>}
                   {st && <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
@@ -379,6 +402,7 @@ const MarketingDataPage = () => {
       {detail && <CustomerConsole row={detail} me={me} staff={staff} teleStaff={teleStaff} canWrite={canWrite} canAssign={canAssign} appt={apptOf(detail)}
         queuePos={queue ? { i: queue.pos + 1, n: queue.ids.length } : null} onNext={queue ? queueNext : null}
         onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
+      {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} onClose={() => setReportOpen(false)} />}
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
@@ -625,6 +649,121 @@ const Timeline = ({ items, loading, me, onDelete, kind }) => {
         </div>
       ))}
     </div>
+  );
+};
+
+// ---------- BÁO CÁO NGÀY (tổng hợp từ nhật ký gọi & chăm sóc) ----------
+const DailyReportModal = ({ me, teleStaff, isTele, onClose }) => {
+  const [day, setDay] = useState(todayKey());
+  const [who, setWho] = useState(isTele ? me.id : 'all');
+  const [acts, setActs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const from = new Date(day + 'T00:00:00').toISOString();
+      const to = new Date(day + 'T23:59:59.999').toISOString();
+      let q = supabase.from('marketing_activities')
+        .select('*, author:profiles!created_by(full_name), khach:marketing_data!data_id(customer_name, phone, status)')
+        .gte('created_at', from).lte('created_at', to).order('created_at', { ascending: true });
+      if (who !== 'all') q = q.eq('created_by', who);
+      const { data } = await q;
+      setActs(data || []); setLoading(false);
+    })();
+  }, [day, who]);
+
+  const calls = acts.filter(a => a.type === 'call');
+  const cares = acts.filter(a => a.type === 'care');
+  const byOutcome = {}; calls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
+  const customers = new Set(acts.map(a => a.data_id)).size;
+  const nextCnt = acts.filter(a => a.next_at).length;
+  const byPerson = {};
+  acts.forEach(a => { const k = a.author?.full_name || '—'; const o = byPerson[k] = byPerson[k] || { calls: 0, cares: 0, cust: new Set() }; if (a.type === 'call') o.calls++; else o.cares++; o.cust.add(a.data_id); });
+
+  const copyReport = () => {
+    const d = new Date(day + 'T12:00:00').toLocaleDateString('vi-VN');
+    const lines = [`📋 BÁO CÁO TELESALE NGÀY ${d}`];
+    if (who === 'all') {
+      Object.entries(byPerson).forEach(([name, o]) => lines.push(`• ${name}: ${o.calls} cuộc gọi · ${o.cares} chăm sóc · ${o.cust.size} khách`));
+      lines.push(`—— Tổng: ${calls.length} cuộc gọi · ${cares.length} chăm sóc · ${customers} khách · ${nextCnt} hẹn liên hệ lại`);
+    } else {
+      const name = who === me?.id ? (me?.full_name || 'Tôi') : (teleStaff.find(t => t.id === who)?.full_name || '');
+      lines.push(`Nhân sự: ${name}`);
+      lines.push(`• Tổng cuộc gọi: ${calls.length}`);
+      Object.entries(byOutcome).forEach(([k, v]) => lines.push(`   - ${OUTCOMES[k]?.label || k}: ${v}`));
+      lines.push(`• Chăm sóc: ${cares.length}`);
+      lines.push(`• Khách đã tương tác: ${customers}`);
+      lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
+    }
+    navigator.clipboard?.writeText(lines.join('\n'));
+    toast.success('Đã copy báo cáo — dán vào Zalo/nhóm để gửi');
+  };
+
+  return (
+    <Modal title="Báo cáo ngày — Telesale" onClose={onClose}>
+      <div className="flex gap-2 mb-3 flex-wrap">
+        <input type="date" value={day} onChange={e => setDay(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
+        {!isTele && (
+          <select value={who} onChange={e => setWho(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none flex-1 min-w-[140px]">
+            <option value="all">Tất cả telesale</option>
+            {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+          </select>
+        )}
+      </div>
+
+      {loading ? <div className="text-center py-8 text-slate-300 text-sm">Đang tải…</div> : (
+        <>
+          {/* Tổng quan */}
+          <div className="grid grid-cols-4 gap-2 mb-3 text-center">
+            {[
+              { label: 'Cuộc gọi', value: calls.length, cls: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Chăm sóc', value: cares.length, cls: 'bg-violet-50 text-violet-700' },
+              { label: 'Khách', value: customers, cls: 'bg-blue-50 text-blue-700' },
+              { label: 'Hẹn lại', value: nextCnt, cls: 'bg-amber-50 text-amber-700' },
+            ].map((c, i) => <div key={i} className={`rounded-xl py-2 ${c.cls}`}><div className="text-lg font-bold">{c.value}</div><div className="text-[10px] font-semibold">{c.label}</div></div>)}
+          </div>
+          {/* Kết quả gọi */}
+          {calls.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {Object.entries(byOutcome).map(([k, v]) => <span key={k} className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${OUTCOMES[k]?.cls || 'bg-slate-100 text-slate-500'}`}>{OUTCOMES[k]?.label || k}: {v}</span>)}
+            </div>
+          )}
+          {/* Theo từng telesale (chế độ Tất cả) */}
+          {who === 'all' && Object.keys(byPerson).length > 0 && (
+            <div className="rounded-xl border border-slate-100 divide-y divide-slate-50 mb-3">
+              {Object.entries(byPerson).map(([name, o]) => (
+                <div key={name} className="flex items-center justify-between px-3 py-2 text-[13px]">
+                  <b className="text-slate-700">{name}</b>
+                  <span className="text-slate-500">{o.calls} gọi · {o.cares} chăm sóc · {o.cust.size} khách</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Chi tiết hoạt động */}
+          <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-3">
+            {acts.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có hoạt động nào trong ngày</div> :
+              acts.map(a => (
+                <div key={a.id} className="px-3 py-2 text-[12px]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-slate-400 tabular-nums">{new Date(a.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <b className="text-slate-700">{a.khach?.customer_name || a.phone || '—'}</b>
+                    {a.type === 'call'
+                      ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${OUTCOMES[a.outcome]?.cls || 'bg-slate-100'}`}>{OUTCOMES[a.outcome]?.label || 'Gọi'}</span>
+                      : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Chăm sóc</span>}
+                    {who === 'all' && <span className="text-slate-400">· {a.author?.full_name}</span>}
+                  </div>
+                  {a.content && <div className="text-slate-500 mt-0.5 line-clamp-2">{a.content}</div>}
+                </div>
+              ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button>
+            <button onClick={copyReport} className="px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 inline-flex items-center gap-1.5"><Copy className="w-4 h-4" /> Copy báo cáo</button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 };
 
