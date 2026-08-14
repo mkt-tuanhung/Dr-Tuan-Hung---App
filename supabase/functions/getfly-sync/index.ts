@@ -86,7 +86,8 @@ function extractTotalPage(d: any): number {
 // Gọi 1 route + phân trang. Gửi API key ở CẢ header lẫn query cho chắc.
 async function callList(domain: string, apiKey: string, path: string, page: number, pageSize: number) {
   const url = `https://${domain}${path}?page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(apiKey)}`;
-  const r = await fetch(url, { headers: { "X-API-KEY": apiKey, "Accept": "application/json" } });
+  // Gửi key theo NHIỀU kiểu để hợp mọi bản GetFly.
+  const r = await fetch(url, { headers: { "X-API-KEY": apiKey, "api_key": apiKey, "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" } });
   const text = await r.text();
   let d: any = {};
   try { d = JSON.parse(text); } catch { /* HTML/redirect */ }
@@ -127,7 +128,8 @@ Deno.serve(async (req) => {
     // ---- Dò route đúng ----
     const { path, tries } = await detectPath(domain, apiKey);
     if (!path) {
-      return json({ ok: false, error: "Không tìm được route API GetFly đúng — xem 'tries' để biết route/HTTP nào GetFly trả về (gửi cho kỹ thuật).", tries });
+      const summary = tries.map((t: any) => `${t.path}→${t.status ?? t.error ?? '?'}`).join("  ·  ");
+      return json({ ok: false, error: `Không route nào trúng (domain=${domain}). ${summary}`, tries });
     }
 
     // ---- KIỂM TRA: trả dữ liệu thô + xem trước map (không ghi) ----
