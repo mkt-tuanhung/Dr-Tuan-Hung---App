@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
+import QRCode from 'qrcode';
+import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus } from 'lucide-react';
 
 const STATUS = {
@@ -663,16 +665,18 @@ const Timeline = ({ items, loading, me, onDelete, kind }) => {
   );
 };
 
-// ---------- BÁO CÁO NGÀY — cuộc gọi (note GetFly + trong app) & số mới tiếp nhận ----------
+// ---------- BÁO CÁO NGÀY — trực quan (biểu đồ) + tải file + link/QR cho sếp ----------
 const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const [day, setDay] = useState(todayKey());
   const [who, setWho] = useState(isTele ? me.id : 'all');
-  const [acts, setActs] = useState([]);   // nhật ký gọi/chăm sóc ghi TRONG APP
+  const [acts, setActs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [share, setShare] = useState(null);      // {url, qr}
+  const [busyShare, setBusyShare] = useState(false);
 
   useEffect(() => {
     (async () => {
-      setLoading(true);
+      setLoading(true); setShare(null);
       const from = new Date(day + 'T00:00:00').toISOString();
       const to = new Date(day + 'T23:59:59.999').toISOString();
       let q = supabase.from('marketing_activities')
@@ -685,43 +689,115 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   }, [day, who]);
 
   const whoName = who === 'all' ? '' : (who === me?.id ? (me?.full_name || '') : (teleStaff.find(t => t.id === who)?.full_name || ''));
-  // Khách thuộc người được chọn: đã gán telesale trong app HOẶC trùng tên phụ trách GetFly
   const ofWho = (r) => who === 'all' ? true : (r.telesale_id === who || (r.manager_name && whoName && r.manager_name.trim().toLowerCase() === whoName.trim().toLowerCase()));
 
-  // CUỘC GỌI = note GetFly trong ngày (mỗi note = 1 cuộc) + nhật ký gọi trong app
+  const rowById = new Map(rows.map(r => [r.id, r]));
+  const isNewRow = (r) => r && dayKey(arrivedAt(r)) === day;
+
+  // CUỘC GỌI = note GetFly trong ngày + nhật ký gọi trong app
   const inAppCalls = acts.filter(a => a.type === 'call');
   const inAppIds = new Set(inAppCalls.map(a => a.data_id));
   const gfCalls = rows.filter(r => ofWho(r) && r.last_exchange && dayKey(r.getfly_updated_at) === day && !inAppIds.has(r.id));
   const callRows = [
-    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name })),
-    ...gfCalls.map(r => ({ time: r.getfly_updated_at, name: r.customer_name || '—', phone: r.phone, content: r.last_exchange, author: r.manager_name, gf: true })),
+    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name, isNew: isNewRow(rowById.get(a.data_id)) })),
+    ...gfCalls.map(r => ({ time: r.getfly_updated_at, name: r.customer_name || '—', phone: r.phone, content: r.last_exchange, author: r.manager_name, gf: true, isNew: isNewRow(r) })),
   ].sort((a, b) => new Date(a.time) - new Date(b.time));
+  const newCallCnt = callRows.filter(c => c.isNew).length;
+  const oldCallCnt = callRows.length - newCallCnt;
 
-  // SỐ MỚI = khách được tạo trong ngày
+  // SỐ MỚI + tệp khách + nguồn
   const newRows = rows.filter(r => ofWho(r) && dayKey(arrivedAt(r)) === day);
   const isCalled = (r) => inAppIds.has(r.id) || (r.last_exchange && dayKey(r.getfly_updated_at) === day);
   const newCalled = newRows.filter(isCalled);
   const cares = acts.filter(a => a.type === 'care');
   const nextCnt = acts.filter(a => a.next_at).length;
+  const pool = rows.filter(ofWho);
+  const byStatusData = Object.entries(STATUS).map(([k, v]) => ({ label: v.label, value: pool.filter(r => r.status === k).length, color: STATUS_COLORS[k] })).filter(d => d.value > 0);
+  const byOutcome = {}; inAppCalls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
+  const byOutcomeData = Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOMES[k]?.label || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' }));
+  const srcMap = {}; newRows.forEach(r => { const s = r.source || 'Khác'; srcMap[s] = (srcMap[s] || 0) + 1; });
+  const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#14b8a6', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
+
+  const buildPayload = () => ({
+    day, whoName: whoName || 'Tất cả telesale', generated_at: new Date().toISOString(),
+    stats: {
+      calls: callRows.length, new_count: newRows.length, new_called: newCalled.length,
+      new_not_called: newRows.length - newCalled.length, cares: cares.length, next_cnt: nextCnt,
+      old_calls: oldCallCnt, new_calls: newCallCnt,
+    },
+    by_outcome: byOutcomeData, by_status: byStatusData, by_source: bySourceData,
+    calls: callRows.slice(0, 300).map(c => ({ name: c.name, phone: c.phone, time: c.time, content: String(c.content || '').slice(0, 300), author: c.author || null, is_new: !!c.isNew })),
+    news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: r.phone, source: r.source || null, called: isCalled(r), status: STATUS[r.status]?.label || r.status })),
+  });
+
+  // Tạo LINK CÔNG KHAI + QR — sếp quét là vào /bao-cao/<mã>, không cần đăng nhập
+  const makeShare = async () => {
+    setBusyShare(true);
+    try {
+      const slug = Array.from(crypto.getRandomValues(new Uint8Array(14))).map(b => (b % 36).toString(36)).join('');
+      const title = `Báo cáo telesale ${new Date(day + 'T12:00:00').toLocaleDateString('vi-VN')}${whoName ? ' — ' + whoName : ''}`;
+      const { error } = await supabase.from('daily_reports').insert({ slug, day, title, payload: buildPayload(), created_by: me.id });
+      if (error) throw error;
+      const url = `${window.location.origin}/bao-cao/${slug}`;
+      const qr = await QRCode.toDataURL(url, { width: 320, margin: 1, color: { dark: '#0f2140' } });
+      setShare({ url, qr });
+      toast.success('Đã tạo link báo cáo — gửi link hoặc cho sếp quét QR');
+    } catch (e) { toast.error('Lỗi tạo link: ' + e.message + ' (đã chạy daily_reports.sql chưa?)'); }
+    setBusyShare(false);
+  };
+
+  // Tải file HTML báo cáo (mở được trên mọi máy, gửi Zalo dạng file)
+  const downloadHtml = () => {
+    const p = buildPayload();
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const bars = (data) => data.map(d => {
+      const max = Math.max(...data.map(x => x.value), 1);
+      return `<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px"><span style="width:96px;color:#64748b">${esc(d.label)}</span><div style="flex:1;height:14px;background:#f1f5f9;border-radius:99px;overflow:hidden"><div style="height:100%;width:${(d.value / max) * 100}%;background:${d.color};border-radius:99px"></div></div><b style="width:32px;text-align:right">${d.value}</b></div>`;
+    }).join('');
+    const donut = (data) => {
+      const total = data.reduce((s, d) => s + d.value, 0) || 1; let acc = 0;
+      const stops = data.map(d => { const f = acc / total * 360; acc += d.value; return `${d.color} ${f}deg ${acc / total * 360}deg`; }).join(',');
+      const legend = data.map(d => `<div style="font-size:11px;color:#475569;margin:3px 0"><span style="display:inline-block;width:10px;height:10px;border-radius:99px;background:${d.color};margin-right:6px"></span>${esc(d.label)}: <b>${d.value}</b></div>`).join('');
+      return `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><div style="width:120px;height:120px;border-radius:99px;background:conic-gradient(${stops});display:grid;place-items:center"><div style="width:86px;height:86px;border-radius:99px;background:#fff;display:grid;place-items:center;font-weight:700;font-size:18px">${total}</div></div><div>${legend}</div></div>`;
+    };
+    const tiles = [
+      ['Cuộc gọi', p.stats.calls, '#059669'], ['Số mới', p.stats.new_count, '#2563eb'],
+      ['Mới đã gọi', p.stats.new_called, '#0d9488'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
+    ].map(([l, v, c]) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px">${l}</div></div>`).join('');
+    const callList = p.calls.map(c => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.is_new ? ' · <span style="color:#059669;font-weight:700">MỚI</span>' : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`).join('');
+    const newList = p.news.map(r => `<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(r.name || '—')}</b><span style="color:#64748b">${esc(r.phone)}</span>${r.source ? `<span style="color:#94a3b8">· ${esc(r.source)}</span>` : ''}<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${r.called ? '#d1fae5' : '#ffe4e6'};color:${r.called ? '#047857' : '#be123c'}">${r.called ? 'Đã gọi' : 'Chưa gọi'}</span></div>`).join('');
+    const sec = (t, inner) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:16px;margin-bottom:12px"><div style="font-weight:700;font-size:13px;margin-bottom:10px">${t}</div>${inner}</div>`;
+    const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(p.whoName)} — Báo cáo ${new Date(p.day + 'T12:00:00').toLocaleDateString('vi-VN')}</title></head>
+<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc">
+<div style="background:linear-gradient(160deg,#0b3b34,#136b5e);color:#fff;padding:24px 16px 32px;border-radius:0 0 28px 28px"><div style="max-width:640px;margin:0 auto"><div style="font-size:10px;letter-spacing:2px;opacity:.6;font-weight:700">DR TUẤN HÙNG · TELESALE</div><div style="font-size:24px;font-weight:800;margin-top:4px">Báo cáo ngày</div><div style="opacity:.85;font-size:13px;margin-top:4px">${new Date(p.day + 'T12:00:00').toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${esc(p.whoName)}</div></div></div>
+<div style="max-width:640px;margin:-16px auto 0;padding:0 14px 40px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">${tiles}</div>
+${sec('Cuộc gọi: khách cũ ' + p.stats.old_calls + ' · khách mới ' + p.stats.new_calls, `<div style="display:flex;height:18px;border-radius:99px;overflow:hidden;background:#f1f5f9"><div style="background:#94a3b8;width:${(p.stats.old_calls / ((p.stats.old_calls + p.stats.new_calls) || 1)) * 100}%"></div><div style="background:#10b981;width:${(p.stats.new_calls / ((p.stats.old_calls + p.stats.new_calls) || 1)) * 100}%"></div></div>`)}
+${p.by_status.length ? sec('Tệp khách hàng (theo trạng thái)', donut(p.by_status)) : ''}
+${p.by_outcome.length ? sec('Kết quả cuộc gọi', bars(p.by_outcome)) : ''}
+${p.by_source.length ? sec('Số mới theo nguồn', bars(p.by_source)) : ''}
+${sec('Chi tiết cuộc gọi (' + p.calls.length + ')', callList || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
+${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
+<div style="text-align:center;color:#cbd5e1;font-size:11px">Dr Tuấn Hùng — Internal System</div>
+</div></body></html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bao-cao-telesale-${day}${whoName ? '-' + whoName.replace(/\s+/g, '') : ''}.html`;
+    a.click(); URL.revokeObjectURL(a.href);
+    toast.success('Đã tải file báo cáo — gửi file này qua Zalo cũng được');
+  };
 
   const copyReport = () => {
     const d = new Date(day + 'T12:00:00').toLocaleDateString('vi-VN');
     const lines = [`BÁO CÁO TELESALE NGÀY ${d}${whoName ? ' — ' + whoName : ''}`];
-    lines.push(`• Cuộc gọi trong ngày: ${callRows.length}`);
+    lines.push(`• Cuộc gọi trong ngày: ${callRows.length} (khách cũ ${oldCallCnt} · khách mới ${newCallCnt})`);
     lines.push(`• Số mới tiếp nhận: ${newRows.length} (đã gọi ${newCalled.length} · chưa gọi ${newRows.length - newCalled.length})`);
     if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
     if (nextCnt) lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
-    if (callRows.length) {
-      lines.push('', '—— CHI TIẾT CUỘC GỌI ——');
-      callRows.slice(0, 100).forEach((c, i) => lines.push(`${i + 1}. ${c.name} · ${c.phone} · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${String(c.content || '').slice(0, 120)}`));
-    }
-    const notCalled = newRows.filter(r => !isCalled(r));
-    if (notCalled.length) {
-      lines.push('', '—— SỐ MỚI CHƯA GỌI ——');
-      notCalled.slice(0, 100).forEach((r, i) => lines.push(`${i + 1}. ${r.customer_name || '—'} · ${r.phone}`));
-    }
+    if (share?.url) lines.push(`• Xem chi tiết: ${share.url}`);
     navigator.clipboard?.writeText(lines.join('\n'));
-    toast.success('Đã copy báo cáo — dán vào Zalo/nhóm để gửi');
+    toast.success('Đã copy báo cáo tóm tắt');
   };
 
   return (
@@ -735,17 +811,35 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
           <div className="flex gap-2 mb-3 flex-wrap">
             <input type="date" value={day} onChange={e => setDay(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
             {!isTele && (
-              <select value={who} onChange={e => setWho(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none flex-1 min-w-[140px]">
+              <select value={who} onChange={e => setWho(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none flex-1 min-w-[130px]">
                 <option value="all">Tất cả telesale</option>
                 {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
               </select>
             )}
-            <button onClick={copyReport} className="ml-auto px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 inline-flex items-center gap-1.5"><Copy className="w-4 h-4" /> Copy báo cáo</button>
           </div>
+          {/* Hàng nút: Link+QR cho sếp · Tải file · Copy */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <button onClick={makeShare} disabled={busyShare || loading} className="h-10 rounded-xl bg-teal-600 text-white font-bold text-[12.5px] hover:bg-teal-700 disabled:opacity-50 inline-flex items-center justify-center gap-1"><Link2 className="w-4 h-4" />{busyShare ? 'Đang tạo…' : 'Link + QR'}</button>
+            <button onClick={downloadHtml} disabled={loading} className="h-10 rounded-xl border border-slate-200 text-slate-600 font-bold text-[12.5px] hover:bg-slate-50 disabled:opacity-50 inline-flex items-center justify-center gap-1"><Download className="w-4 h-4" />Tải file</button>
+            <button onClick={copyReport} disabled={loading} className="h-10 rounded-xl border border-amber-300 text-amber-700 font-bold text-[12.5px] hover:bg-amber-50 disabled:opacity-50 inline-flex items-center justify-center gap-1"><Copy className="w-4 h-4" />Copy</button>
+          </div>
+
+          {/* Khối chia sẻ: QR + link */}
+          {share && (
+            <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-4 mb-4 text-center">
+              <div className="text-[13px] font-bold text-teal-800 mb-2">Sếp quét QR hoặc mở link là xem được (không cần đăng nhập)</div>
+              <img src={share.qr} alt="QR báo cáo" className="w-44 h-44 mx-auto rounded-xl border border-teal-100 bg-white" />
+              <div className="flex gap-2 mt-3">
+                <input readOnly value={share.url} className="flex-1 min-w-0 px-3 py-2 text-[12px] rounded-lg border border-teal-200 bg-white text-slate-600 outline-none" onFocus={e => e.target.select()} />
+                <button onClick={() => { navigator.clipboard?.writeText(share.url); toast.success('Đã copy link'); }} className="shrink-0 px-3 py-2 rounded-lg bg-teal-600 text-white text-[12px] font-bold hover:bg-teal-700">Copy link</button>
+                <a href={share.url} target="_blank" rel="noopener noreferrer" className="shrink-0 px-3 py-2 rounded-lg border border-teal-300 text-teal-700 text-[12px] font-bold hover:bg-teal-50">Mở</a>
+              </div>
+            </div>
+          )}
 
           {loading ? <div className="text-center py-8 text-slate-300 text-sm">Đang tải…</div> : (
             <>
-              {/* Tổng quan */}
+              {/* 4 thẻ tổng quan */}
               <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                 {[
                   { label: 'Cuộc gọi', value: callRows.length, cls: 'bg-emerald-50 text-emerald-700' },
@@ -755,27 +849,45 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
                 ].map((c, i) => <div key={i} className={`rounded-xl py-2.5 ${c.cls}`}><div className="text-xl font-bold">{c.value}</div><div className="text-[10px] font-semibold">{c.label}</div></div>)}
               </div>
 
-              {/* CHI TIẾT CUỘC GỌI — tên · sđt · gọi lúc · nội dung */}
+              {/* Khách cũ / mới */}
+              <div className="rounded-2xl border border-slate-100 p-3.5 mb-3">
+                <div className="text-[12.5px] font-bold text-slate-700 mb-2">Cuộc gọi: khách cũ · khách mới</div>
+                <div className="flex h-4 rounded-full overflow-hidden bg-slate-100 mb-1.5">
+                  <div className="bg-slate-400" style={{ width: `${(oldCallCnt / (callRows.length || 1)) * 100}%` }} />
+                  <div className="bg-emerald-500" style={{ width: `${(newCallCnt / (callRows.length || 1)) * 100}%` }} />
+                </div>
+                <div className="flex justify-between text-[11.5px] text-slate-600">
+                  <span>Khách cũ: <b>{oldCallCnt}</b></span><span>Khách mới: <b>{newCallCnt}</b></span>
+                </div>
+              </div>
+
+              {/* Tệp khách + kết quả gọi + nguồn */}
+              {byStatusData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Tệp khách hàng (theo trạng thái)</div><Donut data={byStatusData} centerLabel="khách" /></div>}
+              {byOutcomeData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Kết quả cuộc gọi</div><Bars data={byOutcomeData} /></div>}
+              {bySourceData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Số mới theo nguồn</div><Bars data={bySourceData} /></div>}
+
+              {/* Chi tiết cuộc gọi */}
               <div className="text-[13px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><PhoneCall className="w-4 h-4 text-emerald-600" /> Chi tiết cuộc gọi ({callRows.length})</div>
-              <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-4">
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-4">
                 {callRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có cuộc gọi nào</div> :
                   callRows.map((c, i) => (
                     <div key={i} className="px-3 py-2 text-[12px]">
                       <div className="flex items-center gap-2 flex-wrap">
                         <b className="text-slate-800">{c.name}</b>
                         <span className="text-slate-500 tabular-nums">{c.phone}</span>
-                        <span className="text-slate-400">· gọi lúc {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-slate-400">· {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        {c.isNew && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">MỚI</span>}
                         {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
                         {who === 'all' && c.author && <span className="text-slate-400">· {c.author}</span>}
                       </div>
-                      {c.content && <div className="text-slate-500 mt-0.5">{c.content}</div>}
+                      {c.content && <div className="text-slate-500 mt-0.5 line-clamp-2">{c.content}</div>}
                     </div>
                   ))}
               </div>
 
-              {/* SỐ MỚI TIẾP NHẬN trong ngày */}
+              {/* Số mới */}
               <div className="text-[13px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5"><UserPlus className="w-4 h-4 text-blue-600" /> Số mới tiếp nhận ({newRows.length})</div>
-              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-2">
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-50 mb-2">
                 {newRows.length === 0 ? <div className="text-center py-6 text-slate-300 text-sm">Không có số mới trong ngày</div> :
                   newRows.map(r => (
                     <div key={r.id} className="px-3 py-2 text-[12px] flex items-center gap-2 flex-wrap">
