@@ -485,14 +485,14 @@ const AppointmentManagementPage = () => {
         </div>
       </div>
 
-      {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
+      {!showCreateModal && !showEvalModal && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
         <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới' }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
 
       {/* Nút nổi (+) TÁI KHÁM cho Điều dưỡng trên mobile (desktop đã có nút riêng ở header) */}
-      {['dieu_duong', 'admin'].includes(profile?.role) && (
+      {!showCreateModal && !showEvalModal && ['dieu_duong', 'admin'].includes(profile?.role) && (
         <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ' }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-2xl shadow-orange-900/40 ring-4 ring-orange-500/20 flex items-center justify-center hover:bg-orange-600 active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
           <Stethoscope className="w-6 h-6" strokeWidth={2.5} />
         </button>
@@ -809,7 +809,7 @@ const AppointmentManagementPage = () => {
 
       {/* Modal Thêm Lịch Hẹn Mới */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
+        <div className="fixed inset-0 bg-slate-900/50 z-[70] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
           <div className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="shrink-0 px-5 py-4 flex items-center gap-3 text-white" style={{ background: 'linear-gradient(135deg,#0f5148 0%,#136b5e 100%)' }}>
