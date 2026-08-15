@@ -514,6 +514,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const [tab, setTab] = useState('call');   // 'call' | 'care' | 'info'
   const [acts, setActs] = useState([]);
   const [loadingActs, setLoadingActs] = useState(true);
+  const [apptOpen, setApptOpen] = useState(false);   // modal tạo lịch hẹn
 
   const loadActs = useCallback(async () => {
     setLoadingActs(true);
@@ -525,6 +526,19 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
 
   const calls = acts.filter(a => a.type === 'call');
   const cares = acts.filter(a => a.type === 'care');
+
+  // Gom "Nhật ký tư vấn" (nhật ký gọi + chăm sóc) thành 1 đoạn -> điền sẵn ô "tình trạng khách hàng" khi tạo lịch hẹn
+  const consultSummary = (() => {
+    const lines = [];
+    if (row.description) lines.push(row.description.trim());
+    acts.forEach(a => {
+      if (a.type !== 'call' && a.type !== 'care') return;
+      const d = a.created_at ? new Date(a.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '';
+      const label = a.type === 'call' ? (OUTCOMES[a.outcome]?.label || 'Gọi') : 'Chăm sóc';
+      lines.push(`• [${d}] ${label}${a.content ? ': ' + a.content.trim() : ''}`);
+    });
+    return lines.join('\n');
+  })();
 
   // ----- Messenger: hội thoại fanpage khớp với khách này (theo data_id hoặc SĐT) -----
   const [fbMsgs, setFbMsgs] = useState(null);   // null = đang tải
@@ -619,6 +633,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'fb', label: 'Messenger', icon: MessageCircle, n: fbMsgs?.length ?? 0 }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
 
   return (
+    <>
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4 lg:top-[57px] lg:items-stretch lg:justify-end lg:p-0 lg:bg-transparent lg:backdrop-blur-none lg:pointer-events-none" onClick={onClose}>
       <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden lg:w-[500px] xl:w-[600px] lg:max-w-none lg:max-h-none lg:h-full lg:rounded-none lg:rounded-l-2xl lg:border-l lg:border-slate-200 lg:shadow-2xl lg:pointer-events-auto" onClick={e => e.stopPropagation()}>
         {/* Header khách */}
@@ -642,6 +657,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
             {queuePos && <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap hidden sm:inline">{queuePos.i}/{queuePos.n}</span>}
             <a href={`tel:${row.phone}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"><PhoneCall className="w-4 h-4" /><span className="hidden sm:inline">Gọi</span></a>
             <a href={zaloLink(row.phone)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 h-9 rounded-xl border border-blue-200 text-blue-600 text-sm font-bold hover:bg-blue-50">Zalo</a>
+            {canWrite && <button onClick={() => setApptOpen(true)} title="Tạo lịch hẹn" className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 whitespace-nowrap"><CalendarDays className="w-4 h-4" /><span className="hidden sm:inline">Lịch hẹn</span></button>}
             {onNext && <button onClick={onNext} className="inline-flex items-center gap-1 px-3 h-9 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-700 whitespace-nowrap">Tiếp <ChevronRight className="w-4 h-4" /></button>}
             <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded-xl text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button>
           </div>
@@ -760,6 +776,8 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
         </div>
       </div>
     </div>
+    {apptOpen && <CreateApptModal row={row} me={me} teleStaff={teleStaff} defaultNotes={consultSummary} onClose={() => setApptOpen(false)} />}
+    </>
   );
 };
 
@@ -1385,6 +1403,92 @@ const MessengerSyncModal = ({ onClose, onDone }) => {
 
       <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
     </Modal>
+  );
+};
+
+// ================= Tạo lịch hẹn từ 1 khách (đẩy sang Module lịch hẹn) =================
+const CreateApptModal = ({ row, me, teleStaff = [], defaultNotes = '', onClose }) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const [f, setF] = useState({
+    appointment_date: today, appointment_time: '09:00',
+    customer_name: row.customer_name || '', phone: row.phone || '',
+    service: '', service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
+    telesale_id: row.telesale_id || '', notes: defaultNotes || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+
+  const save = async () => {
+    if (!f.customer_name.trim() || !f.appointment_date) return toast.error('Cần Tên khách và Ngày hẹn');
+    setSaving(true);
+    const { error } = await supabase.from('customer_appointments').insert({
+      customer_name: f.customer_name.trim(), phone: f.phone.trim() || null,
+      appointment_date: f.appointment_date, appointment_time: f.appointment_time,
+      service: f.service || null, test_status: 'Chưa xét nghiệm',
+      expected_bill: 0, deposit_amount: 0,
+      telesale_id: f.telesale_id || null, telesale_id_2: null, sale_id: null, social_link: '',
+      notes: f.notes || null, service_group: f.service_group, surgery_type: 'Tiểu phẫu',
+      customer_source: f.customer_source, customer_type: f.customer_type,
+      status: 'scheduled', created_by: me.id,
+    });
+    setSaving(false);
+    if (error) return toast.error('Lỗi tạo lịch: ' + error.message);
+    toast.success('Đã tạo lịch hẹn — xem ở Module lịch hẹn');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="shrink-0 px-5 py-3.5 border-b flex items-center justify-between bg-white">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><CalendarDays className="w-4 h-4 text-violet-600" /> Tạo lịch hẹn</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-5">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Ngày hẹn *"><input type="date" value={f.appointment_date} onChange={e => set('appointment_date', e.target.value)} className={inp} /></Field>
+            <Field label="Giờ hẹn"><input type="time" value={f.appointment_time} onChange={e => set('appointment_time', e.target.value)} className={inp} /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} className={inp} /></Field>
+            <Field label="Số điện thoại"><input value={f.phone} onChange={e => set('phone', e.target.value)} className={inp} /></Field>
+          </div>
+          <Field label="Dịch vụ"><input value={f.service} onChange={e => set('service', e.target.value)} placeholder="VD: Gọt hàm, nâng mũi…" className={inp} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nhóm dịch vụ">
+              <select value={f.service_group} onChange={e => set('service_group', e.target.value)} className={inp}>
+                <option>Hàm mặt</option><option>Body</option><option>Tiểu phẫu</option>
+              </select>
+            </Field>
+            <Field label="Telesale phụ trách">
+              <select value={f.telesale_id} onChange={e => set('telesale_id', e.target.value)} className={inp}>
+                <option value="">— Không —</option>
+                {teleStaff.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nguồn khách">
+              <select value={f.customer_source} onChange={e => set('customer_source', e.target.value)} className={inp}>
+                <option>Ads</option><option>CSKH</option><option>Referral</option><option>Khác</option>
+              </select>
+            </Field>
+            <Field label="Tệp khách">
+              <select value={f.customer_type} onChange={e => set('customer_type', e.target.value)} className={inp}>
+                <option>Mới</option><option>Cũ</option>
+              </select>
+            </Field>
+          </div>
+          <Field label="Tình trạng khách hàng (tự gom từ nhật ký tư vấn)">
+            <textarea rows={6} value={f.notes} onChange={e => set('notes', e.target.value)} placeholder="Tổng hợp nội dung tư vấn, mong muốn của khách…" className={`${inp} resize-none leading-relaxed`} />
+          </Field>
+        </div>
+        <div className="shrink-0 flex justify-end gap-2 px-5 py-3 border-t bg-white">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
+          <button onClick={save} disabled={saving} className="px-5 py-2 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:opacity-60 text-sm inline-flex items-center gap-1.5"><CalendarDays className="w-4 h-4" />{saving ? 'Đang tạo…' : 'Tạo lịch hẹn'}</button>
+        </div>
+      </div>
+    </div>
   );
 };
 
