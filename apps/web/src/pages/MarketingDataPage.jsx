@@ -79,6 +79,7 @@ const MarketingDataPage = () => {
   const [detail, setDetail] = useState(null);    // khách đang mở console gọi/chăm sóc
   const [importOpen, setImportOpen] = useState(false);
   const [getflyOpen, setGetflyOpen] = useState(false);
+  const [msgOpen, setMsgOpen] = useState(false);   // Kéo Messenger
   const [chip, setChip] = useState('all');
   const [page, setPage] = useState(1);
   const [teleStaff, setTeleStaff] = useState([]);       // danh sách telesale để phân công
@@ -257,6 +258,7 @@ const MarketingDataPage = () => {
             <button onClick={() => setReportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-amber-300 text-amber-700 font-semibold text-sm hover:bg-amber-50"><FileText className="w-4 h-4" /> Báo cáo ngày</button>
             {canAssign && <button onClick={divideTele} disabled={dividing} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 disabled:opacity-50"><Users className="w-4 h-4" /> {dividing ? 'Đang chia…' : 'Chia đều'}</button>}
             {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
+            {['admin', 'marketing', 'truc_page'].some(r => roles.includes(r)) && <button onClick={() => setMsgOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-sky-200 text-sky-700 font-semibold text-sm hover:bg-sky-50"><MessageCircle className="w-4 h-4" /> Kéo Messenger</button>}
             {['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)) && <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>}
             <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
           </div>
@@ -444,7 +446,7 @@ const MarketingDataPage = () => {
         </div>
       )}
 
-      {canWrite && !detail && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
+      {canWrite && !detail && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && !msgOpen && (
         <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
       )}
 
@@ -499,6 +501,7 @@ const MarketingDataPage = () => {
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
+      {msgOpen && <MessengerSyncModal onClose={() => setMsgOpen(false)} onDone={loadData} />}
     </div>
   );
 };
@@ -1302,6 +1305,71 @@ const GetflyModal = ({ onClose, onDone }) => {
             </div>
           ))}
         </div>
+      )}
+
+      <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
+    </Modal>
+  );
+};
+
+// ================= Kéo hội thoại Messenger =================
+const MessengerSyncModal = ({ onClose, onDone }) => {
+  const [busy, setBusy] = useState('');
+  const [probe, setProbe] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const doProbe = async () => {
+    setBusy('probe'); setProbe(null); setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('fb-messenger-sync', { body: { probe: true } });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Lỗi Messenger');
+      setProbe(data);
+      const bad = (data.pages || []).find(p => p.error);
+      if (bad) toast.error(`Page "${bad.page}": ${bad.error}`, { duration: 9000 });
+      else toast.success('Kết nối OK — đọc được hội thoại');
+    } catch (e) { toast.error('Messenger: ' + e.message, { duration: 9000 }); }
+    setBusy('');
+  };
+
+  const doSync = async () => {
+    if (!confirm('Kéo TOÀN BỘ hội thoại Messenger của các fanpage về? Hệ thống tự quét số điện thoại trong tin nhắn và gán vào Data khách hàng theo SĐT.')) return;
+    setBusy('sync'); setResult(null);
+    toast.loading('Đang kéo Messenger — có thể mất 1–2 phút, đừng đóng cửa sổ…', { id: 'fb-sync' });
+    try {
+      const { data, error } = await supabase.functions.invoke('fb-messenger-sync', { body: { conversations: 500, messages_per: 100 } });
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || 'Lỗi Messenger');
+      setResult(data);
+      toast.success(`Đã kéo ${data.conversations} hội thoại · ${data.messages} tin · gán SĐT ${data.linked_phone} khách${data.failed ? ` · lỗi ${data.failed}` : ''}`, { id: 'fb-sync', duration: 10000 });
+      onDone?.();
+    } catch (e) {
+      // Function chạy nền tới ~110s; nếu cổng cắt kết nối sớm vẫn có thể đã kéo được — nhắc kiểm tra lại.
+      toast.error('Kết nối bị ngắt sớm (' + e.message + '). Hội thoại có thể vẫn đang được kéo ở nền — đợi 1 phút rồi mở lại 1 khách để xem tab Messenger. Nhiều hội thoại thì bấm "Kéo về" thêm lần nữa.', { id: 'fb-sync', duration: 12000 });
+    }
+    setBusy('');
+  };
+
+  return (
+    <Modal title="Kéo hội thoại Messenger" onClose={onClose}>
+      <p className="text-[12px] text-slate-500 mb-3">Kéo toàn bộ hội thoại Messenger của các fanpage về CRM. Hệ thống <b>tự quét số điện thoại</b> trong nội dung chat và <b>gán vào Data khách hàng</b> theo SĐT. Mỗi khách có tab <b>Messenger</b> xem realtime. Nên bấm <b>Kiểm tra kết nối</b> trước.</p>
+      <div className="flex gap-2 flex-wrap">
+        <button type="button" onClick={doProbe} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">{busy === 'probe' ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}</button>
+        <button type="button" onClick={doSync} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-50"><Download className="w-4 h-4" /> {busy === 'sync' ? 'Đang kéo…' : 'Kéo về'}</button>
+      </div>
+
+      {probe && (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+          {(probe.pages || []).map((p, i) => (
+            <div key={i} className="text-[12px] border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+              <div className="font-bold text-slate-700">{p.page} {p.error ? <span className="text-rose-500 font-normal">· {p.error}</span> : <span className="text-teal-600 font-normal">· {p.conversations} hội thoại</span>}</div>
+              {(p.sample || []).map((s, j) => <div key={j} className="text-slate-500 mt-0.5 truncate"><b className="text-slate-600">{s.from}:</b> {s.text || '[đính kèm]'}</div>)}
+            </div>
+          ))}
+        </div>
+      )}
+      {result && (
+        <div className="mt-3 text-sm text-sky-700 font-semibold">Đã kéo {result.conversations} hội thoại · {result.messages} tin nhắn · gán SĐT {result.linked_phone} khách{result.failed ? ` · lỗi ${result.failed}` : ''}.</div>
       )}
 
       <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
