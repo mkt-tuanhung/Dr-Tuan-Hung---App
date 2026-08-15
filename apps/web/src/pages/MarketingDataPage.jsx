@@ -231,7 +231,7 @@ const MarketingDataPage = () => {
   const activeFilters = [fStatus, fTruc, fDay, (fTele && fTele !== (isTele ? 'mine' : '')) ? fTele : ''].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 transition-[padding] duration-200 ${detail ? 'lg:pr-[520px] xl:pr-[620px]' : ''}`}>
       {/* Header — MOBILE */}
       <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
@@ -341,8 +341,8 @@ const MarketingDataPage = () => {
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          {/* Desktop */}
-          <div className="hidden md:block overflow-auto">
+          {/* Desktop — bảng đầy đủ; khi mở panel khách thì ẩn, nhường chỗ danh sách gọn */}
+          <div className={`hidden md:block overflow-auto ${detail ? 'lg:hidden' : ''}`}>
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                 <tr>
@@ -364,7 +364,7 @@ const MarketingDataPage = () => {
               <tbody className="divide-y divide-slate-50">
                 {paged.length === 0 ? <tr><td colSpan={canWrite ? 13 : 12} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
                   paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
-                    <tr key={r.id} className="hover:bg-teal-50/40 cursor-pointer" onClick={() => setDetail(r)}>
+                    <tr key={r.id} className={`cursor-pointer ${detail?.id === r.id ? 'bg-teal-50 ring-1 ring-inset ring-teal-300' : 'hover:bg-teal-50/40'}`} onClick={() => setDetail(r)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
@@ -402,10 +402,10 @@ const MarketingDataPage = () => {
               </tbody>
             </table>
           </div>
-          {/* Mobile — thẻ khách: rail màu trạng thái · Gọi/Zalo 1 chạm */}
-          <div className="md:hidden divide-y divide-slate-50">
+          {/* Thẻ khách gọn: mobile luôn hiện; desktop hiện khi mở panel khách (danh sách bên trái) */}
+          <div className={`md:hidden divide-y divide-slate-50 ${detail ? 'lg:block' : ''}`}>
             {paged.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); const isToday = dayKey(arrivedAt(r)) === todayKey(); return (
-              <div key={r.id} className="relative flex gap-3 pl-4 pr-3 py-3 active:bg-slate-50" onClick={() => setDetail(r)}>
+              <div key={r.id} className={`relative flex gap-3 pl-4 pr-3 py-3 ${detail?.id === r.id ? 'bg-teal-50' : 'active:bg-slate-50'}`} onClick={() => setDetail(r)}>
                 <span className="absolute left-1 top-3 bottom-3 w-1 rounded-full" style={{ background: STATUS_COLORS[r.status] || '#cbd5e1' }} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
@@ -613,8 +613,8 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'fb', label: 'Messenger', icon: MessageCircle, n: fbMsgs?.length ?? 0 }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4 lg:top-[57px] lg:items-stretch lg:justify-end lg:p-0 lg:bg-transparent lg:backdrop-blur-none lg:pointer-events-none" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden lg:w-[500px] xl:w-[600px] lg:max-w-none lg:max-h-none lg:h-full lg:rounded-none lg:rounded-l-2xl lg:border-l lg:border-slate-200 lg:shadow-2xl lg:pointer-events-auto" onClick={e => e.stopPropagation()}>
         {/* Header khách */}
         <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b flex items-start gap-3 bg-white">
           <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(row.customer_name)}</span>
