@@ -1407,16 +1407,27 @@ const MessengerSyncModal = ({ onClose, onDone }) => {
 };
 
 // ================= Tạo lịch hẹn từ 1 khách (đẩy sang Module lịch hẹn) =================
-const CreateApptModal = ({ row, me, teleStaff = [], defaultNotes = '', onClose }) => {
+const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
   const today = new Date().toISOString().slice(0, 10);
   const [f, setF] = useState({
     appointment_date: today, appointment_time: '09:00',
     customer_name: row.customer_name || '', phone: row.phone || '',
-    service: '', service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
-    telesale_id: row.telesale_id || '', notes: defaultNotes || '',
+    service: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu',
+    test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '',
+    customer_source: 'Ads', customer_type: 'Mới',
+    telesale_id: row.telesale_id || '', telesale_id_2: '', sale_id: '',
+    social_link: '', notes: defaultNotes || '',
   });
+  const [staffList, setStaffList] = useState([]);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, full_name, role, role_2').eq('is_active', true).order('full_name')
+      .then(({ data }) => setStaffList(data || []));
+  }, []);
+  const telesales = staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale');
+  const sales = staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline');
 
   const save = async () => {
     if (!f.customer_name.trim() || !f.appointment_date) return toast.error('Cần Tên khách và Ngày hẹn');
@@ -1424,10 +1435,11 @@ const CreateApptModal = ({ row, me, teleStaff = [], defaultNotes = '', onClose }
     const { error } = await supabase.from('customer_appointments').insert({
       customer_name: f.customer_name.trim(), phone: f.phone.trim() || null,
       appointment_date: f.appointment_date, appointment_time: f.appointment_time,
-      service: f.service || null, test_status: 'Chưa xét nghiệm',
-      expected_bill: 0, deposit_amount: 0,
-      telesale_id: f.telesale_id || null, telesale_id_2: null, sale_id: null, social_link: '',
-      notes: f.notes || null, service_group: f.service_group, surgery_type: 'Tiểu phẫu',
+      service: f.service || null, service_group: f.service_group, surgery_type: f.surgery_type,
+      test_status: f.test_status,
+      expected_bill: Number(f.expected_bill) || 0, deposit_amount: Number(f.deposit_amount) || 0,
+      telesale_id: f.telesale_id || null, telesale_id_2: f.telesale_id_2 || null, sale_id: f.sale_id || null,
+      social_link: f.social_link || '', notes: f.notes || null,
       customer_source: f.customer_source, customer_type: f.customer_type,
       status: 'scheduled', created_by: me.id,
     });
@@ -1445,27 +1457,14 @@ const CreateApptModal = ({ row, me, teleStaff = [], defaultNotes = '', onClose }
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-5">
+          <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3">Thông tin khách hàng</div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Ngày hẹn *"><input type="date" value={f.appointment_date} onChange={e => set('appointment_date', e.target.value)} className={inp} /></Field>
-            <Field label="Giờ hẹn"><input type="time" value={f.appointment_time} onChange={e => set('appointment_time', e.target.value)} className={inp} /></Field>
+            <Field label="Giờ hẹn *"><input type="time" value={f.appointment_time} onChange={e => set('appointment_time', e.target.value)} className={inp} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} className={inp} /></Field>
             <Field label="Số điện thoại"><input value={f.phone} onChange={e => set('phone', e.target.value)} className={inp} /></Field>
-          </div>
-          <Field label="Dịch vụ"><input value={f.service} onChange={e => set('service', e.target.value)} placeholder="VD: Gọt hàm, nâng mũi…" className={inp} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Nhóm dịch vụ">
-              <select value={f.service_group} onChange={e => set('service_group', e.target.value)} className={inp}>
-                <option>Hàm mặt</option><option>Body</option><option>Tiểu phẫu</option>
-              </select>
-            </Field>
-            <Field label="Telesale phụ trách">
-              <select value={f.telesale_id} onChange={e => set('telesale_id', e.target.value)} className={inp}>
-                <option value="">— Không —</option>
-                {teleStaff.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
-              </select>
-            </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nguồn khách">
@@ -1479,6 +1478,56 @@ const CreateApptModal = ({ row, me, teleStaff = [], defaultNotes = '', onClose }
               </select>
             </Field>
           </div>
+
+          <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3 mt-2">Chi tiết dịch vụ</div>
+          <Field label="Dịch vụ"><input value={f.service} onChange={e => set('service', e.target.value)} placeholder="VD: Gọt hàm, nâng mũi…" className={inp} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nhóm dịch vụ">
+              <select value={f.service_group} onChange={e => set('service_group', e.target.value)} className={inp}>
+                <option>Hàm mặt</option><option>Body</option><option>Tiểu phẫu</option>
+              </select>
+            </Field>
+            <Field label="Loại phẫu thuật">
+              <select value={f.surgery_type} onChange={e => set('surgery_type', e.target.value)} className={inp}>
+                <option>Tiểu phẫu</option><option>Đại phẫu</option>
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Tình trạng xét nghiệm">
+              <select value={f.test_status} onChange={e => set('test_status', e.target.value)} className={inp}>
+                <option>Chưa xét nghiệm</option><option>Đã xét nghiệm</option><option>Không cần</option>
+              </select>
+            </Field>
+            <div />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Bill dự kiến (VNĐ)"><input type="number" inputMode="numeric" value={f.expected_bill} onChange={e => set('expected_bill', e.target.value)} placeholder="0" className={inp} /></Field>
+            <Field label="Đã cọc (VNĐ)"><input type="number" inputMode="numeric" value={f.deposit_amount} onChange={e => set('deposit_amount', e.target.value)} placeholder="0" className={inp} /></Field>
+          </div>
+
+          <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3 mt-2">Phụ trách & Ghi chú</div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Telesale phụ trách">
+              <select value={f.telesale_id} onChange={e => set('telesale_id', e.target.value)} className={inp}>
+                <option value="">— Không có —</option>
+                {telesales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+              </select>
+            </Field>
+            <Field label="Telesale phụ trách 2">
+              <select value={f.telesale_id_2} onChange={e => set('telesale_id_2', e.target.value)} className={inp}>
+                <option value="">— Không có —</option>
+                {telesales.filter(t => t.id !== f.telesale_id).map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+              </select>
+            </Field>
+          </div>
+          <Field label="Sale Offline phụ trách">
+            <select value={f.sale_id} onChange={e => set('sale_id', e.target.value)} className={inp}>
+              <option value="">— Không có —</option>
+              {sales.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+            </select>
+          </Field>
+          <Field label="Thông tin tham khảo (Link FB, Zalo…)"><input value={f.social_link} onChange={e => set('social_link', e.target.value)} placeholder="Link profile khách hàng…" className={inp} /></Field>
           <Field label="Tình trạng khách hàng (tự gom từ nhật ký tư vấn)">
             <textarea rows={6} value={f.notes} onChange={e => set('notes', e.target.value)} placeholder="Tổng hợp nội dung tư vấn, mong muốn của khách…" className={`${inp} resize-none leading-relaxed`} />
           </Field>
