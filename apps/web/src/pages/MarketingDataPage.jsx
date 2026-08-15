@@ -6,7 +6,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
-import { maskPhone } from '@/lib/phoneMask';
+import { maskPhone, phoneView } from '@/lib/phoneMask';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send } from 'lucide-react';
 
 const STATUS = {
@@ -376,7 +376,7 @@ const MarketingDataPage = () => {
                           <div className="min-w-0"><div className="font-semibold text-slate-800 truncate max-w-[140px]">{r.customer_name || '—'}</div>{r.getfly_code && <div className="text-[10px] text-slate-300 truncate">{r.getfly_code}</div>}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-slate-600 tabular-nums whitespace-nowrap">{r.phone}</td>
+                      <td className="px-4 py-3 text-slate-600 tabular-nums whitespace-nowrap">{phoneView(r.phone, me)}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`text-xs font-semibold tabular-nums ${dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600' : 'text-slate-500'}`} title={arrivedAt(r) ? new Date(arrivedAt(r)).toLocaleString('vi-VN') : ''}>
                           {dayKey(arrivedAt(r)) === todayKey() ? <span className="inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />Hôm nay</span> : fmtD(arrivedAt(r))}
@@ -418,7 +418,7 @@ const MarketingDataPage = () => {
                     {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
                   </div>
                   <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-slate-600 tabular-nums">{r.phone}</span>
+                    <span className="font-semibold text-slate-600 tabular-nums">{phoneView(r.phone, me)}</span>
                     <span className="text-slate-300">·</span><span>{isToday ? 'Hôm nay' : fmtD(arrivedAt(r))}</span>
                     {r.source && <><span className="text-slate-300">·</span><span className="truncate max-w-[110px]">{r.source}</span></>}
                   </div>
@@ -642,8 +642,8 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
           <div className="min-w-0 flex-1">
             <div className="font-bold text-slate-800 truncate">{row.customer_name || '(Chưa có tên)'}</div>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm text-slate-500 tabular-nums">{row.phone}</span>
-              <button onClick={() => { navigator.clipboard?.writeText(row.phone || ''); toast.success('Đã copy SĐT'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
+              <span className="text-sm text-slate-500 tabular-nums">{phoneView(row.phone, me)}</span>
+              <button onClick={() => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
               {st && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span>}
             </div>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -1464,7 +1464,11 @@ const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} className={inp} /></Field>
-            <Field label="Số điện thoại"><input value={f.phone} onChange={e => set('phone', e.target.value)} className={inp} /></Field>
+            <Field label="Số điện thoại">
+              {phoneView(row.phone, me) !== String(row.phone ?? '')
+                ? <input value={phoneView(row.phone, me)} readOnly title="Đã ẩn theo phân quyền" className={`${inp} bg-slate-50 text-slate-400`} />
+                : <input value={f.phone} onChange={e => set('phone', e.target.value)} className={inp} />}
+            </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nguồn khách">
