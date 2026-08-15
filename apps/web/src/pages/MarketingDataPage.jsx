@@ -96,7 +96,10 @@ const MarketingDataPage = () => {
     for (let from = 0; from < 50000; from += 1000) {
       const { data, error } = await supabase.from('marketing_data')
         .select('*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)')
-        .order('updated_at', { ascending: false }).range(from, from + 999);
+        // Mới nhất -> cũ nhất theo LẦN TƯƠNG TÁC GẦN NHẤT trên GetFly (null xuống cuối); id làm mốc phụ để phân lô ổn định
+        .order('getfly_updated_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false })
+        .range(from, from + 999);
       if (error || !data?.length) break;
       list.push(...data);
       if (data.length < 1000) break;
