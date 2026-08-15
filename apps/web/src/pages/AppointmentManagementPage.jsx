@@ -11,7 +11,7 @@ import { useFocusHighlight } from '@/lib/useFocusHighlight';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 
 // Style tokens dùng chung cho form lịch hẹn
-const FLD_INP = 'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[15px] outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
+const FLD_INP = 'w-full min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[15px] outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
 const FLD_LBL = 'block text-[13px] font-semibold text-slate-600 mb-1.5';
 const FormSection = ({ icon: Icon, title, children }) => (
   <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
@@ -828,13 +828,13 @@ const AppointmentManagementPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                     {/* Ngày + Giờ cùng 1 hàng trên mobile (md trở lên chảy vào lưới 3 cột) */}
                     <div className="grid grid-cols-2 gap-3.5 md:contents">
-                      <div>
+                      <div className="min-w-0">
                         <label className={FLD_LBL}>Ngày hẹn <span className="text-rose-500">*</span></label>
-                        <input required type="date" value={createForm.appointment_date} onChange={e => setCreateForm({...createForm, appointment_date: e.target.value})} className={FLD_INP} />
+                        <input required type="date" value={createForm.appointment_date} onChange={e => setCreateForm({...createForm, appointment_date: e.target.value})} className={`${FLD_INP} appearance-none`} />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className={FLD_LBL}>Giờ hẹn <span className="text-rose-500">*</span></label>
-                        <input required type="time" value={createForm.appointment_time} onChange={e => setCreateForm({...createForm, appointment_time: e.target.value})} className={FLD_INP} />
+                        <input required type="time" value={createForm.appointment_time} onChange={e => setCreateForm({...createForm, appointment_time: e.target.value})} className={`${FLD_INP} appearance-none`} />
                       </div>
                     </div>
                     <div>
