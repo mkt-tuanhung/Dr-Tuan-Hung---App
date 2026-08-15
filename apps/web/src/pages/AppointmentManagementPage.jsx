@@ -10,6 +10,19 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 
+// Style tokens dùng chung cho form lịch hẹn
+const FLD_INP = 'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[15px] outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
+const FLD_LBL = 'block text-[13px] font-semibold text-slate-600 mb-1.5';
+const FormSection = ({ icon: Icon, title, children }) => (
+  <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
+    <div className="flex items-center gap-2.5 mb-4">
+      <span className="w-8 h-8 rounded-xl grid place-items-center bg-teal-50 text-teal-600 shrink-0"><Icon className="w-4 h-4" /></span>
+      <h4 className="text-sm font-bold text-slate-800">{title}</h4>
+    </div>
+    {children}
+  </section>
+);
+
 const AppointmentManagementPage = () => {
   const { profile } = useAuth();
   
@@ -796,183 +809,185 @@ const AppointmentManagementPage = () => {
 
       {/* Modal Thêm Lịch Hẹn Mới */}
       {showCreateModal && (
-         <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 text-xl">{createForm.id ? 'Cập nhật lịch hẹn' : (createForm.appointment_type === 'new' ? 'Thêm lịch Tư vấn / PT' : 'Thêm lịch Tái khám')}</h3>
-              <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300">
-                <X className="w-4 h-4" />
-              </button>
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="shrink-0 px-5 py-4 flex items-center gap-3 text-white" style={{ background: 'linear-gradient(135deg,#0f5148 0%,#136b5e 100%)' }}>
+              <span className="w-10 h-10 rounded-2xl bg-white/15 grid place-items-center shrink-0"><CalendarDays className="w-5 h-5" /></span>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-lg leading-tight">{createForm.id ? 'Cập nhật lịch hẹn' : (createForm.appointment_type === 'new' ? 'Thêm lịch Tư vấn / PT' : 'Thêm lịch Tái khám')}</h3>
+                <p className="text-white/70 text-[12px] mt-0.5">Điền thông tin để tạo lịch hẹn cho khách</p>
+              </div>
+              <button type="button" onClick={() => setShowCreateModal(false)} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 grid place-items-center shrink-0"><X className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /></button>
             </div>
-            
-            <form onSubmit={handleCreateSubmit} className="p-6 space-y-8">
-              {/* Thông tin Khách hàng */}
-              <section>
-                <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">Thông tin khách hàng</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Ngày + Giờ cùng 1 hàng trên mobile (md trở lên chảy vào lưới 3 cột như cũ) */}
-                  <div className="grid grid-cols-2 gap-4 md:contents">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Ngày hẹn <span className="text-red-500">*</span></label>
-                      <input required type="date" value={createForm.appointment_date} onChange={e => setCreateForm({...createForm, appointment_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Giờ hẹn <span className="text-red-500">*</span></label>
-                      <input required type="time" value={createForm.appointment_time} onChange={e => setCreateForm({...createForm, appointment_time: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tên khách hàng <span className="text-red-500">*</span></label>
-                    <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập tên..." />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
-                    <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập SĐT..." />
-                  </div>
-                  {createForm.appointment_type === 'new' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
-                        <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                          <option value="Ads">Ads</option>
-                          <option value="Seeding">Seeding</option>
-                          <option value="Người quen">Người quen</option>
-                          <option value="CTV">CTV</option>
-                          <option value="CSKH">CSKH</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách hàng <span className="text-red-500">*</span></label>
-                        <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                          <option value="Mới">Khách Mới</option>
-                          <option value="Cũ">Khách Cũ</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </section>
 
-              {/* Chi tiết dịch vụ */}
-              <section>
-                <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">{createForm.appointment_type === 'new' ? 'Chi tiết dịch vụ' : 'Dịch vụ tái khám'}</h4>
-                <div className={`grid grid-cols-1 gap-4 ${createForm.appointment_type === 'new' ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-red-500">*</span></label>
-                    <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
-                  </div>
-                  {createForm.appointment_type === 'recheck' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ sử dụng</label>
-                      <input value={createForm.used_service} onChange={e => setCreateForm({...createForm, used_service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="VD: Cắt mí trên, nâng mũi" />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
-                    <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option value="Hàm mặt">Hàm mặt</option>
-                      <option value="Body">Body</option>
-                      <option value="Tiểu phẫu">Tiểu phẫu</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Loại phẫu thuật <span className="text-red-500">*</span></label>
-                    <select value={createForm.surgery_type} onChange={e => setCreateForm({...createForm, surgery_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option value="Tiểu phẫu">Tiểu phẫu</option>
-                      <option value="Đại phẫu">Đại phẫu</option>
-                    </select>
-                    <p className="mt-1 text-xs text-slate-400">Quyết định thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
-                  </div>
-                  {createForm.appointment_type === 'recheck' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Ngày phẫu thuật</label>
-                      <input type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
-                    </div>
-                  )}
-                  {createForm.appointment_type === 'new' && (
-                    <>
+            <form onSubmit={handleCreateSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50">
+                {/* Thông tin Khách hàng */}
+                <FormSection icon={User} title="Thông tin khách hàng">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                    {/* Ngày + Giờ cùng 1 hàng trên mobile (md trở lên chảy vào lưới 3 cột) */}
+                    <div className="grid grid-cols-2 gap-3.5 md:contents">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tình trạng xét nghiệm</label>
-                        <select value={createForm.test_status} onChange={e => setCreateForm({...createForm, test_status: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                          <option>Chưa xét nghiệm</option>
-                          <option>Đã xét nghiệm</option>
-                          <option>Không cần</option>
+                        <label className={FLD_LBL}>Ngày hẹn <span className="text-rose-500">*</span></label>
+                        <input required type="date" value={createForm.appointment_date} onChange={e => setCreateForm({...createForm, appointment_date: e.target.value})} className={FLD_INP} />
+                      </div>
+                      <div>
+                        <label className={FLD_LBL}>Giờ hẹn <span className="text-rose-500">*</span></label>
+                        <input required type="time" value={createForm.appointment_time} onChange={e => setCreateForm({...createForm, appointment_time: e.target.value})} className={FLD_INP} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={FLD_LBL}>Tên khách hàng <span className="text-rose-500">*</span></label>
+                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className={FLD_INP} placeholder="Nhập tên..." />
+                    </div>
+                    <div>
+                      <label className={FLD_LBL}>Số điện thoại <span className="text-rose-500">*</span></label>
+                      <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className={FLD_INP} placeholder="Nhập SĐT..." />
+                    </div>
+                    {createForm.appointment_type === 'new' && (
+                      <>
+                        <div>
+                          <label className={FLD_LBL}>Nguồn khách <span className="text-rose-500">*</span></label>
+                          <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className={FLD_INP}>
+                            <option value="Ads">Ads</option>
+                            <option value="Seeding">Seeding</option>
+                            <option value="Người quen">Người quen</option>
+                            <option value="CTV">CTV</option>
+                            <option value="CSKH">CSKH</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={FLD_LBL}>Tệp khách hàng <span className="text-rose-500">*</span></label>
+                          <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className={FLD_INP}>
+                            <option value="Mới">Khách Mới</option>
+                            <option value="Cũ">Khách Cũ</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </FormSection>
+
+                {/* Chi tiết dịch vụ */}
+                <FormSection icon={Stethoscope} title={createForm.appointment_type === 'new' ? 'Chi tiết dịch vụ' : 'Dịch vụ tái khám'}>
+                  <div className={`grid grid-cols-1 gap-3.5 ${createForm.appointment_type === 'new' ? 'md:grid-cols-2' : 'md:grid-cols-2'}`}>
+                    <div className="md:col-span-2">
+                      <label className={FLD_LBL}>{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-rose-500">*</span></label>
+                      <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className={FLD_INP} placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
+                    </div>
+                    {createForm.appointment_type === 'recheck' && (
+                      <div>
+                        <label className={FLD_LBL}>Dịch vụ sử dụng</label>
+                        <input value={createForm.used_service} onChange={e => setCreateForm({...createForm, used_service: e.target.value})} className={FLD_INP} placeholder="VD: Cắt mí trên, nâng mũi" />
+                      </div>
+                    )}
+                    <div>
+                      <label className={FLD_LBL}>Nhóm dịch vụ <span className="text-rose-500">*</span></label>
+                      <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className={FLD_INP}>
+                        <option value="Hàm mặt">Hàm mặt</option>
+                        <option value="Body">Body</option>
+                        <option value="Tiểu phẫu">Tiểu phẫu</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={FLD_LBL}>Loại phẫu thuật <span className="text-rose-500">*</span></label>
+                      <select value={createForm.surgery_type} onChange={e => setCreateForm({...createForm, surgery_type: e.target.value})} className={FLD_INP}>
+                        <option value="Tiểu phẫu">Tiểu phẫu</option>
+                        <option value="Đại phẫu">Đại phẫu</option>
+                      </select>
+                    </div>
+                    {createForm.appointment_type === 'recheck' && (
+                      <div>
+                        <label className={FLD_LBL}>Ngày phẫu thuật</label>
+                        <input type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className={FLD_INP} />
+                      </div>
+                    )}
+                    {createForm.appointment_type === 'new' && (
+                      <>
+                        <div>
+                          <label className={FLD_LBL}>Tình trạng xét nghiệm</label>
+                          <select value={createForm.test_status} onChange={e => setCreateForm({...createForm, test_status: e.target.value})} className={FLD_INP}>
+                            <option>Chưa xét nghiệm</option>
+                            <option>Đã xét nghiệm</option>
+                            <option>Không cần</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={FLD_LBL}>Bill dự kiến (VNĐ)</label>
+                          <MoneyInput value={createForm.expected_bill} onChange={v => setCreateForm({...createForm, expected_bill: v})} className={FLD_INP} placeholder="0" />
+                        </div>
+                        <div>
+                          <label className={FLD_LBL}>Đã cọc (VNĐ)</label>
+                          <MoneyInput value={createForm.deposit_amount} onChange={v => setCreateForm({...createForm, deposit_amount: v})} className={FLD_INP} placeholder="0" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {createForm.appointment_type === 'new' && <p className="mt-3 text-xs text-slate-400 flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>}
+                </FormSection>
+
+                {/* Phụ trách & Ghi chú */}
+                <FormSection icon={UserCheck} title="Phụ trách & Ghi chú">
+                  <div className={`grid grid-cols-1 gap-3.5 mb-3.5 ${createForm.appointment_type === 'new' ? 'md:grid-cols-2' : ''}`}>
+                    {createForm.appointment_type === 'new' && (
+                      <div>
+                        <label className={FLD_LBL}>Telesale phụ trách</label>
+                        <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className={FLD_INP}>
+                          <option value="">-- Không có --</option>
+                          {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale').map(s => (
+                            <option key={s.id} value={s.id}>{s.full_name}</option>
+                          ))}
                         </select>
                       </div>
+                    )}
+                    {createForm.appointment_type === 'new' && (
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Bill dự kiến (VNĐ)</label>
-                        <MoneyInput value={createForm.expected_bill} onChange={v => setCreateForm({...createForm, expected_bill: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
+                        <label className={FLD_LBL}>Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi hoa hồng)</span></label>
+                        <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className={FLD_INP}>
+                          <option value="">-- Không có --</option>
+                          {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale') && s.id !== createForm.telesale_id).map(s => (
+                            <option key={s.id} value={s.id}>{s.full_name}</option>
+                          ))}
+                        </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Đã cọc (VNĐ)</label>
-                        <MoneyInput value={createForm.deposit_amount} onChange={v => setCreateForm({...createForm, deposit_amount: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="0" />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </section>
-
-              {/* Phụ trách & Ghi chú */}
-              <section>
-                <h4 className="text-sm font-bold text-teal-700 uppercase mb-4 tracking-wider border-b pb-2">Phụ trách & Ghi chú</h4>
-                <div className={`grid grid-cols-1 gap-4 mb-4 ${createForm.appointment_type === 'new' ? 'md:grid-cols-2' : ''}`}>
-                  {createForm.appointment_type === 'new' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
-                      <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                    )}
+                    <div className={createForm.appointment_type === 'new' ? 'md:col-span-2' : ''}>
+                      <label className={FLD_LBL}>{createForm.appointment_type === 'new' ? 'Sale Offline phụ trách' : 'Người phụ trách (Sale/Điều dưỡng)'}</label>
+                      <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className={FLD_INP}>
                         <option value="">-- Không có --</option>
-                        {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale').map(s => (
+                        {staffList.filter(s => {
+                          const r = [s.role, s.role_2];
+                          if (createForm.appointment_type === 'new') return r.includes('sale_offline');
+                          return r.includes('sale_offline') || r.includes('dieu_duong');
+                        }).map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
                         ))}
                       </select>
                     </div>
-                  )}
-                  {createForm.appointment_type === 'new' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(nếu có — chia đôi hoa hồng)</span></label>
-                      <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                        <option value="">-- Không có --</option>
-                        {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale') && s.id !== createForm.telesale_id).map(s => (
-                          <option key={s.id} value={s.id}>{s.full_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  </div>
+                  <div className="mb-3.5">
+                    <label className={`${FLD_LBL} flex items-center gap-1.5`}><LinkIcon className="w-3.5 h-3.5 text-slate-400" /> Thông tin tham khảo (Link FB, Zalo...)</label>
+                    <input type="text" value={createForm.social_link} onChange={e => setCreateForm({...createForm, social_link: e.target.value})} className={FLD_INP} placeholder="Link profile khách hàng..." />
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{createForm.appointment_type === 'new' ? 'Sale Offline phụ trách' : 'Người phụ trách (Sale/Điều dưỡng)'}</label>
-                    <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
-                      <option value="">-- Không có --</option>
-                      {staffList.filter(s => {
-                        const r = [s.role, s.role_2];
-                        if (createForm.appointment_type === 'new') return r.includes('sale_offline');
-                        return r.includes('sale_offline') || r.includes('dieu_duong');
-                      }).map(s => (
-                        <option key={s.id} value={s.id}>{s.full_name}</option>
-                      ))}
-                    </select>
+                    <div className="flex justify-between items-end mb-1.5">
+                      <label className={`${FLD_LBL} mb-0 flex items-center gap-1.5`}><FileText className="w-3.5 h-3.5 text-slate-400" /> Note tình trạng khách hàng</label>
+                      <label className="cursor-pointer inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 text-xs font-bold transition-colors">
+                        {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                        {uploadingImage ? 'Đang tải...' : 'Đính kèm ảnh'}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                      </label>
+                    </div>
+                    <textarea rows={4} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className={`${FLD_INP} resize-none leading-relaxed`} placeholder="Ghi chú chi tiết về tình trạng, mong muốn..." />
                   </div>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Thông tin tham khảo (Link FB, Zalo...)</label>
-                  <input type="text" value={createForm.social_link} onChange={e => setCreateForm({...createForm, social_link: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Link profile khách hàng..." />
-                </div>
-                <div>
-                  <div className="flex justify-between items-end mb-1">
-                    <label className="block text-sm font-medium text-slate-700">Note tình trạng khách hàng</label>
-                    <label className="cursor-pointer inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 text-xs font-bold transition-colors">
-                      {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-                      {uploadingImage ? 'Đang tải...' : 'Đính kèm ảnh'}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
-                    </label>
-                  </div>
-                  <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none resize-none" placeholder="Ghi chú chi tiết về tình trạng, mong muốn..." />
-                </div>
-              </section>
+                </FormSection>
+              </div>
 
-              <div className="pt-4 flex justify-end">
-                <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">
-                  {saving ? 'Đang lưu...' : 'Lưu Lịch Hẹn'}
-                </button>
+              {/* Footer cố định */}
+              <div className="shrink-0 flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-slate-100 bg-white">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-5 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
+                <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 disabled:opacity-60 transition-colors text-sm inline-flex items-center gap-2"><CalendarDays className="w-4 h-4" />{saving ? 'Đang lưu...' : 'Lưu Lịch Hẹn'}</button>
               </div>
             </form>
           </div>
