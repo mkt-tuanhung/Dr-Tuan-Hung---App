@@ -29,6 +29,6 @@ export const isTelesale = (profile) => {
 export const phoneFor = (p, profile) => (isSaleOffline(profile) ? maskPhone(p) : (p ?? ''));
 
 // Hiển thị SĐT trong Data khách hàng theo vai trò:
-//   sale offline -> che 4 số cuối; telesale -> che 5 số cuối; còn lại -> đầy đủ.
+//   sale offline -> che 4 số cuối; các vai trò khác (kể cả telesale) -> đầy đủ.
 export const phoneView = (p, profile) =>
-  isSaleOffline(profile) ? maskPhone(p) : (isTelesale(profile) ? maskPhone5(p) : (p ?? ''));
+  isSaleOffline(profile) ? maskPhone(p) : (p ?? '');
