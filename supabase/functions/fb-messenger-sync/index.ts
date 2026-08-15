@@ -156,29 +156,32 @@ Deno.serve(async (req) => {
       const pageToken = await getPageToken(pg.page_id, userToken);
       if (!pageToken) { failed++; console.error("no page token", pg.page_id); continue; }
 
-      // Con trỏ trong page: nếu đúng page resume thì bắt đầu từ after đã lưu
-      let after: string | null = (pi === startIdx && resume?.after) ? resume.after : null;
-      for (;;) {
+      // Trang đầu (hoặc tiếp tục từ cursor resume). Sau đó LẬT TRANG bằng chính
+      // URL paging.next của Facebook (token nằm sẵn trong URL) -> bền, không phụ
+      // thuộc việc FB có trả cursors.after hay không (đây là chỗ trước kia dừng sớm).
+      let d: any = null;
+      try {
         const params: Record<string, string> = { platform: "messenger", fields: "id,updated_time,participants", limit: "50" };
-        if (after) params.after = after;
-        let d: any;
-        try { d = await gget(`${pg.page_id}/conversations`, params, pageToken); }
-        catch (e) { failed++; console.error("conv list fail", pg.page_id, (e as Error)?.message); break; }
+        if (pi === startIdx && resume?.after) params.after = resume.after;
+        d = await gget(`${pg.page_id}/conversations`, params, pageToken);
+      } catch (e) { failed++; console.error("conv list fail", pg.page_id, (e as Error)?.message); }
 
+      while (d) {
         for (const conv of d.data || []) {
           try { await handleConv(pg, conv, pageToken); }
           catch (e) { failed++; console.error("conv fail", conv.id, (e as Error)?.message); }
         }
+        const nextUrl: string | null = d.paging?.next || null;
+        let nextAfter: string | null = d.paging?.cursors?.after || null;
+        if (!nextAfter && nextUrl) { try { nextAfter = new URL(nextUrl).searchParams.get("after"); } catch { /*noop*/ } }
 
-        const nextAfter = d.paging?.cursors?.after || null;
-        const hasNext = !!d.paging?.next && !!nextAfter;
-
-        // Hết thời gian mà page này còn -> dừng, báo điểm resume (chính page này)
-        if (Date.now() - started > TIME_BUDGET_MS && hasNext) {
+        // Hết giờ mà còn trang -> dừng, trả điểm resume để client gọi tiếp
+        if (nextUrl && Date.now() - started > TIME_BUDGET_MS) {
           return json({ ok: true, done: false, next: { page_id: pg.page_id, after: nextAfter }, conversations: convDone, messages: msgDone, linked_phone: linked, failed });
         }
-        if (!hasNext) break;      // page này hết hội thoại
-        after = nextAfter;
+        if (!nextUrl) break;      // page này hết hội thoại
+        try { d = await (await fetch(nextUrl)).json(); }
+        catch (e) { failed++; console.error("conv next fail", pg.page_id, (e as Error)?.message); break; }
       }
 
       // Page này xong. Nếu hết giờ mà còn page sau -> resume từ page kế (after=null)
