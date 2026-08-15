@@ -31,6 +31,18 @@ function scanPhone(text: string): string | null {
   return null;
 }
 
+// Đổi token System User -> Page Access Token của page (lấy tên khách bắt buộc cái này).
+const pageTokenCache: Record<string, string> = {};
+async function getPageToken(pageId: string, userToken: string): Promise<string | null> {
+  if (pageTokenCache[pageId]) return pageTokenCache[pageId];
+  try {
+    const r = await fetch(`https://graph.facebook.com/${API}/${pageId}?fields=access_token&access_token=${userToken}`);
+    const d = await r.json().catch(() => ({}));
+    if (d?.access_token) { pageTokenCache[pageId] = d.access_token; return d.access_token; }
+    return null;
+  } catch { return null; }
+}
+
 async function getName(psid: string, token: string): Promise<string | null> {
   try {
     const r = await fetch(`https://graph.facebook.com/${API}/${psid}?fields=name&access_token=${token}`);
@@ -73,7 +85,7 @@ Deno.serve(async (req) => {
     if (body?.object !== "page") return new Response("ignored", { status: 200, headers: cors });
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const pageToken = Deno.env.get("FB_PAGE_TOKEN") || "";
+    const userToken = Deno.env.get("FB_PAGE_TOKEN") || "";
 
     for (const entry of body.entry || []) {
       const pageId = String(entry.id);
@@ -91,6 +103,7 @@ Deno.serve(async (req) => {
         const { data: conv } = await sb.from("fb_conversations").select("conv_key, participant_name, phone").eq("conv_key", convKey).maybeSingle();
         let pname = conv?.participant_name || null;
         if (!conv) {
+          const pageToken = userToken ? await getPageToken(pageId, userToken) : null;
           pname = pageToken ? await getName(psid, pageToken) : null;
           await sb.from("fb_conversations").upsert({ conv_key: convKey, page_id: pageId, psid, participant_name: pname }, { onConflict: "conv_key" });
         }
