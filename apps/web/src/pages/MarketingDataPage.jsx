@@ -1358,23 +1358,30 @@ const MessengerSyncModal = ({ onClose, onDone }) => {
     setBusy('sync'); setResult(null);
     try {
       // Kéo tới khi HẾT SẠCH: function trả next (điểm dừng) thì gọi tiếp từ đó.
-      let resume = null, C = 0, M = 0, L = 0, F = 0, round = 0;
+      // Bị Facebook giới hạn (throttled) thì CHỜ rồi kéo tiếp chứ không bỏ cuộc.
+      let resume = null, C = 0, M = 0, L = 0, F = 0, S = 0, round = 0, waits = 0;
       for (;;) {
         round++;
-        toast.loading(`Đang kéo Messenger — đợt ${round} (đã ${C} hội thoại)…`, { id: 'fb-sync' });
+        toast.loading(`Đang kéo Messenger — đợt ${round} (mới ${C} · bỏ qua ${S} đã có)…`, { id: 'fb-sync' });
         const { data, error } = await supabase.functions.invoke('fb-messenger-sync', { body: resume ? { resume } : {} });
         if (error) throw new Error(error.message);
         if (!data?.ok) throw new Error(data?.error || 'Lỗi Messenger');
-        C += data.conversations || 0; M += data.messages || 0; L += data.linked_phone || 0; F += data.failed || 0;
-        setResult({ conversations: C, messages: M, linked_phone: L, failed: F });
+        C += data.conversations || 0; M += data.messages || 0; L += data.linked_phone || 0; F += data.failed || 0; S += data.skipped || 0;
+        setResult({ conversations: C, messages: M, linked_phone: L, failed: F, skipped: S });
         if (data.done || !data.next) break;   // hết sạch
-        if (round > 60) break;                // chặn vòng lặp vô tận
         resume = data.next;
+        if (data.throttled) {
+          waits++;
+          if (waits > 20) { toast.error('Facebook đang giới hạn gắt — nghỉ 30–60 phút rồi bấm "Kéo về" lại, hệ thống sẽ tự kéo tiếp từ chỗ dừng.', { id: 'fb-sync', duration: 15000 }); setBusy(''); return; }
+          toast.loading(`Facebook giới hạn tạm thời — chờ 30s rồi kéo tiếp (đã có ${C} hội thoại mới)…`, { id: 'fb-sync' });
+          await new Promise(r => setTimeout(r, 30000));
+        }
+        if (round > 120) break;               // chặn vòng lặp vô tận
       }
-      toast.success(`Đã kéo HẾT: ${C} hội thoại · ${M} tin · gán SĐT ${L} khách${F ? ` · lỗi ${F}` : ''}`, { id: 'fb-sync', duration: 12000 });
+      toast.success(`Đã kéo HẾT: ${C} hội thoại mới · ${M} tin · gán SĐT ${L} khách · bỏ qua ${S} đã đồng bộ${F ? ` · lỗi ${F}` : ''}`, { id: 'fb-sync', duration: 12000 });
       onDone?.();
     } catch (e) {
-      toast.error('Messenger: ' + e.message + '. Đã kéo được một phần — bấm "Kéo về" lại để tiếp tục.', { id: 'fb-sync', duration: 12000 });
+      toast.error('Messenger: ' + e.message + '. Đã kéo được một phần — bấm "Kéo về" lại để tiếp tục từ chỗ dừng.', { id: 'fb-sync', duration: 12000 });
     }
     setBusy('');
   };

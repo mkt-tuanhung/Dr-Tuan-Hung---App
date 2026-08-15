@@ -94,20 +94,18 @@ Deno.serve(async (req) => {
     }
 
     // ---- KÉO (resumable, theo LÔ 50 hội thoại) ----
-    let convDone = 0, msgDone = 0, linked = 0, failed = 0;
+    let convDone = 0, msgDone = 0, linked = 0, failed = 0, skipped = 0;
     const started = Date.now();
     const TIME_BUDGET_MS = 80_000;
+    const isThrottle = (msg: string) => /\(#(4|17|32|613)\)|request limit|rate limit|too many/i.test(msg || "");
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-    // Xử lý 1 hội thoại
-    const handleConv = async (pg: any, conv: any, pageToken: string) => {
-      const parts = conv.participants?.data || [];
-      const user = parts.find((x: any) => String(x.id) !== String(pg.page_id)) || {};
-      const psid = String(user.id || "");
-      if (!psid) return;
-      const convKey = `${pg.page_id}:${psid}`;
+    // Xử lý 1 hội thoại (KHÔNG ghi synced_at trước — chỉ ghi sau khi kéo tin xong,
+    // để lần sau biết chính xác hội thoại nào đã xong mà bỏ qua)
+    const handleConv = async (pg: any, conv: any, user: any, convKey: string, pageToken: string) => {
       await sb.from("fb_conversations").upsert({
-        conv_key: convKey, page_id: pg.page_id, psid, thread_id: conv.id,
-        participant_name: user.name || null, synced_at: new Date().toISOString(),
+        conv_key: convKey, page_id: pg.page_id, psid: String(user.id), thread_id: conv.id,
+        participant_name: user.name || null,
       }, { onConflict: "conv_key" });
 
       const md = await gget(`${conv.id}/messages`, { fields: "id,message,from,created_time,attachments", limit: String(msgPer) }, pageToken);
@@ -131,7 +129,7 @@ Deno.serve(async (req) => {
         const { error } = await sb.from("fb_messages").upsert(rows, { onConflict: "id" });
         if (error) { failed++; console.error("msg upsert fail", convKey, error.message); }
       }
-      const upd: any = { last_message: lastText || null, last_time: lastTime };
+      const upd: any = { last_message: lastText || null, last_time: lastTime, synced_at: new Date().toISOString() };
       if (phone) {
         const { data: exist } = await sb.from("marketing_data").select("id").eq("phone", phone).maybeSingle();
         let dataId = exist?.id;
@@ -148,6 +146,10 @@ Deno.serve(async (req) => {
       convDone++;
     };
 
+    // Trả điểm dừng để client gọi tiếp (kèm cờ throttled nếu bị FB giới hạn)
+    const pause = (pageId: string, after: string | null, throttled = false) =>
+      json({ ok: true, done: false, next: { page_id: pageId, after }, throttled, conversations: convDone, messages: msgDone, linked_phone: linked, failed, skipped });
+
     // Bắt đầu từ page nào (nếu resume)
     const startIdx = resume?.page_id ? Math.max(0, pages.findIndex((p) => String(p.page_id) === String(resume.page_id))) : 0;
 
@@ -156,42 +158,70 @@ Deno.serve(async (req) => {
       const pageToken = await getPageToken(pg.page_id, userToken);
       if (!pageToken) { failed++; console.error("no page token", pg.page_id); continue; }
 
-      // Trang đầu (hoặc tiếp tục từ cursor resume). Sau đó LẬT TRANG bằng chính
-      // URL paging.next của Facebook (token nằm sẵn trong URL) -> bền, không phụ
-      // thuộc việc FB có trả cursors.after hay không (đây là chỗ trước kia dừng sớm).
+      // Danh sách hội thoại ĐÃ đồng bộ của page này -> lần chạy sau bỏ qua cái
+      // không có tin mới, dồn thời gian + hạn mức FB cho hội thoại chưa kéo.
+      const known: Record<string, string> = {};
+      for (let fromI = 0; fromI < 100000; fromI += 1000) {
+        const { data: ex } = await sb.from("fb_conversations").select("conv_key, synced_at").eq("page_id", pg.page_id).range(fromI, fromI + 999);
+        if (!ex?.length) break;
+        ex.forEach((r: any) => { if (r.synced_at) known[r.conv_key] = r.synced_at; });
+        if (ex.length < 1000) break;
+      }
+
+      // Trang đầu (hoặc tiếp từ cursor resume); lật trang bằng URL paging.next của FB.
+      let curAfter: string | null = (pi === startIdx && resume?.after) ? resume.after : null;
       let d: any = null;
       try {
         const params: Record<string, string> = { platform: "messenger", fields: "id,updated_time,participants", limit: "50" };
-        if (pi === startIdx && resume?.after) params.after = resume.after;
+        if (curAfter) params.after = curAfter;
         d = await gget(`${pg.page_id}/conversations`, params, pageToken);
-      } catch (e) { failed++; console.error("conv list fail", pg.page_id, (e as Error)?.message); }
+      } catch (e) {
+        // Lỗi ngay trang đầu (thường là FB giới hạn) -> KHÔNG được báo "xong",
+        // trả điểm dừng để client chờ rồi gọi lại đúng chỗ này.
+        console.error("conv list fail", pg.page_id, (e as Error)?.message);
+        return pause(pg.page_id, curAfter, isThrottle(String((e as Error)?.message)));
+      }
 
       while (d) {
+        // FB trả lỗi trong body (fetch nextUrl không throw) -> cũng phải dừng-chờ chứ không phải "hết"
+        if (d.error) {
+          console.error("conv page error", pg.page_id, d.error?.message);
+          return pause(pg.page_id, curAfter, isThrottle(String(d.error?.message)));
+        }
         for (const conv of d.data || []) {
-          try { await handleConv(pg, conv, pageToken); }
-          catch (e) { failed++; console.error("conv fail", conv.id, (e as Error)?.message); }
+          const parts = conv.participants?.data || [];
+          const user = parts.find((x: any) => String(x.id) !== String(pg.page_id)) || {};
+          const psid = String(user.id || "");
+          if (!psid) continue;
+          const convKey = `${pg.page_id}:${psid}`;
+          // Đã đồng bộ & không có tin mới hơn -> bỏ qua (không tốn lượt gọi FB)
+          if (known[convKey] && conv.updated_time && new Date(conv.updated_time) <= new Date(known[convKey])) { skipped++; continue; }
+          try { await handleConv(pg, conv, user, convKey, pageToken); }
+          catch (e) {
+            const msg = String((e as Error)?.message || e);
+            if (isThrottle(msg)) return pause(pg.page_id, curAfter, true);   // FB chặn -> dừng-chờ tại trang hiện tại
+            failed++; console.error("conv fail", conv.id, msg);
+          }
+          await sleep(120);   // giãn nhịp gọi FB, đỡ dính giới hạn
         }
         const nextUrl: string | null = d.paging?.next || null;
         let nextAfter: string | null = d.paging?.cursors?.after || null;
         if (!nextAfter && nextUrl) { try { nextAfter = new URL(nextUrl).searchParams.get("after"); } catch { /*noop*/ } }
 
         // Hết giờ mà còn trang -> dừng, trả điểm resume để client gọi tiếp
-        if (nextUrl && Date.now() - started > TIME_BUDGET_MS) {
-          return json({ ok: true, done: false, next: { page_id: pg.page_id, after: nextAfter }, conversations: convDone, messages: msgDone, linked_phone: linked, failed });
-        }
+        if (nextUrl && Date.now() - started > TIME_BUDGET_MS) return pause(pg.page_id, nextAfter);
         if (!nextUrl) break;      // page này hết hội thoại
+        curAfter = nextAfter;
         try { d = await (await fetch(nextUrl)).json(); }
-        catch (e) { failed++; console.error("conv next fail", pg.page_id, (e as Error)?.message); break; }
+        catch (e) { console.error("conv next fail", pg.page_id, (e as Error)?.message); return pause(pg.page_id, curAfter, true); }
       }
 
       // Page này xong. Nếu hết giờ mà còn page sau -> resume từ page kế (after=null)
-      if (Date.now() - started > TIME_BUDGET_MS && pi + 1 < pages.length) {
-        return json({ ok: true, done: false, next: { page_id: pages[pi + 1].page_id, after: null }, conversations: convDone, messages: msgDone, linked_phone: linked, failed });
-      }
+      if (Date.now() - started > TIME_BUDGET_MS && pi + 1 < pages.length) return pause(pages[pi + 1].page_id, null);
     }
 
     // Hết tất cả page
-    return json({ ok: true, done: true, conversations: convDone, messages: msgDone, linked_phone: linked, failed });
+    return json({ ok: true, done: true, conversations: convDone, messages: msgDone, linked_phone: linked, failed, skipped });
   } catch (e) {
     console.error("fb-messenger-sync error", e);
     return json({ ok: false, error: String((e as Error)?.message || e) });
