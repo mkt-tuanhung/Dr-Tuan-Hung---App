@@ -79,7 +79,18 @@ function toIso(v: any): string | null {
   if (v == null || v === "") return null;
   const n = Number(v);
   if (Number.isFinite(n) && n > 1e9) return new Date(n > 1e12 ? n : n * 1000).toISOString();
-  const d = new Date(String(v));
+  const s = String(v).trim();
+  // GetFly trả GIỜ VIỆT NAM không kèm múi giờ ("2026-08-15 18:30:00").
+  // Server chạy UTC nên nếu để nguyên sẽ hiểu nhầm là giờ UTC (lệch +7h —
+  // note sau 17:00 bị tính sang NGÀY HÔM SAU, báo cáo ngày đếm sai/thiếu).
+  // -> Chuỗi không có múi giờ thì gắn +07:00 trước khi đổi sang ISO.
+  const hasTz = /[zZ]$|[+\-]\d{2}:?\d{2}$/.test(s);
+  let str = s.replace(" ", "T");
+  if (!hasTz) {
+    if (!str.includes("T")) str += "T00:00:00";
+    str += "+07:00";
+  }
+  const d = new Date(str);
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 // "THÔNG TIN ĐÃ TIẾP CẬN" & các custom field -> text gọn.
