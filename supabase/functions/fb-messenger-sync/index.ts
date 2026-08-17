@@ -134,8 +134,10 @@ Deno.serve(async (req) => {
         const { data: exist } = await sb.from("marketing_data").select("id").eq("phone", phone).maybeSingle();
         let dataId = exist?.id;
         if (!dataId) {
+          // Ngày về = thời điểm tin nhắn cuối (KHÔNG phải lúc bấm kéo) — kẻo
+          // hội thoại cũ import về bị đếm nhầm thành "số mới" của hôm nay.
           const { data: ins } = await sb.from("marketing_data")
-            .upsert({ phone, customer_name: user.name || null, source: "Messenger", description: "Tự tạo từ hội thoại Messenger" }, { onConflict: "phone" })
+            .upsert({ phone, customer_name: user.name || null, source: "Messenger", description: "Tự tạo từ hội thoại Messenger", created_at: lastTime || new Date().toISOString() }, { onConflict: "phone" })
             .select("id").maybeSingle();
           dataId = ins?.id;
         }
