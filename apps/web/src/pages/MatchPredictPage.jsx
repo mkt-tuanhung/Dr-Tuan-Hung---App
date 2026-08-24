@@ -135,7 +135,7 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
   const load = useCallback(async () => {
     const [{ data: g }, { data: ps }] = await Promise.all([
       supabase.from('minigames').select('*').eq('id', gameId).maybeSingle(),
-      supabase.from('minigame_predictions').select('*, nguoi:profiles!user_id(full_name, role, position)').eq('game_id', gameId).order('created_at', { ascending: true }),
+      supabase.from('minigame_predictions').select('*, nguoi:profiles!user_id(full_name, role, position, avatar_url)').eq('game_id', gameId).order('created_at', { ascending: true }),
     ]);
     setGame(g || null); setPreds(ps || []); setLoading(false);
   }, [gameId]);
@@ -471,7 +471,9 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
                     {cfg.match_status === 'finished' && (
                       <span className={`w-7 h-7 shrink-0 rounded-full grid place-items-center text-[12px] font-black ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'text-slate-400'}`}>{i + 1}</span>
                     )}
-                    <span className="w-9 h-9 shrink-0 rounded-full bg-slate-800 text-white grid place-items-center text-[12px] font-black">{initials(p.nguoi?.full_name)}</span>
+                    {p.nguoi?.avatar_url
+                      ? <img src={p.nguoi.avatar_url} alt="" className="w-9 h-9 shrink-0 rounded-full object-cover border border-slate-100" />
+                      : <span className="w-9 h-9 shrink-0 rounded-full bg-slate-800 text-white grid place-items-center text-[12px] font-black">{initials(p.nguoi?.full_name)}</span>}
                     <div className="min-w-0 flex-1">
                       <div className="text-[13.5px] font-bold text-slate-800 truncate">{p.nguoi?.full_name || '—'}</div>
                       <div className="text-[11px] text-slate-400 truncate">
