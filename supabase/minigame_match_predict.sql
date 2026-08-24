@@ -15,12 +15,17 @@ create table if not exists minigame_predictions (
   user_id    uuid not null references profiles(id),
   pred_a     int  not null default 0,     -- tỉ số dự đoán đội A (Việt Nam)
   pred_b     int  not null default 0,     -- tỉ số dự đoán đội B
-  scorer     text,                        -- cầu thủ VN ghi bàn (dự đoán)
+  scorer     text,                        -- (cũ) 1 cầu thủ ghi bàn — giữ tương thích
   mvp        text,                        -- MVP trận đấu (dự đoán)
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   unique (game_id, user_id)
 );
+-- DANH SÁCH cầu thủ ghi bàn (chọn tối đa 3) — thay cột scorer đơn lẻ
+alter table minigame_predictions add column if not exists scorers jsonb not null default '[]'::jsonb;
+-- Chuyển dự đoán cũ (1 cầu thủ) sang danh sách
+update minigame_predictions set scorers = jsonb_build_array(scorer)
+where scorer is not null and (scorers is null or scorers = '[]'::jsonb);
 create index if not exists idx_mgpred_game on minigame_predictions(game_id, created_at desc);
 
 alter table minigame_predictions enable row level security;

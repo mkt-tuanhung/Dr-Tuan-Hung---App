@@ -4,8 +4,9 @@ import QRCode from 'qrcode';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload.js';
+import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { ChevronLeft, Trophy, QrCode, X, Download, Copy, Minus, Plus, Save, Crown, Target, Users, Radio, Settings, Sparkles } from 'lucide-react';
+import { ChevronLeft, Trophy, QrCode, X, Download, Copy, Minus, Plus, Save, Crown, Target, Users, Radio, Settings, Sparkles, ImagePlus, Loader2, Link2 } from 'lucide-react';
 
 // ===== MINIGAME: DỰ ĐOÁN BÓNG ĐÁ (VN vs Thái Lan — AFF Cup) =====
 // Dự đoán tỉ số + cầu thủ ghi bàn + MVP trước giờ bóng lăn.
@@ -13,15 +14,18 @@ import { ChevronLeft, Trophy, QrCode, X, Download, Copy, Minus, Plus, Save, Crow
 
 const fmtT = (iso) => iso ? new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
 
-// Điểm: đúng tỉ số +3 · đúng kết quả (thắng/hòa/thua) +1 · đúng người ghi bàn +1 · đúng MVP +1
+// Dự đoán ghi bàn: mảng tên (tương thích bản cũ chỉ có 1 tên ở cột scorer)
+const predScorers = (p) => Array.isArray(p.scorers) && p.scorers.length ? p.scorers : (p.scorer ? [p.scorer] : []);
+
+// Điểm: đúng tỉ số +3 · đúng kết quả (thắng/hòa/thua) +1 · MỖI cầu thủ ghi bàn đoán đúng +1 · đúng MVP +1
 const calcPoints = (p, cfg) => {
   if (cfg.match_status !== 'finished') return null;
   let pts = 0;
   const sa = Number(cfg.score_a) || 0, sb = Number(cfg.score_b) || 0;
   if (p.pred_a === sa && p.pred_b === sb) pts += 3;
   else if (Math.sign(p.pred_a - p.pred_b) === Math.sign(sa - sb)) pts += 1;
-  const scorers = (cfg.scorers || []).map(s => s.player || s);
-  if (p.scorer && scorers.includes(p.scorer)) pts += 1;
+  const actual = (cfg.scorers || []).map(s => s.player || s);
+  predScorers(p).forEach(name => { if (actual.includes(name)) pts += 1; });
   if (p.mvp && cfg.mvp && p.mvp === cfg.mvp) pts += 1;
   return pts;
 };
@@ -31,13 +35,20 @@ const PlayerAvatar = ({ p, size = 56 }) => p.photo
   ? <img src={p.photo} alt={p.name} className="rounded-full object-cover border-2 border-white shadow" style={{ width: size, height: size }} />
   : <span className="rounded-full grid place-items-center font-black text-white border-2 border-white shadow" style={{ width: size, height: size, background: 'linear-gradient(135deg,#da251d,#8f1611)', fontSize: size * 0.34 }}>{p.num}</span>;
 
-// Lưới chọn cầu thủ (ghi bàn / MVP)
-const PlayerPick = ({ squad, value, onChange, disabled }) => (
+// Lưới chọn cầu thủ. multi=true: chọn nhiều (value là MẢNG tên, tối đa max người)
+const PlayerPick = ({ squad, value, onChange, disabled, multi = false, max = 3 }) => (
   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
     {squad.map(p => {
-      const on = value === p.name;
+      const on = multi ? (value || []).includes(p.name) : value === p.name;
+      const toggle = () => {
+        if (!multi) return onChange(on ? null : p.name);
+        const cur = value || [];
+        if (on) return onChange(cur.filter(n => n !== p.name));
+        if (cur.length >= max) return toast.error(`Chọn tối đa ${max} cầu thủ ghi bàn`);
+        onChange([...cur, p.name]);
+      };
       return (
-        <button key={p.num + p.name} type="button" disabled={disabled} onClick={() => onChange(on ? null : p.name)}
+        <button key={p.num + p.name} type="button" disabled={disabled} onClick={toggle}
           className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition text-center ${on ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200' : 'border-slate-100 bg-white hover:bg-slate-50'} disabled:opacity-60`}>
           <PlayerAvatar p={p} size={46} />
           <span className={`text-[10px] font-bold leading-tight ${on ? 'text-emerald-700' : 'text-slate-600'}`}>{p.name.split(' ').slice(-2).join(' ')}</span>
@@ -92,14 +103,16 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
   const [f, setF] = useState(null);   // form dự đoán (khởi tạo khi có dữ liệu)
   useEffect(() => {
     if (f !== null || loading) return;
-    setF({ pred_a: mine?.pred_a ?? 0, pred_b: mine?.pred_b ?? 0, scorer: mine?.scorer ?? null, mvp: mine?.mvp ?? null });
+    setF({ pred_a: mine?.pred_a ?? 0, pred_b: mine?.pred_b ?? 0, scorers: mine ? predScorers(mine) : [], mvp: mine?.mvp ?? null });
   }, [mine, loading]); // eslint-disable-line react-hooks/exhaustive-deps
   const [saving, setSaving] = useState(false);
   const savePred = async () => {
     setSaving(true);
     const { error } = await supabase.from('minigame_predictions').upsert({
       game_id: gameId, user_id: me.id,
-      pred_a: f.pred_a, pred_b: f.pred_b, scorer: f.scorer, mvp: f.mvp,
+      pred_a: f.pred_a, pred_b: f.pred_b,
+      scorers: f.scorers || [], scorer: (f.scorers || [])[0] || null,   // scorer giữ cho tương thích bản cũ
+      mvp: f.mvp,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'game_id,user_id' });
     setSaving(false);
@@ -212,10 +225,10 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
               </div>
             </div>
 
-            {/* Cầu thủ ghi bàn */}
+            {/* Cầu thủ ghi bàn — chọn tối đa 3 */}
             <div className="mt-4">
-              <div className="text-[12px] font-bold text-slate-600 mb-2">⚽ Cầu thủ Việt Nam sẽ ghi bàn {f.scorer && <span className="text-emerald-600">— {f.scorer}</span>}</div>
-              <PlayerPick squad={squad} value={f.scorer} onChange={v => setF({ ...f, scorer: v })} disabled={locked} />
+              <div className="text-[12px] font-bold text-slate-600 mb-2">⚽ Cầu thủ Việt Nam sẽ ghi bàn <span className="text-slate-400 font-normal">(chọn tối đa 3)</span>{(f.scorers || []).length > 0 && <span className="text-emerald-600"> — {f.scorers.map(n => n.split(' ').slice(-2).join(' ')).join(', ')}</span>}</div>
+              <PlayerPick squad={squad} value={f.scorers} onChange={v => setF({ ...f, scorers: v })} disabled={locked} multi max={3} />
             </div>
 
             {/* MVP */}
@@ -229,7 +242,7 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
                 <Save className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />{saving ? 'Đang lưu…' : (mine ? 'CẬP NHẬT DỰ ĐOÁN' : 'CHỐT DỰ ĐOÁN')}
               </button>
             )}
-            {locked && mine && <div className="mt-3 text-center text-[13px] text-slate-500">Bạn đã dự đoán <b>{mine.pred_a}-{mine.pred_b}</b>{mine.scorer ? <> · ghi bàn <b>{mine.scorer}</b></> : ''}{mine.mvp ? <> · MVP <b>{mine.mvp}</b></> : ''}</div>}
+            {locked && mine && <div className="mt-3 text-center text-[13px] text-slate-500">Bạn đã dự đoán <b>{mine.pred_a}-{mine.pred_b}</b>{predScorers(mine).length ? <> · ghi bàn <b>{predScorers(mine).join(', ')}</b></> : ''}{mine.mvp ? <> · MVP <b>{mine.mvp}</b></> : ''}</div>}
             {locked && !mine && <div className="mt-3 text-center text-[13px] text-slate-400">Đã quá giờ chốt — hẹn bạn trận sau nhé!</div>}
           </div>
         )}
@@ -246,14 +259,14 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
                   {cfg.match_status === 'finished' && <span className={`w-6 h-6 shrink-0 rounded-full grid place-items-center text-[11px] font-black ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'bg-slate-100 text-slate-400'}`}>{i + 1}</span>}
                   <b className="text-slate-800">{p.nguoi?.full_name || '—'}</b>
                   <span className="font-black text-emerald-700 tabular-nums">{p.pred_a}-{p.pred_b}</span>
-                  {p.scorer && <span className="text-slate-400">⚽ {p.scorer.split(' ').slice(-2).join(' ')}</span>}
+                  {predScorers(p).length > 0 && <span className="text-slate-400">⚽ {predScorers(p).map(n => n.split(' ').slice(-2).join(' ')).join(', ')}</span>}
                   {p.mvp && <span className="text-slate-400">👑 {p.mvp.split(' ').slice(-2).join(' ')}</span>}
                   {p.pts != null && <span className="ml-auto text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{p.pts} điểm</span>}
                 </div>
               ))}
             </div>
           )}
-          {cfg.match_status !== 'finished' && <p className="text-[11px] text-slate-400 mt-3">Tính điểm: đúng tỉ số <b>+3</b> · đúng kết quả <b>+1</b> · đúng người ghi bàn <b>+1</b> · đúng MVP <b>+1</b></p>}
+          {cfg.match_status !== 'finished' && <p className="text-[11px] text-slate-400 mt-3">Tính điểm: đúng tỉ số <b>+3</b> · đúng kết quả <b>+1</b> · <b>+1 cho MỖI</b> cầu thủ ghi bàn đoán đúng · đúng MVP <b>+1</b></p>}
         </div>
       </div>
 
@@ -265,12 +278,30 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
 // ================= ADMIN: cập nhật tỉ số / ghi bàn / MVP (realtime) =================
 const AdminControl = ({ game, cfg, squad, onSaved }) => {
   const [busy, setBusy] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [uploadingIx, setUploadingIx] = useState(null);
   const patch = async (changes) => {
     setBusy(true);
     const { error } = await supabase.from('minigames').update({ config: { ...cfg, ...changes } }).eq('id', game.id);
     setBusy(false);
     if (error) return toast.error('Lỗi: ' + error.message);
     onSaved?.();
+  };
+  const setPhoto = (i, url) => patch({ squad: squad.map((p, j) => j === i ? { ...p, photo: url || null } : p) });
+  const uploadPhoto = async (i, file) => {
+    if (!file) return;
+    setUploadingIx(i);
+    try {
+      const url = await uploadToR2(file, 'players');
+      await setPhoto(i, url);
+      toast.success(`Đã gắn ảnh ${squad[i].name}`);
+    } catch (e) { toast.error('Upload lỗi: ' + (e?.message || e)); }
+    setUploadingIx(null);
+  };
+  const pastePhoto = (i) => {
+    const url = prompt(`Dán link ảnh cho ${squad[i].name} (bỏ trống để XOÁ ảnh):`, squad[i].photo || '');
+    if (url === null) return;
+    setPhoto(i, url.trim());
   };
   const addGoal = async (side) => {
     const key = side === 'a' ? 'score_a' : 'score_b';
@@ -303,6 +334,26 @@ const AdminControl = ({ game, cfg, squad, onSaved }) => {
               className={`px-2.5 h-8 rounded-full text-[11px] font-bold ${cfg.mvp === p.name ? 'bg-amber-400 text-slate-900' : 'bg-white/10 hover:bg-white/20'}`}>#{p.num} {p.name.split(' ').slice(-2).join(' ')}</button>
           ))}
         </div>
+      </div>
+
+      {/* Ảnh cầu thủ: upload từ máy (lưu kho R2 của app) hoặc dán link */}
+      <div>
+        <button onClick={() => setPhotoOpen(v => !v)} className="text-[11px] font-bold text-white/50 hover:text-white/80 inline-flex items-center gap-1.5"><ImagePlus className="w-3.5 h-3.5" /> ẢNH CẦU THỦ {photoOpen ? '▲' : '▼'}</button>
+        {photoOpen && (
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-72 overflow-y-auto pr-1">
+            {squad.map((p, i) => (
+              <div key={p.num + p.name} className="flex items-center gap-2 bg-white/5 rounded-xl px-2 py-1.5">
+                <PlayerAvatar p={p} size={34} />
+                <span className="text-[11px] font-bold flex-1 min-w-0 truncate">#{p.num} {p.name}</span>
+                <label className="cursor-pointer w-8 h-8 grid place-items-center rounded-lg bg-white/10 hover:bg-white/25" title="Tải ảnh từ máy">
+                  {uploadingIx === i ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                  <input type="file" accept="image/*" className="hidden" disabled={uploadingIx != null} onChange={e => uploadPhoto(i, e.target.files?.[0])} />
+                </label>
+                <button onClick={() => pastePhoto(i)} className="w-8 h-8 grid place-items-center rounded-lg bg-white/10 hover:bg-white/25" title="Dán link ảnh"><Link2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
