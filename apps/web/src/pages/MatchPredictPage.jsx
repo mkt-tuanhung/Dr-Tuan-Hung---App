@@ -57,24 +57,34 @@ const TeamBackdrop = ({ team }) => team === 'a'
   ? <span className="absolute inset-0 grid place-items-center"><span style={{ width: '58%', aspectRatio: '1 / 1', background: '#ffcd00', clipPath: STAR_CLIP, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.25))' }} /></span>
   : null;
 
-// Thẻ cầu thủ dạng ảnh lớn (mục CẦU THỦ GHI BÀN)
-const PlayerCard = ({ p, team, flag, on, disabled, onClick }) => (
-  <button type="button" disabled={disabled} onClick={onClick}
-    className={`relative rounded-2xl border-2 overflow-hidden text-left transition bg-white ${on ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-slate-100 hover:border-slate-200'} disabled:opacity-60`}>
-    <div className="relative h-24 sm:h-28 w-full overflow-hidden" style={teamBgStyle(team)}>
-      <TeamBackdrop team={team} />
-      {p.photo
-        ? <img src={p.photo} alt={p.name} className="relative w-full h-full object-contain object-bottom" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,.35))' }} />
-        : <span className="absolute inset-0 grid place-items-center text-4xl font-black" style={{ color: team === 'a' ? '#7f1d1d' : '#ffffffd9', textShadow: '0 1px 3px rgba(0,0,0,.25)' }}>{p.num}</span>}
-      <span className="absolute top-1.5 left-1.5 min-w-6 h-6 px-1 rounded-lg bg-black/55 text-white text-[11px] font-black grid place-items-center">{p.num}</span>
-      {on && <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-emerald-500 text-white grid place-items-center shadow"><CheckCircle2 className="w-4 h-4" /></span>}
-    </div>
-    <div className="px-2 py-1.5">
-      <div className={`text-[11.5px] font-bold leading-tight truncate ${on ? 'text-emerald-700' : 'text-slate-700'}`}>{p.name}</div>
-      <div className="text-[10px] text-slate-400 mt-0.5">{flag} {p.pos === 'GK' ? 'Thủ môn' : p.pos === 'DF' ? 'Hậu vệ' : p.pos === 'MF' ? 'Tiền vệ' : 'Tiền đạo'}</div>
-    </div>
-  </button>
-);
+// Thẻ cầu thủ: ảnh trên nền cờ + tên. variant 'scorer' (xanh, chọn nhiều) | 'mvp' (vàng + 👑, chọn 1)
+const POS_VI = { GK: 'Thủ môn', DF: 'Hậu vệ', MF: 'Tiền vệ', FW: 'Tiền đạo' };
+const PlayerCard = ({ p, team = 'a', flag, on, disabled, onClick, delay = 0, variant = 'scorer' }) => {
+  const mvp = variant === 'mvp';
+  const onCls = mvp ? 'border-amber-400 ring-2 ring-amber-200' : 'border-emerald-500 ring-2 ring-emerald-200';
+  return (
+    <button type="button" disabled={disabled} onClick={onClick}
+      className={`mg-card relative rounded-2xl border-2 overflow-hidden text-left transition bg-white active:scale-95 ${on ? `${onCls} mg-pop` : 'border-slate-100 hover:border-slate-200 hover:-translate-y-0.5 hover:shadow-md'} disabled:opacity-60`}
+      style={{ animationDelay: `${delay}ms` }}>
+      <div className="relative h-20 sm:h-28 w-full overflow-hidden" style={teamBgStyle(team)}>
+        <TeamBackdrop team={team} />
+        {p.photo
+          ? <img src={p.photo} alt={p.name} loading="lazy" className="relative w-full h-full object-contain object-bottom" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,.35))' }} />
+          : <span className="absolute inset-0 grid place-items-center text-3xl sm:text-4xl font-black" style={{ color: team === 'a' ? '#7f1d1d' : '#ffffffd9', textShadow: '0 1px 3px rgba(0,0,0,.25)' }}>{p.num}</span>}
+        <span className="absolute top-1.5 left-1.5 min-w-6 h-6 px-1 rounded-lg bg-black/55 text-white text-[11px] font-black grid place-items-center">{p.num}</span>
+        {on && (
+          <span className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full text-white grid place-items-center shadow mg-check ${mvp ? 'bg-amber-400' : 'bg-emerald-500'}`}>
+            {mvp ? <Crown className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-4 h-4" />}
+          </span>
+        )}
+      </div>
+      <div className="px-2 py-1.5">
+        <div className={`text-[11px] sm:text-[11.5px] font-bold leading-tight truncate ${on ? (mvp ? 'text-amber-600' : 'text-emerald-700') : 'text-slate-700'}`}>{p.name}</div>
+        <div className="text-[9.5px] sm:text-[10px] text-slate-400 mt-0.5">{flag} {POS_VI[p.pos] || p.pos}</div>
+      </div>
+    </button>
+  );
+};
 
 const Stepper = ({ value, onChange, disabled, color }) => (
   <div className="flex items-center gap-2.5">
@@ -250,6 +260,14 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
 
   return (
     <div className={standalone ? 'min-h-screen bg-slate-50 pb-10' : 'space-y-4'}>
+      <style>{`
+        @keyframes mgFadeUp { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+        @keyframes mgPopIn  { 0% { transform: scale(.94); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+        @keyframes mgCheck  { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+        .mg-card  { animation: mgFadeUp .45s cubic-bezier(.2,.7,.3,1) both; }
+        .mg-pop   { animation: mgPopIn .28s ease; }
+        .mg-check { animation: mgCheck .3s cubic-bezier(.2,.7,.3,1.4); }
+      `}</style>
       <div className={standalone ? 'max-w-5xl mx-auto px-3 pt-3 space-y-4' : 'space-y-4'}>
         {/* Thanh trên */}
         <div className="flex items-center gap-2">
@@ -336,19 +354,20 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
                     <span className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 grid place-items-center text-[13px] font-black shrink-0">2</span>
                     <h4 className="font-bold text-slate-800">Cầu thủ ghi bàn</h4>
                   </div>
-                  <p className="text-[11.5px] text-slate-400 ml-9 mb-3">Chọn một hoặc nhiều cầu thủ của cả hai đội {f.scorers?.length > 0 && <b className="text-emerald-600">— đã chọn {f.scorers.length}</b>}</p>
+                  <p className="text-[11.5px] text-slate-400 ml-9 mb-3">Chọn một hoặc nhiều cầu thủ Việt Nam {f.scorers?.length > 0 && <b className="text-emerald-600">— đã chọn {f.scorers.length}</b>}</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
-                    {allPlayers.map(p => (
-                      <PlayerCard key={p.team + p.num + p.name} p={p} team={p.team} flag={p.team === 'a' ? A.flag : B.flag}
+                    {squadA.map((p, i) => (
+                      <PlayerCard key={'sc' + p.num + p.name} p={p} team="a" flag={A.flag} delay={i * 30}
                         on={(f.scorers || []).includes(p.name)} disabled={locked} onClick={() => toggleScorer(p.name)} />
                     ))}
                     {/* Không có bàn thắng */}
                     <button type="button" disabled={locked} onClick={() => setF({ ...f, scorers: [], noGoal: !f.noGoal })}
-                      className={`rounded-2xl border-2 grid place-items-center p-3 transition min-h-[120px] ${f.noGoal ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50' : 'border-dashed border-slate-200 hover:border-slate-300 bg-slate-50/50'} disabled:opacity-60`}>
+                      className={`mg-card rounded-2xl border-2 grid place-items-center p-3 transition min-h-[110px] active:scale-95 ${f.noGoal ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50 mg-pop' : 'border-dashed border-slate-200 hover:border-slate-300 bg-slate-50/50'} disabled:opacity-60`}
+                      style={{ animationDelay: `${squadA.length * 30}ms` }}>
                       <div className="text-center">
                         <Ban className={`w-6 h-6 mx-auto mb-1.5 ${f.noGoal ? 'text-emerald-600' : 'text-slate-300'}`} />
                         <div className={`text-[11.5px] font-bold ${f.noGoal ? 'text-emerald-700' : 'text-slate-500'}`}>Không có bàn thắng</div>
-                        <div className="text-[10px] text-slate-400">Kết quả 0–0</div>
+                        <div className="text-[10px] text-slate-400">VN không ghi bàn</div>
                       </div>
                     </button>
                   </div>
@@ -360,22 +379,12 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
                     <span className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 grid place-items-center text-[13px] font-black shrink-0">3</span>
                     <h4 className="font-bold text-slate-800">Cầu thủ xuất sắc nhất trận</h4>
                   </div>
-                  <p className="text-[11.5px] text-slate-400 ml-9 mb-3">Chỉ chọn một cầu thủ</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {allPlayers.map(p => {
-                      const on = f.mvp === p.name;
-                      return (
-                        <button key={'mvp' + p.team + p.num + p.name} type="button" disabled={locked} onClick={() => setF({ ...f, mvp: on ? null : p.name })}
-                          className={`flex items-center gap-2.5 rounded-2xl border-2 px-3 py-2 text-left transition ${on ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-200' : 'border-slate-100 hover:border-slate-200 bg-white'} disabled:opacity-60`}>
-                          <PlayerAvatar p={p} team={p.team} size={38} />
-                          <div className="min-w-0 flex-1">
-                            <div className={`text-[13px] font-bold truncate ${on ? 'text-emerald-700' : 'text-slate-700'}`}>{p.name}</div>
-                            <div className="text-[10.5px] text-slate-400">#{p.num} · {p.team === 'a' ? A.flag : B.flag} {p.pos === 'GK' ? 'Thủ môn' : p.pos === 'DF' ? 'Hậu vệ' : p.pos === 'MF' ? 'Tiền vệ' : 'Tiền đạo'}</div>
-                          </div>
-                          {on && <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />}
-                        </button>
-                      );
-                    })}
+                  <p className="text-[11.5px] text-slate-400 ml-9 mb-3">Chỉ chọn một cầu thủ Việt Nam {f.mvp && <b className="text-amber-600">— 👑 {f.mvp}</b>}</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {squadA.map((p, i) => (
+                      <PlayerCard key={'mvp' + p.num + p.name} p={p} team="a" flag={A.flag} variant="mvp" delay={i * 30}
+                        on={f.mvp === p.name} disabled={locked} onClick={() => setF({ ...f, mvp: f.mvp === p.name ? null : p.name })} />
+                    ))}
                   </div>
                 </section>
 
@@ -495,7 +504,8 @@ const AdminControl = ({ game, cfg, squadA, squadB, preds, onSaved }) => {
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = 'du-doan-vn-thai.csv'; a.click();
   };
-  const allP = [...squadA.map((p, i) => ({ ...p, i })), ...squadB.map((p, i) => ({ ...p, i }))];
+  // Bình chọn chỉ dùng đội VN -> quản trị MVP/ảnh cũng chỉ cần đội VN
+  const allP = squadA.map((p, i) => ({ ...p, i }));
 
   return (
     <div className="bg-slate-900 text-white rounded-3xl p-4 space-y-3 shadow-xl">

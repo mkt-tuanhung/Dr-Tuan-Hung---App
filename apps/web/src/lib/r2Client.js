@@ -23,9 +23,14 @@ export const compressImage = async (file, { maxDim = 1600, quality = 0.82 } = {}
     canvas.width = width; canvas.height = height;
     canvas.getContext('2d').drawImage(bmp, 0, 0, width, height);
     bmp.close?.();
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+    // PNG giữ nguyên PNG để BẢO TOÀN NỀN TRONG SUỐT (đổi sang JPEG là mất kênh alpha,
+    // ảnh cầu thủ tách nền sẽ bị nền đen/trắng). Các định dạng khác nén JPEG như cũ.
+    const isPng = t === 'image/png';
+    const blob = await new Promise(res => isPng ? canvas.toBlob(res, 'image/png') : canvas.toBlob(res, 'image/jpeg', quality));
     if (!blob || blob.size >= file.size) return file; // không nhỏ hơn thì giữ nguyên
-    return new File([blob], (file.name || 'image').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+    return isPng
+      ? new File([blob], (file.name || 'image').replace(/\.\w+$/, '') + '.png', { type: 'image/png' })
+      : new File([blob], (file.name || 'image').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
   } catch {
     return file; // trình duyệt cũ / lỗi -> giữ nguyên
   }
