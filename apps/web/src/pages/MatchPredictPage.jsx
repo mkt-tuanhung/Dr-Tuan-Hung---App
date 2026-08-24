@@ -448,18 +448,12 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h4 className="font-bold text-slate-800">Bảng xếp hạng dự đoán</h4>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{cfg.match_status === 'finished' ? 'Đã chốt kết quả — chúc mừng các nhà tiên tri! 🏆' : locked ? 'Trận đang diễn ra — điểm chốt khi kết thúc' : 'Phiếu chi tiết công khai sau giờ khóa'}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{cfg.match_status === 'finished' ? 'Đã chốt kết quả — chúc mừng các nhà tiên tri! 🏆' : locked ? 'Trận đang diễn ra — điểm chốt khi kết thúc' : 'Mọi người đang dự đoán — điểm tính khi trận kết thúc'}</div>
                 </div>
                 <span className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500">Thể lệ: +{PTS.exact} tỉ số · +{PTS.scorer}/ghi bàn · +{PTS.mvp} MVP</span>
               </div>
 
-              {!locked ? (
-                <div className="text-center py-10 text-slate-400">
-                  <Lock className="w-8 h-8 mx-auto mb-2 text-slate-200" />
-                  Dự đoán của mọi người được <b>giữ kín tới giờ khóa</b> ({lockAt ? fmtDT(lockAt.toISOString()) : ''}) cho công bằng.<br />
-                  Hiện đã có <b className="text-emerald-600">{preds.length.toLocaleString('vi-VN')}</b> người tham gia{mine ? ' (bạn đã gửi phiếu ✓)' : ''}.
-                </div>
-              ) : ranked.length === 0 ? (
+              {ranked.length === 0 ? (
                 <div className="text-center py-10 text-slate-300">Chưa có ai dự đoán.</div>
               ) : (
                 <div className="divide-y divide-slate-50">
