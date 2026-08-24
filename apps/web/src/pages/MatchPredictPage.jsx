@@ -80,6 +80,15 @@ const THFlag = ({ className = '' }) => (
     style={{ background: 'linear-gradient(180deg,#ef3340 0%,#ef3340 16%,#f4f5f8 16%,#f4f5f8 32%,#2d2a6e 32%,#2d2a6e 68%,#f4f5f8 68%,#f4f5f8 84%,#ef3340 84%)' }} />
 );
 
+// Icon QUẢ BÓNG vẽ SVG (không dùng emoji)
+const BallIcon = ({ className = 'w-4 h-4' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.2l4.2 3.1-1.6 4.9H9.4L7.8 10.3z" fill="currentColor" stroke="none" />
+    <path d="M12 3v4.2M4 9.8l3.8.5M20 9.8l-3.8.5M6.6 19.2l2.8-4M17.4 19.2l-2.8-4" />
+  </svg>
+);
+
 // Nền thẻ cầu thủ: đỏ sao vàng
 const vnCardBg = { background: 'radial-gradient(circle at 50% 40%, #e4392f 0%, #c8102e 55%, #8f1611 100%)' };
 const VNBackdrop = () => (
@@ -169,7 +178,7 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
     }, { onConflict: 'game_id,user_id' });
     setSaving(false);
     if (error) return toast.error(/policy|security/i.test(error.message) ? 'Đã quá giờ khóa dự đoán!' : 'Lỗi: ' + error.message);
-    toast.success(mine ? 'Đã cập nhật phiếu dự đoán ⚽' : 'Đã gửi phiếu dự đoán ⚽');
+    toast.success(mine ? 'Đã cập nhật phiếu dự đoán!' : 'Đã gửi phiếu dự đoán!');
     setEditing(false); load();
   };
   const toggleScorer = (name) => {
@@ -195,6 +204,19 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
     }
     return list;
   }, [preds, cfg]);
+
+  // Thống kê dự đoán: tỉ số / cầu thủ ghi bàn / MVP được chọn nhiều nhất
+  const stats = useMemo(() => {
+    const cnt = (map, k) => { if (!k) return; map[k] = (map[k] || 0) + 1; };
+    const score = {}, scorer = {}, mvp = {};
+    preds.forEach(p => {
+      cnt(score, `${p.pred_a}-${p.pred_b}`);
+      predScorers(p).forEach(n => cnt(scorer, n));
+      cnt(mvp, p.mvp);
+    });
+    const top = (m, n) => Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, n);
+    return { score: top(score, 5), scorer: top(scorer, 5), mvp: top(mvp, 3), total: preds.length };
+  }, [preds]);
 
   if (loading) return <div className={`flex items-center justify-center h-60 ${standalone ? 'min-h-screen bg-slate-50' : ''}`}><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
   if (!game) return <div className={`grid place-items-center h-60 text-slate-400 ${standalone ? 'min-h-screen bg-slate-50' : ''}`}>Không tìm thấy trận đấu.</div>;
@@ -286,7 +308,7 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
             <span className="text-[12.5px] font-black text-amber-300 shrink-0">{locked ? 'ĐÃ KHÓA' : `Khóa lúc ${lockAt ? lockAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}`}</span>
           </div>
           {(cfg.scorers || []).length > 0 && (
-            <div className="relative mt-2.5 text-center text-[12px] text-white/80">⚽ {(cfg.scorers || []).map(s => `${s.player || s}${s.minute ? ` ${s.minute}'` : ''}`).join(' · ')}</div>
+            <div className="relative mt-2.5 text-center text-[12px] text-white/80 inline-flex w-full items-center justify-center gap-1.5"><BallIcon className="w-3.5 h-3.5 shrink-0" /><span>{(cfg.scorers || []).map(s => `${s.player || s}${s.minute ? ` ${s.minute}'` : ''}`).join(' · ')}</span></div>
           )}
         </div>
 
@@ -452,42 +474,116 @@ const MatchPredictPage = ({ gameId: propGameId, onBack, standalone = false }) =>
           </div>
         )}
 
-        {/* ===== TAB: BẢNG XẾP HẠNG ===== */}
-        {tab === 'rank' && (
-          <div className="mg-fade mg-d3 bg-white rounded-[28px] border border-slate-100 shadow-sm p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div>
-                <h4 className="font-black text-slate-800 text-lg">Bảng xếp hạng</h4>
-                <div className="text-[11px] text-slate-400 mt-0.5">{cfg.match_status === 'finished' ? 'Đã chốt kết quả — chúc mừng! 🏆' : 'Điểm chốt khi trận kết thúc'}</div>
+        {/* ===== TAB: BẢNG XẾP HẠNG (biểu đồ + thẻ dự đoán) ===== */}
+        {tab === 'rank' && ranked.length === 0 && (
+          <div className="mg-fade mg-d3 bg-white rounded-[28px] border border-slate-100 shadow-sm p-8 text-center text-slate-300">Chưa có ai dự đoán — làm người đầu tiên nào!</div>
+        )}
+        {tab === 'rank' && ranked.length > 0 && (
+          <>
+            {/* --- BIỂU ĐỒ THỐNG KÊ --- */}
+            <div className="mg-fade mg-d2 bg-white rounded-[28px] border border-slate-100 shadow-sm p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <h4 className="font-black text-slate-800 text-lg">Thống kê dự đoán</h4>
+                <span className="text-[10.5px] font-bold px-2.5 py-1.5 rounded-xl bg-slate-50 text-slate-500 shrink-0 text-right leading-tight">+{PTS.exact} tỉ số<br />+{PTS.scorer}/ghi bàn · +{PTS.mvp} MVP</span>
               </div>
-              <span className="text-[10.5px] font-bold px-2.5 py-1.5 rounded-xl bg-slate-50 text-slate-500 shrink-0 text-right leading-tight">+{PTS.exact} tỉ số<br />+{PTS.scorer}/ghi bàn · +{PTS.mvp} MVP</span>
-            </div>
-            {ranked.length === 0 ? (
-              <div className="text-center py-10 text-slate-300">Chưa có ai dự đoán — làm người đầu tiên nào!</div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {ranked.map((p, i) => (
-                  <div key={p.id} className={`flex items-center gap-3 px-2 py-2.5 rounded-2xl ${cfg.match_status === 'finished' && i < 3 ? 'bg-amber-50/70' : ''}`}>
-                    {cfg.match_status === 'finished' && (
-                      <span className={`w-7 h-7 shrink-0 rounded-full grid place-items-center text-[12px] font-black ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : i === 2 ? 'bg-orange-300 text-white' : 'text-slate-400'}`}>{i + 1}</span>
-                    )}
-                    {p.nguoi?.avatar_url
-                      ? <img src={p.nguoi.avatar_url} alt="" className="w-9 h-9 shrink-0 rounded-full object-cover border border-slate-100" />
-                      : <span className="w-9 h-9 shrink-0 rounded-full bg-slate-800 text-white grid place-items-center text-[12px] font-black">{initials(p.nguoi?.full_name)}</span>}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13.5px] font-bold text-slate-800 truncate">{p.nguoi?.full_name || '—'}</div>
-                      <div className="text-[11px] text-slate-400 truncate">
-                        {dept(p.nguoi)}{dept(p.nguoi) ? ' · ' : ''}<b className="text-emerald-700">{p.pred_a}-{p.pred_b}</b>
-                        {predScorers(p).length > 0 && <> · ⚽ {predScorers(p).map(shortName).join(', ')}</>}
-                        {p.mvp && <> · 👑 {shortName(p.mvp)}</>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {/* Tỉ số được chọn nhiều nhất */}
+                <div>
+                  <div className="text-[11.5px] font-black tracking-widest text-slate-400 mb-2.5 flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-emerald-600" /> TỈ SỐ ĐƯỢC CHỌN NHIỀU NHẤT</div>
+                  <div className="space-y-2">
+                    {stats.score.map(([k, v]) => (
+                      <div key={k} className="flex items-center gap-2.5">
+                        <span className="w-12 text-[14px] font-black text-slate-700 tabular-nums shrink-0">{k}</span>
+                        <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.round(v / stats.total * 100)}%`, background: 'linear-gradient(90deg,#10b981,#059669)' }} />
+                        </div>
+                        <span className="w-14 text-right text-[11.5px] font-bold text-slate-500 shrink-0">{v} · {Math.round(v / stats.total * 100)}%</span>
                       </div>
-                    </div>
-                    {p.pts != null && <b className="text-[14px] text-slate-800 shrink-0 tabular-nums">{p.pts} điểm</b>}
+                    ))}
                   </div>
-                ))}
+                </div>
+                {/* Cầu thủ được dự đoán ghi bàn nhiều nhất */}
+                <div>
+                  <div className="text-[11.5px] font-black tracking-widest text-slate-400 mb-2.5 flex items-center gap-1.5"><BallIcon className="w-3.5 h-3.5 text-emerald-600" /> ĐƯỢC CHỌN GHI BÀN NHIỀU NHẤT</div>
+                  <div className="space-y-2">
+                    {stats.scorer.length === 0 ? <div className="text-[12px] text-slate-300 py-2">Chưa có lựa chọn</div> : stats.scorer.map(([name, v]) => {
+                      const pl = playerByName(name);
+                      const max = stats.scorer[0]?.[1] || 1;
+                      return (
+                        <div key={name} className="flex items-center gap-2.5">
+                          {pl ? <PlayerAvatar p={pl} size={28} /> : <span className="w-7 h-7 rounded-full grid place-items-center text-[10px] font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#da251d,#8f1611)' }}>{initials(name)}</span>}
+                          <span className="w-20 text-[11.5px] font-bold text-slate-700 truncate shrink-0">{shortName(name)}</span>
+                          <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.round(v / max * 100)}%`, background: 'linear-gradient(90deg,#f43f5e,#c8102e)' }} />
+                          </div>
+                          <span className="w-8 text-right text-[11.5px] font-bold text-slate-500 shrink-0">{v}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* MVP được chọn nhiều nhất */}
+                  <div className="text-[11.5px] font-black tracking-widest text-slate-400 mt-4 mb-2 flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-amber-500" /> MVP ĐƯỢC CHỌN NHIỀU NHẤT</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {stats.mvp.length === 0 ? <div className="text-[12px] text-slate-300">Chưa có lựa chọn</div> : stats.mvp.map(([name, v], i) => (
+                      <span key={name} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11.5px] font-bold ${i === 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                        {i === 0 && <Crown className="w-3.5 h-3.5" />}{shortName(name)} · {v}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+
+            {/* --- THẺ DỰ ĐOÁN TỪNG NGƯỜI --- */}
+            <div className="mg-fade mg-d3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {ranked.map((p, i) => {
+                const isMe = p.user_id === me?.id;
+                const fin = cfg.match_status === 'finished';
+                return (
+                  <div key={p.id} className={`bg-white rounded-3xl border-2 shadow-sm p-4 relative overflow-hidden ${isMe ? 'border-emerald-300' : fin && i < 3 ? 'border-amber-200' : 'border-slate-100'}`}>
+                    {fin && i < 3 && <span className={`absolute -right-6 top-3 rotate-45 text-[10px] font-black text-white px-8 py-0.5 ${i === 0 ? 'bg-amber-400' : i === 1 ? 'bg-slate-300' : 'bg-orange-300'}`}>TOP {i + 1}</span>}
+                    {/* người dự đoán */}
+                    <div className="flex items-center gap-2.5">
+                      {p.nguoi?.avatar_url
+                        ? <img src={p.nguoi.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-100 shrink-0" />
+                        : <span className="w-10 h-10 rounded-full bg-slate-800 text-white grid place-items-center text-[13px] font-black shrink-0">{initials(p.nguoi?.full_name)}</span>}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[14px] font-black text-slate-800 truncate">{p.nguoi?.full_name || '—'} {isMe && <span className="text-[10px] font-black text-emerald-600">(Bạn)</span>}</div>
+                        <div className="text-[11px] text-slate-400 truncate">{dept(p.nguoi) || 'Nhân sự'}</div>
+                      </div>
+                      {p.pts != null && <span className="shrink-0 text-[12.5px] font-black px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 tabular-nums">{p.pts}đ</span>}
+                    </div>
+                    {/* tỉ số */}
+                    <div className="mt-3 bg-slate-50 rounded-2xl px-3 py-2.5 grid grid-cols-[1fr_auto_1fr] items-center">
+                      <div className="flex items-center justify-end gap-2"><VNFlag className="w-7 h-5" /><span className="text-2xl font-black tabular-nums" style={{ color: A.color || '#da251d' }}>{p.pred_a}</span></div>
+                      <span className="px-2 text-slate-300 font-black">—</span>
+                      <div className="flex items-center gap-2"><span className="text-2xl font-black tabular-nums" style={{ color: B.color || '#2d2a6e' }}>{p.pred_b}</span><THFlag className="w-7 h-5" /></div>
+                    </div>
+                    {/* ghi bàn + MVP */}
+                    <div className="mt-2.5 space-y-1.5">
+                      <div className="flex items-start gap-1.5 text-[11.5px] text-slate-500">
+                        <BallIcon className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0" />
+                        {predScorers(p).length === 0 ? <span className="text-slate-300">Không chọn ghi bàn</span> : (
+                          <span className="flex flex-wrap gap-1">
+                            {predScorers(p).map(n => {
+                              const pl = playerByName(n);
+                              return <span key={n} className="inline-flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-full pl-0.5 pr-2 py-0.5 font-bold text-slate-600">{pl ? <PlayerAvatar p={pl} size={18} /> : null}{shortName(n)}</span>;
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      {p.mvp && (
+                        <div className="flex items-center gap-1.5 text-[11.5px]">
+                          <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="font-bold text-slate-600">{p.mvp}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -570,7 +666,7 @@ const AdminControl = ({ game, cfg, squad, preds, onSaved }) => {
     <div className="bg-slate-900 text-white rounded-3xl p-4 space-y-3 shadow-xl">
       <div className="text-[12px] font-black tracking-widest text-white/60 flex items-center gap-1.5"><Radio className="w-4 h-4" /> BẢNG ĐIỀU KHIỂN (admin — mọi người thấy realtime)</div>
       <div className="flex flex-wrap gap-2">
-        {[['upcoming', 'Chưa bắt đầu'], ['live', '🔴 Đang đá'], ['finished', 'Kết thúc']].map(([k, label]) => (
+        {[['upcoming', 'Chưa bắt đầu'], ['live', 'Đang đá ●'], ['finished', 'Kết thúc']].map(([k, label]) => (
           <button key={k} disabled={busy} onClick={() => patch({ match_status: k })}
             className={`px-3.5 h-9 rounded-xl text-xs font-bold ${cfg.match_status === k ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}>{label}</button>
         ))}
