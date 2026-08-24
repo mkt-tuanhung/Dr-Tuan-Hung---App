@@ -7,7 +7,7 @@ import {
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
   Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile,
-  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown
+  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -15,6 +15,7 @@ import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
 import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
 import TelesaleStaffKPI from '@/components/kpi/TelesaleStaffKPI.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
+import MinigamePage from '@/pages/MinigamePage.jsx';
 import MeetingPage from '@/pages/MeetingPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
@@ -58,6 +59,7 @@ const FULL_MENU = [
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'], exclude: ['designer'] },
   { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
+  { id: 'minigame',   label: 'Minigame',        icon: Gamepad2, roles: ['all'] },
   { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
 
   // MKT / Finance / Sales
@@ -414,6 +416,7 @@ const StaffDashboard = () => {
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
+    if (activeTab === 'minigame') return <MinigamePage />;
     if (activeTab === 'meetings') return <MeetingPage />;
     return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
