@@ -48,16 +48,26 @@ const PlayerAvatar = ({ p, team = 'a', size = 46 }) => p.photo
   ? <img src={p.photo} alt={p.name} className="rounded-full object-cover border-2 border-white shadow shrink-0" style={{ width: size, height: size }} />
   : <span className="rounded-full grid place-items-center font-black text-white border-2 border-white shadow shrink-0" style={{ width: size, height: size, background: team === 'a' ? 'linear-gradient(135deg,#da251d,#8f1611)' : 'linear-gradient(135deg,#2d2a6e,#191740)', fontSize: size * 0.34 }}>{p.num}</span>;
 
+// Nền thẻ cầu thủ theo quốc kỳ: VN = đỏ sao vàng · Thái = sọc đỏ–trắng–xanh
+const STAR_CLIP = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+const teamBgStyle = (team) => team === 'a'
+  ? { background: 'radial-gradient(circle at 50% 40%, #e4392f 0%, #c8102e 55%, #8f1611 100%)' }
+  : { background: 'linear-gradient(180deg,#ef3340 0%,#ef3340 15%,#f4f5f8 15%,#f4f5f8 31%,#2d2a6e 31%,#2d2a6e 69%,#f4f5f8 69%,#f4f5f8 85%,#ef3340 85%,#ef3340 100%)' };
+const TeamBackdrop = ({ team }) => team === 'a'
+  ? <span className="absolute inset-0 grid place-items-center"><span style={{ width: '58%', aspectRatio: '1 / 1', background: '#ffcd00', clipPath: STAR_CLIP, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.25))' }} /></span>
+  : null;
+
 // Thẻ cầu thủ dạng ảnh lớn (mục CẦU THỦ GHI BÀN)
 const PlayerCard = ({ p, team, flag, on, disabled, onClick }) => (
   <button type="button" disabled={disabled} onClick={onClick}
     className={`relative rounded-2xl border-2 overflow-hidden text-left transition bg-white ${on ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-slate-100 hover:border-slate-200'} disabled:opacity-60`}>
-    <div className="relative h-24 sm:h-28 w-full overflow-hidden" style={{ background: team === 'a' ? 'linear-gradient(135deg,#b91c1c,#7f1d1d)' : 'linear-gradient(135deg,#2d2a6e,#191740)' }}>
+    <div className="relative h-24 sm:h-28 w-full overflow-hidden" style={teamBgStyle(team)}>
+      <TeamBackdrop team={team} />
       {p.photo
-        ? <img src={p.photo} alt={p.name} className="w-full h-full object-cover object-top" />
-        : <span className="absolute inset-0 grid place-items-center text-4xl font-black text-white/85">{p.num}</span>}
+        ? <img src={p.photo} alt={p.name} className="relative w-full h-full object-contain object-bottom" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,.35))' }} />
+        : <span className="absolute inset-0 grid place-items-center text-4xl font-black" style={{ color: team === 'a' ? '#7f1d1d' : '#ffffffd9', textShadow: '0 1px 3px rgba(0,0,0,.25)' }}>{p.num}</span>}
       <span className="absolute top-1.5 left-1.5 min-w-6 h-6 px-1 rounded-lg bg-black/55 text-white text-[11px] font-black grid place-items-center">{p.num}</span>
-      {on && <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-emerald-500 text-white grid place-items-center"><CheckCircle2 className="w-4 h-4" /></span>}
+      {on && <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-emerald-500 text-white grid place-items-center shadow"><CheckCircle2 className="w-4 h-4" /></span>}
     </div>
     <div className="px-2 py-1.5">
       <div className={`text-[11.5px] font-bold leading-tight truncate ${on ? 'text-emerald-700' : 'text-slate-700'}`}>{p.name}</div>
