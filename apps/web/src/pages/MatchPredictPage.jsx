@@ -48,6 +48,44 @@ const PlayerAvatar = ({ p, team = 'a', size = 46 }) => p.photo
   ? <img src={p.photo} alt={p.name} className="rounded-full object-cover border-2 border-white shadow shrink-0" style={{ width: size, height: size }} />
   : <span className="rounded-full grid place-items-center font-black text-white border-2 border-white shadow shrink-0" style={{ width: size, height: size, background: team === 'a' ? 'linear-gradient(135deg,#da251d,#8f1611)' : 'linear-gradient(135deg,#2d2a6e,#191740)', fontSize: size * 0.34 }}>{p.num}</span>;
 
+// ===== TẨY NỀN TỰ ĐỘNG =====
+// Xoá vùng nền SÁNG (trắng / caro xám nhạt) loang từ 4 mép ảnh vào trong (flood-fill),
+// giữ nguyên cầu thủ ở giữa -> ảnh preview dính caro hoặc nền trắng đều thành nền trong suốt.
+const fetchImageBlob = async (url) => {
+  try { const r = await fetch(url, { mode: 'cors' }); if (r.ok) return await r.blob(); } catch { /* thử proxy */ }
+  // Ảnh kho không mở CORS -> đi qua proxy ảnh công cộng (có CORS *)
+  const r2 = await fetch('https://images.weserv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//, '')));
+  if (!r2.ok) throw new Error('Không tải được ảnh');
+  return await r2.blob();
+};
+const cleanLightBg = async (source) => {
+  const blob = typeof source === 'string' ? await fetchImageBlob(source) : source;
+  const bmp = await createImageBitmap(blob);
+  const maxDim = 1100;
+  const sc = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+  const W = Math.max(1, Math.round(bmp.width * sc)), H = Math.max(1, Math.round(bmp.height * sc));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, W, H); bmp.close?.();
+  const img = ctx.getImageData(0, 0, W, H); const d = img.data;
+  // Pixel "nền sáng": khá sáng + gần như không màu (trắng 255 / caro ~204)
+  const isBg = (p) => { const i = p * 4, r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3]; if (a < 10) return true; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx >= 165 && (mx - mn) <= 36; };
+  const seen = new Uint8Array(W * H); const stack = [];
+  const tryPush = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const p = y * W + x; if (seen[p]) return; seen[p] = 1; if (isBg(p)) stack.push(p); };
+  for (let x = 0; x < W; x++) { tryPush(x, 0); tryPush(x, H - 1); }
+  for (let y = 0; y < H; y++) { tryPush(0, y); tryPush(W - 1, y); }
+  let removed = 0;
+  while (stack.length) {
+    const p = stack.pop(); d[p * 4 + 3] = 0; removed++;
+    const x = p % W, y = (p / W) | 0;
+    tryPush(x + 1, y); tryPush(x - 1, y); tryPush(x, y + 1); tryPush(x, y - 1);
+  }
+  if (removed < W * H * 0.02) return null;   // gần như không có nền sáng -> giữ ảnh gốc
+  ctx.putImageData(img, 0, 0);
+  const out = await new Promise(res => c.toBlob(res, 'image/png'));
+  return out ? new File([out], 'player.png', { type: 'image/png' }) : null;
+};
+
 // Nền thẻ cầu thủ theo quốc kỳ: VN = đỏ sao vàng · Thái = sọc đỏ–trắng–xanh
 const STAR_CLIP = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
 const teamBgStyle = (team) => team === 'a'
@@ -482,11 +520,36 @@ const AdminControl = ({ game, cfg, squadA, squadB, preds, onSaved }) => {
     if (!file) return;
     setUploadingKey(team + i);
     try {
-      const url = await uploadToR2(file, 'players');
+      // Tự TẨY NỀN sáng (trắng/caro) trước khi lưu — ảnh nào không có nền sáng thì giữ nguyên
+      let toUp = file;
+      try { toUp = (await cleanLightBg(file)) || file; } catch { /* giữ ảnh gốc */ }
+      const url = await uploadToR2(toUp, 'players');
       await stripPhoto(team, i, url);
-      toast.success(`Đã gắn ảnh ${name}`);
+      toast.success(`Đã gắn ảnh ${name} (đã tự tẩy nền)`);
     } catch (e) { toast.error('Upload lỗi: ' + (e?.message || e)); }
     setUploadingKey(null);
+  };
+  // TẨY NỀN HÀNG LOẠT các ảnh đã lưu (ảnh dính caro/nền trắng) — không cần up lại
+  const [cleaning, setCleaning] = useState(false);
+  const cleanAll = async () => {
+    const targets = squadA.map((p, i) => ({ ...p, i })).filter(p => p.photo);
+    if (!targets.length) return toast.error('Chưa có ảnh nào để xử lý');
+    setCleaning(true);
+    const newSquad = squadA.map(({ team: _t, ...p }) => p);
+    let ok = 0, skip = 0, fail = 0;
+    for (const p of targets) {
+      toast.loading(`Đang tẩy nền ${p.name}… (${ok + skip + fail + 1}/${targets.length})`, { id: 'mg-clean' });
+      try {
+        const cleaned = await cleanLightBg(p.photo);
+        if (!cleaned) { skip++; continue; }        // ảnh vốn sạch -> bỏ qua
+        const url = await uploadToR2(cleaned, 'players');
+        newSquad[p.i] = { ...newSquad[p.i], photo: url };
+        ok++;
+      } catch (e) { fail++; console.error('clean fail', p.name, e); }
+    }
+    if (ok) await patch({ squad: newSquad });
+    setCleaning(false);
+    toast.success(`Tẩy nền xong: ${ok} ảnh đã xử lý · ${skip} vốn sạch${fail ? ` · ${fail} lỗi (ảnh không đọc được)` : ''}`, { id: 'mg-clean', duration: 9000 });
   };
   const pastePhoto = (team, i, p) => {
     const url = prompt(`Dán link ảnh cho ${p.name} (bỏ trống để XOÁ ảnh):`, p.photo || '');
@@ -534,7 +597,12 @@ const AdminControl = ({ game, cfg, squadA, squadB, preds, onSaved }) => {
       </div>
       {/* Ảnh cầu thủ: upload (kho R2) hoặc dán link */}
       <div>
-        <button onClick={() => setPhotoOpen(v => !v)} className="text-[11px] font-bold text-white/50 hover:text-white/80 inline-flex items-center gap-1.5"><ImagePlus className="w-3.5 h-3.5" /> ẢNH CẦU THỦ {photoOpen ? '▲' : '▼'}</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setPhotoOpen(v => !v)} className="text-[11px] font-bold text-white/50 hover:text-white/80 inline-flex items-center gap-1.5"><ImagePlus className="w-3.5 h-3.5" /> ẢNH CẦU THỦ {photoOpen ? '▲' : '▼'}</button>
+          <button onClick={cleanAll} disabled={cleaning} className="px-3 h-8 rounded-xl text-[11px] font-bold bg-amber-400/90 text-slate-900 hover:bg-amber-300 disabled:opacity-50 inline-flex items-center gap-1.5">
+            {cleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} {cleaning ? 'Đang tẩy nền…' : 'Tẩy nền TẤT CẢ ảnh'}
+          </button>
+        </div>
         {photoOpen && (
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-72 overflow-y-auto pr-1">
             {allP.map(p => (
