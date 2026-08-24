@@ -7,6 +7,7 @@ import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
+import MinigamePage from '@/pages/MinigamePage.jsx';
 import NotificationsPage from '@/pages/NotificationsPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
@@ -37,7 +38,7 @@ import {
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
-  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
@@ -77,6 +78,7 @@ const MENU_GROUPS = [
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
+    { id: 'minigame', label: 'Minigame', icon: Gamepad2 },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
   ]},
@@ -675,6 +677,7 @@ const AdminDashboard = () => {
       case 'payroll': return <PayrollPage />;
       case 'meetings': return <MeetingPage />;
       case 'community': return <CommunityPage />;
+      case 'minigame': return <MinigamePage />;
       case 'notifications': return <NotificationsPage />;
       case 'content_overview': return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
       case 'marketing': case 'content_kho': return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;
