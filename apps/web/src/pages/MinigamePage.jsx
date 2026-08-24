@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload.js';
 import { toast } from 'sonner';
 import { Gamepad2, Plus, X, Trash2, Gift, Trophy, Users, Clock, Sparkles, Play, Lock, ChevronLeft } from 'lucide-react';
+import MatchPredictPage from '@/pages/MatchPredictPage.jsx';
 
 // ===== Module MINIGAME — sân chơi cho nhân sự =====
 // Đợt đầu: VÒNG QUAY MAY MẮN. Admin tạo game (giải thưởng, lượt, thời gian);
@@ -59,6 +60,7 @@ const MinigamePage = () => {
 
   if (current) {
     const g = games.find(x => x.id === current) || null;
+    if (g?.type === 'match') return <MatchPredictPage gameId={g.id} onBack={() => setCurrent(null)} />;
     if (g) return <WheelPlay game={g} me={me} plays={plays.filter(p => p.game_id === g.id)} onBack={() => setCurrent(null)} onPlayed={load} />;
   }
 
@@ -90,10 +92,12 @@ const MinigamePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {games.map(g => {
             const st = gameState(g);
+            const isMatch = g.type === 'match';
             const gPlays = plays.filter(p => p.game_id === g.id);
             const mine = gPlays.filter(p => p.user_id === me?.id).length;
             const left = Math.max(0, (g.spins_per_user || 1) - mine);
             const prizes = g.config?.prizes || [];
+            const A = g.config?.team_a, B = g.config?.team_b;
             return (
               <div key={g.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
@@ -105,23 +109,30 @@ const MinigamePage = () => {
                       {g.ends_at && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />đến {fmtDT(g.ends_at)}</span>}
                     </div>
                   </div>
-                  <span className="w-11 h-11 shrink-0 rounded-2xl grid place-items-center bg-violet-50 text-violet-600"><Gift className="w-5 h-5" /></span>
+                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center ${isMatch ? 'bg-emerald-50' : 'bg-violet-50 text-violet-600'}`}>{isMatch ? <span className="text-xl">⚽</span> : <Gift className="w-5 h-5" />}</span>
                 </div>
-                {/* Giải thưởng */}
-                <div className="flex flex-wrap gap-1.5">
-                  {prizes.slice(0, 5).map((p, i) => (
-                    <span key={i} className="text-[10.5px] font-bold px-2 py-1 rounded-full text-white" style={{ background: p.color || PALETTE[i % PALETTE.length] }}>{p.label}</span>
-                  ))}
-                  {prizes.length > 5 && <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-500">+{prizes.length - 5}</span>}
-                </div>
+                {/* Match: 2 đội · Wheel: giải thưởng */}
+                {isMatch ? (
+                  <div className="flex items-center justify-center gap-3 py-1 text-[15px] font-black text-slate-700">
+                    <span>{A?.flag} {A?.name}</span><span className="text-slate-300 text-xs">VS</span><span>{B?.flag} {B?.name}</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {prizes.slice(0, 5).map((p, i) => (
+                      <span key={i} className="text-[10.5px] font-bold px-2 py-1 rounded-full text-white" style={{ background: p.color || PALETTE[i % PALETTE.length] }}>{p.label}</span>
+                    ))}
+                    {prizes.length > 5 && <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-500">+{prizes.length - 5}</span>}
+                  </div>
+                )}
                 <div className="mt-auto flex items-center gap-2">
-                  <button onClick={() => setCurrent(g.id)} disabled={!isOpen(g) && !isAdmin}
-                    className="flex-1 h-10 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 disabled:opacity-40 inline-flex items-center justify-center gap-1.5">
-                    {isOpen(g) ? <><Play className="w-4 h-4" /> Chơi ngay{left > 0 ? ` · còn ${left} lượt` : ''}</> : <><Lock className="w-4 h-4" /> Xem kết quả</>}
+                  <button onClick={() => setCurrent(g.id)} disabled={!isOpen(g) && !isAdmin && !isMatch}
+                    className={`flex-1 h-10 rounded-xl text-white font-bold text-sm disabled:opacity-40 inline-flex items-center justify-center gap-1.5 ${isMatch ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-violet-600 hover:bg-violet-700'}`}>
+                    {isMatch ? <><Play className="w-4 h-4" /> {isOpen(g) ? 'Dự đoán ngay' : 'Xem kết quả'}</>
+                      : isOpen(g) ? <><Play className="w-4 h-4" /> Chơi ngay{left > 0 ? ` · còn ${left} lượt` : ''}</> : <><Lock className="w-4 h-4" /> Xem kết quả</>}
                   </button>
                   {isAdmin && (
                     <>
-                      <button onClick={() => setEditGame(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">Sửa</button>
+                      {!isMatch && <button onClick={() => setEditGame(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">Sửa</button>}
                       <button onClick={() => toggleClose(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">{g.status === 'active' ? 'Đóng' : 'Mở'}</button>
                       <button onClick={() => del(g)} className="h-10 w-10 grid place-items-center rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
                     </>

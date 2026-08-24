@@ -10,6 +10,7 @@ import StaffDashboard from '@/pages/StaffDashboard.jsx';
 import PayslipViewPage from '@/pages/PayslipViewPage.jsx';
 import ServiceReviewPublicPage from '@/pages/ServiceReviewPublicPage.jsx';
 import DailyReportPublicPage from '@/pages/DailyReportPublicPage.jsx';
+import MatchPredictPage from '@/pages/MatchPredictPage.jsx';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/phieu-luong" element={<PayslipViewPage />} />
           <Route path="/danh-gia/:token" element={<ServiceReviewPublicPage />} />
           <Route path="/bao-cao/:slug" element={<DailyReportPublicPage />} />
+          <Route path="/du-doan/:id" element={<ProtectedRoute><MatchPredictPage standalone /></ProtectedRoute>} />
 
           <Route
             path="/admin-dashboard"
