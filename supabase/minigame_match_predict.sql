@@ -71,28 +71,36 @@ values (
     'score_a', 0, 'score_b', 0,
     'scorers', '[]'::jsonb,                -- [{player, minute}]
     'mvp', null,
-    -- Đội hình VN (số áo tham khảo — admin sửa trong config; photo: dán URL ảnh là hiện)
+    -- ĐỘI HÌNH 26 CẦU THỦ VN — HLV Kim Sang Sik chốt dự ASEAN Cup 2026
+    -- (nguồn VFF/VnExpress 07/2026; số áo tham khảo — admin sửa trong config;
+    --  photo: dán URL ảnh cầu thủ là hiện ảnh thật)
     'squad', jsonb_build_array(
-      jsonb_build_object('num', 1,  'name', 'Nguyễn Filip',        'pos', 'GK', 'photo', null),
-      jsonb_build_object('num', 26, 'name', 'Nguyễn Đình Triệu',   'pos', 'GK', 'photo', null),
-      jsonb_build_object('num', 2,  'name', 'Đỗ Duy Mạnh',         'pos', 'DF', 'photo', null),
-      jsonb_build_object('num', 3,  'name', 'Quế Ngọc Hải',        'pos', 'DF', 'photo', null),
-      jsonb_build_object('num', 4,  'name', 'Bùi Hoàng Việt Anh',  'pos', 'DF', 'photo', null),
-      jsonb_build_object('num', 5,  'name', 'Phan Tuấn Tài',       'pos', 'DF', 'photo', null),
-      jsonb_build_object('num', 16, 'name', 'Nguyễn Thanh Bình',   'pos', 'DF', 'photo', null),
-      jsonb_build_object('num', 17, 'name', 'Vũ Văn Thanh',        'pos', 'DF', 'photo', null),
-      jsonb_build_object('num', 8,  'name', 'Đỗ Hùng Dũng',        'pos', 'MF', 'photo', null),
-      jsonb_build_object('num', 10, 'name', 'Nguyễn Quang Hải',    'pos', 'MF', 'photo', null),
-      jsonb_build_object('num', 14, 'name', 'Nguyễn Hoàng Đức',    'pos', 'MF', 'photo', null),
-      jsonb_build_object('num', 18, 'name', 'Khuất Văn Khang',     'pos', 'MF', 'photo', null),
-      jsonb_build_object('num', 20, 'name', 'Châu Ngọc Quang',     'pos', 'MF', 'photo', null),
-      jsonb_build_object('num', 21, 'name', 'Nguyễn Hai Long',     'pos', 'MF', 'photo', null),
-      jsonb_build_object('num', 7,  'name', 'Nguyễn Văn Toàn',     'pos', 'FW', 'photo', null),
-      jsonb_build_object('num', 9,  'name', 'Nguyễn Tiến Linh',    'pos', 'FW', 'photo', null),
-      jsonb_build_object('num', 11, 'name', 'Phạm Tuấn Hải',       'pos', 'FW', 'photo', null),
-      jsonb_build_object('num', 12, 'name', 'Nguyễn Xuân Son',     'pos', 'FW', 'photo', null),
-      jsonb_build_object('num', 15, 'name', 'Bùi Vĩ Hào',          'pos', 'FW', 'photo', null),
-      jsonb_build_object('num', 23, 'name', 'Nguyễn Đình Bắc',     'pos', 'FW', 'photo', null)
+      jsonb_build_object('num', 1,  'name', 'Đặng Văn Lâm',           'pos', 'GK', 'photo', null),
+      jsonb_build_object('num', 26, 'name', 'Trần Trung Kiên',        'pos', 'GK', 'photo', null),
+      jsonb_build_object('num', 29, 'name', 'Lê Giang Patrik',        'pos', 'GK', 'photo', null),
+      jsonb_build_object('num', 2,  'name', 'Đỗ Duy Mạnh',            'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 3,  'name', 'Phan Tuấn Tài',          'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 4,  'name', 'Bùi Hoàng Việt Anh',     'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 5,  'name', 'Đoàn Văn Hậu',           'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 16, 'name', 'Nguyễn Thành Chung',     'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 17, 'name', 'Phạm Xuân Mạnh',         'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 23, 'name', 'Trương Tiến Anh',        'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 20, 'name', 'Nguyễn Văn Vĩ',          'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 13, 'name', 'Nguyễn Nhật Minh',       'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 15, 'name', 'Đinh Quang Kiệt',        'pos', 'DF', 'photo', null),
+      jsonb_build_object('num', 19, 'name', 'Nguyễn Quang Hải',       'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 14, 'name', 'Nguyễn Hoàng Đức',       'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 22, 'name', 'Nguyễn Hai Long',        'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 18, 'name', 'Khuất Văn Khang',        'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 7,  'name', 'Đỗ Hoàng Hên',           'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 6,  'name', 'Nguyễn Ngọc Mỹ',         'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 8,  'name', 'Lê Phạm Thành Long',     'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 11, 'name', 'Lê Văn Đô',              'pos', 'MF', 'photo', null),
+      jsonb_build_object('num', 12, 'name', 'Nguyễn Xuân Son',        'pos', 'FW', 'photo', null),
+      jsonb_build_object('num', 24, 'name', 'Nguyễn Đình Bắc',        'pos', 'FW', 'photo', null),
+      jsonb_build_object('num', 9,  'name', 'Nguyễn Tài Lộc',         'pos', 'FW', 'photo', null),
+      jsonb_build_object('num', 10, 'name', 'Phạm Gia Hưng',          'pos', 'FW', 'photo', null),
+      jsonb_build_object('num', 21, 'name', 'Nguyễn Trần Việt Cường', 'pos', 'FW', 'photo', null)
     )
   )
 )
