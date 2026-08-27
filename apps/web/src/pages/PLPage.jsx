@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { TrendingUp, TrendingDown, DollarSign, Megaphone, Banknote, Package, Users, PieChart, Wallet, Shield, Plus, Trash2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Megaphone, Banknote, Package, Users, PieChart, Wallet, Shield, Plus, Trash2, ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0)) + 'đ';
 const lastDay = (y, m) => `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
@@ -72,6 +72,12 @@ export default function PLPage() {
   useEffect(() => { load(); }, [load]);
   useRealtimeReload('customer_appointments,marketing_ads_performance,expenses,payroll,inventory_transactions,risk_fund', load);
 
+  const shiftMonth = (delta) => {
+    let m = month + delta, y = year;
+    if (m < 1) { m = 12; y -= 1; } else if (m > 12) { m = 1; y += 1; }
+    setMonth(m); setYear(y);
+  };
+
   const riskNet = risk.monthDep - risk.monthWit; // trích ròng trong tháng
   const totalCost = d.ads + d.hospitalFee + d.expenses + d.materials + d.labor + riskNet;
   const profit = d.revenue - totalCost;
@@ -120,10 +126,14 @@ export default function PLPage() {
             <p className="text-slate-400 text-sm">Lợi nhuận thực theo tháng · doanh thu trừ mọi chi phí &amp; quỹ rủi ro</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
-          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-slate-700 outline-none">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}</select>
-          <span className="text-slate-300">/</span>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-slate-700 outline-none">{[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}</select>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => shiftMonth(-1)} title="Tháng trước" className="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 flex items-center justify-center text-slate-600 shadow-sm transition"><ChevronLeft className="w-5 h-5" /></button>
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
+            <select value={month} onChange={e => setMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-slate-700 outline-none">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}</select>
+            <span className="text-slate-300">/</span>
+            <select value={year} onChange={e => setYear(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-slate-700 outline-none">{[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}</select>
+          </div>
+          <button type="button" onClick={() => shiftMonth(1)} title="Tháng sau" className="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 flex items-center justify-center text-slate-600 shadow-sm transition"><ChevronRight className="w-5 h-5" /></button>
         </div>
       </div>
 
@@ -151,36 +161,43 @@ export default function PLPage() {
                 <div className="text-xl font-bold">{fmt(d.revenue)}</div>
                 <div className="text-white/70 text-xs mt-2">Tổng chi phí (gồm trích quỹ)</div>
                 <div className="text-xl font-bold">{fmt(totalCost)}</div>
+                <div className="text-white/70 text-xs mt-2">Tiền thực về trong tháng</div>
+                <div className="text-xl font-bold">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
               </div>
             </div>
           </div>
 
-          {/* Doanh thu: ca mổ · CỌC · thực thu */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
-            <div className="p-4 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">Doanh thu (ca mổ)</div><div className="text-xs text-slate-400">{d.cases} ca đã mổ trong tháng</div></div>
-              <div className="text-xl font-bold text-teal-600">{fmt(d.revenue)}</div>
+          {/* Dòng tiền tháng: sổ phép tính gọn */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-50 flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center"><Banknote className="w-4 h-4" /></span>
+              <h3 className="font-bold text-slate-700">Dòng tiền tháng {month}/{year}</h3>
             </div>
-            <div className="p-4 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">Đối trừ cọc ca mổ tháng này</div><div className="text-xs text-slate-400">{d.cocOffsetCount} ca mổ tháng này đã cọc trước (kể cả cọc từ tháng trước)</div></div>
-              <div className="text-xl font-bold text-amber-600">− {fmt(d.cocOffset)}</div>
+            <div className="divide-y divide-slate-50 text-sm">
+              <div className="px-4 py-2.5 flex items-center gap-3">
+                <span className="w-5 text-center font-black text-slate-300"> </span>
+                <div className="flex-1 min-w-0"><span className="font-semibold text-slate-700">Doanh thu ca mổ</span> <span className="text-xs text-slate-400">· {d.cases} ca</span></div>
+                <div className="font-bold text-slate-800 tabular-nums">{fmt(d.revenue)}</div>
+              </div>
+              <div className="px-4 py-2.5 flex items-center gap-3">
+                <span className="w-5 text-center font-black text-amber-500">−</span>
+                <div className="flex-1 min-w-0"><span className="font-semibold text-slate-700">Cọc đã thu trước</span> <span className="text-xs text-slate-400">· {d.cocOffsetCount} ca đã cọc (kể cả tháng trước)</span></div>
+                <div className="font-bold text-amber-600 tabular-nums">− {fmt(d.cocOffset)}</div>
+              </div>
+              <div className="px-4 py-2.5 flex items-center gap-3 bg-emerald-50/50">
+                <span className="w-5 text-center font-black text-emerald-500">=</span>
+                <div className="flex-1 min-w-0"><span className="font-bold text-emerald-700">Thực thu từ ca mổ</span></div>
+                <div className="font-black text-emerald-600 tabular-nums">{fmt(d.revenue - d.cocOffset)}</div>
+              </div>
+              <div className="px-4 py-2.5 flex items-center gap-3">
+                <span className="w-5 text-center font-black text-violet-500">+</span>
+                <div className="flex-1 min-w-0"><span className="font-semibold text-slate-700">Cọc thu trong tháng</span> <span className="text-xs text-slate-400">· {d.cocCount} khách — đối trừ khi lên ca mổ</span></div>
+                <div className="font-bold text-violet-600 tabular-nums">+ {fmt(d.cocRev)}</div>
+              </div>
             </div>
-            <div className="p-4 flex items-center gap-3 bg-emerald-50/40">
-              <span className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">Thực thu từ ca mổ</div><div className="text-xs text-slate-400">= Doanh thu (ca mổ) − cọc đã thu trước của chính các ca đó</div></div>
-              <div className="text-xl font-bold text-emerald-600">{fmt(d.revenue - d.cocOffset)}</div>
-            </div>
-            <div className="p-4 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">DT cọc thu trong tháng</div><div className="text-xs text-slate-400">{d.cocCount} khoản cọc thu về trong tháng — sẽ đối trừ khi khách lên ca mổ</div></div>
-              <div className="text-xl font-bold text-violet-600">+ {fmt(d.cocRev)}</div>
-            </div>
-            <div className="p-4 flex items-center gap-3 bg-teal-50/50">
-              <span className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center shrink-0"><Banknote className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">Tổng tiền THỰC VỀ trong tháng</div><div className="text-xs text-slate-400">= Thực thu ca mổ + DT cọc thu trong tháng (dòng tiền thật)</div></div>
-              <div className="text-xl font-bold text-teal-700">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
+            <div className="px-4 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 text-white flex items-center justify-between gap-3">
+              <div className="text-xs md:text-sm font-bold uppercase tracking-wide">Tổng tiền thực về trong tháng</div>
+              <div className="text-lg md:text-xl font-black tabular-nums">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
             </div>
           </div>
 
