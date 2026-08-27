@@ -465,13 +465,18 @@ const HauPhauPage = () => {
     const cskhImgTags = pendingCskhImgs.map(u => `[Ảnh đính kèm: ${u}]`).join('\n');
     const cskhContent = [cskhForm.cskh_notes.trim(), cskhImgTags].filter(Boolean).join('\n');
     const newNote = cskhContent ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${cskhContent}` : '';
-    // Lấy nhật ký CSKH mới nhất từ DB làm nền (tránh ghi đè mất mốc đã lưu)
-    const { data: freshCskh } = await supabase.from('customer_appointments').select('cskh_notes').eq('id', careApp.id).maybeSingle();
-    const updatedNotes = ((freshCskh ? freshCskh.cskh_notes : careApp.cskh_notes) || '') + newNote;
+    // NỐI trong database (atomic — không dựng lại nhật ký, không thể ghi đè mất mốc cũ)
+    if (newNote) {
+      const { data: appended, error: apErr } = await supabase.rpc('append_care_note', { p_id: careApp.id, p_kind: 'cskh', p_note: newNote });
+      if (apErr) { toast.error('Lỗi lưu nhật ký: ' + apErr.message); setSavingCskh(false); return; }
+      if (!appended) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSavingCskh(false); return; }
+    }
     const { data: updCskh, error } = await supabase.from('customer_appointments')
-      .update({ cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes })
+      .update({ cskh_status: cskhForm.cskh_status || null })
       .eq('id', careApp.id)
       .select('id');
+    const { data: freshCskh } = await supabase.from('customer_appointments').select('cskh_notes').eq('id', careApp.id).maybeSingle();
+    const updatedNotes = freshCskh ? freshCskh.cskh_notes : ((careApp.cskh_notes || '') + newNote);
     if (error) toast.error(error.message);
     else if (!updCskh?.length) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSavingCskh(false); return; }
     else {
@@ -542,24 +547,30 @@ const HauPhauPage = () => {
     const imgTags = pendingImgs.map(u => `[Ảnh đính kèm: ${u}]`).join('\n');
     const content = [form.post_op_notes.trim(), imgTags].filter(Boolean).join('\n');
     const newNote = content ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${content}` : '';
-    // LẤY NHẬT KÝ MỚI NHẤT TỪ DB làm nền (selectedApp có thể là bản cũ lúc mở trang —
-    // nếu cộng vào bản cũ, lần lưu sau sẽ GHI ĐÈ MẤT mốc vừa lưu trước đó)
-    const { data: freshRow } = await supabase.from('customer_appointments').select('post_op_notes').eq('id', selectedApp.id).maybeSingle();
-    const updatedNotes = ((freshRow ? freshRow.post_op_notes : selectedApp.post_op_notes) || '') + newNote;
 
+    // NỐI mốc mới ngay trong database (RPC append_care_note — atomic, KHÔNG dựng
+    // lại nhật ký ở client nên không bao giờ ghi đè mất mốc cũ)
+    if (newNote) {
+      const { data: appended, error: apErr } = await supabase.rpc('append_care_note', { p_id: selectedApp.id, p_kind: 'hau_phau', p_note: newNote });
+      if (apErr) { toast.error('Lỗi lưu nhật ký: ' + apErr.message); setSaving(false); return; }
+      if (!appended) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSaving(false); return; }
+    }
+    // Các trường còn lại (KHÔNG đụng vào cột nhật ký)
     const { data: updRows, error } = await supabase.from('customer_appointments')
       .update({
         post_op_status: form.post_op_status,
-        post_op_notes: updatedNotes,
         warning_signs: form.warning_signs || [],
         next_recheck_at: form.next_recheck ? new Date(form.next_recheck).toISOString() : null,
       })
       .eq('id', selectedApp.id)
       .select('id');
+    // Đọc lại bản MỚI NHẤT từ DB để hiển thị đúng những gì đã lưu
+    const { data: freshRow } = await supabase.from('customer_appointments').select('post_op_notes').eq('id', selectedApp.id).maybeSingle();
+    const updatedNotes = freshRow ? freshRow.post_op_notes : ((selectedApp.post_op_notes || '') + newNote);
 
     if (error) toast.error(error.message);
     else if (!updRows?.length) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSaving(false); return; }
-    else { 
+    else {
       if (form.post_op_status === 'Tái khám') {
         if (!form.recheck_date) {
           toast.error('Vui lòng chọn ngày tái khám.');
