@@ -465,11 +465,15 @@ const HauPhauPage = () => {
     const cskhImgTags = pendingCskhImgs.map(u => `[Ảnh đính kèm: ${u}]`).join('\n');
     const cskhContent = [cskhForm.cskh_notes.trim(), cskhImgTags].filter(Boolean).join('\n');
     const newNote = cskhContent ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${cskhContent}` : '';
-    const updatedNotes = (careApp.cskh_notes || '') + newNote;
-    const { error } = await supabase.from('customer_appointments')
+    // Lấy nhật ký CSKH mới nhất từ DB làm nền (tránh ghi đè mất mốc đã lưu)
+    const { data: freshCskh } = await supabase.from('customer_appointments').select('cskh_notes').eq('id', careApp.id).maybeSingle();
+    const updatedNotes = ((freshCskh ? freshCskh.cskh_notes : careApp.cskh_notes) || '') + newNote;
+    const { data: updCskh, error } = await supabase.from('customer_appointments')
       .update({ cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes })
-      .eq('id', careApp.id);
+      .eq('id', careApp.id)
+      .select('id');
     if (error) toast.error(error.message);
+    else if (!updCskh?.length) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSavingCskh(false); return; }
     else {
       toast.success('Đã lưu nhật ký CSKH!');
       setCareApp(prev => prev ? { ...prev, cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes } : prev);
@@ -538,18 +542,23 @@ const HauPhauPage = () => {
     const imgTags = pendingImgs.map(u => `[Ảnh đính kèm: ${u}]`).join('\n');
     const content = [form.post_op_notes.trim(), imgTags].filter(Boolean).join('\n');
     const newNote = content ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${content}` : '';
-    const updatedNotes = (selectedApp.post_op_notes || '') + newNote;
+    // LẤY NHẬT KÝ MỚI NHẤT TỪ DB làm nền (selectedApp có thể là bản cũ lúc mở trang —
+    // nếu cộng vào bản cũ, lần lưu sau sẽ GHI ĐÈ MẤT mốc vừa lưu trước đó)
+    const { data: freshRow } = await supabase.from('customer_appointments').select('post_op_notes').eq('id', selectedApp.id).maybeSingle();
+    const updatedNotes = ((freshRow ? freshRow.post_op_notes : selectedApp.post_op_notes) || '') + newNote;
 
-    const { error } = await supabase.from('customer_appointments')
+    const { data: updRows, error } = await supabase.from('customer_appointments')
       .update({
         post_op_status: form.post_op_status,
         post_op_notes: updatedNotes,
         warning_signs: form.warning_signs || [],
         next_recheck_at: form.next_recheck ? new Date(form.next_recheck).toISOString() : null,
       })
-      .eq('id', selectedApp.id);
+      .eq('id', selectedApp.id)
+      .select('id');
 
     if (error) toast.error(error.message);
+    else if (!updRows?.length) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSaving(false); return; }
     else { 
       if (form.post_op_status === 'Tái khám') {
         if (!form.recheck_date) {
@@ -572,6 +581,7 @@ const HauPhauPage = () => {
       }
       toast.success('Đã lưu mốc chăm sóc!');
       setCareApp(prev => prev ? { ...prev, post_op_status: form.post_op_status, post_op_notes: updatedNotes } : prev);
+      setSelectedApp(prev => prev ? { ...prev, post_op_status: form.post_op_status, post_op_notes: updatedNotes } : prev);
       setForm(f => ({ ...f, post_op_notes: '' }));
       setPendingImgs([]);
       loadData();
@@ -920,20 +930,29 @@ const HauPhauPage = () => {
                 })}
               </div>
             </div>
+            {/* Lịch tái khám — thẻ riêng, KHÔNG chen giữa ghi chú và khay ảnh */}
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-sky-50 p-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 grid place-items-center shrink-0"><CalendarClock className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-bold text-blue-900 leading-tight">Lịch tái khám tiếp theo</div>
+                  <div className="text-[11px] text-blue-500">Bỏ trống nếu chưa hẹn</div>
+                </div>
+                {form.next_recheck && <button type="button" onClick={() => setForm({ ...form, next_recheck: '' })} className="shrink-0 w-7 h-7 grid place-items-center rounded-full text-blue-400 hover:bg-blue-100"><X className="w-4 h-4" /></button>}
+              </div>
+              <input type="datetime-local" value={form.next_recheck} onChange={e => setForm({ ...form, next_recheck: e.target.value })} className="mt-2.5 w-full min-w-0 border border-blue-200 bg-white p-2.5 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm" />
+              {st === 'Tái khám' && (
+                <div className="grid grid-cols-2 gap-3 mt-2.5 pt-2.5 border-t border-blue-100">
+                  <div><label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám (tạo lịch)</label><input type="date" value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full min-w-0 border border-blue-200 bg-white p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
+                  <div><label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full min-w-0 border border-blue-200 bg-white p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
+                </div>
+              )}
+            </div>
+            {/* Ghi chú + khay ảnh + nút: liền một mạch */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-slate-600">Ghi chú cập nhật</label>
               <textarea rows={3} value={form.post_op_notes} onChange={e => setForm({ ...form, post_op_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-slate-600">Lịch tái khám tiếp theo</label>
-              <input type="datetime-local" value={form.next_recheck} onChange={e => setForm({ ...form, next_recheck: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 text-sm" />
-            </div>
-            {st === 'Tái khám' && (
-              <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                <div><label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám (tạo lịch)</label><input type="date" value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
-              </div>
-            )}
             <PendingStrip imgs={pendingImgs} onRemove={(i) => setPendingImgs(l => l.filter((_, j) => j !== i))} />
             <div className="flex items-center justify-between pt-1">
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-teal-100">
