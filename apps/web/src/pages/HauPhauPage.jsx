@@ -173,35 +173,49 @@ const HauPhauPage = () => {
     loadData();
   };
 
+  // Ảnh CHỜ GỬI: up vào khay xem trước (không chèn link vào ô ghi chú), lưu mới ghép vào nhật ký
+  const [pendingImgs, setPendingImgs] = useState([]);
+  const [pendingCskhImgs, setPendingCskhImgs] = useState([]);
+
   const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setUploadingImage(true);
-    try {
-      const url = await uploadToR2(file, 'hau-phau');
-      setForm(prev => ({ ...prev, post_op_notes: prev.post_op_notes + (prev.post_op_notes ? '\n' : '') + `[Ảnh đính kèm: ${url}]` }));
-      toast.success('Đã tải ảnh lên!');
-    } catch (err) {
-      toast.error('Lỗi tải ảnh: ' + err.message);
+    let ok = 0;
+    for (const file of files) {
+      try { const url = await uploadToR2(file, 'hau-phau'); setPendingImgs(prev => [...prev, url]); ok++; }
+      catch (err) { toast.error('Lỗi tải ảnh: ' + err.message); }
     }
+    if (ok) toast.success(`Đã tải ${ok} ảnh — bấm "Lưu cập nhật" để ghi vào nhật ký`);
     setUploadingImage(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleCskhImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setUploadingCskhImage(true);
-    try {
-      const url = await uploadToR2(file, 'cskh');
-      setCskhForm(prev => ({ ...prev, cskh_notes: prev.cskh_notes + (prev.cskh_notes ? '\n' : '') + `[Ảnh đính kèm: ${url}]` }));
-      toast.success('Đã tải ảnh lên!');
-    } catch (err) {
-      toast.error('Lỗi tải ảnh: ' + err.message);
+    let ok = 0;
+    for (const file of files) {
+      try { const url = await uploadToR2(file, 'cskh'); setPendingCskhImgs(prev => [...prev, url]); ok++; }
+      catch (err) { toast.error('Lỗi tải ảnh: ' + err.message); }
     }
+    if (ok) toast.success(`Đã tải ${ok} ảnh — bấm "Lưu mốc CSKH" để ghi vào nhật ký`);
     setUploadingCskhImage(false);
     if (cskhFileRef.current) cskhFileRef.current.value = '';
   };
+
+  // Khay ảnh chờ gửi (dùng chung 2 form)
+  const PendingStrip = ({ imgs, onRemove }) => imgs.length === 0 ? null : (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {imgs.map((u, i) => (
+        <div key={u + i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+          <img src={u} alt="" className="w-full h-full object-cover" />
+          <button type="button" onClick={() => onRemove(i)} className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-black/60 text-white grid place-items-center hover:bg-black/80"><X className="w-3.5 h-3.5" /></button>
+        </div>
+      ))}
+    </div>
+  );
 
   const [satByAppt, setSatByAppt] = useState({}); // appointment_id -> điểm hài lòng (1-5)
 
@@ -448,7 +462,9 @@ const HauPhauPage = () => {
   const handleSaveCskh = async () => {
     if (!careApp) return;
     setSavingCskh(true);
-    const newNote = cskhForm.cskh_notes ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${cskhForm.cskh_notes}` : '';
+    const cskhImgTags = pendingCskhImgs.map(u => `[Ảnh đính kèm: ${u}]`).join('\n');
+    const cskhContent = [cskhForm.cskh_notes.trim(), cskhImgTags].filter(Boolean).join('\n');
+    const newNote = cskhContent ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${cskhContent}` : '';
     const updatedNotes = (careApp.cskh_notes || '') + newNote;
     const { error } = await supabase.from('customer_appointments')
       .update({ cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes })
@@ -458,6 +474,7 @@ const HauPhauPage = () => {
       toast.success('Đã lưu nhật ký CSKH!');
       setCareApp(prev => prev ? { ...prev, cskh_status: cskhForm.cskh_status || null, cskh_notes: updatedNotes } : prev);
       setCskhForm(f => ({ ...f, cskh_notes: '' }));
+      setPendingCskhImgs([]);
       loadData();
     }
     setSavingCskh(false);
@@ -517,7 +534,10 @@ const HauPhauPage = () => {
     e.preventDefault();
     if (!canEditHauPhau) return; // CSKH chỉ xem nhật ký hậu phẫu, không ghi
     setSaving(true);
-    const newNote = form.post_op_notes ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${form.post_op_notes}` : '';
+    // Ghép ghi chú + ảnh chờ gửi thành 1 mốc nhật ký
+    const imgTags = pendingImgs.map(u => `[Ảnh đính kèm: ${u}]`).join('\n');
+    const content = [form.post_op_notes.trim(), imgTags].filter(Boolean).join('\n');
+    const newNote = content ? `\n[${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}] ${content}` : '';
     const updatedNotes = (selectedApp.post_op_notes || '') + newNote;
 
     const { error } = await supabase.from('customer_appointments')
@@ -553,6 +573,7 @@ const HauPhauPage = () => {
       toast.success('Đã lưu mốc chăm sóc!');
       setCareApp(prev => prev ? { ...prev, post_op_status: form.post_op_status, post_op_notes: updatedNotes } : prev);
       setForm(f => ({ ...f, post_op_notes: '' }));
+      setPendingImgs([]);
       loadData();
     }
     setSaving(false);
@@ -643,48 +664,58 @@ const HauPhauPage = () => {
     return acc;
   }, {});
 
+  // Nhật ký dạng TIMELINE: gom từng mốc [ngày giờ] thành thẻ — giờ + chữ + LƯỚI ẢNH,
+  // mốc MỚI NHẤT trên cùng. (Dữ liệu vẫn lưu dạng text cũ nên tương thích ngược.)
   const renderNotes = (notesString) => {
     if (!notesString) return null;
     const lines = notesString.split('\n').filter(l => l.trim() !== '');
-    let currentDate = null;
-    const elements = [];
-    
-    lines.forEach((line, index) => {
-      const match = line.match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2}:\d{2})\]/);
-      if (match) {
-        const date = match[1];
-        if (date !== currentDate) {
-          currentDate = date;
-          elements.push(
-            <div key={`date-${index}`} className="font-extrabold text-teal-700 text-[13px] mt-3 mb-1 uppercase tracking-wide border-b border-teal-100 pb-0.5 inline-block">
-              NGÀY {date} :
-            </div>
-          );
-        }
-      }
-      
-      const parts = line.split(/(\[Ảnh đính kèm:\s*https?:\/\/[^\s\]]+\])/g);
-      const lineContent = parts.map((part, i) => {
-        const imgMatch = part.match(/\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/);
-        if (imgMatch) {
-          const url = imgMatch[1];
-          // Chỉ hiển thị ảnh từ domain R2 (tránh auto-load URL ngoài lạ)
-          if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) {
-            return <a key={i} href={url} target="_blank" rel="noreferrer noopener" className="text-xs text-slate-400 underline mx-1">[ảnh ngoài]</a>;
-          }
-          return (
-            <div key={i} onClick={() => setViewImage(url)} className="inline-block mt-1.5 mb-2 cursor-pointer">
-              <img src={url} alt="attachment" className="max-h-28 rounded-lg border border-slate-200 shadow-sm object-cover hover:opacity-90 transition-opacity" />
-            </div>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      });
-
-      elements.push(<div key={`line-${index}`} className="mb-0.5">{lineContent}</div>);
+    const entries = [];
+    let cur = null;
+    const IMG_RE = /\[Ảnh đính kèm:\s*(https?:\/\/[^\s\]]+)\]/g;
+    lines.forEach(line => {
+      const m = line.match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})(?:\s+(\d{1,2}:\d{2}(?::\d{2})?))?\]\s*(.*)$/);
+      let rest = line;
+      if (m) { cur = { date: m[1], time: (m[2] || '').slice(0, 5), texts: [], imgs: [] }; entries.push(cur); rest = m[3] || ''; }
+      else if (!cur) { cur = { date: null, time: '', texts: [], imgs: [] }; entries.push(cur); }
+      let im; IMG_RE.lastIndex = 0;
+      while ((im = IMG_RE.exec(rest))) cur.imgs.push(im[1]);
+      const text = rest.replace(IMG_RE, '').trim();
+      if (text) cur.texts.push(text);
     });
-    
-    return elements;
+    entries.reverse();   // mới nhất lên đầu
+
+    let lastDate = null;
+    return entries.map((en, i) => {
+      const showDate = en.date !== lastDate;
+      lastDate = en.date;
+      return (
+        <div key={i}>
+          {showDate && (
+            <div className="flex items-center gap-2 mt-4 mb-2 first:mt-0">
+              <span className="text-[11px] font-black tracking-wide text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-3 py-1">{en.date ? `NGÀY ${en.date}` : 'GHI CHÚ CŨ'}</span>
+              <span className="flex-1 h-px bg-slate-100" />
+            </div>
+          )}
+          <div className="relative pl-4 pb-3">
+            <span className="absolute left-0 top-1.5 w-2 h-2 rounded-full bg-teal-400" />
+            <span className="absolute left-[3.5px] top-4 bottom-0 w-px bg-slate-100" />
+            <div className="bg-slate-50/70 border border-slate-100 rounded-2xl px-3 py-2.5">
+              {en.time && <div className="text-[10.5px] font-black text-slate-400 tabular-nums mb-1">{en.time}</div>}
+              {en.texts.map((t, j) => <div key={j} className="text-[13px] text-slate-700 leading-relaxed">{t}</div>)}
+              {en.imgs.length > 0 && (
+                <div className={`grid gap-1.5 mt-2 ${en.imgs.length === 1 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {en.imgs.map((url, j) => (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL))
+                    ? <a key={j} href={url} target="_blank" rel="noreferrer noopener" className="text-xs text-slate-400 underline">[ảnh ngoài]</a>
+                    : <button key={j} type="button" onClick={() => setViewImage(url)} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:opacity-90 active:scale-95 transition">
+                        <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      </button>)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    });
   };
 
   // ===== TRANG CHĂM SÓC RIÊNG (full-page) =====
@@ -903,11 +934,12 @@ const HauPhauPage = () => {
                 <div><label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full border border-blue-200 p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
               </div>
             )}
+            <PendingStrip imgs={pendingImgs} onRemove={(i) => setPendingImgs(l => l.filter((_, j) => j !== i))} />
             <div className="flex items-center justify-between pt-1">
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-teal-100">
-                {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+                {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh{pendingImgs.length > 0 ? ` (${pendingImgs.length})` : ''}
               </button>
-              <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+              <input type="file" accept="image/*" multiple className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
               <button type="submit" disabled={saving} className="px-6 py-2.5 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700">{saving ? 'Đang lưu...' : 'Lưu cập nhật'}</button>
             </div>
           </div>
@@ -965,11 +997,12 @@ const HauPhauPage = () => {
             ))}
           </div>
           <textarea rows={3} value={cskhForm.cskh_notes} onChange={e => setCskhForm({ ...cskhForm, cskh_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-violet-500 resize-none text-sm" placeholder="Ghi chú chăm sóc CSKH, phản hồi của khách…" />
+          <PendingStrip imgs={pendingCskhImgs} onRemove={(i) => setPendingCskhImgs(l => l.filter((_, j) => j !== i))} />
           <div className="flex items-center justify-between">
             <button type="button" onClick={() => cskhFileRef.current?.click()} disabled={uploadingCskhImage} className="text-violet-600 hover:bg-violet-50 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-violet-100">
-              {uploadingCskhImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh
+              {uploadingCskhImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Thêm ảnh{pendingCskhImgs.length > 0 ? ` (${pendingCskhImgs.length})` : ''}
             </button>
-            <input type="file" accept="image/*" className="hidden" ref={cskhFileRef} onChange={handleCskhImageUpload} />
+            <input type="file" accept="image/*" multiple className="hidden" ref={cskhFileRef} onChange={handleCskhImageUpload} />
             <button type="button" onClick={handleSaveCskh} disabled={savingCskh} className="px-6 py-2.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700">{savingCskh ? 'Đang lưu...' : 'Lưu mốc CSKH'}</button>
           </div>
         </div>
