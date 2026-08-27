@@ -44,20 +44,20 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 
 const MENU_GROUPS = [
   { title: null, items: [
-    { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
+    { id: 'overview', label: 'Tổng quan', shortLabel: 'Tổng quan', icon: LayoutDashboard },
   ]},
   { title: 'KHÁCH HÀNG', color: 'blue', items: [
     { id: 'data_kh', label: 'Data khách hàng', icon: Database },
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
-    { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
+    { id: 'appointments', label: 'Lịch hẹn', shortLabel: 'Lịch hẹn', icon: CalendarDays },
     { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
     { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
     { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
     { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
-    { id: 'hr', label: 'Quản lý Nhân sự', icon: Users },
-    { id: 'kpi', label: 'KPI & Hoa hồng', icon: Target },
+    { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
+    { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
     { id: 'payroll', label: 'Bảng lương', icon: Wallet },
   ]},
   { title: 'TÀI CHÍNH', color: 'amber', items: [
@@ -84,6 +84,9 @@ const MENU_GROUPS = [
   ]},
 ];
 const MENU = MENU_GROUPS.flatMap(g => g.items).flatMap(m => m.children ? [m, ...m.children] : [m]);
+
+// Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("lai lo" -> "Lãi / Lỗ")
+const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 
 // Màu nền/nhãn nhẹ theo nhóm (class tĩnh để Tailwind không purge)
 const GROUP_STYLE = {
@@ -623,6 +626,11 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
   const [pendingLeaves, setPendingLeaves] = useState(0);
+  const [navQ, setNavQ] = useState(''); // tìm nhanh menu (không cần gõ dấu)
+  // Kết quả tìm menu: mọi mục bấm được (bỏ mục cha chỉ để mở nhóm)
+  const navResults = navQ.trim()
+    ? MENU.filter(m => !m.children && deAccent(m.label).includes(deAccent(navQ)))
+    : null;
 
   useEffect(() => {
     // Fetch initial count
@@ -695,6 +703,7 @@ const AdminDashboard = () => {
   };
 
   const activeMenu = MENU.find(m => m.id === activeTab);
+  const activeGroup = MENU_GROUPS.find(g => g.items.some(i => i.id === activeTab || (i.children || []).some(c => c.id === activeTab)));
 
   return (
     <div className="min-h-screen flex" style={{ background: '#f3f6f5' }}>
@@ -729,8 +738,42 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Tìm nhanh menu */}
+        <div className="px-3 pt-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={navQ}
+              onChange={e => setNavQ(e.target.value)}
+              placeholder="Tìm chức năng…"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-8 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/60 focus:bg-white/10 transition"
+            />
+            {navQ && (
+              <button onClick={() => setNavQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-0.5"><X className="w-4 h-4" /></button>
+            )}
+          </div>
+        </div>
+
         <nav className="flex-1 overflow-y-auto p-3 space-y-2">
-          {MENU_GROUPS.map((group, gi) => {
+          {navResults && (
+            <div className="space-y-0.5">
+              {navResults.length === 0 && <div className="px-3 py-2 text-[13px] text-slate-500">Không tìm thấy chức năng nào</div>}
+              {navResults.map(item => {
+                const Icon = item.icon;
+                const active = activeTab === item.id;
+                return (
+                  <button key={item.id}
+                    onClick={() => { setActiveTab(item.id); setSidebarOpen(false); setNavQ(''); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
+                      active ? 'bg-teal-500 text-white shadow-lg shadow-teal-900/40' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    }`}>
+                    <Icon className="w-4 h-4 shrink-0" />{item.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {!navResults && MENU_GROUPS.map((group, gi) => {
             const gs = GROUP_STYLE[group.color] || {};
             return (
             <div key={group.title || `g${gi}`} className={group.title ? 'pt-3' : ''}>
@@ -820,6 +863,12 @@ const AdminDashboard = () => {
         <header className="hidden lg:flex items-center justify-between bg-white/85 backdrop-blur border-b border-slate-100 px-6 py-3.5 sticky top-0 z-10">
           <div className="flex items-center gap-2.5">
             {activeMenu && <span className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center"><activeMenu.icon className="w-4 h-4 text-teal-600" /></span>}
+            {activeGroup?.title && (
+              <>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{activeGroup.title}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+              </>
+            )}
             <span className="font-bold text-slate-800 text-[15px]">{activeMenu?.label}</span>
           </div>
 
@@ -856,7 +905,7 @@ const AdminDashboard = () => {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
-          {renderContent()}
+          <div key={activeTab} className="animate-page">{renderContent()}</div>
         </main>
       </div>
 
@@ -877,8 +926,8 @@ const AdminDashboard = () => {
                 }`}>
                   <Icon className={`w-4 h-4 transition-colors ${active ? 'text-white' : 'text-slate-400'}`} />
                 </div>
-                <span className={`text-[10px] font-medium leading-none transition-colors ${active ? 'text-teal-600' : 'text-slate-400'}`}>
-                  {item.shortLabel}
+                <span className={`text-[10px] font-medium leading-none transition-colors max-w-full truncate ${active ? 'text-teal-600' : 'text-slate-400'}`}>
+                  {item.shortLabel || item.label}
                 </span>
               </button>
             );
