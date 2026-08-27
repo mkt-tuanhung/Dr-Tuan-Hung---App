@@ -17,7 +17,7 @@ export default function PLPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [loading, setLoading] = useState(true);
-  const [d, setD] = useState({ revenue: 0, ads: 0, hospitalFee: 0, expenses: 0, materials: 0, labor: 0, cases: 0, cocRev: 0, cocCount: 0 });
+  const [d, setD] = useState({ revenue: 0, ads: 0, hospitalFee: 0, expenses: 0, materials: 0, labor: 0, cases: 0, cocRev: 0, cocCount: 0, cocOffset: 0, cocOffsetCount: 0 });
   // Quỹ rủi ro: trích từ dòng tiền để dự phòng — P&L và dòng tiền tự trừ khoản trích
   const [risk, setRisk] = useState({ entries: [], monthDep: 0, monthWit: 0, totalFund: 0 });
 
@@ -26,8 +26,8 @@ export default function PLPage() {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = lastDay(year, month);
     const [apptRes, feeRes, adsRes, expRes, prRes, partnerRes, matRes, riskRes, cocRes] = await Promise.all([
-      // Doanh thu ca mổ: chỉ khách đã phẫu thuật
-      supabase.from('customer_appointments').select('revenue, surgery_date').eq('status', 'phau_thuat'),
+      // Doanh thu ca mổ: chỉ khách đã phẫu thuật (kèm cọc để đối trừ chéo tháng)
+      supabase.from('customer_appointments').select('revenue, surgery_date, deposit_amount, deposit_date').eq('status', 'phau_thuat'),
       // Viện phí: MỌI khách có viện phí trong tháng (bất kể trạng thái) — khớp module Viện phí
       supabase.from('customer_appointments').select('hospital_fee, hospital_fee_date').not('hospital_fee', 'is', null).gte('hospital_fee_date', startDate).lte('hospital_fee_date', endDate + 'T23:59:59'),
       supabase.from('marketing_ads_performance').select('amount_spent, date').gte('date', startDate).lte('date', endDate),
@@ -37,12 +37,17 @@ export default function PLPage() {
       // Vật tư nhập mới trong tháng = khoản chi (phiếu nhập kho)
       supabase.from('inventory_transactions').select('amount, date').eq('type', 'import').gte('date', startDate).lte('date', endDate),
       supabase.from('risk_fund').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
-      // Doanh thu CỌC: tiền cọc đã thu trong tháng (khách đang cọc)
-      supabase.from('customer_appointments').select('deposit_amount').eq('status', 'coc').gte('deposit_date', startDate).lte('deposit_date', endDate),
+      // DT CỌC thu trong tháng: mọi khoản cọc có deposit_date trong tháng, KHÔNG lọc status
+      // (khách lên ca mổ thì status thành phau_thuat nhưng tiền cọc vẫn tính ở tháng đã cọc)
+      supabase.from('customer_appointments').select('deposit_amount').gt('deposit_amount', 0).gte('deposit_date', startDate).lte('deposit_date', endDate),
     ]);
-    let revenue = 0, hospitalFee = 0, cases = 0;
+    let revenue = 0, hospitalFee = 0, cases = 0, cocOffset = 0, cocOffsetCount = 0;
     (apptRes.data || []).forEach(a => {
-      if (a.surgery_date && a.surgery_date >= startDate && a.surgery_date <= endDate) { revenue += Number(a.revenue || 0); cases++; }
+      if (a.surgery_date && a.surgery_date >= startDate && a.surgery_date <= endDate) {
+        revenue += Number(a.revenue || 0); cases++;
+        // Ca mổ tháng này đã cọc từ trước (kể cả cọc tháng trước) -> đối trừ khỏi thực thu tháng này
+        if (Number(a.deposit_amount || 0) > 0) { cocOffset += Number(a.deposit_amount || 0); cocOffsetCount++; }
+      }
     });
     // Viện phí = mọi khách có viện phí trong tháng (đã lọc theo hospital_fee_date ở truy vấn)
     (feeRes.data || []).forEach(a => { hospitalFee += Number(a.hospital_fee || 0); });
@@ -53,7 +58,7 @@ export default function PLPage() {
     const materials = (matRes.data || []).reduce((s, x) => s + Number(x.amount || 0), 0);
     const labor = (prRes.data || []).reduce((s, x) => s + (Number(x.net_salary || 0) - Number(x.unpaid_advance || 0)), 0);
     const cocRev = (cocRes.data || []).reduce((s2, c) => s2 + Number(c.deposit_amount || 0), 0);
-    setD({ revenue, ads, hospitalFee, expenses, materials, labor, cases, cocRev, cocCount: (cocRes.data || []).length });
+    setD({ revenue, ads, hospitalFee, expenses, materials, labor, cases, cocRev, cocCount: (cocRes.data || []).length, cocOffset, cocOffsetCount });
     const allRisk = riskRes.data || [];
     const inMonth = allRisk.filter(r => r.date >= startDate && r.date <= endDate);
     setRisk({
@@ -158,14 +163,24 @@ export default function PLPage() {
               <div className="text-xl font-bold text-teal-600">{fmt(d.revenue)}</div>
             </div>
             <div className="p-4 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">Doanh thu CỌC</div><div className="text-xs text-slate-400">{d.cocCount} khách cọc trong tháng — đối trừ khi lên ca mổ, KHÔNG cộng vào lợi nhuận</div></div>
-              <div className="text-xl font-bold text-violet-600">{fmt(d.cocRev)}</div>
+              <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
+              <div className="flex-1"><div className="font-bold text-slate-800">Đối trừ cọc ca mổ tháng này</div><div className="text-xs text-slate-400">{d.cocOffsetCount} ca mổ tháng này đã cọc trước (kể cả cọc từ tháng trước)</div></div>
+              <div className="text-xl font-bold text-amber-600">− {fmt(d.cocOffset)}</div>
             </div>
             <div className="p-4 flex items-center gap-3 bg-emerald-50/40">
               <span className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
-              <div className="flex-1"><div className="font-bold text-slate-800">Doanh thu thực thu</div><div className="text-xs text-slate-400">= Doanh thu (ca mổ) − Doanh thu cọc</div></div>
-              <div className="text-xl font-bold text-emerald-600">{fmt(d.revenue - d.cocRev)}</div>
+              <div className="flex-1"><div className="font-bold text-slate-800">Thực thu từ ca mổ</div><div className="text-xs text-slate-400">= Doanh thu (ca mổ) − cọc đã thu trước của chính các ca đó</div></div>
+              <div className="text-xl font-bold text-emerald-600">{fmt(d.revenue - d.cocOffset)}</div>
+            </div>
+            <div className="p-4 flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5" /></span>
+              <div className="flex-1"><div className="font-bold text-slate-800">DT cọc thu trong tháng</div><div className="text-xs text-slate-400">{d.cocCount} khoản cọc thu về trong tháng — sẽ đối trừ khi khách lên ca mổ</div></div>
+              <div className="text-xl font-bold text-violet-600">+ {fmt(d.cocRev)}</div>
+            </div>
+            <div className="p-4 flex items-center gap-3 bg-teal-50/50">
+              <span className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center shrink-0"><Banknote className="w-5 h-5" /></span>
+              <div className="flex-1"><div className="font-bold text-slate-800">Tổng tiền THỰC VỀ trong tháng</div><div className="text-xs text-slate-400">= Thực thu ca mổ + DT cọc thu trong tháng (dòng tiền thật)</div></div>
+              <div className="text-xl font-bold text-teal-700">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
             </div>
           </div>
 
@@ -187,7 +202,7 @@ export default function PLPage() {
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed bg-slate-50 rounded-xl p-3">
-            <b>Cách tính:</b> Doanh thu = tổng doanh thu các ca đã mổ trong tháng (đã gồm upsale). Chi phí gồm: quảng cáo (đã tiêu) + viện phí + <b>vật tư nhập kho</b> + chi khác (phiếu chi đã duyệt) + lương &amp; hoa hồng + <b>trích quỹ rủi ro</b> (trích − rút trong tháng). <b>Lợi nhuận = Doanh thu − Tổng chi phí.</b> Tạm ứng chi hộ &amp; ứng lương (khoản cho vay) không tính là chi phí. <b>Doanh thu cọc</b> là tiền cọc đã thu của khách đang cọc trong tháng — hiển thị để theo dõi, không cộng vào lợi nhuận (sẽ nằm trong doanh thu ca mổ khi khách phẫu thuật); <b>Doanh thu thực thu = Doanh thu − DT cọc</b>.
+            <b>Cách tính:</b> Doanh thu = tổng doanh thu các ca đã mổ trong tháng (đã gồm upsale). Chi phí gồm: quảng cáo (đã tiêu) + viện phí + <b>vật tư nhập kho</b> + chi khác (phiếu chi đã duyệt) + lương &amp; hoa hồng + <b>trích quỹ rủi ro</b> (trích − rút trong tháng). <b>Lợi nhuận = Doanh thu − Tổng chi phí.</b> Tạm ứng chi hộ &amp; ứng lương (khoản cho vay) không tính là chi phí. <b>Tiền cọc (dòng tiền):</b> DT cọc thu trong tháng = mọi khoản cọc thu về theo ngày cọc (kể cả khách sau này đã mổ). Khi khách lên ca mổ, doanh thu ca mổ ghi ĐỦ giá dịch vụ, nên <b>Thực thu ca mổ = Doanh thu ca mổ − phần cọc đã thu trước của chính các ca đó</b> (VD: cọc 20tr tháng 6, mổ 80tr tháng 7 → tháng 6 thực về 20tr, tháng 7 thực về 60tr). Lợi nhuận vẫn tính trên Doanh thu ca mổ (giá trị dịch vụ), không tính trên dòng tiền.
           </p>
         </>
       ) : (
