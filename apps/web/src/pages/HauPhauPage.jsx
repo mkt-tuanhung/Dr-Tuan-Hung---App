@@ -931,7 +931,7 @@ const HauPhauPage = () => {
               </div>
             </div>
             {/* Lịch tái khám — thẻ riêng, KHÔNG chen giữa ghi chú và khay ảnh */}
-            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-sky-50 p-3.5">
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-sky-50 p-3.5 overflow-hidden">
               <div className="flex items-center gap-2.5">
                 <span className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 grid place-items-center shrink-0"><CalendarClock className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /></span>
                 <div className="min-w-0 flex-1">
@@ -940,11 +940,11 @@ const HauPhauPage = () => {
                 </div>
                 {form.next_recheck && <button type="button" onClick={() => setForm({ ...form, next_recheck: '' })} className="shrink-0 w-7 h-7 grid place-items-center rounded-full text-blue-400 hover:bg-blue-100"><X className="w-4 h-4" /></button>}
               </div>
-              <input type="datetime-local" value={form.next_recheck} onChange={e => setForm({ ...form, next_recheck: e.target.value })} className="mt-2.5 w-full min-w-0 border border-blue-200 bg-white p-2.5 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm" />
+              <input type="datetime-local" value={form.next_recheck} onChange={e => setForm({ ...form, next_recheck: e.target.value })} style={{ maxWidth: '100%' }} className="mt-2.5 block w-full min-w-0 appearance-none box-border border border-blue-200 bg-white p-2.5 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm" />
               {st === 'Tái khám' && (
                 <div className="grid grid-cols-2 gap-3 mt-2.5 pt-2.5 border-t border-blue-100">
-                  <div><label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám (tạo lịch)</label><input type="date" value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} className="w-full min-w-0 border border-blue-200 bg-white p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
-                  <div><label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} className="w-full min-w-0 border border-blue-200 bg-white p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
+                  <div className="min-w-0"><label className="block text-xs font-semibold mb-1 text-blue-800">Ngày tái khám (tạo lịch)</label><input type="date" value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} style={{ maxWidth: '100%' }} className="block w-full min-w-0 appearance-none box-border border border-blue-200 bg-white p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
+                  <div className="min-w-0"><label className="block text-xs font-semibold mb-1 text-blue-800">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} style={{ maxWidth: '100%' }} className="block w-full min-w-0 appearance-none box-border border border-blue-200 bg-white p-2 rounded-lg text-sm outline-none focus:border-blue-500" /></div>
                 </div>
               )}
             </div>
