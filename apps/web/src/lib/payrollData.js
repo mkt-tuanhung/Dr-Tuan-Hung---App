@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import { computePayrollRow } from '@/lib/kpiCalc';
+import { computePayrollRow, fetchTelesalePrior } from '@/lib/kpiCalc';
 
 // Tải dữ liệu nguồn + tính lương 1 nhân sự cho 1 tháng.
 // Tháng đã CHỐT -> lấy số đã lưu (chính thức); chưa chốt -> tính LIVE.
@@ -13,14 +13,14 @@ export async function loadPayrollDetail(staffId, month, year) {
   const orSale = `telesale_id.eq.${tid},telesale_id_2.eq.${tid},sale_id.eq.${tid}`;
   const orSurg = `${orSale},bac_si_id.eq.${tid},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid},truc_dem_id.eq.${tid},truc_dem_id_2.eq.${tid},hau_phau_id.eq.${tid}`;
 
-  const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes, seedRes] = await Promise.all([
+  const [profRes, payRes, attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, salRes, winRes, partnerRes, seedRes, prior] = await Promise.all([
     supabase.from('profiles').select('id, full_name, employee_id, role, role_2, position, base_salary, allowance, employment_status, fixed_salary, bank_name, bank_account').eq('id', tid).maybeSingle(),
     supabase.from('payroll').select('*').eq('staff_id', tid),
     supabase.from('attendance').select('staff_id, status, date, overtime_hours, late_early_hours').eq('staff_id', tid).gte('date', ms).lte('date', meDay),
     supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').or(orSale).gte('appointment_date', ms).lte('appointment_date', meDay),
-    supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').or(orSurg).gte('surgery_date', ms).lte('surgery_date', meDay),
-    supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('bong_date', ms).lte('bong_date', meDay),
-    supabase.from('customer_appointments').select('telesale_id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('deposit_date', ms).lte('deposit_date', meDay),
+    supabase.from('customer_appointments').select('sale_id, phone, telesale_id, telesale_id_2, revenue, upsale_revenue, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').or(orSurg).gte('surgery_date', ms).lte('surgery_date', meDay),
+    supabase.from('customer_appointments').select('phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('bong_date', ms).lte('bong_date', meDay),
+    supabase.from('customer_appointments').select('phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('deposit_date', ms).lte('deposit_date', meDay),
     supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').or(`staff_id.eq.${tid},telesale_id.eq.${tid}`).gte('date', ms).lte('date', meDay),
     supabase.from('expenses').select('staff_id, amount').eq('staff_id', tid).eq('is_advance', true).eq('status', 'approved'),
     supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
@@ -28,6 +28,7 @@ export async function loadPayrollDetail(staffId, month, year) {
     supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, surgery_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').or(`bac_si_id.eq.${tid},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid}`).gte('surgery_date', ms).lte('surgery_date', meDay),
     // Ca nguồn Seeding (kèm viện phí) — hoa hồng seeding = 20% × (DT − viện phí), tính trên TẤT CẢ ca
     supabase.from('customer_appointments').select('customer_name, revenue, hospital_fee').eq('customer_source', 'Seeding').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay).limit(2000),
+    fetchTelesalePrior(ms), // lịch sử bong/cọc trước tháng — chống thưởng lịch hẹn lặp
   ]);
 
   const profile = profRes.data;
@@ -38,7 +39,7 @@ export async function loadPayrollDetail(staffId, month, year) {
     att: attRes.data || [], appts: apptRes.data || [], surg: surgRes.data || [],
     bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
     adv: advRes.data || [], salAdv: salRes.data || [], contentWins: winRes.data || [],
-    partner: partnerRes.data || [], seeding: seedRes.data || [],
+    partner: partnerRes.data || [], seeding: seedRes.data || [], prior,
     saved: savedThisMonth,
   }) : null;
   const detail = savedThisMonth?.status === 'locked'

@@ -1,6 +1,35 @@
 // ============================================================
 // Hàm tính KPI & hoa hồng dùng chung (admin + nhân sự phải khớp số)
 // ============================================================
+import { supabase } from '@/lib/supabaseClient';
+
+// Chuẩn hoá SĐT để so trùng khách giữa các tháng (bỏ ký tự thừa, +84 -> 0)
+export const normPhone = (p) => {
+  let s = String(p || '').replace(/\D/g, '');
+  if (s.startsWith('84') && s.length > 9) s = '0' + s.slice(2);
+  return s;
+};
+
+// Lịch sử bong/cọc TRƯỚC đầu tháng (ms = 'YYYY-MM-01') — theo SĐT.
+// Dùng để KHÔNG thưởng lịch hẹn lặp: khách đã tới tư vấn từ tháng trước (đã bong/cọc)
+// mà tháng này tái tư vấn vẫn bong/cọc thì không được cộng thưởng lần nữa.
+// RLS tự giới hạn: telesale chỉ đọc được khách của mình -> lịch sử cũng là khách của mình.
+export const fetchTelesalePrior = async (ms) => {
+  const prior = { bong: new Set(), coc: new Set() };
+  for (const [key, col] of [['bong', 'bong_date'], ['coc', 'deposit_date']]) {
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('customer_appointments')
+        .select(`phone, ${col}`)
+        .lt(col, ms)
+        .range(from, from + 999);
+      if (error || !data || data.length === 0) break;
+      data.forEach(r => { const ph = normPhone(r.phone); if (ph) prior[key].add(ph); });
+      if (data.length < 1000) break;
+    }
+  }
+  return prior;
+};
 
 export const PHONE_COMMISSION = 20000; // 20.000đ / 1 SĐT quan tâm (Trực page)
 
@@ -151,9 +180,31 @@ export const isHalfSource = (a) => SALE_HALF_SOURCES.includes(a?.customer_source
 // Hệ số hoa hồng telesale/khách = chia sẻ co-care (½ nếu 2 telesale) × (½ nếu nguồn quen/CTV)
 export const telesaleFactor = (row) => telesaleShare(row) * (isHalfSource(row) ? 0.5 : 1);
 
-export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows = [], surgRows = [] }) => {
+// QUY TẮC THƯỞNG LỊCH HẸN (áp dụng khi caller truyền `prior` + rows có phone/consult_received):
+//   1) Giai đoạn Bong/Cọc CHỈ thưởng khi khách đã được TIẾP NHẬN TƯ VẤN (consult_received).
+//   2) Khách đã bong/cọc từ TRƯỚC tháng này (so theo SĐT) mà tháng này tái tư vấn vẫn
+//      bong/cọc (không lên phẫu thuật) -> KHÔNG thưởng lại. Chỉ khi lên PHẪU THUẬT
+//      mới cộng nốt PHẦN CÒN LẠI của hành trình (tránh phát sinh chi phí trùng).
+export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows = [], surgRows = [], prior = null }) => {
   const tongLichHen = appts.length; // số lịch hẹn (đếm đủ, không chia)
   const tyLeChotHen = phones > 0 ? (tongLichHen / phones) * 100 : 0;
+
+  // Giai đoạn đã tính thưởng TRƯỚC tháng này của khách (so theo SĐT): 'coc' | 'bong' | null
+  const priorStage = (a) => {
+    if (!prior) return null;
+    const ph = normPhone(a?.phone);
+    if (!ph) return null;
+    if (prior.coc.has(ph)) return 'coc';
+    if (prior.bong.has(ph)) return 'bong';
+    return null;
+  };
+  // Lý do KHÔNG thưởng giai đoạn bong/cọc trong tháng (null = được thưởng)
+  const stageBlock = (a) => {
+    if (prior && !a.consult_received) return 'Chưa tiếp nhận tư vấn';
+    const ps = priorStage(a);
+    if (ps) return 'Đã tính từ tháng trước';
+    return null;
+  };
 
   // Doanh thu cá nhân: chia đều nếu 2 telesale + giảm 50% nếu nguồn quen/CTV
   const doanhThu = surgRows.reduce((s, a) => s + Number(a.revenue || 0) * telesaleFactor(a), 0);
@@ -167,17 +218,32 @@ export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows
   //   Đại : bong 200k (+300k khi PT) | cọc 300k (+200k khi PT) | trực tiếp 500k
   const isDai = (a) => a?.surgery_type === 'Đại phẫu';
   let thuongLichHen = 0;
-  // Khách bị BONG (chưa lên PT)
-  thuongLichHen += bongRows.reduce((s, a) => s + (isDai(a) ? 200000 : 150000) * telesaleFactor(a), 0);
+  let bongPaid = 0, cocPaid = 0;
+  // Khách bị BONG (chưa lên PT) — chỉ thưởng khi đủ điều kiện (tiếp nhận TV + lần đầu)
+  for (const a of bongRows) {
+    if (stageBlock(a)) continue;
+    thuongLichHen += (isDai(a) ? 200000 : 150000) * telesaleFactor(a); bongPaid++;
+  }
   // Khách CỌC (chưa lên PT)
-  thuongLichHen += cocRows.reduce((s, a) => s + (isDai(a) ? 300000 : 200000) * telesaleFactor(a), 0);
-  // Khi lên PHẪU THUẬT — cộng phần còn lại tùy hành trình
+  for (const a of cocRows) {
+    if (stageBlock(a)) continue;
+    thuongLichHen += (isDai(a) ? 300000 : 200000) * telesaleFactor(a); cocPaid++;
+  }
+  // Khi lên PHẪU THUẬT — cộng phần còn lại tùy hành trình.
+  // Hành trình lấy từ chính dòng khách (bong_date/deposit_date) HOẶC lịch sử tháng trước
+  // theo SĐT (khách tái tư vấn tạo lịch mới không mang theo mốc cũ).
   let direct = 0, fromBong = 0, fromCoc = 0;
+  const surgJourney = (a) => {
+    if (a.bong_date) return 'bong';
+    if (a.deposit_date) return 'coc';
+    return priorStage(a); // 'coc' | 'bong' | null
+  };
   for (const a of surgRows) {
     const sh = telesaleFactor(a);
     const dai = isDai(a);
-    if (a.bong_date) { thuongLichHen += (dai ? 300000 : 150000) * sh; fromBong++; }
-    else if (a.deposit_date) { thuongLichHen += (dai ? 200000 : 100000) * sh; fromCoc++; }
+    const j = surgJourney(a);
+    if (j === 'bong') { thuongLichHen += (dai ? 300000 : 150000) * sh; fromBong++; }
+    else if (j === 'coc') { thuongLichHen += (dai ? 200000 : 100000) * sh; fromCoc++; }
     else { thuongLichHen += (dai ? 500000 : 300000) * sh; direct++; }
   }
   thuongLichHen = Math.round(thuongLichHen);
@@ -191,28 +257,32 @@ export const computeTelesale = ({ phones = 0, appts = [], bongRows = [], cocRows
     const dai = isDai(a);
     const rev = Number(a.revenue || 0) * factor;
     const hhRev = Math.round(rev * dtRate / 100);
+    const j = surgJourney(a);
     let hhHen, journey;
-    if (a.bong_date) { hhHen = (dai ? 300000 : 150000) * factor; journey = 'Bong → PT'; }
-    else if (a.deposit_date) { hhHen = (dai ? 200000 : 100000) * factor; journey = 'Cọc → PT'; }
+    if (j === 'bong') { hhHen = (dai ? 300000 : 150000) * factor; journey = a.bong_date ? 'Bong → PT' : 'Bong tháng trước → PT'; }
+    else if (j === 'coc') { hhHen = (dai ? 200000 : 100000) * factor; journey = a.deposit_date ? 'Cọc → PT' : 'Cọc tháng trước → PT'; }
     else { hhHen = (dai ? 500000 : 300000) * factor; journey = 'Trực tiếp'; }
     hhHen = Math.round(hhHen);
     perCustomer.push({ name: a.customer_name || '—', stage: 'Phẫu thuật', journey, dai, share: sh, half, source: a.customer_source || '', revenue: rev, hhRev, hhHen, hh: hhRev + hhHen });
   }
   for (const a of bongRows) {
     const factor = telesaleFactor(a); const half = isHalfSource(a);
-    const hhHen = Math.round((isDai(a) ? 200000 : 150000) * factor);
-    perCustomer.push({ name: a.customer_name || '—', stage: 'Bong', journey: 'Bong (chưa PT)', dai: isDai(a), share: telesaleShare(a), half, source: a.customer_source || '', revenue: 0, hhRev: 0, hhHen, hh: hhHen });
+    const block = stageBlock(a);
+    const hhHen = block ? 0 : Math.round((isDai(a) ? 200000 : 150000) * factor);
+    perCustomer.push({ name: a.customer_name || '—', stage: 'Bong', journey: block ? `Bong — ${block} (0đ)` : 'Bong (chưa PT)', dai: isDai(a), share: telesaleShare(a), half, source: a.customer_source || '', revenue: 0, hhRev: 0, hhHen, hh: hhHen });
   }
   for (const a of cocRows) {
     const factor = telesaleFactor(a); const half = isHalfSource(a);
-    const hhHen = Math.round((isDai(a) ? 300000 : 200000) * factor);
-    perCustomer.push({ name: a.customer_name || '—', stage: 'Cọc', journey: 'Cọc (chưa PT)', dai: isDai(a), share: telesaleShare(a), half, source: a.customer_source || '', revenue: 0, hhRev: 0, hhHen, hh: hhHen });
+    const block = stageBlock(a);
+    const hhHen = block ? 0 : Math.round((isDai(a) ? 300000 : 200000) * factor);
+    perCustomer.push({ name: a.customer_name || '—', stage: 'Cọc', journey: block ? `Cọc — ${block} (0đ)` : 'Cọc (chưa PT)', dai: isDai(a), share: telesaleShare(a), half, source: a.customer_source || '', revenue: 0, hhRev: 0, hhHen, hh: hhHen });
   }
 
   return {
     phones, tongLichHen, tyLeChotHen, doanhThu, dtRate,
     thuongDoanhThu, thuongLichHen, tongHH,
     bongCount: bongRows.length, cocCount: cocRows.length, ptCount: surgRows.length,
+    bongPaid, cocPaid,
     direct, fromBong, fromCoc, perCustomer,
   };
 };
@@ -303,7 +373,7 @@ export const computeOvertime = (records = [], base = 0, D = PAYROLL_STANDARD_DAY
 };
 export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip được Ads duyệt chạy Ads
 
-export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], seeding = [], saved = null }) => {
+export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], seeding = [], prior = null, saved = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
   // Số công = ngày CÓ MẶT (present/muộn/về sớm = 1) + nghỉ nửa ngày (0.5)
   const workingDays = att.filter(a => a.staff_id === staff.id)
@@ -320,7 +390,7 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
     if (role === 'telesale') {
       const mine = (a) => a.telesale_id === staff.id || a.telesale_id_2 === staff.id;
       const phones = pages.filter(p => p.telesale_id === staff.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
-      return computeTelesale({ phones, appts: appts.filter(a => mine(a) && !isRecheck(a)), bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine) }).tongHH;
+      return computeTelesale({ phones, appts: appts.filter(a => mine(a) && !isRecheck(a)), bongRows: bong.filter(mine), cocRows: coc.filter(mine), surgRows: surg.filter(mine), prior }).tongHH;
     }
     if (role === 'truc_page') return computeTrucPage(pages.filter(p => p.staff_id === staff.id)).hh;
     if (role === 'dieu_duong') return computeDieuDuong(surg, staff.id).tongHH;

@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
-  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, computeSeeding, computeOvertime, isRecheck, SALE_HALF_SOURCES,
+  computeSaleOffline, computeTelesale, computeTrucPage, computeDieuDuong, computeBacSi, computePartner, computeSeeding, computeOvertime, fetchTelesalePrior, isRecheck, SALE_HALF_SOURCES,
 } from '@/lib/kpiCalc';
 import { encryptPayslip } from '@/lib/payslipCrypto';
 
@@ -59,12 +59,12 @@ const PayrollPage = () => {
     const ids = (staff || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
 
-    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes, partnerRes] = await Promise.all([
+    const [attRes, apptRes, surgRes, bongRes, cocRes, pageRes, advRes, payRes, histRes, salRes, winRes, partnerRes, prior] = await Promise.all([
       supabase.from('attendance').select('staff_id, status, date, overtime_hours, late_early_hours').gte('date', ms).lte('date', meDay).in('staff_id', safe),
       supabase.from('customer_appointments').select('sale_id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, hospital_fee, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', meDay),
-      supabase.from('customer_appointments').select('customer_name, telesale_id, telesale_id_2, surgery_type, customer_source').gte('deposit_date', ms).lte('deposit_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, phone, service, sale_id, telesale_id, telesale_id_2, revenue, upsale_revenue, hospital_fee, customer_source, bong_date, deposit_date, surgery_type, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id, truc_dem_id, truc_dem_id_2, hau_phau_id, additional_hau_phau_ids').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', meDay),
+      supabase.from('customer_appointments').select('customer_name, phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').gte('date', ms).lte('date', meDay),
       supabase.from('expenses').select('staff_id, amount').eq('is_advance', true).eq('status', 'approved').gte('date', ms).lte('date', meDay),
       supabase.from('payroll').select('*').eq('month', month).eq('year', year),
@@ -72,6 +72,7 @@ const PayrollPage = () => {
       supabase.from('salary_advances').select('staff_id, amount').eq('status', 'approved').eq('month', month).eq('year', year),
       supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').gte('evaluated_at', ms).lt('evaluated_at', meNext),
       supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, surgery_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').gte('surgery_date', ms).lte('surgery_date', meDay),
+      fetchTelesalePrior(ms), // lịch sử bong/cọc trước tháng — chống thưởng lịch hẹn lặp
     ]);
 
     const att = attRes.data || [], appts = apptRes.data || [], surg = surgRes.data || [];
@@ -110,7 +111,7 @@ const PayrollPage = () => {
         ? computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id))
         : null;
       const teleOff = rolesArr.includes('telesale')
-        ? computeTelesale({ phones: telePhones, appts: appts.filter(a => mineTele(a) && !isRecheck(a)), bongRows: bong.filter(mineTele), cocRows: coc.filter(mineTele), surgRows: surg.filter(mineTele) })
+        ? computeTelesale({ phones: telePhones, appts: appts.filter(a => mineTele(a) && !isRecheck(a)), bongRows: bong.filter(mineTele), cocRows: coc.filter(mineTele), surgRows: surg.filter(mineTele), prior })
         : null;
       const ddOff = rolesArr.includes('dieu_duong') ? computeDieuDuong(surg, s.id) : null;
       const trucOff = rolesArr.includes('truc_page') ? computeTrucPage(pages.filter(p => p.staff_id === s.id)) : null;

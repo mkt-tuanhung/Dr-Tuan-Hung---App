@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, AlertCircle, Phone, CalendarCheck, Percent, Wallet, CalendarClock, TrendingDown } from 'lucide-react';
-import { computeTelesale, isRecheck } from '@/lib/kpiCalc';
+import { computeTelesale, fetchTelesalePrior, isRecheck } from '@/lib/kpiCalc';
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
@@ -34,6 +34,7 @@ const TelesaleStaffKPI = () => {
   const [bongRows, setBongRows] = useState([]);
   const [cocRows, setCocRows] = useState([]);
   const [phones, setPhones] = useState(0);
+  const [prior, setPrior] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
@@ -42,13 +43,14 @@ const TelesaleStaffKPI = () => {
     const me = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
     const id = profile.id;
     const orTele = `telesale_id.eq.${id},telesale_id_2.eq.${id}`;
-    const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes] = await Promise.all([
+    const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes, priorData] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('staff_id', id).eq('month', month).eq('year', year).maybeSingle(),
       supabase.from('customer_appointments').select('id, customer_name, appointment_date, status, service, notes, telesale_id_2').or(orTele).gte('appointment_date', ms).lte('appointment_date', me).order('appointment_date', { ascending: false }),
-      supabase.from('customer_appointments').select('id, customer_name, surgery_date, revenue, service, notes, bong_date, deposit_date, surgery_type, telesale_id_2, customer_source').eq('status', 'phau_thuat').or(orTele).gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
-      supabase.from('customer_appointments').select('id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('bong_date', ms).lte('bong_date', me),
-      supabase.from('customer_appointments').select('id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('deposit_date', ms).lte('deposit_date', me),
+      supabase.from('customer_appointments').select('id, customer_name, phone, surgery_date, revenue, service, notes, bong_date, deposit_date, surgery_type, telesale_id_2, customer_source').eq('status', 'phau_thuat').or(orTele).gte('surgery_date', ms).lte('surgery_date', me).order('surgery_date', { ascending: false }),
+      supabase.from('customer_appointments').select('id, customer_name, phone, consult_received, telesale_id_2, surgery_type, customer_source').or(orTele).gte('bong_date', ms).lte('bong_date', me),
+      supabase.from('customer_appointments').select('id, customer_name, phone, consult_received, telesale_id_2, surgery_type, customer_source').or(orTele).gte('deposit_date', ms).lte('deposit_date', me),
       supabase.from('page_daily_reports').select('total_phones').eq('telesale_id', id).gte('date', ms).lte('date', me),
+      fetchTelesalePrior(ms),
     ]);
     if (apptRes.error) toast.error('Lỗi tải lịch hẹn: ' + apptRes.error.message);
     if (surgRes.error) toast.error('Lỗi tải doanh thu (cần chạy add_bong_date.sql?): ' + surgRes.error.message);
@@ -58,6 +60,7 @@ const TelesaleStaffKPI = () => {
     setBongRows(bongRes.data || []);
     setCocRows(cocRes.data || []);
     setPhones((pageRes.data || []).reduce((s, r) => s + Number(r.total_phones || 0), 0));
+    setPrior(priorData);
     setLoading(false);
   }, [profile?.id, month, year]);
 
@@ -66,7 +69,7 @@ const TelesaleStaffKPI = () => {
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
-  const r = computeTelesale({ phones, appts, bongRows, cocRows, surgRows });
+  const r = computeTelesale({ phones, appts, bongRows, cocRows, surgRows, prior });
   const apptTarget = kpi?.target_appointments || 0;
   const revTarget = kpi?.target_revenue || 0;
   const apptProgress = apptTarget > 0 ? Math.min(Math.round(r.tongLichHen / apptTarget * 100), 100) : 0;

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { computeTelesale, isRecheck } from '@/lib/kpiCalc';
+import { computeTelesale, fetchTelesalePrior, isRecheck } from '@/lib/kpiCalc';
 import StatCell from '@/components/kpi/StatCell.jsx';
 
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
@@ -17,7 +17,7 @@ const TelesaleAdmin = ({ month, year }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [staff, setStaff] = useState([]);
-  const [data, setData] = useState({ kpis: [], appts: [], surg: [], bong: [], coc: [], pages: [] });
+  const [data, setData] = useState({ kpis: [], appts: [], surg: [], bong: [], coc: [], pages: [], prior: null });
   const [form, setForm] = useState(EMPTY);
 
   const loadData = useCallback(async () => {
@@ -27,19 +27,21 @@ const TelesaleAdmin = ({ month, year }) => {
     const { data: staffData } = await supabase.from('profiles').select('id, full_name, employee_id').or('role.eq.telesale,role_2.eq.telesale').eq('is_active', true).order('full_name');
     const ids = (staffData || []).map(s => s.id);
     const safe = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
-    const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes] = await Promise.all([
+    const [kpiRes, apptRes, surgRes, bongRes, cocRes, pageRes, priorData] = await Promise.all([
       supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year).in('staff_id', safe),
       supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, status, service').gte('appointment_date', ms).lte('appointment_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, revenue, bong_date, deposit_date, surgery_type, customer_source').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', me2),
-      supabase.from('customer_appointments').select('id, telesale_id, telesale_id_2, surgery_type, customer_source').gte('deposit_date', ms).lte('deposit_date', me2),
+      supabase.from('customer_appointments').select('id, phone, telesale_id, telesale_id_2, revenue, bong_date, deposit_date, surgery_type, customer_source').eq('status', 'phau_thuat').gte('surgery_date', ms).lte('surgery_date', me2),
+      supabase.from('customer_appointments').select('id, phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').gte('bong_date', ms).lte('bong_date', me2),
+      supabase.from('customer_appointments').select('id, phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').gte('deposit_date', ms).lte('deposit_date', me2),
       supabase.from('page_daily_reports').select('telesale_id, total_phones').in('telesale_id', safe).gte('date', ms).lte('date', me2),
+      fetchTelesalePrior(ms),
     ]);
     setStaff(staffData || []);
     setData({
       kpis: kpiRes.data || [],
       appts: (apptRes.data || []).filter(a => !isRecheck(a)),
       surg: surgRes.data || [], bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
+      prior: priorData,
     });
     setLoading(false);
   }, [month, year]);
@@ -53,7 +55,7 @@ const TelesaleAdmin = ({ month, year }) => {
     const surgRows = data.surg.filter(mine);
     const bongRows = data.bong.filter(mine);
     const cocRows = data.coc.filter(mine);
-    const m = computeTelesale({ phones, appts, bongRows, cocRows, surgRows });
+    const m = computeTelesale({ phones, appts, bongRows, cocRows, surgRows, prior: data.prior });
     const kpi = data.kpis.find(k => k.staff_id === s.id) || null;
     const revProgress = kpi?.target_revenue > 0 ? Math.round(m.doanhThu / kpi.target_revenue * 100) : null;
     return { staff: s, kpi, ...m, revProgress };
