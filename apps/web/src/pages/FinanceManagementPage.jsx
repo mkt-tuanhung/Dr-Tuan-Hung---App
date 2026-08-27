@@ -365,10 +365,20 @@ const FinanceManagementPage = () => {
           </div>
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-gradient-to-br from-teal-50 to-teal-100/50 p-4 md:p-5 rounded-2xl border border-teal-100">
               <div className="text-teal-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
               <div className="text-lg md:text-2xl font-black text-teal-800 mt-2 truncate" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+            </div>
+            <div className="bg-gradient-to-br from-violet-50 to-violet-100/50 p-4 md:p-5 rounded-2xl border border-violet-100">
+              <div className="text-violet-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> DOANH THU CỌC</div>
+              <div className="text-lg md:text-2xl font-black text-violet-800 mt-2 truncate" title={fmt(stats.totalCocRev || 0)}>{fmt(stats.totalCocRev || 0)}</div>
+              <div className="text-[11px] text-violet-500 mt-0.5">{stats.totalCocCustomers || 0} khách đang cọc</div>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 md:p-5 rounded-2xl border border-emerald-100">
+              <div className="text-emerald-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU THỰC THU</div>
+              <div className="text-lg md:text-2xl font-black text-emerald-800 mt-2 truncate" title={fmt((stats.totalRev || 0) - (stats.totalCocRev || 0))}>{fmt((stats.totalRev || 0) - (stats.totalCocRev || 0))}</div>
+              <div className="text-[11px] text-emerald-500 mt-0.5">= Tổng doanh thu − DT cọc</div>
             </div>
             <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 md:p-5 rounded-2xl border border-purple-100">
               <div className="text-purple-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU UPSALE</div>
