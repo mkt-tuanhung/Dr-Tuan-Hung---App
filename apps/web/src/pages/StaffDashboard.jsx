@@ -7,7 +7,7 @@ import {
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
   Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile,
-  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2
+  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -92,6 +92,9 @@ const FULL_MENU = [
 ];
 
 const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actual || 0) / target) * 100), 100) : 0;
+
+// Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("luong" -> "Lương của tôi")
+const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 
 // Tổng quan dành cho Editor: clip Win / đang xử lý / đã duyệt + tổng lương tháng
 const EditorOverview = ({ profile, setActiveTab }) => {
@@ -323,6 +326,7 @@ const StaffDashboard = () => {
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  const [navQ, setNavQ] = useState(''); // tìm nhanh menu (không cần gõ dấu)
 
   const handleLogout = async () => {
     await logout();
@@ -355,6 +359,8 @@ const StaffDashboard = () => {
   }).filter(Boolean);
   // Danh sách phẳng (gồm cả mục con) để kiểm tra quyền & tra cứu tab đang mở
   const flatMenu = allowedMenu.flatMap(m => (m.children ? m.children : [m]));
+  // Kết quả tìm nhanh menu (đã lọc theo quyền)
+  const navResults = navQ.trim() ? flatMenu.filter(m => deAccent(m.label).includes(deAccent(navQ))) : null;
 
   // Nếu tab hiện tại không thuộc quyền của nhân sự → về mục đầu tiên được phép
   useEffect(() => {
@@ -454,9 +460,43 @@ const StaffDashboard = () => {
           </button>
         </div>
 
+        {/* Tìm nhanh menu */}
+        <div className="px-3 pt-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={navQ}
+              onChange={e => setNavQ(e.target.value)}
+              placeholder="Tìm chức năng…"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white transition"
+            />
+            {navQ && (
+              <button onClick={() => setNavQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"><X className="w-4 h-4" /></button>
+            )}
+          </div>
+        </div>
+
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {allowedMenu.map(item => {
+          {navResults && (
+            <div className="space-y-0.5">
+              {navResults.length === 0 && <div className="px-3 py-2 text-[13px] text-slate-400">Không tìm thấy chức năng nào</div>}
+              {navResults.map(item => {
+                const Icon = item.icon;
+                const active = activeTab === item.id;
+                return (
+                  <button key={item.id}
+                    onClick={() => { setActiveTab(item.id); setSidebarOpen(false); setNavQ(''); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      active ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200' : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
+                    }`}>
+                    <Icon className="w-4 h-4 shrink-0" />{item.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {!navResults && allowedMenu.map(item => {
             const Icon = item.icon;
             // Mục có nhóm con (dropdown)
             if (item.children) {
@@ -570,7 +610,7 @@ const StaffDashboard = () => {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
-          {renderContent()}
+          <div key={activeTab} className="animate-page">{renderContent()}</div>
         </main>
       </div>
 
@@ -590,7 +630,7 @@ const StaffDashboard = () => {
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${active ? 'bg-teal-500 shadow-md shadow-teal-200' : ''}`}>
                   <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
                 </div>
-                <span className={`text-[10px] font-medium leading-none ${active ? 'text-teal-600' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-medium leading-none max-w-full truncate ${active ? 'text-teal-600' : 'text-slate-400'}`}>
                   {item.label}
                 </span>
               </button>

@@ -103,6 +103,21 @@
     overflow-x: hidden;
     max-width: 100%;
     overscroll-behavior-x: none;
+    /* Số dùng bề rộng cố định trên TOÀN hệ thống -> cột tiền/bảng lương/KPI thẳng hàng, dễ so sánh */
+    font-variant-numeric: tabular-nums;
+  }
+  /* Focus ring rõ ràng khi điều hướng bằng bàn phím (không ảnh hưởng khi bấm chuột/chạm) */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring) / 0.6);
+    outline-offset: 2px;
+  }
+  /* Mobile: input < 16px khiến iOS tự phóng to khi gõ làm "nhảy" giao diện -> ép tối thiểu 16px */
+  @media (max-width: 1023px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
   #root {
     overflow-x: hidden;
@@ -245,6 +260,15 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Hiệu ứng vào trang khi chuyển tab (áp cho khung nội dung 2 dashboard) */
+  .animate-page {
+    animation: page-in 0.22s ease-out;
+  }
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 }
 
