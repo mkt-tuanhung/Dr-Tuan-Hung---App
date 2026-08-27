@@ -8,7 +8,7 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
-import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2 } from 'lucide-react';
+import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const COLORS = ['#14b8a6', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -361,6 +361,18 @@ const FinanceManagementPage = () => {
 
   const fmt = (val) => new Intl.NumberFormat('vi-VN').format(val) + 'đ';
 
+  // Chuyển tháng nhanh bằng nút ◀ ▶
+  const shiftMonth = (delta) => {
+    let m = month + delta, y = year;
+    if (m < 1) { m = 12; y -= 1; } else if (m > 12) { m = 1; y += 1; }
+    setMonth(m); setYear(y);
+  };
+  const goThisMonth = () => { const n = new Date(); setMonth(n.getMonth() + 1); setYear(n.getFullYear()); };
+
+  // Dòng tiền tháng: thực thu ca mổ (sau đối trừ cọc) và tổng tiền thực về
+  const netSurgery = (stats.totalRev || 0) - (stats.depositOffset || 0);
+  const totalCashIn = netSurgery + (stats.totalCocRev || 0);
+
   return (
     <div className="space-y-6">
       {/* Header & Tabs */}
@@ -384,45 +396,72 @@ const FinanceManagementPage = () => {
       {activeTab === 'revenue' && (
         <div className="space-y-6">
           {/* Controls */}
-          <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-slate-400" />
+          <div className="flex items-center justify-between gap-3 bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-slate-100">
+            <div className="flex items-center gap-1.5">
+              <button type="button" onClick={() => shiftMonth(-1)} title="Tháng trước" className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-600 transition"><ChevronLeft className="w-5 h-5" /></button>
+              <CalendarIcon className="w-5 h-5 text-slate-400 hidden sm:block" />
               <select value={month} onChange={e => setMonth(Number(e.target.value))} className="font-semibold text-slate-700 bg-slate-50 border-none rounded-lg p-2 outline-none">
                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>Tháng {m}</option>)}
               </select>
               <select value={year} onChange={e => setYear(Number(e.target.value))} className="font-semibold text-slate-700 bg-slate-50 border-none rounded-lg p-2 outline-none">
                 {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>Năm {y}</option>)}
               </select>
+              <button type="button" onClick={() => shiftMonth(1)} title="Tháng sau" className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-600 transition"><ChevronRight className="w-5 h-5" /></button>
+            </div>
+            <button type="button" onClick={goThisMonth} className="px-3 py-2 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold hover:bg-teal-100 transition shrink-0">Tháng này</button>
+          </div>
+
+          {/* ===== DÒNG TIỀN THÁNG: phép tính trực quan 4 bước → tổng thực về ===== */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="font-black text-slate-800 flex items-center gap-2"><Wallet className="w-5 h-5 text-teal-600" /> Dòng tiền tháng {month}/{year}</div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="px-3 py-1.5 rounded-xl bg-violet-600 text-white text-xs font-bold hover:bg-violet-700 active:scale-95 transition flex items-center gap-1.5 shrink-0">
+                <Search className="w-3.5 h-3.5" /> Chi tiết khách cọc
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+              <div className="rounded-xl bg-teal-50 border border-teal-100 p-3">
+                <div className="text-[11px] font-bold text-teal-600 uppercase">Doanh thu ca mổ</div>
+                <div className="text-base md:text-xl font-black text-teal-800 mt-1 truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+                <div className="text-[11px] text-teal-500 mt-0.5">{stats.totalCustomers} ca mổ trong tháng</div>
+              </div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl bg-amber-50 border border-amber-100 p-3 hover:border-amber-300 transition cursor-pointer">
+                <div className="text-[11px] font-bold text-amber-600 uppercase">− Cọc đã thu trước</div>
+                <div className="text-base md:text-xl font-black text-amber-700 mt-1 truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
+                <div className="text-[11px] text-amber-500 mt-0.5">{stats.depositOffsetCount || 0} ca đã cọc từ trước ▸</div>
+              </button>
+              <div className="rounded-xl bg-emerald-50 border-2 border-emerald-200 p-3">
+                <div className="text-[11px] font-bold text-emerald-600 uppercase">= Thực thu ca mổ</div>
+                <div className="text-base md:text-xl font-black text-emerald-700 mt-1 truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
+                <div className="text-[11px] text-emerald-500 mt-0.5">tiền ca mổ thực về tháng này</div>
+              </div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl bg-violet-50 border border-violet-100 p-3 hover:border-violet-300 transition cursor-pointer">
+                <div className="text-[11px] font-bold text-violet-600 uppercase">+ Cọc thu trong tháng</div>
+                <div className="text-base md:text-xl font-black text-violet-700 mt-1 truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
+                <div className="text-[11px] text-violet-500 mt-0.5">{stats.totalCocCustomers || 0} khách cọc ▸</div>
+              </button>
+            </div>
+
+            <div className="mt-3 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-4 py-3 flex items-center justify-between gap-3">
+              <div className="text-[11px] md:text-sm font-bold uppercase tracking-wide flex items-center gap-2 min-w-0"><Banknote className="w-4 h-4 shrink-0" /> <span className="truncate">Tổng tiền thực về trong tháng</span></div>
+              <div className="text-xl md:text-2xl font-black tabular-nums shrink-0" title={fmt(totalCashIn)}>{fmt(totalCashIn)}</div>
             </div>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-teal-50 to-teal-100/50 p-4 md:p-5 rounded-2xl border border-teal-100">
-              <div className="text-teal-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
-              <div className="text-lg md:text-2xl font-black text-teal-800 mt-2 truncate" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+          {/* Chỉ số phụ */}
+          <div className="grid grid-cols-3 gap-3 md:gap-4">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-3 md:p-5 rounded-2xl border border-purple-100">
+              <div className="text-purple-600 text-[11px] md:text-sm font-bold flex items-center gap-1.5"><TrendingUp className="w-4 h-4 shrink-0" /> <span className="truncate">DT UPSALE</span></div>
+              <div className="text-base md:text-2xl font-black text-purple-800 mt-2 truncate tabular-nums" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
             </div>
-            <button type="button" onClick={() => setShowCocModal(true)} className="text-left bg-gradient-to-br from-violet-50 to-violet-100/50 p-4 md:p-5 rounded-2xl border border-violet-100 hover:border-violet-300 hover:shadow-md transition cursor-pointer">
-              <div className="text-violet-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> DT CỌC THU TRONG THÁNG</div>
-              <div className="text-lg md:text-2xl font-black text-violet-800 mt-2 truncate" title={fmt(stats.totalCocRev || 0)}>{fmt(stats.totalCocRev || 0)}</div>
-              <div className="text-[11px] text-violet-500 mt-0.5">{stats.totalCocCustomers || 0} khách cọc · Bấm xem chi tiết ▸</div>
-            </button>
-            <button type="button" onClick={() => setShowCocModal(true)} className="text-left bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 md:p-5 rounded-2xl border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition cursor-pointer">
-              <div className="text-emerald-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU THỰC THU</div>
-              <div className="text-lg md:text-2xl font-black text-emerald-800 mt-2 truncate" title={fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}>{fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}</div>
-              <div className="text-[11px] text-emerald-500 mt-0.5">= DT ca mổ − {fmt(stats.depositOffset || 0)} cọc đối trừ ({stats.depositOffsetCount || 0} ca)</div>
-            </button>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 md:p-5 rounded-2xl border border-purple-100">
-              <div className="text-purple-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU UPSALE</div>
-              <div className="text-lg md:text-2xl font-black text-purple-800 mt-2 truncate" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-3 md:p-5 rounded-2xl border border-blue-100">
+              <div className="text-blue-600 text-[11px] md:text-sm font-bold flex items-center gap-1.5"><Users className="w-4 h-4 shrink-0" /> <span className="truncate">TỔNG KHÁCH</span></div>
+              <div className="text-base md:text-2xl font-black text-blue-800 mt-2 truncate">{stats.totalCustomers} <span className="text-xs md:text-sm font-medium text-blue-600">khách</span></div>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 md:p-5 rounded-2xl border border-blue-100">
-              <div className="text-blue-600 text-xs md:text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" /> TỔNG SỐ KHÁCH</div>
-              <div className="text-lg md:text-2xl font-black text-blue-800 mt-2 truncate">{stats.totalCustomers} <span className="text-xs md:text-sm font-medium text-blue-600">Khách</span></div>
-            </div>
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 md:p-5 rounded-2xl border border-amber-100">
-              <div className="text-amber-600 text-xs md:text-sm font-bold flex items-center gap-2"><Filter className="w-4 h-4" /> KHÁCH TỪ ADS</div>
-              <div className="text-lg md:text-2xl font-black text-amber-800 mt-2 truncate">{stats.adsCustomers} <span className="text-xs md:text-sm font-medium text-amber-600">Khách</span></div>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 p-3 md:p-5 rounded-2xl border border-amber-100">
+              <div className="text-amber-600 text-[11px] md:text-sm font-bold flex items-center gap-1.5"><Filter className="w-4 h-4 shrink-0" /> <span className="truncate">KHÁCH TỪ ADS</span></div>
+              <div className="text-base md:text-2xl font-black text-amber-800 mt-2 truncate">{stats.adsCustomers} <span className="text-xs md:text-sm font-medium text-amber-600">khách</span></div>
             </div>
           </div>
 
@@ -430,12 +469,16 @@ const FinanceManagementPage = () => {
           {showCocModal && (
             <div className="fixed inset-0 z-[80] bg-black/50 flex items-end md:items-center justify-center p-0 md:p-6" onClick={() => setShowCocModal(false)}>
               <div className="bg-white w-full md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-t-3xl md:rounded-3xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-                  <div>
-                    <div className="font-black text-slate-800">Chi tiết tiền cọc — Tháng {month}/{year}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">Ai cọc, cọc ngày nào, và đối trừ vào ca mổ tháng nào</div>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0 gap-2">
+                  <div className="min-w-0">
+                    <div className="font-black text-slate-800 truncate">Chi tiết tiền cọc — Tháng {month}/{year}</div>
+                    <div className="text-xs text-slate-400 mt-0.5 truncate">Ai cọc, cọc ngày nào, và đối trừ vào ca mổ tháng nào</div>
                   </div>
-                  <button onClick={() => setShowCocModal(false)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"><X className="w-5 h-5" /></button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => shiftMonth(-1)} title="Tháng trước" className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
+                    <button onClick={() => shiftMonth(1)} title="Tháng sau" className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><ChevronRight className="w-5 h-5" /></button>
+                    <button onClick={() => setShowCocModal(false)} className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white"><X className="w-5 h-5" /></button>
+                  </div>
                 </div>
 
                 <div className="overflow-y-auto p-5 space-y-6">
