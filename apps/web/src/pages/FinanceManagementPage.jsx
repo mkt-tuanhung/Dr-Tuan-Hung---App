@@ -76,11 +76,17 @@ const FinanceManagementPage = () => {
   const [serviceGroupData, setServiceGroupData] = useState([]);
   
   // Stats
-  const [stats, setStats] = useState({ 
+  const [stats, setStats] = useState({
     totalRev: 0, totalUpsale: 0, totalCustomers: 0, adsCustomers: 0, adsRevenue: 0, adsSpent: 0,
     hospitalFee: 0, hospitalFeeCash: 0, hospitalFeeTransfer: 0, hospitalFeeCount: 0,
-    totalCocRev: 0, totalCocCustomers: 0
+    totalCocRev: 0, totalCocCustomers: 0, depositOffset: 0, depositOffsetCount: 0
   });
+
+  // Chi tiết tiền cọc: danh sách khách cọc trong tháng, đối trừ cọc cho ca mổ tháng này, DT cọc theo từng tháng trong năm
+  const [cocList, setCocList] = useState([]);       // khách có deposit_date trong tháng (mọi trạng thái)
+  const [offsetList, setOffsetList] = useState([]); // ca mổ tháng này có cọc từ trước -> đối trừ
+  const [cocByMonth, setCocByMonth] = useState([]); // [{m, total, count}] cả năm
+  const [showCocModal, setShowCocModal] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -148,25 +154,49 @@ const FinanceManagementPage = () => {
         adsData.forEach(ad => { tAdsSpent += Number(ad.amount_spent || 0); });
       }
 
-      // Fetch Coc Data
+      // ===== TIỀN CỌC (kế toán theo tháng) =====
+      // DT cọc THU trong tháng = mọi khoản cọc có deposit_date trong tháng, KHÔNG lọc theo status
+      // (khách đã lên ca mổ thì status đổi thành phau_thuat nhưng tiền cọc vẫn thu ở tháng cọc).
       let cocQuery = supabase
         .from('customer_appointments')
-        .select('deposit_amount')
-        .eq('status', 'coc')
-        .gte('deposit_date', startDate)
-        .lte('deposit_date', endDate);
-      
+        .select('id, customer_name, phone, service, deposit_amount, deposit_date, status, surgery_date, bong_date')
+        .gt('deposit_amount', 0)
+        .gte('deposit_date', `${year}-01-01`)
+        .lte('deposit_date', `${year}-12-31`);
+
       if (!canSeeAll && profile?.id) {
         cocQuery = cocQuery.or(`telesale_id.eq.${profile.id},telesale_id_2.eq.${profile.id},sale_id.eq.${profile.id}`);
       }
 
       const { data: cocData } = await cocQuery;
-      let tCocRev = 0;
-      let cocCustomers = 0;
-      if (cocData) {
-        cocCustomers = cocData.length;
-        cocData.forEach(c => { tCocRev += Number(c.deposit_amount || 0); });
-      }
+      const yearCoc = cocData || [];
+      // Phân theo 12 tháng trong năm
+      const byMonth = Array.from({ length: 12 }, (_, i) => ({ m: i + 1, total: 0, count: 0 }));
+      yearCoc.forEach(c => {
+        const mIdx = Number(String(c.deposit_date).slice(5, 7)) - 1;
+        if (mIdx >= 0 && mIdx < 12) { byMonth[mIdx].total += Number(c.deposit_amount || 0); byMonth[mIdx].count++; }
+      });
+      setCocByMonth(byMonth);
+
+      const monthCoc = yearCoc
+        .filter(c => c.deposit_date >= startDate && c.deposit_date <= endDate)
+        .sort((a, b) => String(a.deposit_date).localeCompare(String(b.deposit_date)));
+      setCocList(monthCoc);
+      const tCocRev = monthCoc.reduce((s, c) => s + Number(c.deposit_amount || 0), 0);
+      const cocCustomers = monthCoc.length;
+
+      // ĐỐI TRỪ CỌC: các ca mổ trong tháng này đã cọc từ trước (bất kể cọc tháng nào)
+      // -> Thực thu ca mổ tháng này = doanh thu ca mổ − phần cọc đã thu của chính các ca đó.
+      const offsetRows = records
+        .filter(r => Number(r.deposit_amount || 0) > 0)
+        .map(r => ({
+          id: r.id, customer_name: r.customer_name, phone: r.phone, service: r.service,
+          revenue: Number(r.revenue || 0), deposit_amount: Number(r.deposit_amount || 0),
+          deposit_date: r.deposit_date, surgery_date: r.surgery_date
+        }))
+        .sort((a, b) => String(a.surgery_date).localeCompare(String(b.surgery_date)));
+      setOffsetList(offsetRows);
+      const tOffset = offsetRows.reduce((s, r) => s + r.deposit_amount, 0);
 
       setStats({
         totalRev: tRev,
@@ -180,7 +210,9 @@ const FinanceManagementPage = () => {
         hospitalFeeTransfer: tFeeTransfer,
         hospitalFeeCount: feeCount,
         totalCocRev: tCocRev,
-        totalCocCustomers: cocCustomers
+        totalCocCustomers: cocCustomers,
+        depositOffset: tOffset,
+        depositOffsetCount: offsetRows.length
       });
 
       setSourceData(Object.keys(srcMap).map(name => ({ name, value: srcMap[name] })));
@@ -370,16 +402,16 @@ const FinanceManagementPage = () => {
               <div className="text-teal-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> TỔNG DOANH THU</div>
               <div className="text-lg md:text-2xl font-black text-teal-800 mt-2 truncate" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
             </div>
-            <div className="bg-gradient-to-br from-violet-50 to-violet-100/50 p-4 md:p-5 rounded-2xl border border-violet-100">
-              <div className="text-violet-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> DOANH THU CỌC</div>
+            <button type="button" onClick={() => setShowCocModal(true)} className="text-left bg-gradient-to-br from-violet-50 to-violet-100/50 p-4 md:p-5 rounded-2xl border border-violet-100 hover:border-violet-300 hover:shadow-md transition cursor-pointer">
+              <div className="text-violet-600 text-xs md:text-sm font-bold flex items-center gap-2"><Banknote className="w-4 h-4" /> DT CỌC THU TRONG THÁNG</div>
               <div className="text-lg md:text-2xl font-black text-violet-800 mt-2 truncate" title={fmt(stats.totalCocRev || 0)}>{fmt(stats.totalCocRev || 0)}</div>
-              <div className="text-[11px] text-violet-500 mt-0.5">{stats.totalCocCustomers || 0} khách đang cọc</div>
-            </div>
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 md:p-5 rounded-2xl border border-emerald-100">
+              <div className="text-[11px] text-violet-500 mt-0.5">{stats.totalCocCustomers || 0} khách cọc · Bấm xem chi tiết ▸</div>
+            </button>
+            <button type="button" onClick={() => setShowCocModal(true)} className="text-left bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 md:p-5 rounded-2xl border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition cursor-pointer">
               <div className="text-emerald-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU THỰC THU</div>
-              <div className="text-lg md:text-2xl font-black text-emerald-800 mt-2 truncate" title={fmt((stats.totalRev || 0) - (stats.totalCocRev || 0))}>{fmt((stats.totalRev || 0) - (stats.totalCocRev || 0))}</div>
-              <div className="text-[11px] text-emerald-500 mt-0.5">= Tổng doanh thu − DT cọc</div>
-            </div>
+              <div className="text-lg md:text-2xl font-black text-emerald-800 mt-2 truncate" title={fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}>{fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}</div>
+              <div className="text-[11px] text-emerald-500 mt-0.5">= DT ca mổ − {fmt(stats.depositOffset || 0)} cọc đối trừ ({stats.depositOffsetCount || 0} ca)</div>
+            </button>
             <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 md:p-5 rounded-2xl border border-purple-100">
               <div className="text-purple-600 text-xs md:text-sm font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4" /> DOANH THU UPSALE</div>
               <div className="text-lg md:text-2xl font-black text-purple-800 mt-2 truncate" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
@@ -394,7 +426,104 @@ const FinanceManagementPage = () => {
             </div>
           </div>
 
-          
+          {/* ===== Modal chi tiết tiền cọc ===== */}
+          {showCocModal && (
+            <div className="fixed inset-0 z-[80] bg-black/50 flex items-end md:items-center justify-center p-0 md:p-6" onClick={() => setShowCocModal(false)}>
+              <div className="bg-white w-full md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-t-3xl md:rounded-3xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                  <div>
+                    <div className="font-black text-slate-800">Chi tiết tiền cọc — Tháng {month}/{year}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Ai cọc, cọc ngày nào, và đối trừ vào ca mổ tháng nào</div>
+                  </div>
+                  <button onClick={() => setShowCocModal(false)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"><X className="w-5 h-5" /></button>
+                </div>
+
+                <div className="overflow-y-auto p-5 space-y-6">
+                  {/* DT cọc theo 12 tháng */}
+                  <div>
+                    <div className="text-xs font-bold text-slate-500 uppercase mb-2">DT cọc theo tháng — năm {year}</div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {cocByMonth.map(mm => (
+                        <button key={mm.m} type="button" onClick={() => setMonth(mm.m)}
+                          className={`rounded-xl border p-2 text-left transition ${mm.m === month ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-200' : 'border-slate-100 bg-slate-50 hover:border-violet-200'}`}>
+                          <div className={`text-[10px] font-bold ${mm.m === month ? 'text-violet-600' : 'text-slate-400'}`}>Tháng {mm.m}</div>
+                          <div className={`text-xs font-black truncate ${mm.total > 0 ? 'text-violet-800' : 'text-slate-300'}`} title={fmt(mm.total)}>{mm.total > 0 ? fmt(mm.total) : '—'}</div>
+                          {mm.count > 0 && <div className="text-[10px] text-slate-400">{mm.count} khách</div>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Khách cọc trong tháng */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-bold text-violet-600 uppercase">Khách cọc trong tháng {month} ({cocList.length})</div>
+                      <div className="text-sm font-black text-violet-700">{fmt(stats.totalCocRev || 0)}</div>
+                    </div>
+                    {cocList.length === 0 ? (
+                      <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-4 text-center">Không có khách cọc trong tháng này</div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                        {cocList.map(c => (
+                          <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-slate-800 truncate">{c.customer_name} <span className="font-normal text-slate-400 text-xs">· {c.phone}</span></div>
+                              <div className="text-xs text-slate-400 truncate">Cọc ngày {String(c.deposit_date).slice(0,10).split('-').reverse().join('/')}{c.service ? ` · ${c.service}` : ''}</div>
+                            </div>
+                            {c.status === 'phau_thuat'
+                              ? <span className="shrink-0 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold">Đã mổ {c.surgery_date ? String(c.surgery_date).slice(5,10).split('-').reverse().join('/') : ''}</span>
+                              : c.status === 'bong' || c.bong_date
+                                ? <span className="shrink-0 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[10px] font-bold">Bong</span>
+                                : <span className="shrink-0 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">Đang cọc</span>}
+                            <div className="shrink-0 font-black text-violet-700 text-sm">{fmt(Number(c.deposit_amount || 0))}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Đối trừ cọc cho ca mổ tháng này */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-bold text-amber-600 uppercase">Đối trừ cọc — ca mổ tháng {month} đã cọc trước ({offsetList.length})</div>
+                      <div className="text-sm font-black text-amber-600">− {fmt(stats.depositOffset || 0)}</div>
+                    </div>
+                    {offsetList.length === 0 ? (
+                      <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-4 text-center">Tháng này không có ca mổ nào đã cọc từ trước</div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                        {offsetList.map(r => (
+                          <div key={r.id} className="px-4 py-3 bg-white">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-slate-800 truncate">{r.customer_name} <span className="font-normal text-slate-400 text-xs">· {r.phone}</span></div>
+                                <div className="text-xs text-slate-400 truncate">Mổ {String(r.surgery_date || '').slice(0,10).split('-').reverse().join('/')} · Cọc {r.deposit_date ? String(r.deposit_date).slice(0,10).split('-').reverse().join('/') : '?'}{r.service ? ` · ${r.service}` : ''}</div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <div className="text-xs text-slate-500">DT {fmt(r.revenue)} − cọc <span className="text-amber-600 font-bold">{fmt(r.deposit_amount)}</span></div>
+                                <div className="font-black text-emerald-600 text-sm">Thực thu {fmt(r.revenue - r.deposit_amount)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tổng kết dòng tiền tháng */}
+                  <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-1.5 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-500">Doanh thu ca mổ tháng {month}</span><span className="font-bold text-slate-800">{fmt(stats.totalRev || 0)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">− Cọc đã thu từ trước (đối trừ)</span><span className="font-bold text-amber-600">− {fmt(stats.depositOffset || 0)}</span></div>
+                    <div className="flex justify-between border-t border-slate-200 pt-1.5"><span className="font-bold text-slate-700">= Thực thu từ ca mổ</span><span className="font-black text-emerald-600">{fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">+ Tiền cọc thu trong tháng</span><span className="font-bold text-violet-600">+ {fmt(stats.totalCocRev || 0)}</span></div>
+                    <div className="flex justify-between border-t border-slate-200 pt-1.5"><span className="font-black text-slate-800">= Tổng tiền THỰC VỀ trong tháng</span><span className="font-black text-teal-700">{fmt((stats.totalRev || 0) - (stats.depositOffset || 0) + (stats.totalCocRev || 0))}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
