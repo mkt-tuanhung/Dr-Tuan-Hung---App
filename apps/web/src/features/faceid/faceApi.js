@@ -27,12 +27,21 @@ export async function fetchFaceConfig() {
   return data;
 }
 
+// supabase-js KHÔNG tự parse body khi function trả non-2xx -> tự đọc để lấy
+// thông báo lỗi thật (thay vì "Edge Function returned a non-2xx status code")
+const parseFnError = async (error) => {
+  try {
+    const body = await error?.context?.json?.();
+    return body?.message || body?.error || null;
+  } catch { return null; }
+};
+
 export async function submitEnrollment({ embeddings, quality }) {
   const { data, error } = await withTimeout(
     supabase.functions.invoke('face-enroll', { body: { embeddings, quality, modelVersion: MODEL_VERSION } }),
     15000,
   );
-  if (error) throw new Error(error.message || 'Không thể kết nối CRM');
+  if (error) throw new Error((await parseFnError(error)) || error.message || 'Không thể kết nối CRM');
   if (!data?.ok) throw new Error(data?.message || data?.error || 'Đăng ký thất bại');
   return data;
 }
@@ -52,6 +61,13 @@ export async function submitFaceAttendance({ requestId, action, embeddings, live
     }),
     8000,
   );
-  if (error) throw new Error('NETWORK_ERROR');
+  if (error) {
+    // non-2xx nhưng server có trả JSON (vd UNAUTHORIZED/validation) -> dùng nội dung thật
+    try {
+      const body = await error?.context?.json?.();
+      if (body && (body.errorCode || body.message)) return body;
+    } catch { /* rơi xuống NETWORK_ERROR */ }
+    throw new Error('NETWORK_ERROR');
+  }
   return data; // { accepted, time, status, lateMinutes, errorCode, message, ... }
 }
