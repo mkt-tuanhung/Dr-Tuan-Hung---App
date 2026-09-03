@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download, ScanFace } from 'lucide-react';
 import LeaveManagementPage from './LeaveManagementPage.jsx';
+import FaceIdAdminPanel from '@/features/faceid/FaceIdAdminPanel.jsx';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'bg-teal-100 text-teal-700' },
@@ -352,6 +353,12 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             >
               Cảnh báo
               {violations.length > 0 && <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">{violations.length}</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab('faceid')}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'faceid' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              <ScanFace className="w-4 h-4" /> Face ID
             </button>
           </div>
         </div>
@@ -751,6 +758,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         </>
       ) : activeTab === 'leave' ? (
         <LeaveManagementPage />
+      ) : activeTab === 'faceid' ? (
+        <FaceIdAdminPanel />
       ) : (
         <div className="space-y-4">
           {violations.length === 0 ? (

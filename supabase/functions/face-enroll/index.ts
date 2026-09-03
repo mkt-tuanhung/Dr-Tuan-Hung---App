@@ -33,17 +33,17 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: 'DISABLED', message: 'Face ID của tài khoản đã bị khóa — liên hệ admin' }, 403);
     }
 
-    // Kiểm tra các mẫu là CÙNG MỘT NGƯỜI (chống ghép mặt nhiều người khi enroll)
+    // Kiểm tra các mẫu là CÙNG MỘT NGƯỜI: so từng mẫu với TÂM (trung bình) thay vì
+    // so đôi một — enrollment đa góc (quay trái/phải/ngẩng/cúi) làm 2 mẫu khác góc
+    // lệch nhau tự nhiên, so đôi một quá chặt gây từ chối oan người thật.
     const vecs = (raw as number[][]).map(normalize);
-    let minSim = 1;
-    for (let i = 0; i < vecs.length; i++) {
-      for (let j = i + 1; j < vecs.length; j++) minSim = Math.min(minSim, cosine(vecs[i], vecs[j]));
-    }
-    if (minSim < 0.5) {
-      return json({ ok: false, error: 'INCONSISTENT_SAMPLES', message: 'Các mẫu khuôn mặt không nhất quán — vui lòng đăng ký lại nơi đủ sáng' }, 400);
+    const template = averageVec(vecs);
+    let minToCenter = 1;
+    for (const v of vecs) minToCenter = Math.min(minToCenter, cosine(template, v));
+    if (minToCenter < 0.38) {
+      return json({ ok: false, error: 'INCONSISTENT_SAMPLES', message: 'Các mẫu khuôn mặt không nhất quán — thử lại nơi đủ sáng, giữ máy ngang tầm mặt, xoay đầu CHẬM' }, 400);
     }
 
-    const template = averageVec(vecs);
     const template_enc = await encryptTemplate(template);
 
     const { error } = await db.from('face_profiles').upsert({
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     });
     if (error) throw error;
 
-    return json({ ok: true, status: 'ACTIVE', samples: vecs.length, consistency: Number(minSim.toFixed(3)) });
+    return json({ ok: true, status: 'ACTIVE', samples: vecs.length, consistency: Number(minToCenter.toFixed(3)) });
   } catch (e) {
     return json({ ok: false, error: 'UNKNOWN', message: (e as Error).message }, 500);
   }
