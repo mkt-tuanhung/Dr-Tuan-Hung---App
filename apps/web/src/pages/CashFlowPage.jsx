@@ -17,6 +17,7 @@ export default function CashFlowPage() {
   // Xét CẢ vai chính lẫn vai phụ (kiêm nhiệm) — khớp RLS bảng cash_flows
   const myRoles = [profile?.role, profile?.role_2].filter(Boolean);
   const canWrite = myRoles.some(r => ['admin', 'accountant'].includes(r));
+  const canEdit = myRoles.includes('admin'); // CHỈ admin được SỬA giao dịch đã ghi
   const canRead = myRoles.some(r => ['admin', 'accountant', 'shareholder'].includes(r));
 
   const [activeTab, setActiveTab] = useState('transfer'); // 'transfer', 'cash', 'stats'
@@ -125,6 +126,7 @@ export default function CashFlowPage() {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!form.amount) return toast.error('Vui lòng nhập số tiền');
+    if (editId && !canEdit) return toast.error('Chỉ admin được sửa giao dịch đã ghi');
     setSaving(true);
     
     const numericAmount = parseInt(form.amount.replace(/\./g, ''), 10);
@@ -229,9 +231,11 @@ export default function CashFlowPage() {
               <td className="px-6 py-4 text-slate-600">{d.notes}</td>
               {canWrite && (
                 <td className="px-6 py-4 text-center whitespace-nowrap">
-                  <button onClick={() => openEdit(d)} title="Sửa giao dịch" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                    <Pencil className="w-4 h-4" />
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => openEdit(d)} title="Sửa giao dịch (chỉ admin)" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => handleDelete(d.id)} title="Xóa giao dịch" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
