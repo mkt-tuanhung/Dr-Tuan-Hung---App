@@ -96,6 +96,131 @@ export const LowPolyMesh = ({ pts, color }) => {
   );
 };
 
+// ============================================================
+// FaceScanCanvas — toàn bộ hiệu ứng quét vẽ bằng CANVAS 60fps:
+// khung 4 góc + lưới low-poly + tia quét NỘI SUY MƯỢT từng frame màn hình
+// (không phụ thuộc nhịp AI ~7fps). Đọc dữ liệu qua `feed` (ref, không re-render):
+//   feed.current = { box, pts, color, scanning, pulse }
+// Hiệu ứng: khung "thở" glow; tia quét ease-in-out có vệt mờ; đỉnh lưới
+// SÁNG BỪNG khi tia quét chạy qua; vòng sóng lan khi có kết quả (pulse).
+// ============================================================
+export const FaceScanCanvas = ({ feed }) => {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas.getContext('2d');
+    let raf; let alive = true;
+    const disp = { box: null, pts: {} };
+    const lerp = (a, b, k) => a + (b - a) * k;
+
+    const draw = (now) => {
+      if (!alive) return;
+      const f = feed.current || {};
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
+      if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const color = f.color || HUD.neutral;
+
+      // Nội suy khung + đỉnh lưới về mục tiêu mới nhất (mượt 60fps)
+      if (f.box) {
+        disp.box = disp.box
+          ? { x: lerp(disp.box.x, f.box.x, 0.22), y: lerp(disp.box.y, f.box.y, 0.22), w: lerp(disp.box.w, f.box.w, 0.22), h: lerp(disp.box.h, f.box.h, 0.22) }
+          : { ...f.box };
+      } else disp.box = null;
+      if (f.pts) {
+        for (const k in f.pts) {
+          const t = f.pts[k], c = disp.pts[k];
+          disp.pts[k] = c ? [lerp(c[0], t[0], 0.3), lerp(c[1], t[1], 0.3)] : [t[0], t[1]];
+        }
+        for (const k in disp.pts) if (!f.pts[k]) delete disp.pts[k];
+      } else disp.pts = {};
+
+      const b = disp.box;
+      if (b) {
+        const bx = b.x * w, by = b.y * h, bw = b.w * w, bh = b.h * h;
+
+        // Khung 4 góc bo tròn + glow "thở"
+        const glow = f.scanning ? 8 + 5 * (0.5 + 0.5 * Math.sin(now / 450)) : 11;
+        ctx.save();
+        ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.shadowColor = color; ctx.shadowBlur = glow;
+        const seg = Math.min(bw, bh) * 0.26, r = 14;
+        const corner = (x, y, sx, sy) => {
+          ctx.beginPath();
+          ctx.moveTo(x + sx * seg, y);
+          ctx.lineTo(x + sx * r, y);
+          ctx.quadraticCurveTo(x, y, x, y + sy * r);
+          ctx.lineTo(x, y + sy * seg);
+          ctx.stroke();
+        };
+        corner(bx, by, 1, 1); corner(bx + bw, by, -1, 1);
+        corner(bx, by + bh, 1, -1); corner(bx + bw, by + bh, -1, -1);
+        ctx.restore();
+
+        // Tia quét ease-in-out + vệt mờ
+        let scanY = null;
+        if (f.scanning) {
+          const T = 1800, ph = (now % T) / T;
+          const e = ph < 0.5 ? 2 * ph * ph : 1 - ((-2 * ph + 2) ** 2) / 2;
+          scanY = by + e * bh;
+          const grad = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+          grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(0.5, color); grad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.save();
+          ctx.strokeStyle = grad; ctx.lineWidth = 2.5; ctx.shadowColor = color; ctx.shadowBlur = 16;
+          ctx.beginPath(); ctx.moveTo(bx - bw * 0.06, scanY); ctx.lineTo(bx + bw * 1.06, scanY); ctx.stroke();
+          ctx.globalAlpha = 0.16; ctx.lineWidth = 14; ctx.shadowBlur = 0;
+          ctx.beginPath(); ctx.moveTo(bx, scanY - 6); ctx.lineTo(bx + bw, scanY - 6); ctx.stroke();
+          ctx.restore();
+        }
+
+        // Cạnh lưới low-poly
+        const P = disp.pts;
+        ctx.save();
+        ctx.strokeStyle = color; ctx.globalAlpha = 0.32; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (const [a, b2] of FACE_EDGES) {
+          const p = P[a], q = P[b2];
+          if (p && q) { ctx.moveTo(p[0] * w, p[1] * h); ctx.lineTo(q[0] * w, q[1] * h); }
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Đỉnh lưới: chấm trắng phát sáng, SÁNG BỪNG khi tia quét chạy qua
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        for (const k in P) {
+          const x = P[k][0] * w, y = P[k][1] * h;
+          const near = scanY != null ? Math.max(0, 1 - Math.abs(y - scanY) / 26) : 0;
+          const rr = 1.9 + 0.4 * Math.sin(now / 500 + x * 0.05) + near * 1.7;
+          ctx.globalAlpha = 0.7 + 0.3 * near;
+          ctx.shadowColor = color; ctx.shadowBlur = 4 + near * 12;
+          ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+
+        // Vòng sóng lan 1 lần khi có kết quả (xanh/đỏ)
+        if (f.pulse && now - f.pulse < 700) {
+          const t = (now - f.pulse) / 700;
+          ctx.save();
+          ctx.globalAlpha = (1 - t) * 0.8;
+          ctx.strokeStyle = color; ctx.lineWidth = 3;
+          ctx.shadowColor = color; ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(bx + bw / 2, by + bh / 2, (Math.min(bw, bh) / 2) * (0.9 + t * 0.85), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, [feed]);
+  return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
+};
+
 // Hàng trạng thái: Liveness | Face Match | Wi-Fi | GPS — chỉ hiện giá trị THẬT
 export const StatusRow = ({ items }) => (
   <div className="flex items-stretch justify-between gap-1 rounded-2xl px-2 py-2"
