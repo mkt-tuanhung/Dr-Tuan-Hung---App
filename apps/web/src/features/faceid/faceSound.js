@@ -29,7 +29,24 @@ export function playErrorBeep() {
   try { navigator.vibrate?.([80, 60, 80]); } catch { /* noop */ }
 }
 
+// Giọng nói tiếng Việt (Web Speech API — có sẵn trên iOS/Android, không cần dịch vụ ngoài)
+// Chỉ đọc câu chung chung ("Đã check in thành công"), KHÔNG đọc tên nhân sự.
+export function speak(text) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'vi-VN';
+    u.rate = 1.05;
+    u.volume = 1;
+    const viVoice = window.speechSynthesis.getVoices().find((v) => (v.lang || '').toLowerCase().startsWith('vi'));
+    if (viVoice) u.voice = viVoice;
+    window.speechSynthesis.cancel(); // không chồng câu
+    window.speechSynthesis.speak(u);
+  } catch { /* noop */ }
+}
+
 // iOS yêu cầu 1 tương tác người dùng trước khi phát âm thanh -> gọi khi mở camera
 export function unlockAudio() {
   try { const ac = audio(); if (ac.state === 'suspended') ac.resume(); } catch { /* noop */ }
+  try { window.speechSynthesis?.getVoices(); } catch { /* noop */ } // nạp sẵn danh sách giọng
 }
