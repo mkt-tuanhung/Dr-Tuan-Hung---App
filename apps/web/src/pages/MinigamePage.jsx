@@ -3,8 +3,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload.js';
 import { toast } from 'sonner';
-import { Gamepad2, Plus, X, Trash2, Gift, Trophy, Users, Clock, Sparkles, Play, Lock, ChevronLeft } from 'lucide-react';
+import { Gamepad2, Plus, X, Trash2, Gift, Trophy, Users, Clock, Sparkles, Play, Lock, ChevronLeft, Moon } from 'lucide-react';
 import MatchPredictPage from '@/pages/MatchPredictPage.jsx';
+import WerewolfGame from '@/features/werewolf/WerewolfGame.jsx';
 
 // ===== Module MINIGAME — sân chơi cho nhân sự =====
 // Đợt đầu: VÒNG QUAY MAY MẮN. Admin tạo game (giải thưởng, lượt, thời gian);
@@ -61,6 +62,7 @@ const MinigamePage = () => {
   if (current) {
     const g = games.find(x => x.id === current) || null;
     if (g?.type === 'match') return <MatchPredictPage gameId={g.id} onBack={() => setCurrent(null)} />;
+    if (g?.type === 'werewolf') return <WerewolfGame onBack={() => setCurrent(null)} />;
     if (g) return <WheelPlay game={g} me={me} plays={plays.filter(p => p.game_id === g.id)} onBack={() => setCurrent(null)} onPlayed={load} />;
   }
 
@@ -93,6 +95,7 @@ const MinigamePage = () => {
           {games.map(g => {
             const st = gameState(g);
             const isMatch = g.type === 'match';
+            const isWolf = g.type === 'werewolf';
             const gPlays = plays.filter(p => p.game_id === g.id);
             const mine = gPlays.filter(p => p.user_id === me?.id).length;
             const left = Math.max(0, (g.spins_per_user || 1) - mine);
@@ -109,10 +112,14 @@ const MinigamePage = () => {
                       {g.ends_at && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />đến {fmtDT(g.ends_at)}</span>}
                     </div>
                   </div>
-                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center ${isMatch ? 'bg-emerald-50' : 'bg-violet-50 text-violet-600'}`}>{isMatch ? <span className="text-xl">⚽</span> : <Gift className="w-5 h-5" />}</span>
+                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center ${isMatch ? 'bg-emerald-50' : isWolf ? 'bg-indigo-50 text-indigo-600' : 'bg-violet-50 text-violet-600'}`}>{isMatch ? <span className="text-xl">⚽</span> : isWolf ? <Moon className="w-5 h-5" /> : <Gift className="w-5 h-5" />}</span>
                 </div>
-                {/* Match: 2 đội · Wheel: giải thưởng */}
-                {isMatch ? (
+                {/* Werewolf: mô tả · Match: 2 đội · Wheel: giải thưởng */}
+                {isWolf ? (
+                  <div className="rounded-xl px-3 py-2 text-[12.5px] font-semibold text-indigo-900" style={{ background: 'linear-gradient(135deg,#EEF2FF,#E9F1FF)' }}>
+                    Trò chơi nhập vai 4–20 người · Tạo phòng, quét QR vào làng, nhận vai bí mật rồi chơi trực tiếp cùng nhau 🌙
+                  </div>
+                ) : isMatch ? (
                   <div className="flex items-center justify-center gap-3 py-1 text-[15px] font-black text-slate-700">
                     <span>{A?.flag} {A?.name}</span><span className="text-slate-300 text-xs">VS</span><span>{B?.flag} {B?.name}</span>
                   </div>
@@ -125,14 +132,16 @@ const MinigamePage = () => {
                   </div>
                 )}
                 <div className="mt-auto flex items-center gap-2">
-                  <button onClick={() => setCurrent(g.id)} disabled={!isOpen(g) && !isAdmin && !isMatch}
-                    className={`flex-1 h-10 rounded-xl text-white font-bold text-sm disabled:opacity-40 inline-flex items-center justify-center gap-1.5 ${isMatch ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-violet-600 hover:bg-violet-700'}`}>
-                    {isMatch ? <><Play className="w-4 h-4" /> {isOpen(g) ? 'Dự đoán ngay' : 'Xem kết quả'}</>
+                  <button onClick={() => setCurrent(g.id)} disabled={!isOpen(g) && !isAdmin && !isMatch && !isWolf}
+                    className={`flex-1 h-10 rounded-xl text-white font-bold text-sm disabled:opacity-40 inline-flex items-center justify-center gap-1.5 ${isMatch ? 'bg-emerald-600 hover:bg-emerald-700' : isWolf ? 'hover:opacity-90' : 'bg-violet-600 hover:bg-violet-700'}`}
+                    style={isWolf ? { background: '#1E2A44' } : undefined}>
+                    {isWolf ? <><Play className="w-4 h-4" /> Vào làng Ma Sói</>
+                      : isMatch ? <><Play className="w-4 h-4" /> {isOpen(g) ? 'Dự đoán ngay' : 'Xem kết quả'}</>
                       : isOpen(g) ? <><Play className="w-4 h-4" /> Chơi ngay{left > 0 ? ` · còn ${left} lượt` : ''}</> : <><Lock className="w-4 h-4" /> Xem kết quả</>}
                   </button>
                   {isAdmin && (
                     <>
-                      {!isMatch && <button onClick={() => setEditGame(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">Sửa</button>}
+                      {!isMatch && !isWolf && <button onClick={() => setEditGame(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">Sửa</button>}
                       <button onClick={() => toggleClose(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">{g.status === 'active' ? 'Đóng' : 'Mở'}</button>
                       <button onClick={() => del(g)} className="h-10 w-10 grid place-items-center rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
                     </>

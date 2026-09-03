@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useParams, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
@@ -11,6 +11,14 @@ import PayslipViewPage from '@/pages/PayslipViewPage.jsx';
 import ServiceReviewPublicPage from '@/pages/ServiceReviewPublicPage.jsx';
 import DailyReportPublicPage from '@/pages/DailyReportPublicPage.jsx';
 import MatchPredictPage from '@/pages/MatchPredictPage.jsx';
+import WerewolfGame from '@/features/werewolf/WerewolfGame.jsx';
+
+// Vào phòng Ma Sói qua QR/link: /ma-soi/:code
+const WerewolfJoinPage = () => {
+  const { code } = useParams();
+  const navigate = useNavigate();
+  return <WerewolfGame standalone joinCode={code} onBack={() => navigate('/staff-dashboard')} />;
+};
 
 function App() {
   return (
@@ -23,6 +31,7 @@ function App() {
           <Route path="/danh-gia/:token" element={<ServiceReviewPublicPage />} />
           <Route path="/bao-cao/:slug" element={<DailyReportPublicPage />} />
           <Route path="/du-doan/:id" element={<ProtectedRoute><MatchPredictPage standalone /></ProtectedRoute>} />
+          <Route path="/ma-soi/:code" element={<ProtectedRoute><WerewolfJoinPage /></ProtectedRoute>} />
 
           <Route
             path="/admin-dashboard"
