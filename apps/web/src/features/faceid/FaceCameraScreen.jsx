@@ -14,6 +14,7 @@ import { loadEngine, analyzeFrame, MODEL_VERSION } from './faceEngine';
 import { newRequestId, submitFaceAttendance } from './faceApi';
 import { playSuccessChime, playErrorBeep, unlockAudio } from './faceSound';
 import { getLocation, getPublicIP, calcDistance, OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS } from '@/lib/geo';
+import { uploadToR2 } from '@/lib/r2Client';
 import { FaceStyles, CornerFrame, ScanLine, LandmarkOverlay, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
 
 // ---------- State machine ----------
@@ -188,8 +189,29 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
     };
     pipeRef.current = pipe;
 
-    const buildAndSubmit = (method, score) => {
+    // Chụp 1 ảnh khuôn mặt tại thời điểm quét làm BẰNG CHỨNG chấm công
+    // (ảnh nhỏ ~420px, JPEG, upload R2 qua hạ tầng sẵn có — không chặn luồng quét)
+    const captureSnapshot = () => {
+      try {
+        const v = videoRef.current;
+        if (!v?.videoWidth) return Promise.resolve(null);
+        const w = 420, h = Math.round((w * v.videoHeight) / v.videoWidth);
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.translate(w, 0); ctx.scale(-1, 1); // mirror giống preview
+        ctx.drawImage(v, 0, 0, w, h);
+        return new Promise((res) => c.toBlob((b) => res(b), 'image/jpeg', 0.72));
+      } catch { return Promise.resolve(null); }
+    };
+
+    const buildAndSubmit = async (method, score) => {
       const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+      // Chờ ảnh bằng chứng tối đa 3s — không có ảnh vẫn chấm công bình thường
+      const snapshotUrl = await Promise.race([
+        pipe.snapshotPromise || Promise.resolve(null),
+        new Promise((r) => setTimeout(() => r(null), 3000)),
+      ]).catch(() => null);
       const payload = {
         requestId: newRequestId(),
         action,
@@ -197,6 +219,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
         liveness: { passed: true, score: Number(score.toFixed(3)), method },
         quality: Number((avg(pipe.qualities) || 0).toFixed(3)),
         gps: locRef.current.gps, ip: locRef.current.ip,
+        snapshotUrl,
       };
       payloadRef.current = payload;
       submit(payload);
@@ -248,7 +271,13 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
             pipe.samples.push(f.embedding);
             pipe.qualities.push(f.quality);
             pipe.lastSampleAt = Date.now();
-            if (pipe.samples.length === 1) goto(S.MATCHING_FACE);
+            if (pipe.samples.length === 1) {
+              goto(S.MATCHING_FACE);
+              // Chụp ảnh bằng chứng ngay frame đạt chuẩn đầu tiên, upload song song
+              pipe.snapshotPromise = captureSnapshot()
+                .then((b) => (b ? uploadToR2(new File([b], 'face.jpg', { type: 'image/jpeg' }), 'face-attendance') : null))
+                .catch(() => null);
+            }
           }
           if (pipe.samples.length >= 3) {
             const ps = passiveScore();

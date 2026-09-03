@@ -196,6 +196,10 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       longitude: record?.longitude,
       ip_address: record?.ip_address,
       location_status: record?.location_status,
+      check_in_method: record?.check_in_method,
+      check_out_method: record?.check_out_method,
+      check_in_photo: record?.check_in_photo,
+      check_out_photo: record?.check_out_photo,
     });
   };
 
@@ -665,6 +669,31 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                   placeholder="Ghi chú thêm..."
                 />
               </div>
+
+              {editModal.id && (editModal.check_in_photo || editModal.check_out_photo) && (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
+                  <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
+                    Ảnh chấm công (Face AI)
+                    {(editModal.check_in_method === 'face_ai' || editModal.check_out_method === 'face_ai') && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold">Face AI</span>
+                    )}
+                  </div>
+                  <div className="flex gap-3">
+                    {editModal.check_in_photo && (
+                      <a href={editModal.check_in_photo} target="_blank" rel="noreferrer" className="flex-1">
+                        <img src={editModal.check_in_photo} alt="Ảnh check-in" className="w-full h-28 object-cover rounded-lg border border-slate-200" />
+                        <div className="text-[10px] text-center text-slate-500 mt-1">Giờ vào {editModal.check_in ? String(editModal.check_in).slice(0,5) : ''}</div>
+                      </a>
+                    )}
+                    {editModal.check_out_photo && (
+                      <a href={editModal.check_out_photo} target="_blank" rel="noreferrer" className="flex-1">
+                        <img src={editModal.check_out_photo} alt="Ảnh check-out" className="w-full h-28 object-cover rounded-lg border border-slate-200" />
+                        <div className="text-[10px] text-center text-slate-500 mt-1">Giờ ra {editModal.check_out ? String(editModal.check_out).slice(0,5) : ''}</div>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {editModal.id && (
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-2 mt-2">

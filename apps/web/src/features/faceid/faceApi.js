@@ -39,13 +39,13 @@ export async function submitEnrollment({ embeddings, quality }) {
 
 // Timeout 8s theo spec; retry là việc của người dùng bấm "Thử gửi lại"
 // (cùng requestId -> backend idempotent, không tạo 2 lượt chấm công)
-export async function submitFaceAttendance({ requestId, action, embeddings, liveness, quality, gps, ip }) {
+export async function submitFaceAttendance({ requestId, action, embeddings, liveness, quality, gps, ip, snapshotUrl }) {
   const { data, error } = await withTimeout(
     supabase.functions.invoke('face-attendance', {
       body: {
         requestId, action, embeddings, liveness, quality,
         modelVersion: MODEL_VERSION,
-        gps, ip,
+        gps, ip, snapshotUrl,
         device: { platform: 'web', deviceId: deviceId(), appVersion: import.meta.env?.VITE_APP_VERSION || 'web' },
         capturedAt: new Date().toISOString(),
       },
