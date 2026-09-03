@@ -112,12 +112,13 @@ const MinigamePage = () => {
                       {g.ends_at && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />đến {fmtDT(g.ends_at)}</span>}
                     </div>
                   </div>
-                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center ${isMatch ? 'bg-emerald-50' : isWolf ? 'bg-indigo-50 text-indigo-600' : 'bg-violet-50 text-violet-600'}`}>{isMatch ? <span className="text-xl">⚽</span> : isWolf ? <Moon className="w-5 h-5" /> : <Gift className="w-5 h-5" />}</span>
+                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center overflow-hidden ${isMatch ? 'bg-emerald-50' : isWolf ? '' : 'bg-violet-50 text-violet-600'}`} style={isWolf ? { background: '#1E2A44' } : undefined}>{isMatch ? <span className="text-xl">⚽</span> : isWolf ? <img src="/masoi/mascot.png" alt="" className="w-9 h-10 object-contain object-top mt-1.5" /> : <Gift className="w-5 h-5" />}</span>
                 </div>
                 {/* Werewolf: mô tả · Match: 2 đội · Wheel: giải thưởng */}
                 {isWolf ? (
-                  <div className="rounded-xl px-3 py-2 text-[12.5px] font-semibold text-indigo-900" style={{ background: 'linear-gradient(135deg,#EEF2FF,#E9F1FF)' }}>
-                    Trò chơi nhập vai 4–20 người · Tạo phòng, quét QR vào làng, nhận vai bí mật rồi chơi trực tiếp cùng nhau 🌙
+                  <div className="rounded-xl px-3 py-2.5 flex items-center gap-1.5 text-[12px] font-semibold text-white" style={{ background: 'linear-gradient(160deg,#1E2A44,#2A3A66)' }}>
+                    <Moon className="w-4 h-4 shrink-0 text-amber-300" />
+                    <span>Trò chơi trí tuệ 4–20 người · Quét QR vào làng, nhận vai bí mật rồi chơi trực tiếp cùng nhau</span>
                   </div>
                 ) : isMatch ? (
                   <div className="flex items-center justify-center gap-3 py-1 text-[15px] font-black text-slate-700">
