@@ -77,6 +77,14 @@ const AttendancePage = () => {
     try { setFaceStatus(await fetchMyFaceStatus(profile.id)); } catch { setFaceStatus(null); }
   }, [profile?.id]);
   useEffect(() => { loadFaceStatus(); }, [loadFaceStatus]);
+  // Tải sẵn AI model ngầm khi vào trang Chấm công -> bấm quét là chạy ngay, không phải chờ
+  useEffect(() => {
+    if (faceStatus === undefined) return;
+    const t = setTimeout(() => {
+      import('@/features/faceid/faceEngine').then(m => m.loadEngine().catch(() => {}));
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [faceStatus]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
