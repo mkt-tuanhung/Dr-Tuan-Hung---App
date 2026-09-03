@@ -390,13 +390,19 @@ const AttendancePage = () => {
               <CalendarCheck className="w-3 h-3" />
               {STATUS_CONFIG[todayRecord.status]?.label || 'Đã chấm công'}
             </div>
-            <div>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {faceReady && (
+                <button onClick={() => setFaceMode('CHECK_OUT')} disabled={saving}
+                  className="mt-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-white text-teal-700 text-xs font-bold shadow hover:bg-teal-50 transition-all active:scale-95 disabled:opacity-50">
+                  <ScanFace className="w-3.5 h-3.5" /> Cập nhật giờ ra (Face)
+                </button>
+              )}
               <button onClick={handleCheckOut} disabled={saving}
                 className="mt-1 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-white/20 text-white text-xs font-semibold border border-white/30 hover:bg-white/30 transition-all active:scale-95 disabled:opacity-50">
                 <LogOut className="w-3.5 h-3.5" /> Cập nhật giờ ra
               </button>
-              <p className="text-emerald-200 text-[10px] mt-1">Bấm lại khi về để cập nhật đúng giờ ra</p>
             </div>
+            <p className="text-emerald-200 text-[10px] mt-1">Bấm lại khi về để cập nhật đúng giờ ra</p>
           </div>
         )}
       </div>
