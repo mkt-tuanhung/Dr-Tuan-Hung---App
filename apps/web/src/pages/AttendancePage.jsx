@@ -407,6 +407,38 @@ const AttendancePage = () => {
         )}
       </div>
 
+      {/* ===== Thẻ FACE ID — LUÔN hiển thị, bất kể đã chấm công hay chưa ===== */}
+      {faceStatus !== undefined && (
+        !faceReady ? (
+          <button onClick={() => setShowEnroll(true)}
+            className="w-full flex items-center gap-3 bg-white rounded-2xl p-4 border-2 border-dashed border-teal-300 hover:border-teal-500 hover:bg-teal-50/50 transition-all active:scale-[0.99] text-left">
+            <span className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shrink-0 shadow-md shadow-teal-200">
+              <ScanFace className="w-6 h-6 text-white" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-bold text-slate-800 text-sm">
+                {faceStatus?.status === 'NEEDS_REENROLLMENT' ? 'Cần đăng ký lại Face ID' : 'Đăng ký Face ID'}
+              </span>
+              <span className="block text-xs text-slate-400 mt-0.5">Chấm công bằng khuôn mặt — quét ~1 giây, chống chấm hộ</span>
+            </span>
+            <ChevronRight className="w-5 h-5 text-teal-500 shrink-0" />
+          </button>
+        ) : (
+          <div className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-teal-100 shadow-sm">
+            <span className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+              <ScanFace className="w-5 h-5 text-teal-600" />
+            </span>
+            <span className="flex-1 min-w-0 text-sm">
+              <span className="font-bold text-slate-700">Face ID</span>
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold">Đã kích hoạt</span>
+            </span>
+            <button onClick={() => setShowEnroll(true)} className="shrink-0 text-xs font-semibold text-teal-600 hover:text-teal-800 px-2 py-1 rounded-lg hover:bg-teal-50 transition">
+              Đăng ký lại
+            </button>
+          </div>
+        )
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-2xl p-3.5 border border-teal-100 shadow-sm text-center">
