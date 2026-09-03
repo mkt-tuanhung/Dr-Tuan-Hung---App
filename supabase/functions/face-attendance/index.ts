@@ -219,19 +219,30 @@ Deno.serve(async (req) => {
       if (!gpsVerified && !wifiVerified) lines.push(`📍 ⚠️ ${locationWarning || 'Ngoài văn phòng'}`);
       if (action === 'CHECK_IN' && lateMinutes > 0) lines.push(`⏰ Đi muộn ${lateMinutes} phút`);
       const caption = lines.join('\n');
-      // Có ảnh -> sendPhoto (Telegram tự tải từ URL); lỗi/không ảnh -> fallback text
       const sendText = () => fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: tgChat, text: caption }),
       }).catch(() => {});
-      if (snapshotUrl) {
-        fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: tgChat, photo: snapshotUrl, caption }),
-        }).then((r) => { if (!r.ok) sendText(); }).catch(sendText);
-      } else {
-        sendText();
-      }
+      // Telegram hay từ chối tự tải ảnh từ URL ngoài -> server TỰ TẢI ảnh về rồi
+      // đẩy thẳng FILE lên Telegram (multipart). Lỗi ở bất kỳ bước nào -> gửi text.
+      const tgTask = (async () => {
+        if (!snapshotUrl) { await sendText(); return; }
+        try {
+          const imgRes = await fetch(snapshotUrl);
+          if (!imgRes.ok) throw new Error('img fetch failed');
+          const blob = await imgRes.blob();
+          const fd = new FormData();
+          fd.append('chat_id', String(tgChat));
+          fd.append('caption', caption);
+          fd.append('photo', new File([blob], 'attendance.jpg', { type: 'image/jpeg' }));
+          const r = await fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, { method: 'POST', body: fd });
+          if (!r.ok) throw new Error('sendPhoto failed');
+        } catch { await sendText(); }
+      })();
+      // Chạy nền sau khi đã trả kết quả cho app (không làm chậm lượt quét)
+      // deno-lint-ignore no-explicit-any
+      const rt: any = globalThis as any;
+      if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(tgTask); else await tgTask;
     }
 
     return finish('ACCEPTED', {
