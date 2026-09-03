@@ -214,8 +214,9 @@ Deno.serve(async (req) => {
         `👤 ${name}`,
         `🏢 ${roleTxt}`,
         `🕒 ${time} — ${dd}/${mm}/${yy}`,
-        `📍 ${(gpsVerified || wifiVerified) ? String(cfg.office_name || 'Cơ sở Hà Nội') : `⚠️ ${locationWarning || 'Ngoài văn phòng'}`}`,
       ];
+      // Công ty 1 cơ sở -> không hiện dòng địa điểm; CHỈ cảnh báo khi sai vị trí/mạng
+      if (!gpsVerified && !wifiVerified) lines.push(`📍 ⚠️ ${locationWarning || 'Ngoài văn phòng'}`);
       if (action === 'CHECK_IN' && lateMinutes > 0) lines.push(`⏰ Đi muộn ${lateMinutes} phút`);
       const caption = lines.join('\n');
       // Có ảnh -> sendPhoto (Telegram tự tải từ URL); lỗi/không ảnh -> fallback text
