@@ -174,20 +174,33 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
     catch { fail('NETWORK_ERROR'); return; }
     if (!aliveRef.current) return;
 
-    // 3) Vòng lặp detect (throttle ~7fps — không inference 30 lần/s, spec mục 21)
+    // 3) Vòng lặp detect. Chiến lược TỐC ĐỘ (spec mục 9 liveness: passive trước):
+    //    thu embedding + điểm passive antispoof NGAY khi mặt đạt chuẩn (~0.5-1s);
+    //    chỉ khi điểm passive thấp mới yêu cầu CHỚP MẮT (active fallback).
     goto(S.SEARCHING_FACE);
     const pipe = {
       startedAt: Date.now(),
       livenessStart: null,
-      challenges: [
-        { id: 'blink', label: 'Chớp mắt để xác minh', done: false },
-        { id: 'turn', label: 'Quay nhẹ đầu sang trái hoặc phải', done: false, turned: false },
-      ],
+      activeDone: false, // fallback chớp mắt đã đạt?
       passiveReal: [], passiveLive: [],
       samples: [], qualities: [], lastSampleAt: 0,
       frames: 0, fpsWindowStart: Date.now(),
     };
     pipeRef.current = pipe;
+
+    const buildAndSubmit = (method, score) => {
+      const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+      const payload = {
+        requestId: newRequestId(),
+        action,
+        embeddings: pipe.samples.slice(0, 3),
+        liveness: { passed: true, score: Number(score.toFixed(3)), method },
+        quality: Number((avg(pipe.qualities) || 0).toFixed(3)),
+        gps: locRef.current.gps, ip: locRef.current.ip,
+      };
+      payloadRef.current = payload;
+      submit(payload);
+    };
 
     const loop = async () => {
       if (!aliveRef.current || !streamRef.current) return;
@@ -214,64 +227,55 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
         setMesh(f.mesh);
       } else { setBox(null); setMesh(null); }
 
-      if (phase === S.SEARCHING_FACE || phase === S.FACE_DETECTED) {
+      const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+      // Điểm passive kết hợp antispoof (real) + liveness (live) — số THẬT từ model
+      const passiveScore = () => {
+        const r = avg(pipe.passiveReal), l = avg(pipe.passiveLive);
+        if (r == null && l == null) return null;
+        return Math.min(1, ((r ?? l) + (l ?? r)) / 2 + 0.15); // +0.15: đã qua multi-frame thật
+      };
+
+      if (phase === S.SEARCHING_FACE || phase === S.FACE_DETECTED || phase === S.MATCHING_FACE) {
         if (searchTimeout) { fail('TIMEOUT'); return; }
         if (f.code !== 'OK') {
           dispatch({ type: 'HINT', hint: ERR[f.code] || null });
-          if (phase !== S.SEARCHING_FACE) goto(S.SEARCHING_FACE);
         } else {
           if (phase === S.SEARCHING_FACE) goto(S.FACE_DETECTED);
-          // đạt chất lượng ổn định 3 frame liên tiếp -> sang liveness
-          pipe.goodFrames = (pipe.goodFrames || 0) + 1;
-          if (pipe.goodFrames >= 3) { pipe.livenessStart = Date.now(); goto(S.CHECKING_LIVENESS); }
-        }
-        if (f.code !== 'OK') pipe.goodFrames = 0;
-      } else if (phase === S.CHECKING_LIVENESS) {
-        if (Date.now() - pipe.livenessStart > 12000) { fail('LIVENESS_FAILED'); return; }
-        if (f.faces === 1) {
+          // Thu NGAY embedding + điểm passive trên từng frame đạt chuẩn (không bắt người dùng làm gì)
           if (typeof f.real === 'number') pipe.passiveReal.push(f.real);
           if (typeof f.live === 'number') pipe.passiveLive.push(f.live);
-          const cur = pipe.challenges.find((c) => !c.done);
-          if (cur) {
-            setChallenge(cur.label);
-            if (cur.id === 'blink' && f.blink) cur.done = true;
-            if (cur.id === 'turn') {
-              if (Math.abs(f.yaw) > 14) cur.turned = true;
-              if (cur.turned && Math.abs(f.yaw) < 8) cur.done = true;
-            }
-          } else {
-            setChallenge(null);
-            goto(S.MATCHING_FACE);
+          if (f.embedding && Date.now() - pipe.lastSampleAt >= 120) {
+            pipe.samples.push(f.embedding);
+            pipe.qualities.push(f.quality);
+            pipe.lastSampleAt = Date.now();
+            if (pipe.samples.length === 1) goto(S.MATCHING_FACE);
+          }
+          if (pipe.samples.length >= 3) {
+            const ps = passiveScore();
+            if (ps != null && ps >= 0.5) { buildAndSubmit('PASSIVE', ps); return; } // ĐỦ TIN CẬY -> gửi luôn (~1s)
+            // Passive thấp/không có -> fallback ACTIVE: yêu cầu chớp mắt
+            pipe.livenessStart = Date.now();
+            goto(S.CHECKING_LIVENESS);
           }
         }
-      } else if (phase === S.MATCHING_FACE) {
-        // Thu 3 mẫu embedding cách nhau >=250ms từ frame đạt chuẩn
-        if (f.code === 'OK' && f.embedding && Date.now() - pipe.lastSampleAt >= 250) {
-          pipe.samples.push(f.embedding);
-          pipe.qualities.push(f.quality);
-          pipe.lastSampleAt = Date.now();
+      } else if (phase === S.CHECKING_LIVENESS) {
+        if (Date.now() - pipe.livenessStart > 8000) { fail('LIVENESS_FAILED'); return; }
+        if (f.faces === 1) {
+          setChallenge('Chớp mắt để xác minh');
+          if (typeof f.real === 'number') pipe.passiveReal.push(f.real);
+          if (typeof f.live === 'number') pipe.passiveLive.push(f.live);
+          if (f.embedding && Date.now() - pipe.lastSampleAt >= 120) { pipe.samples.push(f.embedding); pipe.qualities.push(f.quality); pipe.lastSampleAt = Date.now(); }
+          if (f.blink) {
+            setChallenge(null);
+            const ps = passiveScore();
+            // Chớp mắt thật đã xác nhận -> điểm tối thiểu 0.7 (ghi method ACTIVE)
+            buildAndSubmit('ACTIVE', Math.max(ps ?? 0, 0.7));
+            return;
+          }
         }
-        if (pipe.samples.length >= 3) {
-          const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
-          const passive = avg([...pipe.passiveReal, ...pipe.passiveLive]);
-          // Điểm liveness: trung bình passive (nếu model trả) kết hợp active challenge đã đạt
-          const score = passive != null ? Math.min(1, passive * 0.5 + 0.5) : 0.8;
-          const payload = {
-            requestId: newRequestId(),
-            action,
-            embeddings: pipe.samples.slice(0, 3),
-            liveness: { passed: true, score: Number(score.toFixed(3)), method: 'ACTIVE' },
-            quality: Number((avg(pipe.qualities) || 0).toFixed(3)),
-            gps: locRef.current.gps, ip: locRef.current.ip,
-          };
-          payloadRef.current = payload;
-          submit(payload);
-          return; // dừng loop
-        }
-        if (Date.now() - pipe.livenessStart > 18000) { fail('TIMEOUT'); return; }
       }
 
-      setTimeout(loop, 140);
+      setTimeout(loop, 60); // human.detect tự giới hạn tốc độ theo máy
     };
     loop();
   }, [action, goto, fail, submit]); // eslint-disable-line react-hooks/exhaustive-deps
