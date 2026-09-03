@@ -8,14 +8,16 @@ import {
   LineChart, Line, Legend
 } from 'recharts';
 import { 
-  Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, X, Trash2, 
+  Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, X, Trash2, Pencil, 
   ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users, PackageOpen, TrendingUp, Activity, Wallet, Shield
 } from 'lucide-react';
 
 export default function CashFlowPage() {
   const { profile } = useAuth();
-  const canWrite = ['admin', 'accountant'].includes(profile?.role);
-  const canRead = ['admin', 'accountant', 'shareholder'].includes(profile?.role);
+  // Xét CẢ vai chính lẫn vai phụ (kiêm nhiệm) — khớp RLS bảng cash_flows
+  const myRoles = [profile?.role, profile?.role_2].filter(Boolean);
+  const canWrite = myRoles.some(r => ['admin', 'accountant'].includes(r));
+  const canRead = myRoles.some(r => ['admin', 'accountant', 'shareholder'].includes(r));
 
   const [activeTab, setActiveTab] = useState('transfer'); // 'transfer', 'cash', 'stats'
   const [data, setData] = useState([]);
@@ -33,6 +35,7 @@ export default function CashFlowPage() {
 
   // Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editId, setEditId] = useState(null); // id giao dịch đang SỬA (null = tạo mới)
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -126,21 +129,24 @@ export default function CashFlowPage() {
     
     const numericAmount = parseInt(form.amount.replace(/\./g, ''), 10);
 
-    const { data, error } = await supabase.from('cash_flows').insert({
+    const payload = {
       date: form.date,
       flow_type: form.flow_type,
       amount: numericAmount,
       method: form.method,
       handover_person: form.handover_person,
       notes: form.notes,
-      created_by: profile.id
-    }).select('id');
+    };
+    const { data, error } = editId
+      ? await supabase.from('cash_flows').update(payload).eq('id', editId).select('id')
+      : await supabase.from('cash_flows').insert({ ...payload, created_by: profile.id }).select('id');
 
     if (error) { console.error('cash_flows insert error', error); toast.error(`LỖI [${error.code || '?'}]: ${error.message}${error.hint ? ' | ' + error.hint : ''}`, { duration: 20000 }); }
-    else if (!data || data.length === 0) toast.error('Insert OK nhưng RLS SELECT chặn đọc lại — chạy SQL phân quyền.', { duration: 20000 });
+    else if (!data || data.length === 0) toast.error(editId ? 'Không có quyền sửa giao dịch này (RLS).' : 'Insert OK nhưng RLS SELECT chặn đọc lại — chạy SQL phân quyền.', { duration: 20000 });
     else {
-      toast.success('Đã lưu giao dịch!');
+      toast.success(editId ? 'Đã cập nhật giao dịch!' : 'Đã lưu giao dịch!');
       setShowCreateModal(false);
+      setEditId(null);
       setForm({ ...form, amount: '', handover_person: '', notes: '' });
       // Nhảy bộ lọc về đúng tháng của giao dịch vừa nhập để chắc chắn hiển thị
       const d = new Date(form.date);
@@ -149,6 +155,19 @@ export default function CashFlowPage() {
       loadData();
     }
     setSaving(false);
+  };
+
+  const openEdit = (d) => {
+    setEditId(d.id);
+    setForm({
+      date: d.date,
+      flow_type: d.flow_type,
+      amount: Number(d.amount || 0).toLocaleString('vi-VN'),
+      method: d.method,
+      handover_person: d.handover_person || '',
+      notes: d.notes || '',
+    });
+    setShowCreateModal(true);
   };
 
   const handleDelete = async (id) => {
@@ -209,8 +228,11 @@ export default function CashFlowPage() {
               <td className="px-6 py-4 font-medium text-slate-800">{d.handover_person || '-'}</td>
               <td className="px-6 py-4 text-slate-600">{d.notes}</td>
               {canWrite && (
-                <td className="px-6 py-4 text-center">
-                  <button onClick={() => handleDelete(d.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                <td className="px-6 py-4 text-center whitespace-nowrap">
+                  <button onClick={() => openEdit(d)} title="Sửa giao dịch" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(d.id)} title="Xóa giao dịch" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </td>
@@ -245,7 +267,7 @@ export default function CashFlowPage() {
             <RefreshCw className="w-4 h-4" /> Làm mới
           </button>
           {canWrite && (
-            <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 font-bold rounded-xl text-sm shadow-md flex items-center gap-2 transition-colors">
+            <button onClick={() => { setEditId(null); setForm({ date: new Date().toISOString().split('T')[0], flow_type: 'in', amount: '', method: 'transfer', handover_person: '', notes: '' }); setShowCreateModal(true); }} className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 font-bold rounded-xl text-sm shadow-md flex items-center gap-2 transition-colors">
               <Plus className="w-4 h-4" /> Tạo giao dịch
             </button>
           )}
@@ -391,8 +413,8 @@ export default function CashFlowPage() {
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleCreateSubmit} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50 shrink-0">
-              <h3 className="font-bold text-indigo-800 text-lg">Ghi nhận Dòng tiền</h3>
-              <button type="button" onClick={() => setShowCreateModal(false)}><X className="w-5 h-5 text-indigo-400 hover:text-indigo-600" /></button>
+              <h3 className="font-bold text-indigo-800 text-lg">{editId ? 'Sửa giao dịch Dòng tiền' : 'Ghi nhận Dòng tiền'}</h3>
+              <button type="button" onClick={() => { setShowCreateModal(false); setEditId(null); }}><X className="w-5 h-5 text-indigo-400 hover:text-indigo-600" /></button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-5">
@@ -436,8 +458,8 @@ export default function CashFlowPage() {
             </div>
 
             <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setShowCreateModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Ghi nhận</button>
+              <button type="button" onClick={() => { setShowCreateModal(false); setEditId(null); }} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
+              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">{editId ? 'Lưu thay đổi' : 'Ghi nhận'}</button>
             </div>
           </form>
         </div>
