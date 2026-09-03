@@ -49,6 +49,10 @@ Deno.serve(async (req) => {
     const { data: prev } = await db.from('face_attendance_audit').select('result_json').eq('request_id', requestId).maybeSingle();
     if (prev?.result_json) return json(prev.result_json);
 
+    // Ảnh khuôn mặt chụp tại thời điểm quét (bằng chứng chấm công) — URL từ R2 nội bộ
+    const snapshotUrl = typeof body?.snapshotUrl === 'string' && /^https:\/\//.test(body.snapshotUrl)
+      ? body.snapshotUrl.slice(0, 500) : null;
+
     audit = {
       request_id: requestId,
       user_id: user.id,
@@ -58,6 +62,7 @@ Deno.serve(async (req) => {
       liveness_method: body?.liveness?.method || null,
       device_id: body?.device?.deviceId ? String(body.device.deviceId).slice(0, 128) : null,
       model_version: body?.modelVersion ? String(body.modelVersion).slice(0, 64) : null,
+      snapshot_url: snapshotUrl,
     };
 
     const cfg = await loadFaceConfig(db);
@@ -160,7 +165,7 @@ Deno.serve(async (req) => {
       lateMinutes = Math.max(0, h * 60 + m - (wh * 60 + wm + Number(cfg.late_grace_min || 0)));
       statusOut = lateMinutes > 0 ? 'late' : 'present';
 
-      const payload = { check_in: time, status: statusOut, check_in_method: 'face_ai', ...locFields };
+      const payload = { check_in: time, status: statusOut, check_in_method: 'face_ai', ...(snapshotUrl ? { check_in_photo: snapshotUrl } : {}), ...locFields };
       const { error } = row
         ? await db.from('attendance').update(payload).eq('id', row.id)
         : await db.from('attendance').insert({ staff_id: user.id, date, ...payload });
@@ -171,7 +176,8 @@ Deno.serve(async (req) => {
       }
       // Chấm ra NHIỀU LẦN được phép — luôn cập nhật giờ ra LẦN MỚI NHẤT (như nút "Cập nhật giờ ra" cũ)
       repeated = !!row.check_out;
-      const { error } = await db.from('attendance').update({ check_out: time, check_out_method: 'face_ai' }).eq('id', row.id);
+      // Ảnh giờ ra lấy theo LẦN MỚI NHẤT (không ghi đè bằng null nếu lượt này thiếu ảnh)
+      const { error } = await db.from('attendance').update({ check_out: time, check_out_method: 'face_ai', ...(snapshotUrl ? { check_out_photo: snapshotUrl } : {}) }).eq('id', row.id);
       if (error) throw error;
       statusOut = row.status;
     }
