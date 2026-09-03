@@ -143,11 +143,16 @@ Deno.serve(async (req) => {
       ip_address: ip, location_status: gpsVerified ? 'in_office' : 'outside',
     };
 
-    let lateMinutes = 0, statusOut = 'present';
+    let lateMinutes = 0, statusOut = 'present', repeated = false;
 
     if (action === 'CHECK_IN') {
       if (row?.check_in) {
-        return finish('REJECTED', { accepted: false, errorCode: 'CRM_REJECTED', message: `Bạn đã check-in hôm nay lúc ${fmtHM(row.check_in)}` });
+        // Chấm vào NHIỀU LẦN được phép — giờ vào giữ nguyên LẦN ĐẦU (không ghi đè để không lệch công)
+        return finish('ACCEPTED', {
+          accepted: true, repeated: true, action, date, time: row.check_in, status: row.status,
+          lateMinutes: 0, matchScore: audit.match_score, gpsVerified, wifiVerified, locationWarning,
+          message: `Đã check-in từ ${fmtHM(row.check_in)} — giờ vào giữ nguyên lần đầu`,
+        });
       }
       // Đi muộn: sau work_start + grace (quy tắc trong face_config, không hardcode)
       const [wh, wm] = String(cfg.work_start).split(':').map(Number);
@@ -164,16 +169,15 @@ Deno.serve(async (req) => {
       if (!row?.check_in) {
         return finish('REJECTED', { accepted: false, errorCode: 'CRM_REJECTED', message: 'Bạn chưa check-in hôm nay' });
       }
-      if (row.check_out) {
-        return finish('REJECTED', { accepted: false, errorCode: 'CRM_REJECTED', message: `Bạn đã check-out lúc ${fmtHM(row.check_out)}` });
-      }
+      // Chấm ra NHIỀU LẦN được phép — luôn cập nhật giờ ra LẦN MỚI NHẤT (như nút "Cập nhật giờ ra" cũ)
+      repeated = !!row.check_out;
       const { error } = await db.from('attendance').update({ check_out: time, check_out_method: 'face_ai' }).eq('id', row.id);
       if (error) throw error;
       statusOut = row.status;
     }
 
     // ---------- 7) NOTIFICATION (pipeline sẵn có: notifications -> Push + Telegram cá nhân) ----------
-    const actLabel = action === 'CHECK_IN' ? 'check-in' : 'check-out';
+    const actLabel = action === 'CHECK_IN' ? 'check-in' : (repeated ? 'cập nhật giờ ra' : 'check-out');
     const lateTxt = action === 'CHECK_IN' && lateMinutes > 0 ? ` Đi muộn ${lateMinutes} phút.` : '';
     await db.from('notifications').insert({
       user_id: user.id, type: 'attendance',
@@ -197,8 +201,9 @@ Deno.serve(async (req) => {
     }
 
     return finish('ACCEPTED', {
-      accepted: true, action, date, time, status: statusOut, lateMinutes,
+      accepted: true, action, date, time, status: statusOut, lateMinutes, repeated,
       matchScore: audit.match_score, gpsVerified, wifiVerified, locationWarning,
+      message: repeated ? `Đã cập nhật giờ ra: ${fmtHM(time)}` : null,
     });
   } catch (e) {
     return finish('ERROR', { accepted: false, errorCode: 'UNKNOWN', message: (e as Error).message }, 500);

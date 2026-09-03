@@ -377,7 +377,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
               </div>
               <div className="font-black text-xl leading-tight" style={{ color: isFinal ? color : '#fff' }}>{bigTitle}</div>
               <div className="text-white/60 text-xs mt-1">
-                {st === S.ATTENDANCE_SUCCESS ? (ui.result?.lateMinutes > 0 ? `Đi muộn ${ui.result.lateMinutes} phút` : 'Đúng giờ')
+                {st === S.ATTENDANCE_SUCCESS ? (ui.result?.message || (ui.result?.lateMinutes > 0 ? `Đi muộn ${ui.result.lateMinutes} phút` : 'Đúng giờ'))
                   : isFinal ? (ui.error === 'NETWORK_ERROR' ? 'Đã nhận diện khuôn mặt — chưa gửi được về CRM' : 'Vui lòng nhìn thẳng vào camera và thử lại')
                   : challenge || ui.hint || 'Giữ khuôn mặt trong khung hình'}
               </div>
