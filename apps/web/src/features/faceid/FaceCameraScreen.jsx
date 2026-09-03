@@ -15,7 +15,7 @@ import { newRequestId, submitFaceAttendance } from './faceApi';
 import { playSuccessChime, playErrorBeep, unlockAudio, speak } from './faceSound';
 import { getLocation, getPublicIP, calcDistance, OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS } from '@/lib/geo';
 import { uploadToR2 } from '@/lib/r2Client';
-import { FaceStyles, CornerFrame, ScanLine, LowPolyMesh, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
+import { FaceStyles, FaceScanCanvas, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
 
 // ---------- State machine ----------
 const S = {
@@ -70,8 +70,6 @@ const TITLES = {
 export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSuccess }) {
   const { profile } = useAuth();
   const [ui, dispatch] = useReducer(reducer, { state: S.IDLE, hint: null, error: null, result: null });
-  const [box, setBox] = useState(null);       // vị trí khung mặt (đã mirror)
-  const [mesh, setMesh] = useState(null);
   const [fps, setFps] = useState(null);
   const [res, setRes] = useState(null);
   const [progress, setProgress] = useState('');
@@ -85,7 +83,9 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const aliveRef = useRef(true);
   const stateRef = useRef(S.IDLE);
   const locRef = useRef({ gps: null, ip: null }); // GPS/IP về sau khi loop đã chạy -> đọc qua ref
-  const smoothRef = useRef({ box: null, lastSeen: 0 }); // khung mặt làm mượt, giữ khi mặt mất thoáng qua
+  const smoothRef = useRef({ lastSeen: 0 });      // giữ khung khi mặt mất thoáng qua
+  // Dữ liệu cho canvas hiệu ứng (mutate trực tiếp — canvas tự nội suy 60fps, không re-render React)
+  const feedRef = useRef({ box: null, pts: null, color: HUD.neutral, scanning: false, pulse: 0 });
   const pipeRef = useRef(null);      // dữ liệu pipeline (liveness, samples…)
   const payloadRef = useRef(null);   // payload đã gửi (để "Thử gửi lại" idempotent)
   const beepedRef = useRef(false);
@@ -107,6 +107,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const submit = useCallback(async (payload) => {
     goto(S.SUBMITTING_TO_CRM);
     stopCamera(); // đã đủ dữ liệu — tắt camera ngay, tiết kiệm pin (spec mục 36)
+    feedRef.current.pts = null; // giữ khung + hiệu ứng, ẩn lưới khi chờ CRM
     try {
       const data = await submitFaceAttendance(payload);
       if (data?.accepted) {
@@ -139,10 +140,11 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
     payloadRef.current = null;
     pipeRef.current = null;
     aliveRef.current = false; // dừng loop cũ
-    setBox(null); setMesh(null); setChallenge(null);
+    setChallenge(null);
     setSnap((old) => { try { if (old) URL.revokeObjectURL(old); } catch { /* noop */ } return null; });
     setFlash(false);
-    smoothRef.current = { box: null, lastSeen: 0 };
+    smoothRef.current = { lastSeen: 0 };
+    Object.assign(feedRef.current, { box: null, pts: null, pulse: 0 });
     setTimeout(() => start(), 50); // eslint-disable-line no-use-before-define
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -257,9 +259,10 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
       const phase = stateRef.current;
       const searchTimeout = Date.now() - pipe.startedAt > 15000;
 
-      // Khung + lưới: ánh xạ toạ độ video -> MÀN HÌNH (object-cover, mirror) để không méo,
-      // làm mượt bằng nội suy + vuông hoá khung, giữ khung 0.7s khi mặt mất thoáng qua
+      // Khung + lưới: ánh xạ toạ độ video -> MÀN HÌNH (object-cover, mirror),
+      // ghi MỤC TIÊU vào feedRef — canvas tự nội suy 60fps nên cực mượt.
       const sm = smoothRef.current;
+      const fd = feedRef.current;
       if (f.faces === 1 && f.box) {
         sm.lastSeen = Date.now();
         const { box: mb, pts } = mapFaceToScreen(f, video);
@@ -267,19 +270,14 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
           const aspScr = (window.innerWidth || 1) / (window.innerHeight || 1);
           const cx = mb.x + mb.w / 2, cy = mb.y + mb.h / 2;
           const w = Math.min(0.94, mb.w * 1.16);
-          const h = Math.min(0.62, w * 1.18 * aspScr); // khung gần vuông như mockup, không theo box thô
-          const t = { x: cx - w / 2, y: cy - h / 2, w, h };
-          const k = sm.box ? 0.32 : 1; // hệ số mượt
-          sm.box = sm.box
-            ? { x: sm.box.x + (t.x - sm.box.x) * k, y: sm.box.y + (t.y - sm.box.y) * k, w: sm.box.w + (t.w - sm.box.w) * k, h: sm.box.h + (t.h - sm.box.h) * k }
-            : t;
-          setBox({ ...sm.box });
+          const h = Math.min(0.62, w * 1.18 * aspScr); // khung gần vuông như mockup
+          fd.box = { x: cx - w / 2, y: cy - h / 2, w, h };
         }
-        setMesh(pts);
+        fd.pts = pts;
       } else if (Date.now() - sm.lastSeen > 700) {
-        sm.box = null; setBox(null); setMesh(null);
+        fd.box = null; fd.pts = null;
       } else {
-        setMesh(null); // mất mặt thoáng qua: giữ khung, ẩn lưới
+        fd.pts = null; // mất mặt thoáng qua: giữ khung, ẩn lưới
       }
 
       const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
@@ -370,6 +368,15 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const tone = st === S.ATTENDANCE_SUCCESS ? 'success' : isFinal ? 'error' : 'neutral';
   const color = toneColor(tone);
   const scanning = [S.SEARCHING_FACE, S.FACE_DETECTED, S.CHECKING_LIVENESS, S.MATCHING_FACE].includes(st);
+
+  // Đồng bộ màu/trạng thái cho canvas hiệu ứng + vòng sóng khi có kết quả
+  useEffect(() => {
+    feedRef.current.color = color;
+    feedRef.current.scanning = scanning;
+  }, [color, scanning]);
+  useEffect(() => {
+    if (isFinal) feedRef.current.pulse = performance.now();
+  }, [isFinal]);
   const actLabel = action === 'CHECK_IN' ? 'CHECK-IN' : 'CHECK-OUT';
   const netErr = st === S.ERROR && ui.error === 'NETWORK_ERROR' && payloadRef.current;
 
@@ -397,11 +404,9 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
       <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(5,9,8,.75) 0%, rgba(5,9,8,.15) 22%, rgba(5,9,8,.1) 55%, rgba(5,9,8,.88) 100%)' }} />
 
-      {/* HUD trên video */}
+      {/* HUD trên video — canvas 60fps: khung + lưới + tia quét + shimmer + ripple */}
       <div className="absolute inset-0 pointer-events-none">
-        {!isFinal && <LowPolyMesh pts={mesh} color={color} />}
-        <CornerFrame box={box} color={color} pulsing={scanning} />
-        <ScanLine box={box} color={color} active={scanning} />
+        <FaceScanCanvas feed={feedRef} />
       </div>
 
       {/* Hiệu ứng nháy đèn máy ảnh lúc chụp */}

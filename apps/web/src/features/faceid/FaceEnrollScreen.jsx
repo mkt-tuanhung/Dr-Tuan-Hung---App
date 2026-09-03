@@ -10,7 +10,7 @@ import { ArrowLeft, ScanFace, ShieldCheck, Check } from 'lucide-react';
 import { loadEngine, analyzeFrame, mapFaceToScreen } from './faceEngine';
 import { submitEnrollment } from './faceApi';
 import { playSuccessChime, playErrorBeep, unlockAudio } from './faceSound';
-import { FaceStyles, CornerFrame, ScanLine, LowPolyMesh, Glass, HUD, toneColor } from './FaceHud';
+import { FaceStyles, FaceScanCanvas, Glass, HUD, toneColor } from './FaceHud';
 
 // Mỗi bước: điều kiện góc mặt (độ) + số mẫu cần thu
 const STEPS = [
@@ -26,8 +26,7 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
   const [phase, setPhase] = useState('consent'); // consent | capturing | uploading | done | error
   const [stepIdx, setStepIdx] = useState(0);
   const [stepCount, setStepCount] = useState(0);
-  const [box, setBox] = useState(null);
-  const [mesh, setMesh] = useState(null);
+  const feedRef = useRef({ box: null, pts: null, color: HUD.neutral, scanning: false, pulse: 0 });
   const [progress, setProgress] = useState('');
   const [hint, setHint] = useState(null);
   const [errMsg, setErrMsg] = useState(null);
@@ -77,10 +76,10 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
       if (!aliveRef.current) return;
 
       if (f.faces === 1 && f.box) {
-        // Ánh xạ toạ độ video -> màn hình (object-cover, mirror) để khung/lưới không méo
+        // Ánh xạ toạ độ video -> màn hình rồi ghi vào feed — canvas nội suy 60fps
         const { box: mb, pts } = mapFaceToScreen(f, video);
-        setBox(mb); setMesh(pts);
-      } else { setBox(null); setMesh(null); }
+        feedRef.current.box = mb; feedRef.current.pts = pts;
+      } else { feedRef.current.box = null; feedRef.current.pts = null; }
 
       const step = STEPS[d.stepIdx];
       if (!step) return; // đã xong
@@ -131,6 +130,13 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
   const color = phase === 'done' ? HUD.success : phase === 'error' ? HUD.error : toneColor('neutral');
   const step = STEPS[stepIdx];
 
+  // Đồng bộ màu/trạng thái quét cho canvas + vòng sóng khi xong/lỗi
+  useEffect(() => {
+    feedRef.current.color = color;
+    feedRef.current.scanning = phase === 'capturing';
+    if (phase === 'done' || phase === 'error') feedRef.current.pulse = performance.now();
+  }, [color, phase]);
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: HUD.bg }}>
       <FaceStyles />
@@ -139,9 +145,7 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
           <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(5,9,8,.78) 0%, rgba(5,9,8,.12) 25%, rgba(5,9,8,.1) 55%, rgba(5,9,8,.9) 100%)' }} />
           <div className="absolute inset-0 pointer-events-none">
-            <LowPolyMesh pts={mesh} color={color} />
-            <CornerFrame box={box} color={color} pulsing={phase === 'capturing'} />
-            <ScanLine box={box} color={color} active={phase === 'capturing'} />
+            <FaceScanCanvas feed={feedRef} />
           </div>
         </>
       )}
