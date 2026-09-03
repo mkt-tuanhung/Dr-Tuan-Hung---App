@@ -15,8 +15,9 @@ import { FaceStyles, CornerFrame, ScanLine, LowPolyMesh, Glass, HUD, toneColor }
 // Mỗi bước: điều kiện góc mặt (độ) + số mẫu cần thu
 const STEPS = [
   { id: 'front', label: 'NHÌN THẲNG', hint: 'Giữ khuôn mặt trong khung, nhìn thẳng camera', test: (y, p) => Math.abs(y) < 12 && Math.abs(p) < 12, need: 3 },
-  { id: 'left',  label: 'QUAY NHẸ SANG TRÁI', hint: 'Xoay đầu nhẹ nhàng, không cần xoay mạnh', test: (y) => y > 13, need: 2 },
-  { id: 'right', label: 'QUAY NHẸ SANG PHẢI', hint: 'Xoay đầu nhẹ nhàng, không cần xoay mạnh', test: (y) => y < -13, need: 2 },
+  // Preview là ảnh GƯƠNG -> chiều yaw phải đảo lại cho khớp cảm nhận người dùng
+  { id: 'left',  label: 'QUAY NHẸ SANG TRÁI', hint: 'Xoay đầu nhẹ nhàng, không cần xoay mạnh', test: (y) => y < -13, need: 2 },
+  { id: 'right', label: 'QUAY NHẸ SANG PHẢI', hint: 'Xoay đầu nhẹ nhàng, không cần xoay mạnh', test: (y) => y > 13, need: 2 },
   { id: 'up',    label: 'NGẨNG NHẸ', hint: 'Ngẩng cằm lên một chút', test: (_y, p) => p < -8, need: 2 },
   { id: 'down',  label: 'CÚI NHẸ', hint: 'Cúi cằm xuống một chút', test: (_y, p) => p > 8, need: 2 },
 ];
