@@ -6,7 +6,7 @@
 --   • Vai được chia PHÍA SERVER (RPC security definer, shuffle ngẫu nhiên)
 --   • Cột role bị THU HỒI quyền đọc — không ai select được qua API
 --   • Xem vai CHÍNH MÌNH: RPC ww_my_role
---   • Quản trò (host) xem TẤT CẢ vai để dẫn game: RPC ww_room_roles
+--   • Chủ phòng KHÔNG xem được vai của người khác (chỉ thấy số đã nhận vai)
 -- ============================================================
 
 -- 1) PHÒNG
@@ -98,8 +98,9 @@ begin
 end $$;
 
 -- 5) BẮT ĐẦU VÁN — server chia vai ngẫu nhiên theo số người
---    4+: 1 Sói, 1 Tiên tri | 6+: +Phù thủy | 7+: +Bảo vệ | 8+: 2 Sói, +Thợ săn
---    9+: +Trưởng làng | 10+: +Cupid | 12+: 3 Sói | còn lại: Dân làng
+--    Cơ cấu theo recommendedCompositions trong gói thiết kế (config/roles.json):
+--    6: 2 Sói,Tiên tri,Bảo vệ | 7: +Phù thủy | 8: +Thợ săn | 10+: 3 Sói,+Cupid
+--    12+: +Trưởng làng | 4-5 bản rút gọn | còn lại: Dân làng
 create or replace function ww_start_room(p_room uuid)
 returns void language plpgsql security definer set search_path = public as $$
 declare
@@ -114,13 +115,12 @@ begin
   if n < 4 then raise exception 'Cần ít nhất 4 người chơi (đang có %)', n; end if;
 
   roles := array['wolf', 'seer'];
-  if n >= 8  then roles := roles || 'wolf'; end if;
-  if n >= 12 then roles := roles || 'wolf'; end if;
-  if n >= 6  then roles := roles || 'witch'; end if;
-  if n >= 7  then roles := roles || 'guard'; end if;
+  if n >= 5  then roles := roles || 'guard'; end if;
+  if n >= 6  then roles := roles || 'wolf'; end if;
+  if n >= 7  then roles := roles || 'witch'; end if;
   if n >= 8  then roles := roles || 'hunter'; end if;
-  if n >= 9  then roles := roles || 'mayor'; end if;
-  if n >= 10 then roles := roles || 'cupid'; end if;
+  if n >= 10 then roles := roles || array['wolf', 'cupid']; end if;
+  if n >= 12 then roles := roles || 'mayor'; end if;
   while coalesce(array_length(roles, 1), 0) < n loop
     roles := roles || 'villager';
   end loop;
@@ -152,16 +152,9 @@ begin
   end if;
 end $$;
 
--- 8) QUẢN TRÒ xem toàn bộ vai để dẫn game (chỉ host, sau khi đã chia vai)
-create or replace function ww_room_roles(p_room uuid)
-returns table(user_id uuid, role text) language plpgsql security definer set search_path = public as $$
-declare v_room ww_rooms;
-begin
-  select * into v_room from ww_rooms where id = p_room;
-  if v_room.host_id <> auth.uid() then raise exception 'Chỉ quản trò được xem danh sách vai'; end if;
-  if v_room.status = 'LOBBY' then raise exception 'Chưa chia vai'; end if;
-  return query select p.user_id, p.role from ww_players p where p.room_id = p_room;
-end $$;
+-- 8) Theo spec Dual Mode: CHỦ PHÒNG KHÔNG được xem vai của người khác.
+--    (Host chỉ thấy số người đã nhận vai qua cột acked.) Xoá RPC cũ nếu có.
+drop function if exists ww_room_roles(uuid);
 
 -- 9) VÁN MỚI (giữ nguyên người chơi, chia vai lại) / ĐÓNG PHÒNG
 create or replace function ww_new_round(p_room uuid)
@@ -179,7 +172,6 @@ grant execute on function ww_join_room(text) to authenticated;
 grant execute on function ww_start_room(uuid) to authenticated;
 grant execute on function ww_my_role(uuid) to authenticated;
 grant execute on function ww_ack_role(uuid) to authenticated;
-grant execute on function ww_room_roles(uuid) to authenticated;
 grant execute on function ww_new_round(uuid) to authenticated;
 
 -- 10) Realtime + thẻ game trong module Minigame
