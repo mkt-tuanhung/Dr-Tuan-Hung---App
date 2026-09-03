@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { ArrowLeft, ShieldCheck, User, RefreshCw, Send } from 'lucide-react';
 import { loadEngine, analyzeFrame, MODEL_VERSION } from './faceEngine';
 import { newRequestId, submitFaceAttendance } from './faceApi';
-import { playSuccessChime, playErrorBeep, unlockAudio } from './faceSound';
+import { playSuccessChime, playErrorBeep, unlockAudio, speak } from './faceSound';
 import { getLocation, getPublicIP, calcDistance, OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS } from '@/lib/geo';
 import { uploadToR2 } from '@/lib/r2Client';
 import { FaceStyles, CornerFrame, ScanLine, LandmarkOverlay, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
@@ -110,6 +110,12 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
       const data = await submitFaceAttendance(payload);
       if (data?.accepted) {
         playSuccessChime(); // CHỈ sau khi CRM accepted
+        // Giọng nói xác nhận sau tiếng "ting" (không đọc tên nhân sự)
+        setTimeout(() => speak(
+          action === 'CHECK_IN'
+            ? 'Đã check in thành công'
+            : (data.repeated ? 'Đã cập nhật giờ ra' : 'Đã check out thành công')
+        ), 350);
         stateRef.current = S.ATTENDANCE_SUCCESS;
         dispatch({ type: 'SUCCESS', result: data });
         onSuccess?.(data);
