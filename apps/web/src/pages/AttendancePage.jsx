@@ -3,37 +3,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle } from 'lucide-react';
-
-// Tọa độ văn phòng Dr Tuấn Hùng - 10 ngõ 168 Hào Nam, Hà Nội
-const OFFICE_LAT = 21.025956;
-const OFFICE_LNG = 105.828384;
-const OFFICE_RADIUS_M = 200; // bán kính cho phép 200m
-
-const calcDistance = (lat1, lng1, lat2, lng2) => {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-};
-
-const getLocation = () => new Promise((resolve, reject) => {
-  if (!navigator.geolocation) { reject(new Error('Thiết bị không hỗ trợ GPS')); return; }
-  navigator.geolocation.getCurrentPosition(
-    pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-    err => reject(new Error('Không lấy được vị trí. Vui lòng bật GPS.')),
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
-});
-
-const getPublicIP = async () => {
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    return data.ip;
-  } catch { return null; }
-};
+import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle, ScanFace } from 'lucide-react';
+// Helper vị trí dùng chung (tách ra lib/geo.js — dùng cho cả chấm công khuôn mặt)
+import { OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS, calcDistance, getLocation, getPublicIP } from '@/lib/geo';
+import FaceCameraScreen from '@/features/faceid/FaceCameraScreen.jsx';
+import FaceEnrollScreen from '@/features/faceid/FaceEnrollScreen.jsx';
+import { fetchMyFaceStatus } from '@/features/faceid/faceApi';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'bg-teal-100 text-teal-700', dot: 'bg-teal-500' },
@@ -58,9 +33,6 @@ const LEAVE_STATUS = {
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const DAYS_SHORT = ['CN','T2','T3','T4','T5','T6','T7'];
-
-// Thay đổi địa chỉ IP Public của phòng khám ở đây. Để mảng rỗng [] nếu không muốn check IP.
-const OFFICE_IPS = ['42.114.215.104'];
 
 const fmtTime = (t) => t ? t.slice(0, 5) : null;
 
@@ -94,6 +66,17 @@ const AttendancePage = () => {
   const [showOtForm, setShowOtForm] = useState(false);
   const [otForm, setOtForm] = useState({ date: todayStr, ranges: [{ from: '', to: '' }] });
   const [locationInfo, setLocationInfo] = useState(null); // { lat, lng, distance, inOffice, ip }
+
+  // ---- Chấm công KHUÔN MẶT (FACE_AI) ----
+  const [faceMode, setFaceMode] = useState(null);      // null | 'CHECK_IN' | 'CHECK_OUT'
+  const [showEnroll, setShowEnroll] = useState(false);
+  const [faceStatus, setFaceStatus] = useState(undefined); // undefined=đang tải, null=chưa đăng ký
+  const faceReady = faceStatus?.status === 'ACTIVE';
+  const loadFaceStatus = useCallback(async () => {
+    if (!profile?.id) return;
+    try { setFaceStatus(await fetchMyFaceStatus(profile.id)); } catch { setFaceStatus(null); }
+  }, [profile?.id]);
+  useEffect(() => { loadFaceStatus(); }, [loadFaceStatus]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -342,9 +325,22 @@ const AttendancePage = () => {
                 {locationInfo.ip && <span className="text-white/60 text-[10px]">· {locationInfo.ip}</span>}
               </div>
             )}
+            {faceReady ? (
+              <button onClick={() => setFaceMode('CHECK_IN')} disabled={saving}
+                className="flex items-center gap-2 mx-auto px-8 py-3.5 rounded-2xl bg-white text-teal-700 font-bold text-sm shadow-lg hover:bg-teal-50 transition-all active:scale-95 disabled:opacity-50">
+                <ScanFace className="w-5 h-5" /> Check-in bằng khuôn mặt
+              </button>
+            ) : (
+              <button onClick={() => setShowEnroll(true)}
+                className="flex items-center gap-2 mx-auto px-6 py-3 rounded-2xl bg-white/15 text-white font-semibold text-sm border border-white/30 hover:bg-white/25 transition-all active:scale-95">
+                <ScanFace className="w-4 h-4" /> {faceStatus === undefined ? 'Face ID…' : faceStatus?.status === 'NEEDS_REENROLLMENT' ? 'Đăng ký lại khuôn mặt' : 'Đăng ký Face ID để chấm công'}
+              </button>
+            )}
             <button onClick={handleCheckIn} disabled={saving}
-              className="flex items-center gap-2 mx-auto px-8 py-3 rounded-2xl bg-white text-teal-600 font-semibold text-sm shadow-lg hover:bg-teal-50 transition-all active:scale-95 disabled:opacity-50">
-              <LogIn className="w-4 h-4" /> Chấm công vào
+              className={`flex items-center gap-2 mx-auto rounded-2xl transition-all active:scale-95 disabled:opacity-50 ${faceReady
+                ? 'px-5 py-2 bg-white/15 text-white text-xs font-semibold border border-white/25 hover:bg-white/25'
+                : 'px-8 py-3 bg-white text-teal-600 font-semibold text-sm shadow-lg hover:bg-teal-50'}`}>
+              <LogIn className="w-4 h-4" /> Chấm công vào {faceReady ? '(GPS thường)' : ''}
             </button>
             <p className="text-teal-200 text-[11px]">GPS + IP sẽ được ghi nhận tự động</p>
           </div>
@@ -354,10 +350,18 @@ const AttendancePage = () => {
               <Clock className="w-4 h-4 text-teal-200" />
               <span className="text-sm">Vào lúc <strong>{fmtTime(todayRecord.check_in)}</strong></span>
             </div>
-            <div>
+            <div className="space-y-2">
+              {faceReady && (
+                <button onClick={() => setFaceMode('CHECK_OUT')} disabled={saving}
+                  className="flex items-center gap-2 mx-auto px-8 py-3 rounded-2xl bg-white text-teal-700 font-bold text-sm shadow-lg hover:bg-teal-50 transition-all active:scale-95 disabled:opacity-50">
+                  <ScanFace className="w-5 h-5" /> Check-out bằng khuôn mặt
+                </button>
+              )}
               <button onClick={handleCheckOut} disabled={saving}
-                className="flex items-center gap-2 mx-auto px-8 py-3 rounded-2xl bg-white/20 text-white font-semibold text-sm border border-white/30 hover:bg-white/30 transition-all active:scale-95 disabled:opacity-50">
-                <LogOut className="w-4 h-4" /> Chấm công ra
+                className={`flex items-center gap-2 mx-auto rounded-2xl transition-all active:scale-95 disabled:opacity-50 ${faceReady
+                  ? 'px-5 py-2 bg-white/15 text-white text-xs font-semibold border border-white/25 hover:bg-white/25'
+                  : 'px-8 py-3 bg-white/20 text-white font-semibold text-sm border border-white/30 hover:bg-white/30'}`}>
+                <LogOut className="w-4 h-4" /> Chấm công ra {faceReady ? '(GPS thường)' : ''}
               </button>
             </div>
           </div>
@@ -662,6 +666,11 @@ const AttendancePage = () => {
                   <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
                     {fmtTime(r.check_in) && <span>Vào: {fmtTime(r.check_in)}</span>}
                     {fmtTime(r.check_out) && <span>Ra: {fmtTime(r.check_out)}</span>}
+                    {(r.check_in_method === 'face_ai' || r.check_out_method === 'face_ai') && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-600 font-semibold text-[10px]">
+                        <ScanFace className="w-3 h-3" /> Face AI
+                      </span>
+                    )}
                   </div>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_CONFIG[r.status]?.color || 'bg-slate-100 text-slate-400'}`}>
@@ -829,6 +838,21 @@ const AttendancePage = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ===== CHẤM CÔNG KHUÔN MẶT (FACE_AI) ===== */}
+      {faceMode && (
+        <FaceCameraScreen
+          action={faceMode}
+          onClose={() => setFaceMode(null)}
+          onSuccess={() => { loadData(); }}
+        />
+      )}
+      {showEnroll && (
+        <FaceEnrollScreen
+          onClose={() => { setShowEnroll(false); loadFaceStatus(); }}
+          onDone={() => { loadFaceStatus(); toast.success('Đã đăng ký khuôn mặt — từ giờ chấm công bằng Face ID!'); }}
+        />
       )}
     </div>
   );
