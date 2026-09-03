@@ -77,6 +77,8 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const [progress, setProgress] = useState('');
   const [challenge, setChallenge] = useState(null); // hướng dẫn liveness đang yêu cầu
   const [loc, setLoc] = useState({ gps: null, ip: null, gpsVerified: null, wifiVerified: null });
+  const [snap, setSnap] = useState(null);   // ảnh bằng chứng vừa chụp (objectURL) hiện ở góc
+  const [flash, setFlash] = useState(false); // hiệu ứng "nháy đèn" lúc chụp
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -131,6 +133,8 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
     pipeRef.current = null;
     aliveRef.current = false; // dừng loop cũ
     setBox(null); setMesh(null); setChallenge(null);
+    setSnap((old) => { try { if (old) URL.revokeObjectURL(old); } catch { /* noop */ } return null; });
+    setFlash(false);
     setTimeout(() => start(), 50); // eslint-disable-line no-use-before-define
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -273,9 +277,19 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
             pipe.lastSampleAt = Date.now();
             if (pipe.samples.length === 1) {
               goto(S.MATCHING_FACE);
-              // Chụp ảnh bằng chứng ngay frame đạt chuẩn đầu tiên, upload song song
+              // Chụp ảnh bằng chứng ngay frame đạt chuẩn đầu tiên, upload song song.
+              // Hiệu ứng máy ảnh: flash trắng + rung nhẹ + ảnh thu nhỏ hiện ở góc
               pipe.snapshotPromise = captureSnapshot()
-                .then((b) => (b ? uploadToR2(new File([b], 'face.jpg', { type: 'image/jpeg' }), 'face-attendance') : null))
+                .then((b) => {
+                  if (!b) return null;
+                  try {
+                    setSnap(URL.createObjectURL(b));
+                    setFlash(true);
+                    setTimeout(() => setFlash(false), 260);
+                    navigator.vibrate?.(18);
+                  } catch { /* noop */ }
+                  return uploadToR2(new File([b], 'face.jpg', { type: 'image/jpeg' }), 'face-attendance');
+                })
                 .catch(() => null);
             }
           }
@@ -361,6 +375,22 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
         <CornerFrame box={box} color={color} pulsing={scanning} />
         <ScanLine box={box} color={color} active={scanning} />
       </div>
+
+      {/* Hiệu ứng nháy đèn máy ảnh lúc chụp */}
+      {flash && <div className="absolute inset-0 bg-white pointer-events-none z-20" style={{ animation: 'snapFlash .26s ease-out forwards' }} />}
+
+      {/* Ảnh bằng chứng vừa chụp — người dùng biết ảnh đã được lưu */}
+      {snap && (
+        <div className="absolute right-3 z-10 pointer-events-none" style={{ top: 'calc(max(env(safe-area-inset-top), 14px) + 118px)', animation: 'snapPop .45s cubic-bezier(.2,1.3,.4,1)' }}>
+          <div className="rounded-xl overflow-hidden" style={{ border: `2px solid ${st === S.ATTENDANCE_SUCCESS ? HUD.success : HUD.neutral}`, boxShadow: `0 4px 18px rgba(0,0,0,.5), 0 0 12px ${st === S.ATTENDANCE_SUCCESS ? HUD.success : HUD.neutral}55`, width: 64 }}>
+            <img src={snap} alt="Ảnh chấm công" className="w-full h-20 object-cover block" />
+          </div>
+          <div className="mt-1 text-center text-[9px] font-bold px-1 py-0.5 rounded-md"
+            style={{ background: 'rgba(5,12,11,0.7)', color: st === S.ATTENDANCE_SUCCESS ? HUD.success : 'rgba(255,255,255,0.85)' }}>
+            {st === S.ATTENDANCE_SUCCESS ? '✓ Đã lưu hệ thống' : 'Ảnh chấm công'}
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="relative flex items-center justify-between px-4 pt-safe" style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}>

@@ -24,6 +24,8 @@ export const FaceStyles = () => (
     @keyframes hudDot { 0%,100% { opacity: .25; } 50% { opacity: .5; } }
     @keyframes hudFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     .fh-fade-up { animation: hudFadeUp .3s ease-out; }
+    @keyframes snapFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+    @keyframes snapPop { 0% { transform: scale(1.6); opacity: 0; } 55% { transform: scale(.95); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
   `}</style>
 );
 
