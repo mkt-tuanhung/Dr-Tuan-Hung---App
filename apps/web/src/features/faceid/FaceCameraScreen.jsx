@@ -10,12 +10,12 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { ArrowLeft, ShieldCheck, User, RefreshCw, Send } from 'lucide-react';
-import { loadEngine, analyzeFrame, MODEL_VERSION } from './faceEngine';
+import { loadEngine, analyzeFrame, mapFaceToScreen, MODEL_VERSION } from './faceEngine';
 import { newRequestId, submitFaceAttendance } from './faceApi';
 import { playSuccessChime, playErrorBeep, unlockAudio, speak } from './faceSound';
 import { getLocation, getPublicIP, calcDistance, OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS } from '@/lib/geo';
 import { uploadToR2 } from '@/lib/r2Client';
-import { FaceStyles, CornerFrame, ScanLine, LandmarkOverlay, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
+import { FaceStyles, CornerFrame, ScanLine, LowPolyMesh, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
 
 // ---------- State machine ----------
 const S = {
@@ -85,6 +85,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const aliveRef = useRef(true);
   const stateRef = useRef(S.IDLE);
   const locRef = useRef({ gps: null, ip: null }); // GPS/IP về sau khi loop đã chạy -> đọc qua ref
+  const smoothRef = useRef({ box: null, lastSeen: 0 }); // khung mặt làm mượt, giữ khi mặt mất thoáng qua
   const pipeRef = useRef(null);      // dữ liệu pipeline (liveness, samples…)
   const payloadRef = useRef(null);   // payload đã gửi (để "Thử gửi lại" idempotent)
   const beepedRef = useRef(false);
@@ -141,6 +142,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
     setBox(null); setMesh(null); setChallenge(null);
     setSnap((old) => { try { if (old) URL.revokeObjectURL(old); } catch { /* noop */ } return null; });
     setFlash(false);
+    smoothRef.current = { box: null, lastSeen: 0 };
     setTimeout(() => start(), 50); // eslint-disable-line no-use-before-define
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -255,10 +257,30 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
       const phase = stateRef.current;
       const searchTimeout = Date.now() - pipe.startedAt > 15000;
 
+      // Khung + lưới: ánh xạ toạ độ video -> MÀN HÌNH (object-cover, mirror) để không méo,
+      // làm mượt bằng nội suy + vuông hoá khung, giữ khung 0.7s khi mặt mất thoáng qua
+      const sm = smoothRef.current;
       if (f.faces === 1 && f.box) {
-        setBox({ x: 1 - f.box.x - f.box.w, y: f.box.y, w: f.box.w, h: f.box.h }); // mirror theo video
-        setMesh(f.mesh);
-      } else { setBox(null); setMesh(null); }
+        sm.lastSeen = Date.now();
+        const { box: mb, pts } = mapFaceToScreen(f, video);
+        if (mb) {
+          const aspScr = (window.innerWidth || 1) / (window.innerHeight || 1);
+          const cx = mb.x + mb.w / 2, cy = mb.y + mb.h / 2;
+          const w = Math.min(0.94, mb.w * 1.16);
+          const h = Math.min(0.62, w * 1.18 * aspScr); // khung gần vuông như mockup, không theo box thô
+          const t = { x: cx - w / 2, y: cy - h / 2, w, h };
+          const k = sm.box ? 0.32 : 1; // hệ số mượt
+          sm.box = sm.box
+            ? { x: sm.box.x + (t.x - sm.box.x) * k, y: sm.box.y + (t.y - sm.box.y) * k, w: sm.box.w + (t.w - sm.box.w) * k, h: sm.box.h + (t.h - sm.box.h) * k }
+            : t;
+          setBox({ ...sm.box });
+        }
+        setMesh(pts);
+      } else if (Date.now() - sm.lastSeen > 700) {
+        sm.box = null; setBox(null); setMesh(null);
+      } else {
+        setMesh(null); // mất mặt thoáng qua: giữ khung, ẩn lưới
+      }
 
       const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
       // Điểm passive kết hợp antispoof (real) + liveness (live) — số THẬT từ model
@@ -377,7 +399,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
 
       {/* HUD trên video */}
       <div className="absolute inset-0 pointer-events-none">
-        {!isFinal && <LandmarkOverlay mesh={mesh} color={color} />}
+        {!isFinal && <LowPolyMesh pts={mesh} color={color} />}
         <CornerFrame box={box} color={color} pulsing={scanning} />
         <ScanLine box={box} color={color} active={scanning} />
       </div>

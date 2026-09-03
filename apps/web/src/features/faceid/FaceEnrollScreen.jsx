@@ -7,10 +7,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeft, ScanFace, ShieldCheck, Check } from 'lucide-react';
-import { loadEngine, analyzeFrame } from './faceEngine';
+import { loadEngine, analyzeFrame, mapFaceToScreen } from './faceEngine';
 import { submitEnrollment } from './faceApi';
 import { playSuccessChime, playErrorBeep, unlockAudio } from './faceSound';
-import { FaceStyles, CornerFrame, ScanLine, LandmarkOverlay, Glass, HUD, toneColor } from './FaceHud';
+import { FaceStyles, CornerFrame, ScanLine, LowPolyMesh, Glass, HUD, toneColor } from './FaceHud';
 
 // Mỗi bước: điều kiện góc mặt (độ) + số mẫu cần thu
 const STEPS = [
@@ -76,8 +76,9 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
       if (!aliveRef.current) return;
 
       if (f.faces === 1 && f.box) {
-        setBox({ x: 1 - f.box.x - f.box.w, y: f.box.y, w: f.box.w, h: f.box.h });
-        setMesh(f.mesh);
+        // Ánh xạ toạ độ video -> màn hình (object-cover, mirror) để khung/lưới không méo
+        const { box: mb, pts } = mapFaceToScreen(f, video);
+        setBox(mb); setMesh(pts);
       } else { setBox(null); setMesh(null); }
 
       const step = STEPS[d.stepIdx];
@@ -137,7 +138,7 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
           <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(5,9,8,.78) 0%, rgba(5,9,8,.12) 25%, rgba(5,9,8,.1) 55%, rgba(5,9,8,.9) 100%)' }} />
           <div className="absolute inset-0 pointer-events-none">
-            <LandmarkOverlay mesh={mesh} color={color} />
+            <LowPolyMesh pts={mesh} color={color} />
             <CornerFrame box={box} color={color} pulsing={phase === 'capturing'} />
             <ScanLine box={box} color={color} active={phase === 'capturing'} />
           </div>

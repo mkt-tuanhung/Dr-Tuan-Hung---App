@@ -1,6 +1,7 @@
 // Bộ HUD "biometric scanner" dùng chung cho Chấm công + Đăng ký khuôn mặt.
 // 100% CSS/SVG (không GIF). Mọi thông số hiển thị là dữ liệu THẬT từ engine.
 import React from 'react';
+import { FACE_EDGES, FACE_VERTS } from './faceEngine';
 
 // Design tokens theo spec (mục 41)
 export const HUD = {
@@ -46,7 +47,7 @@ export const CornerFrame = ({ box, color, pulsing }) => {
     <div style={{
       position: 'absolute', left: `${b.x * 100}%`, top: `${b.y * 100}%`,
       width: `${b.w * 100}%`, height: `${b.h * 100}%`,
-      transition: 'all .18s ease-out',
+      transition: 'all .1s linear', // đã làm mượt bằng JS -> transition ngắn, không "nhảy hình"
       animation: pulsing ? 'hudPulse 1.2s ease-in-out infinite' : 'none',
       pointerEvents: 'none',
     }}>
@@ -72,16 +73,25 @@ export const ScanLine = ({ box, color, active }) => {
   );
 };
 
-// Lưới landmark (mesh tỉ lệ 0..1 đã mirror) — SVG, opacity thấp, không che mặt
-export const LandmarkOverlay = ({ mesh, color }) => {
-  if (!mesh || !mesh.length) return null;
-  const pts = [];
-  for (let i = 0; i < mesh.length; i += 7) pts.push(mesh[i]);
+// Lưới LOW-POLY khuôn mặt (đúng phong cách mockup): cạnh tam giác mảnh phát sáng
+// + đỉnh trắng nhỏ. pts = { landmarkIndex: [x, y] } đã map sang toạ độ MÀN HÌNH.
+export const LowPolyMesh = ({ pts, color }) => {
+  if (!pts) return null;
+  // viewBox 100x100 bị kéo giãn theo màn dọc -> bù tỉ lệ để chấm luôn TRÒN
+  const asp = (window.innerWidth || 1) / (window.innerHeight || 1);
+  const rx = 0.55, ry = 0.55 * asp;
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.35 }}>
-      {pts.map((p, i) => (
-        <circle key={i} cx={(1 - p[0]) * 100} cy={p[1] * 100} r="0.42" fill={color} style={{ filter: `drop-shadow(0 0 1px ${color})` }} />
-      ))}
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+      <g opacity="0.42">
+        {FACE_EDGES.map(([a, b], i) => (pts[a] && pts[b]) ? (
+          <line key={i} x1={pts[a][0] * 100} y1={pts[a][1] * 100} x2={pts[b][0] * 100} y2={pts[b][1] * 100}
+            stroke={color} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 }} />
+        ) : null)}
+      </g>
+      {FACE_VERTS.map((i) => pts[i] ? (
+        <ellipse key={i} cx={pts[i][0] * 100} cy={pts[i][1] * 100} rx={rx} ry={ry} fill="#fff" opacity="0.92"
+          style={{ filter: `drop-shadow(0 0 2px ${color})` }} />
+      ) : null)}
     </svg>
   );
 };
