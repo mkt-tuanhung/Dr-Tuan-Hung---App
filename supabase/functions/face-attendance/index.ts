@@ -192,18 +192,45 @@ Deno.serve(async (req) => {
       link: 'attendance',
     });
 
-    // Telegram NHÓM (backend gửi — không bao giờ gửi ảnh khuôn mặt)
+    // Telegram NHÓM CHẤM CÔNG (secret TELEGRAM_ATTENDANCE_CHAT_ID)
+    // Card đầy đủ + ẢNH chụp lúc chấm công (yêu cầu vận hành của quản lý)
     const tgToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const tgChat = Deno.env.get('TELEGRAM_ATTENDANCE_CHAT_ID');
     if (tgToken && tgChat) {
-      const { data: prof } = await db.from('profiles').select('full_name').eq('id', user.id).single();
+      const ROLE_VI: Record<string, string> = {
+        telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
+        media: 'Media', marketing: 'Marketing', editor: 'Editor', seeding: 'Seeding',
+        dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin', bac_si: 'Bác sĩ',
+      };
+      const { data: prof } = await db.from('profiles').select('full_name, role, role_2').eq('id', user.id).single();
       const name = prof?.full_name || 'Nhân sự';
-      const icon = lateMinutes > 0 ? '⚠️' : '✅';
-      const text = `${icon} ${name} đã ${actLabel} lúc ${fmtHM(time)}${lateTxt ? ` — đi muộn ${lateMinutes} phút` : ''} (Face AI)${locationWarning ? `\n⚠️ ${locationWarning}` : ''}`;
-      fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+      const roleTxt = [prof?.role, prof?.role_2].filter(Boolean).map((r) => ROLE_VI[r as string] || r).join(' · ') || '—';
+      const [yy, mm, dd] = date.split('-');
+      const title = action === 'CHECK_IN'
+        ? '✅ CHECK-IN THÀNH CÔNG'
+        : (repeated ? '🔁 CẬP NHẬT GIỜ RA' : '🚪 CHECK-OUT THÀNH CÔNG');
+      const lines = [
+        title,
+        `👤 ${name}`,
+        `🏢 ${roleTxt}`,
+        `🕒 ${time} — ${dd}/${mm}/${yy}`,
+        `📍 ${(gpsVerified || wifiVerified) ? String(cfg.office_name || 'Cơ sở Hà Nội') : `⚠️ ${locationWarning || 'Ngoài văn phòng'}`}`,
+      ];
+      if (action === 'CHECK_IN' && lateMinutes > 0) lines.push(`⏰ Đi muộn ${lateMinutes} phút`);
+      const caption = lines.join('\n');
+      // Có ảnh -> sendPhoto (Telegram tự tải từ URL); lỗi/không ảnh -> fallback text
+      const sendText = () => fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: tgChat, text }),
+        body: JSON.stringify({ chat_id: tgChat, text: caption }),
       }).catch(() => {});
+      if (snapshotUrl) {
+        fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: tgChat, photo: snapshotUrl, caption }),
+        }).then((r) => { if (!r.ok) sendText(); }).catch(sendText);
+      } else {
+        sendText();
+      }
     }
 
     return finish('ACCEPTED', {
