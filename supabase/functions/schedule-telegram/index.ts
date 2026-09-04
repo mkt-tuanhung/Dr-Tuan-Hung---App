@@ -169,6 +169,23 @@ Deno.serve(async (req) => {
 
     // 2) LỊCH MỚI (INSERT có ngày hẹn) — tư vấn hoặc tái khám
     if (type === 'INSERT' && rec.appointment_date) {
+      // ⚡ TƯ VẤN LÀM LUÔN: khách tư vấn xong phẫu thuật ngay -> CHỈ báo nhóm Phẫu thuật
+      if (!isRecheck && rec.consult_do_now) {
+        const text =
+          `⚕️ <b>TƯ VẤN LÀM LUÔN — dự kiến PHẪU THUẬT ngày ${dShort(rec.appointment_date)}</b>` +
+          line('Thời gian tư vấn', tShort(rec.appointment_time)) +
+          line('KH', kh) +
+          line('Dịch vụ', esc(serviceClean)) +
+          line('Tham khảo thêm', esc(rec.extra_consult)) +
+          line('Tổng bill dự kiến', money(rec.expected_bill)) +
+          line('Cọc', money(rec.deposit_amount)) +
+          line('Xét nghiệm', esc(rec.test_status)) +
+          staffLines +
+          line('Tình trạng', esc(notesClean));
+        await send(CHAT_SURGERY, text);
+        queuePhotos(CHAT_SURGERY);
+        return new Response('ok');
+      }
       const text = isRecheck
         ? `🩺 <b>Thông báo lịch TÁI KHÁM ngày ${dShort(rec.appointment_date)}</b>` +
           line('Thời gian', tShort(rec.appointment_time)) +
@@ -177,7 +194,7 @@ Deno.serve(async (req) => {
           line('Ngày phẫu thuật', dFull(rec.surgery_date)) +
           staffLines +
           line('Tình trạng', esc(notesClean))
-        : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>${rec.consult_do_now ? ' ⚡ <b>TƯ VẤN LÀM LUÔN</b>' : ''}` +
+        : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>` +
           line('Thời gian', tShort(rec.appointment_time)) +
           line('KH', kh) +
           line('Dịch vụ', esc(serviceClean)) +
@@ -190,20 +207,6 @@ Deno.serve(async (req) => {
       const chat = isRecheck ? CHAT_RECHECK : CHAT_MAIN;
       await send(chat, text);
       queuePhotos(chat);
-      // ⚡ TƯ VẤN LÀM LUÔN: khách tư vấn xong phẫu thuật ngay -> báo THÊM nhóm Phẫu thuật
-      if (!isRecheck && rec.consult_do_now && CHAT_SURGERY && CHAT_SURGERY !== chat) {
-        const surgeryCopy =
-          `⚕️ <b>TƯ VẤN LÀM LUÔN — dự kiến PHẪU THUẬT ngày ${dShort(rec.appointment_date)}</b>` +
-          line('Thời gian tư vấn', tShort(rec.appointment_time)) +
-          line('KH', kh) +
-          line('Dịch vụ', esc(serviceClean)) +
-          line('Tham khảo thêm', esc(rec.extra_consult)) +
-          line('Tổng bill dự kiến', money(rec.expected_bill)) +
-          staffLines +
-          line('Tình trạng', esc(notesClean));
-        await send(CHAT_SURGERY, surgeryCopy);
-        queuePhotos(CHAT_SURGERY);
-      }
       return new Response('ok');
     }
 
