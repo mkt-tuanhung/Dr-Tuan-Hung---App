@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download, ScanFace } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download, ScanFace, ImageDown } from 'lucide-react';
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 import FaceIdAdminPanel from '@/features/faceid/FaceIdAdminPanel.jsx';
 
@@ -46,7 +46,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
     const [staffRes, attRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, employee_id, role, avatar_url').eq('is_active', true).order('full_name'),
+      supabase.from('profiles').select('id, full_name, employee_id, role, avatar_url, fixed_salary').eq('is_active', true).order('full_name'),
       supabase.from('attendance').select('*').gte('date', startDate).lte('date', endDate),
     ]);
 
@@ -166,6 +166,142 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     setTimesheet({ html, name: `Bang-cong_${(s.employee_id || s.full_name || '').replace(/\s+/g, '')}_${month}-${year}` });
   };
   const printTimesheet = () => { try { tsRef.current?.contentWindow?.focus(); tsRef.current?.contentWindow?.print(); } catch { toast.error('Không in được — thử lại'); } };
+
+  // ---------- Xuất ẢNH tổng hợp LỖI CHẤM CÔNG cả tháng (toàn bộ nhân sự) ----------
+  // Lỗi đi muộn: bản ghi status 'late' (kèm giờ vào). Lỗi check in/out: ngày làm việc
+  // (trừ Chủ nhật, chỉ tính ngày ĐÃ QUA) không có bản ghi nào = "không chấm công";
+  // có bản ghi đi làm nhưng thiếu giờ vào/ra = "thiếu check-in/check-out".
+  // Nhân sự lương cố định (không phải chấm công) không bị tính lỗi "không chấm công".
+  const exportViolationsImage = () => {
+    if (!staff.length) { toast.error('Chưa có dữ liệu'); return; }
+    const pad2 = (x) => String(x).padStart(2, '0');
+    const isCurMonth = year === today.getFullYear() && month === today.getMonth() + 1;
+    const lastDoneDay = isCurMonth ? Math.min(daysInMonth, today.getDate() - 1) : (new Date(year, month - 1, 1) > today ? 0 : daysInMonth);
+
+    const byStaffDate = {};
+    attendance.forEach(a => { byStaffDate[a.staff_id + '|' + a.date] = a; });
+
+    const rows = staff.map((s, idx) => {
+      const lateRecs = attendance
+        .filter(a => a.staff_id === s.id && a.status === 'late')
+        .sort((x, y) => (x.date < y.date ? -1 : 1));
+      const lateDetails = lateRecs.map(a => `${pad2(new Date(a.date).getDate())}/${pad2(month)}${a.check_in ? ` (vào ${fmtTime(a.check_in)})` : ''}`);
+      const miss = [];
+      for (let d = 1; d <= lastDoneDay; d++) {
+        if (new Date(year, month - 1, d).getDay() === 0) continue; // Chủ nhật nghỉ
+        const rec = byStaffDate[s.id + '|' + `${year}-${pad2(month)}-${pad2(d)}`];
+        if (!rec) { if (!s.fixed_salary) miss.push(`${pad2(d)}/${pad2(month)} không chấm công`); }
+        else if (['present', 'late', 'early_leave'].includes(rec.status)) {
+          if (!rec.check_in) miss.push(`${pad2(d)}/${pad2(month)} thiếu check-in`);
+          else if (!rec.check_out) miss.push(`${pad2(d)}/${pad2(month)} thiếu check-out`);
+        }
+      }
+      return { idx: idx + 1, s, lateCount: lateRecs.length, lateDetails, miss };
+    });
+
+    const F = (bold, size) => `${bold ? '700' : '400'} ${size}px Arial, "Helvetica Neue", sans-serif`;
+    const mc = document.createElement('canvas').getContext('2d');
+    const wrap = (text, maxW, bold, size) => {
+      mc.font = F(bold, size);
+      const out = []; let line = '';
+      String(text).split(' ').forEach(w => {
+        const t = line ? line + ' ' + w : w;
+        if (mc.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+      });
+      if (line) out.push(line);
+      return out;
+    };
+
+    const PAD = 12, LH = 18;
+    const W_STT = 46, W_NAME = 190, W_LATE = 330, W_MISS = 330;
+    const W = W_STT + W_NAME + W_LATE + W_MISS;
+    const prepared = rows.map(r => {
+      const nameLines = wrap(r.s.full_name, W_NAME - PAD * 2, true, 13.5);
+      const lateLines = r.lateCount
+        ? [`${r.lateCount} lỗi đi muộn`, ...wrap(r.lateDetails.join(', '), W_LATE - PAD * 2, false, 12)]
+        : ['—'];
+      const missLines = r.miss.length
+        ? [`${r.miss.length} lỗi`, ...wrap(r.miss.join(', '), W_MISS - PAD * 2, false, 12)]
+        : ['—'];
+      const h = Math.max(nameLines.length + 1, lateLines.length, missLines.length) * LH + 16;
+      return { ...r, nameLines, lateLines, missLines, h: Math.max(h, 42) };
+    });
+
+    const titleH = 92, headH = 42, footH = 34;
+    const totalLate = prepared.reduce((s, r) => s + r.lateCount, 0);
+    const totalMiss = prepared.reduce((s, r) => s + r.miss.length, 0);
+    const H = titleH + headH + prepared.reduce((s, r) => s + r.h, 0) + footH;
+
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale; canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.textBaseline = 'middle';
+
+    // Tiêu đề
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#b45309'; ctx.fillRect(0, 0, W, titleH);
+    ctx.fillStyle = '#fff'; ctx.font = F(true, 21); ctx.textAlign = 'left';
+    ctx.fillText(`BÁO CÁO LỖI CHẤM CÔNG — ${MONTHS[month - 1].toUpperCase()}/${year}`, 20, 34);
+    ctx.font = F(false, 13); ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText(`PK Dr Tuấn Hùng · ${staff.length} nhân sự · ${totalLate} lỗi đi muộn · ${totalMiss} lỗi không check in/out (tính đến hết ${lastDoneDay ? pad2(lastDoneDay) + '/' + pad2(month) : '—'}, trừ Chủ nhật)`, 20, 62);
+
+    // Header cột
+    let y = titleH;
+    ctx.fillStyle = '#f1f5f9'; ctx.fillRect(0, y, W, headH);
+    ctx.fillStyle = '#475569'; ctx.font = F(true, 12.5);
+    ctx.textAlign = 'center'; ctx.fillText('STT', W_STT / 2, y + headH / 2);
+    ctx.textAlign = 'left';
+    ctx.fillText('HỌ TÊN', W_STT + PAD, y + headH / 2);
+    ctx.fillText('LỖI ĐI MUỘN — THỜI GIAN CHI TIẾT', W_STT + W_NAME + PAD, y + headH / 2);
+    ctx.fillText('LỖI KHÔNG CHECK IN / CHECK OUT', W_STT + W_NAME + W_LATE + PAD, y + headH / 2);
+    y += headH;
+
+    // Từng nhân sự
+    prepared.forEach((r, ri) => {
+      if (ri % 2 === 1) { ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, y, W, r.h); }
+      ctx.textAlign = 'center'; ctx.font = F(true, 13); ctx.fillStyle = '#64748b';
+      ctx.fillText(String(r.idx), W_STT / 2, y + 22);
+      ctx.textAlign = 'left';
+      let ty = y + 16;
+      r.nameLines.forEach(l => { ctx.font = F(true, 13.5); ctx.fillStyle = '#0f172a'; ctx.fillText(l, W_STT + PAD, ty); ty += LH; });
+      ctx.font = F(false, 11); ctx.fillStyle = '#94a3b8';
+      ctx.fillText(r.s.role || '', W_STT + PAD, ty);
+      ty = y + 16;
+      r.lateLines.forEach((l, i) => {
+        ctx.font = F(i === 0 && r.lateCount ? true : false, 12);
+        ctx.fillStyle = r.lateCount ? (i === 0 ? '#b45309' : '#78716c') : '#94a3b8';
+        ctx.fillText(l, W_STT + W_NAME + PAD, ty); ty += LH;
+      });
+      ty = y + 16;
+      r.missLines.forEach((l, i) => {
+        ctx.font = F(i === 0 && r.miss.length ? true : false, 12);
+        ctx.fillStyle = r.miss.length ? (i === 0 ? '#dc2626' : '#78716c') : '#94a3b8';
+        ctx.fillText(l, W_STT + W_NAME + W_LATE + PAD, ty); ty += LH;
+      });
+      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, y + r.h - 0.5); ctx.lineTo(W, y + r.h - 0.5); ctx.stroke();
+      y += r.h;
+    });
+    // Kẻ dọc giữa các cột
+    ctx.strokeStyle = '#e2e8f0';
+    [W_STT, W_STT + W_NAME, W_STT + W_NAME + W_LATE].forEach(vx => {
+      ctx.beginPath(); ctx.moveTo(vx + 0.5, titleH); ctx.lineTo(vx + 0.5, y); ctx.stroke();
+    });
+    ctx.font = F(false, 11); ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'left';
+    ctx.fillText(`Xuất từ hệ thống lúc ${new Date().toLocaleString('vi-VN')} — Lưu hành nội bộ`, PAD, y + footH / 2);
+
+    canvas.toBlob((blob) => {
+      if (!blob) { toast.error('Không tạo được ảnh'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Loi-cham-cong-thang-${month}-${year}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast.success(`Đã xuất ảnh lỗi chấm công ${MONTHS[month - 1]}/${year}`);
+    }, 'image/png');
+  };
 
   const stats = {
     total: staff.length,
@@ -419,6 +555,13 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
           className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border ${isMultiSelect ? 'bg-teal-600 text-white border-teal-600 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
         >
           {isMultiSelect ? 'Hủy chọn nhiều' : 'Tích chọn nhiều ô'}
+        </button>
+        <button
+          onClick={exportViolationsImage}
+          disabled={loading}
+          className="w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center gap-2 justify-center disabled:opacity-50"
+        >
+          <ImageDown className="w-4 h-4" /> Xuất lỗi tháng
         </button>
         {isNested && (
           <button 
