@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
@@ -293,6 +293,102 @@ const PayrollPage = () => {
     finally { setSaving(false); }
   };
 
+  // Xuất bảng lương thành ẢNH PNG (vẽ canvas trực tiếp — không cần in/PDF)
+  const exportImage = () => {
+    if (!rowsView.length) { toast.error('Chưa có dữ liệu lương'); return; }
+    const cols = [
+      { h: 'Nhân sự', v: r => r.staff.full_name, sub: r => (ROLE_LABELS[r.staff.role] || r.staff.role) + (r.staff.employment_status === 'probation' ? ' · TV' : ''), align: 'left' },
+      { h: 'Công', v: r => String(r.workingDays || 0) + (r.daysOff > 0 ? ` (nghỉ ${r.daysOff})` : ''), align: 'center' },
+      { h: 'Lương theo công', v: r => fmtM(r.luongCong), align: 'right' },
+      { h: 'Phụ cấp', v: r => fmtM(r.phuCap), align: 'right' },
+      { h: 'Hoa hồng', v: r => fmtM(r.commission), align: 'right' },
+      { h: 'Tăng ca', v: r => (r.overtime ? '+' + fmtM(r.overtime) : '0đ'), align: 'right' },
+      { h: 'Thưởng khác', v: r => fmtM(r.otherBonus), align: 'right' },
+      { h: 'Ứng lương', v: r => (r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'), align: 'right', color: '#e11d48' },
+      { h: 'Khấu trừ', v: r => (r.otherDeduction ? '−' + fmtM(r.otherDeduction) : '0đ'), align: 'right', color: '#e11d48' },
+      { h: 'THỰC NHẬN', v: r => fmtM(r.net), align: 'right', bold: true },
+    ];
+    const F = (bold, size) => `${bold ? '700' : '400'} ${size}px Arial, "Helvetica Neue", sans-serif`;
+    const mc = document.createElement('canvas').getContext('2d');
+    const wOf = (t, bold, size) => { mc.font = F(bold, size); return mc.measureText(t).width; };
+    const PAD = 14;
+    const widths = cols.map((c, i) => {
+      let w = wOf(c.h, true, 13);
+      rowsView.forEach(r => {
+        w = Math.max(w, wOf(c.v(r), c.bold || false, 14));
+        if (c.sub) w = Math.max(w, wOf(c.sub(r), false, 11));
+      });
+      return Math.ceil(w) + PAD * 2 + (i === 0 ? 6 : 0);
+    });
+    const rowH = 46, headH = 44, titleH = 92, totalH = 56, footH = 34;
+    const W = widths.reduce((s, x) => s + x, 0) + 2;
+    const H = titleH + headH + rowH * rowsView.length + totalH + footH;
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale; canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // Nền + tiêu đề
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#0f766e'; ctx.fillRect(0, 0, W, titleH);
+    ctx.fillStyle = '#ffffff'; ctx.font = F(true, 22); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(`BẢNG LƯƠNG ${MONTHS[month - 1].toUpperCase()}/${year}`, 20, 34);
+    ctx.font = F(false, 13); ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(`PK Dr Tuấn Hùng · ${rowsView.length} nhân sự · Tổng thực nhận: ${fmtM(totalNet)}${locked ? ' · ĐÃ CHỐT' : ' · BẢN NHÁP'}`, 20, 62);
+
+    // Header bảng
+    let y = titleH;
+    ctx.fillStyle = '#f1f5f9'; ctx.fillRect(0, y, W, headH);
+    let x = 0;
+    cols.forEach((c, i) => {
+      ctx.fillStyle = '#475569'; ctx.font = F(true, 13);
+      ctx.textAlign = c.align === 'right' ? 'right' : c.align === 'center' ? 'center' : 'left';
+      const tx = c.align === 'right' ? x + widths[i] - PAD : c.align === 'center' ? x + widths[i] / 2 : x + PAD;
+      ctx.fillText(c.h, tx, y + headH / 2);
+      x += widths[i];
+    });
+
+    // Từng dòng nhân sự
+    y += headH;
+    rowsView.forEach((r, ri) => {
+      if (ri % 2 === 1) { ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, y, W, rowH); }
+      x = 0;
+      cols.forEach((c, i) => {
+        ctx.textAlign = c.align === 'right' ? 'right' : c.align === 'center' ? 'center' : 'left';
+        const tx = c.align === 'right' ? x + widths[i] - PAD : c.align === 'center' ? x + widths[i] / 2 : x + PAD;
+        ctx.font = F(c.bold || false, 14);
+        ctx.fillStyle = c.bold ? '#0f172a' : (c.color && c.v(r).startsWith('−') ? c.color : '#334155');
+        ctx.fillText(c.v(r), tx, c.sub ? y + 17 : y + rowH / 2);
+        if (c.sub) { ctx.font = F(false, 11); ctx.fillStyle = '#94a3b8'; ctx.fillText(c.sub(r), tx, y + 34); }
+        x += widths[i];
+      });
+      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, y + rowH - 0.5); ctx.lineTo(W, y + rowH - 0.5); ctx.stroke();
+      y += rowH;
+    });
+
+    // Dòng tổng
+    ctx.fillStyle = '#ecfdf5'; ctx.fillRect(0, y, W, totalH);
+    ctx.fillStyle = '#0f766e'; ctx.font = F(true, 15); ctx.textAlign = 'left';
+    ctx.fillText('TỔNG THỰC NHẬN', PAD, y + totalH / 2);
+    ctx.textAlign = 'right'; ctx.font = F(true, 17);
+    ctx.fillText(fmtM(totalNet), W - PAD, y + totalH / 2);
+    y += totalH;
+    ctx.font = F(false, 11); ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'left';
+    ctx.fillText(`Xuất từ hệ thống lúc ${new Date().toLocaleString('vi-VN')} — Lưu hành nội bộ`, PAD, y + footH / 2);
+
+    canvas.toBlob((blob) => {
+      if (!blob) { toast.error('Không tạo được ảnh'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Bang-luong-thang-${month}-${year}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast.success(`Đã xuất ảnh bảng lương ${MONTHS[month - 1]}/${year}`);
+    }, 'image/png');
+  };
+
   const printPayslip = async (r) => {
     const s = r.staff;
     const passcode = (s.payslip_code || '').trim();
@@ -460,7 +556,10 @@ const PayrollPage = () => {
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 flex-wrap">
+        <button onClick={exportImage} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
+          <ImageDown className="w-4 h-4" /> Xuất ảnh
+        </button>
         <button onClick={() => savePayroll(false)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-teal-200 text-teal-600 text-sm font-semibold hover:bg-teal-50 disabled:opacity-50">
           <Save className="w-4 h-4" /> Lưu nháp
         </button>
