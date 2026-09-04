@@ -89,6 +89,11 @@ Deno.serve(async (req) => {
     const isRecheck = String(rec.service || '').startsWith('[Tái khám]');
     const serviceClean = String(rec.service || '').replace('[Tái khám] ', '');
     const kh = `<b>${esc(rec.customer_name)}</b>${rec.phone ? ' ' + esc(rec.phone) : ''}`;
+    const [teleName, tele2Name, saleName] = await Promise.all([
+      nameOf(rec.telesale_id), nameOf(rec.telesale_id_2), nameOf(rec.sale_id),
+    ]);
+    const teleFull = [teleName, tele2Name].filter(Boolean).join(' + ');
+    const staffLines = line('Telesale phụ trách', esc(teleFull)) + line('Sale phụ trách', esc(saleName));
 
     // 1) CHỐT / ĐỔI LỊCH PHẪU THUẬT (surgery_date mới hoặc thay đổi) — không tính dòng tái khám
     if (type === 'UPDATE' && !isRecheck && rec.surgery_date && rec.surgery_date !== old.surgery_date) {
@@ -100,6 +105,7 @@ Deno.serve(async (req) => {
         line('Loại phẫu thuật', esc(rec.surgery_type || serviceClean)) +
         line('Bác sĩ', esc(bacSi)) +
         line('Tổng bill', money(rec.revenue)) +
+        staffLines +
         line('Tình trạng', esc(rec.notes));
       await send(text);
       return new Response('ok');
@@ -113,6 +119,7 @@ Deno.serve(async (req) => {
           line('KH', kh) +
           line('Dịch vụ đã dùng', esc(rec.used_service || serviceClean)) +
           line('Ngày phẫu thuật', dFull(rec.surgery_date)) +
+          staffLines +
           line('Tình trạng', esc(rec.notes))
         : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>` +
           line('Thời gian', tShort(rec.appointment_time)) +
@@ -122,6 +129,7 @@ Deno.serve(async (req) => {
           line('Tổng bill dự kiến', money(rec.expected_bill)) +
           line('Cọc', money(rec.deposit_amount)) +
           line('Xét nghiệm', esc(rec.test_status)) +
+          staffLines +
           line('Tình trạng', esc(rec.notes));
       await send(text);
       return new Response('ok');
@@ -142,6 +150,7 @@ Deno.serve(async (req) => {
         line('Thời gian mới', `${tShort(rec.appointment_time) ? tShort(rec.appointment_time) + ' ' : ''}ngày ${dShort(rec.appointment_date)}`) +
         line('KH', kh) +
         line('Dịch vụ', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
+        staffLines +
         line('Tình trạng', esc(rec.notes));
       await send(text);
       return new Response('ok');
