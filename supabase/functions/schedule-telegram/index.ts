@@ -1,14 +1,18 @@
 // ============================================================
 // BÁO LỊCH HẸN VỀ NHÓM TELEGRAM "LỊCH HẸN - PHẪU THUẬT"
-// Gọi bởi Supabase Database Webhook khi INSERT / UPDATE bảng customer_appointments.
+// Gọi bởi Database Webhook (trigger) khi INSERT / UPDATE customer_appointments.
 // Deploy với "Verify JWT" = OFF; bảo vệ bằng header x-webhook-secret = WEBHOOK_SECRET.
+// Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_SCHEDULE_CHAT_ID, WEBHOOK_SECRET
 //
-// Gửi thông báo khi:
-//   • Tạo LỊCH HẸN TƯ VẤN mới        (INSERT có appointment_date, service thường)
-//   • Tạo LỊCH TÁI KHÁM mới          (INSERT có appointment_date, service bắt đầu "[Tái khám]")
-//   • DỜI LỊCH HẸN                    (UPDATE đổi appointment_date/appointment_time)
-//   • CHỐT LỊCH PHẪU THUẬT            (UPDATE surgery_date mới / đổi ngày mổ)
-// Secrets cần có: TELEGRAM_BOT_TOKEN, TELEGRAM_SCHEDULE_CHAT_ID, WEBHOOK_SECRET
+// Format tin nhắn theo mẫu của quản lý:
+//   Thông báo lịch ngày 4/9
+//   - Thời gian: 17h
+//   - KH: Nguyễn Thị Hợi 0984688318
+//   - Dịch vụ: hạ gò má
+//   - Tổng bill dự kiến: 43tr
+//   - Cọc: 0
+//   - Xét nghiệm: chưa
+//   - Tình trạng: ...
 // ============================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -22,14 +26,36 @@ const supabase = createClient(
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const fmtDate = (d?: string | null) => {
+
+// '2026-09-04' -> '4/9'
+const dShort = (d?: string | null) => {
+  if (!d) return '';
+  const [, m, day] = String(d).slice(0, 10).split('-');
+  return `${Number(day)}/${Number(m)}`;
+};
+// '2026-09-04' -> '4/9/2026'
+const dFull = (d?: string | null) => {
   if (!d) return '';
   const [y, m, day] = String(d).slice(0, 10).split('-');
-  return `${day}/${m}/${y}`;
+  return `${Number(day)}/${Number(m)}/${y}`;
 };
-const fmtTime = (t?: string | null) => (t ? String(t).slice(0, 5) : '');
-const fmtMoney = (n?: number | null) =>
-  Number(n) ? new Intl.NumberFormat('vi-VN').format(Number(n)) + 'đ' : '';
+// '17:00:00' -> '17h' | '17:30:00' -> '17h30'
+const tShort = (t?: string | null) => {
+  if (!t) return '';
+  const [h, m] = String(t).split(':');
+  return `${Number(h)}h${m && m !== '00' ? m : ''}`;
+};
+// 43000000 -> '43tr' | 43500000 -> '43,5tr' | 500000 -> '500k' | 0 -> '0'
+const money = (n?: number | null) => {
+  const v = Number(n) || 0;
+  if (!v) return '0';
+  if (v >= 1_000_000) {
+    const tr = Math.round((v / 1_000_000) * 10) / 10;
+    return String(tr).replace('.', ',') + 'tr';
+  }
+  if (v >= 1_000) return Math.round(v / 1_000) + 'k';
+  return String(v);
+};
 
 async function nameOf(id?: string | null) {
   if (!id) return '';
@@ -46,8 +72,8 @@ async function send(text: string) {
   });
 }
 
-// Dòng chỉ thêm khi có dữ liệu
-const line = (label: string, value: string) => (value ? `\n${label} ${value}` : '');
+// Dòng "- Nhãn: giá trị" — bỏ qua khi trống
+const line = (label: string, value: string) => (value ? `\n- ${label}: ${value}` : '');
 
 Deno.serve(async (req) => {
   if (SECRET && req.headers.get('x-webhook-secret') !== SECRET) {
@@ -62,85 +88,66 @@ Deno.serve(async (req) => {
 
     const isRecheck = String(rec.service || '').startsWith('[Tái khám]');
     const serviceClean = String(rec.service || '').replace('[Tái khám] ', '');
+    const kh = `<b>${esc(rec.customer_name)}</b>${rec.phone ? ' ' + esc(rec.phone) : ''}`;
 
-    // Thông tin chung của khách
-    const [teleName, tele2Name, saleName, bacSiName, creatorName] = await Promise.all([
-      nameOf(rec.telesale_id), nameOf(rec.telesale_id_2), nameOf(rec.sale_id), nameOf(rec.bac_si_id), nameOf(rec.created_by),
-    ]);
-    const teleFull = [teleName, tele2Name].filter(Boolean).join(' + ');
-    const common =
-      line('👤 Khách:', `<b>${esc(rec.customer_name)}</b>`) +
-      line('📞 SĐT:', esc(rec.phone)) +
-      line('🌐 Nguồn:', esc(rec.customer_source));
-
-    // 1) CHỐT / ĐỔI LỊCH PHẪU THUẬT (surgery_date mới hoặc thay đổi)
-    if (type === 'UPDATE' && rec.surgery_date && rec.surgery_date !== old.surgery_date) {
+    // 1) CHỐT / ĐỔI LỊCH PHẪU THUẬT (surgery_date mới hoặc thay đổi) — không tính dòng tái khám
+    if (type === 'UPDATE' && !isRecheck && rec.surgery_date && rec.surgery_date !== old.surgery_date) {
+      const bacSi = await nameOf(rec.bac_si_id);
       const text =
-        `⚕️ <b>LỊCH PHẪU THUẬT${old.surgery_date ? ' — ĐỔI NGÀY' : ''}</b>` +
-        common +
-        line('🔪 Loại phẫu thuật:', esc(rec.surgery_type || serviceClean)) +
-        (old.surgery_date ? line('🗓 Ngày cũ:', `<s>${fmtDate(old.surgery_date)}</s>`) : '') +
-        line('🗓 Ngày mổ:', `<b>${fmtDate(rec.surgery_date)}</b>`) +
-        line('👨‍⚕️ Bác sĩ:', esc(bacSiName)) +
-        line('💰 Doanh thu:', fmtMoney(rec.revenue)) +
-        line('🧑‍💼 Sale:', esc(saleName)) +
-        line('☎️ Telesale:', esc(teleFull)) +
-        line('📝 Ghi chú:', esc(rec.notes));
+        `⚕️ <b>Thông báo lịch PHẪU THUẬT ngày ${dShort(rec.surgery_date)}</b>` +
+        (old.surgery_date ? line('Ngày cũ', dShort(old.surgery_date) + ' (đổi lịch)') : '') +
+        line('KH', kh) +
+        line('Loại phẫu thuật', esc(rec.surgery_type || serviceClean)) +
+        line('Bác sĩ', esc(bacSi)) +
+        line('Tổng bill', money(rec.revenue)) +
+        line('Tình trạng', esc(rec.notes));
       await send(text);
       return new Response('ok');
     }
 
-    // 2) LỊCH HẸN MỚI (tư vấn / tái khám) khi INSERT có ngày hẹn
+    // 2) LỊCH MỚI (INSERT có ngày hẹn) — tư vấn hoặc tái khám
     if (type === 'INSERT' && rec.appointment_date) {
-      const when = `${fmtTime(rec.appointment_time) ? fmtTime(rec.appointment_time) + ' — ' : ''}${fmtDate(rec.appointment_date)}`;
       const text = isRecheck
-        ? `🩺 <b>LỊCH TÁI KHÁM MỚI</b>` +
-          common +
-          line('💉 Dịch vụ đã dùng:', esc(rec.used_service || serviceClean)) +
-          line('🔪 Ngày phẫu thuật:', fmtDate(rec.surgery_date)) +
-          line('🕒 Hẹn tái khám:', `<b>${when}</b>`) +
-          line('🧑‍💼 Người báo lịch:', esc(creatorName)) +
-          line('📝 Ghi chú:', esc(rec.notes))
-        : `🗓 <b>LỊCH HẸN TƯ VẤN MỚI</b>` +
-          common +
-          line('💉 Dịch vụ:', esc(serviceClean)) +
-          line('🕒 Hẹn:', `<b>${when}</b>`) +
-          line('🧪 Xét nghiệm:', esc(rec.test_status)) +
-          line('💰 Bill dự kiến:', fmtMoney(rec.expected_bill)) +
-          line('💵 Cọc:', fmtMoney(rec.deposit_amount)) +
-          line('☎️ Telesale:', esc(teleFull)) +
-          line('🧑‍💼 Sale:', esc(saleName)) +
-          line('🧑‍💻 Người báo lịch:', esc(creatorName)) +
-          line('📝 Ghi chú:', esc(rec.notes));
+        ? `🩺 <b>Thông báo lịch TÁI KHÁM ngày ${dShort(rec.appointment_date)}</b>` +
+          line('Thời gian', tShort(rec.appointment_time)) +
+          line('KH', kh) +
+          line('Dịch vụ đã dùng', esc(rec.used_service || serviceClean)) +
+          line('Ngày phẫu thuật', dFull(rec.surgery_date)) +
+          line('Tình trạng', esc(rec.notes))
+        : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>` +
+          line('Thời gian', tShort(rec.appointment_time)) +
+          line('KH', kh) +
+          line('Dịch vụ', esc(serviceClean)) +
+          line('Tổng bill dự kiến', money(rec.expected_bill)) +
+          line('Cọc', money(rec.deposit_amount)) +
+          line('Xét nghiệm', esc(rec.test_status)) +
+          line('Tình trạng', esc(rec.notes));
       await send(text);
       return new Response('ok');
     }
 
-    // 3) DỜI LỊCH HẸN (đổi ngày/giờ hẹn)
+    // 3) DỜI LỊCH (đổi ngày/giờ hẹn)
     if (
       type === 'UPDATE' && rec.appointment_date &&
       (rec.appointment_date !== old.appointment_date ||
         (rec.appointment_time || '') !== (old.appointment_time || ''))
     ) {
       const oldWhen = old.appointment_date
-        ? `${fmtTime(old.appointment_time) ? fmtTime(old.appointment_time) + ' — ' : ''}${fmtDate(old.appointment_date)}`
+        ? `${tShort(old.appointment_time) ? tShort(old.appointment_time) + ' ' : ''}${dShort(old.appointment_date)}`
         : '';
-      const when = `${fmtTime(rec.appointment_time) ? fmtTime(rec.appointment_time) + ' — ' : ''}${fmtDate(rec.appointment_date)}`;
       const text =
-        `🔁 <b>DỜI LỊCH ${isRecheck ? 'TÁI KHÁM' : 'HẸN TƯ VẤN'}</b>` +
-        common +
-        line('💉 Dịch vụ:', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
-        (oldWhen ? line('🕒 Lịch cũ:', `<s>${oldWhen}</s>`) : '') +
-        line('🕒 Lịch mới:', `<b>${when}</b>`) +
-        line('☎️ Telesale:', esc(teleFull)) +
-        line('📝 Ghi chú:', esc(rec.notes));
+        `🔁 <b>DỜI LỊCH${isRecheck ? ' TÁI KHÁM' : ''} — sang ngày ${dShort(rec.appointment_date)}</b>` +
+        (oldWhen ? line('Lịch cũ', oldWhen) : '') +
+        line('Thời gian mới', `${tShort(rec.appointment_time) ? tShort(rec.appointment_time) + ' ' : ''}ngày ${dShort(rec.appointment_date)}`) +
+        line('KH', kh) +
+        line('Dịch vụ', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
+        line('Tình trạng', esc(rec.notes));
       await send(text);
       return new Response('ok');
     }
 
     return new Response('skip');
   } catch (e) {
-    // Trả 200 để webhook không retry dồn dập
     return new Response('error: ' + (e as Error).message, { status: 200 });
   }
 });
