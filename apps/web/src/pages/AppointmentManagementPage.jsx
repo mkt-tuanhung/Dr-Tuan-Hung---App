@@ -431,6 +431,18 @@ const AppointmentManagementPage = () => {
     else { toast.success('Đã xóa'); loadData(); }
   };
 
+  // Hành trình sau chốt mổ — cập nhật từ nút bấm trong nhóm Telegram "Hành trình khách hàng"
+  const JOURNEY_BADGE = {
+    dang_mo: { label: '🔪 Đang phẫu thuật', cls: 'bg-orange-100 text-orange-700' },
+    mo_xong: { label: '✅ Đã mổ xong', cls: 'bg-emerald-100 text-emerald-700' },
+    ra_vien: { label: '🏠 Đã ra viện', cls: 'bg-sky-100 text-sky-700' },
+  };
+  const JourneyBadge = ({ app }) => {
+    const j = JOURNEY_BADGE[app.journey_status];
+    if (!j) return null;
+    return <span className={`px-3 py-1 font-semibold rounded-full text-xs ${j.cls}`} title={app.journey_updated_by ? `Cập nhật bởi ${app.journey_updated_by}` : ''}>{j.label}</span>;
+  };
+
   const StatusBadge = ({ status }) => {
     switch(status) {
       case 'phau_thuat': return <span className="px-3 py-1 bg-teal-100 text-teal-700 font-semibold rounded-full text-xs">Phẫu thuật</span>;
@@ -717,6 +729,7 @@ const AppointmentManagementPage = () => {
                             </div>
                           </div>
                           <StatusBadge status={app.status} />
+                          <JourneyBadge app={app} />
                         </div>
                         
                         <div className="p-4 space-y-4 flex-1">
