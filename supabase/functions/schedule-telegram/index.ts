@@ -77,6 +77,13 @@ async function send(chatId: string | undefined, text: string) {
 // Dòng "- Nhãn: giá trị" — bỏ qua khi trống
 const line = (label: string, value: string) => (value ? `\n- ${label}: ${value}` : '');
 
+// Hôm nay theo giờ VN (yyyy-mm-dd) — chỉ báo lịch mổ từ hôm nay trở đi khi
+// khách được TẠO MỚI kèm ngày mổ (tránh spam lúc import dữ liệu cũ)
+const todayVN = () => {
+  const d = new Date(Date.now() + 7 * 3600 * 1000);
+  return d.toISOString().slice(0, 10);
+};
+
 // Ảnh đính kèm nằm trong ghi chú dạng "[Ảnh đính kèm: https://...]"
 const IMG_RE = /\[Ảnh đính kèm:\s*(https?:\/\/[^\]\s]+)\]/g;
 const imgsFromNotes = (notes?: string | null) =>
@@ -137,12 +144,18 @@ Deno.serve(async (req) => {
       if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
     };
 
-    // 1) CHỐT / ĐỔI LỊCH PHẪU THUẬT (surgery_date mới hoặc thay đổi) — không tính dòng tái khám
-    if (type === 'UPDATE' && !isRecheck && rec.surgery_date && rec.surgery_date !== old.surgery_date) {
+    // 1) LỊCH PHẪU THUẬT -> NHÓM PHẪU THUẬT, khi:
+    //    • Đánh giá sau tư vấn chốt "Phẫu thuật" / đổi ngày mổ (UPDATE surgery_date)
+    //    • Sale tạo mới khách ĐÃ có ngày mổ luôn (INSERT có surgery_date, từ hôm nay trở đi)
+    const surgeryInsert = type === 'INSERT' && !isRecheck && rec.surgery_date &&
+      String(rec.surgery_date).slice(0, 10) >= todayVN();
+    const surgeryUpdate = type === 'UPDATE' && !isRecheck && rec.surgery_date &&
+      rec.surgery_date !== old.surgery_date;
+    if (surgeryInsert || surgeryUpdate) {
       const bacSi = await nameOf(rec.bac_si_id);
       const text =
         `⚕️ <b>Thông báo lịch PHẪU THUẬT ngày ${dShort(rec.surgery_date)}</b>` +
-        (old.surgery_date ? line('Ngày cũ', dShort(old.surgery_date) + ' (đổi lịch)') : '') +
+        (surgeryUpdate && old.surgery_date ? line('Ngày cũ', dShort(old.surgery_date) + ' (đổi lịch)') : '') +
         line('KH', kh) +
         line('Loại phẫu thuật', esc(rec.surgery_type || serviceClean)) +
         line('Bác sĩ', esc(bacSi)) +
@@ -164,7 +177,7 @@ Deno.serve(async (req) => {
           line('Ngày phẫu thuật', dFull(rec.surgery_date)) +
           staffLines +
           line('Tình trạng', esc(notesClean))
-        : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>` +
+        : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>${rec.consult_do_now ? ' ⚡ <b>TƯ VẤN LÀM LUÔN</b>' : ''}` +
           line('Thời gian', tShort(rec.appointment_time)) +
           line('KH', kh) +
           line('Dịch vụ', esc(serviceClean)) +
@@ -177,6 +190,20 @@ Deno.serve(async (req) => {
       const chat = isRecheck ? CHAT_RECHECK : CHAT_MAIN;
       await send(chat, text);
       queuePhotos(chat);
+      // ⚡ TƯ VẤN LÀM LUÔN: khách tư vấn xong phẫu thuật ngay -> báo THÊM nhóm Phẫu thuật
+      if (!isRecheck && rec.consult_do_now && CHAT_SURGERY && CHAT_SURGERY !== chat) {
+        const surgeryCopy =
+          `⚕️ <b>TƯ VẤN LÀM LUÔN — dự kiến PHẪU THUẬT ngày ${dShort(rec.appointment_date)}</b>` +
+          line('Thời gian tư vấn', tShort(rec.appointment_time)) +
+          line('KH', kh) +
+          line('Dịch vụ', esc(serviceClean)) +
+          line('Tham khảo thêm', esc(rec.extra_consult)) +
+          line('Tổng bill dự kiến', money(rec.expected_bill)) +
+          staffLines +
+          line('Tình trạng', esc(notesClean));
+        await send(CHAT_SURGERY, surgeryCopy);
+        queuePhotos(CHAT_SURGERY);
+      }
       return new Response('ok');
     }
 
