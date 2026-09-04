@@ -75,6 +75,31 @@ async function send(text: string) {
 // Dòng "- Nhãn: giá trị" — bỏ qua khi trống
 const line = (label: string, value: string) => (value ? `\n- ${label}: ${value}` : '');
 
+// Ảnh đính kèm nằm trong ghi chú dạng "[Ảnh đính kèm: https://...]"
+const IMG_RE = /\[Ảnh đính kèm:\s*(https?:\/\/[^\]\s]+)\]/g;
+const imgsFromNotes = (notes?: string | null) =>
+  [...String(notes || '').matchAll(IMG_RE)].map((m) => m[1]);
+// Bỏ marker ảnh khỏi phần "Tình trạng" cho gọn tin nhắn
+const cleanNotes = (notes?: string | null) =>
+  String(notes || '').replace(IMG_RE, '').replace(/\n{2,}/g, '\n').trim();
+
+// Telegram hay từ chối tải ảnh từ URL ngoài (R2) -> server TỰ TẢI ảnh về rồi
+// đẩy thẳng FILE lên nhóm (multipart) — giống nhóm chấm công. Ảnh lỗi thì bỏ qua.
+async function sendPhotos(urls: string[], caption: string) {
+  for (let i = 0; i < urls.length; i++) {
+    try {
+      const res = await fetch(urls[i]);
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      const fd = new FormData();
+      fd.append('chat_id', String(CHAT_ID));
+      if (i === 0) fd.append('caption', caption);
+      fd.append('photo', new File([blob], `anh-${i + 1}.jpg`, { type: blob.type || 'image/jpeg' }));
+      await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: 'POST', body: fd });
+    } catch { /* bỏ qua ảnh lỗi */ }
+  }
+}
+
 Deno.serve(async (req) => {
   if (SECRET && req.headers.get('x-webhook-secret') !== SECRET) {
     return new Response('unauthorized', { status: 401 });
@@ -94,6 +119,21 @@ Deno.serve(async (req) => {
     ]);
     const teleFull = [teleName, tele2Name].filter(Boolean).join(' + ');
     const staffLines = line('Telesale phụ trách', esc(teleFull)) + line('Sale phụ trách', esc(saleName));
+    const notesClean = cleanNotes(rec.notes);
+
+    // Gom ảnh: ảnh đính kèm trong ghi chú + ảnh hồ sơ tư vấn (tối đa 5)
+    const photos = [
+      ...imgsFromNotes(rec.notes),
+      ...(Array.isArray(rec.consult_image_urls) ? rec.consult_image_urls : []),
+    ].filter((u) => typeof u === 'string' && u.startsWith('http')).slice(0, 5);
+    // Gửi ảnh chạy nền sau khi đã trả lời webhook (không bị cắt vì timeout)
+    const queuePhotos = () => {
+      if (!photos.length || !CHAT_ID) return;
+      const task = sendPhotos(photos, `📎 Ảnh đính kèm — ${rec.customer_name}`);
+      // deno-lint-ignore no-explicit-any
+      const rt: any = globalThis as any;
+      if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
+    };
 
     // 1) CHỐT / ĐỔI LỊCH PHẪU THUẬT (surgery_date mới hoặc thay đổi) — không tính dòng tái khám
     if (type === 'UPDATE' && !isRecheck && rec.surgery_date && rec.surgery_date !== old.surgery_date) {
@@ -106,8 +146,9 @@ Deno.serve(async (req) => {
         line('Bác sĩ', esc(bacSi)) +
         line('Tổng bill', money(rec.revenue)) +
         staffLines +
-        line('Tình trạng', esc(rec.notes));
+        line('Tình trạng', esc(notesClean));
       await send(text);
+      queuePhotos();
       return new Response('ok');
     }
 
@@ -120,7 +161,7 @@ Deno.serve(async (req) => {
           line('Dịch vụ đã dùng', esc(rec.used_service || serviceClean)) +
           line('Ngày phẫu thuật', dFull(rec.surgery_date)) +
           staffLines +
-          line('Tình trạng', esc(rec.notes))
+          line('Tình trạng', esc(notesClean))
         : `📅 <b>Thông báo lịch ngày ${dShort(rec.appointment_date)}</b>` +
           line('Thời gian', tShort(rec.appointment_time)) +
           line('KH', kh) +
@@ -130,8 +171,9 @@ Deno.serve(async (req) => {
           line('Cọc', money(rec.deposit_amount)) +
           line('Xét nghiệm', esc(rec.test_status)) +
           staffLines +
-          line('Tình trạng', esc(rec.notes));
+          line('Tình trạng', esc(notesClean));
       await send(text);
+      queuePhotos();
       return new Response('ok');
     }
 
@@ -151,8 +193,9 @@ Deno.serve(async (req) => {
         line('KH', kh) +
         line('Dịch vụ', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
         staffLines +
-        line('Tình trạng', esc(rec.notes));
+        line('Tình trạng', esc(notesClean));
       await send(text);
+      queuePhotos();
       return new Response('ok');
     }
 
