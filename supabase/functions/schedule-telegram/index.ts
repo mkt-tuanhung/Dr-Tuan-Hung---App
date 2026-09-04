@@ -19,7 +19,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
 const CHAT_MAIN = Deno.env.get('TELEGRAM_SCHEDULE_CHAT_ID');            // nhóm LỊCH TƯ VẤN
 const CHAT_RECHECK = Deno.env.get('TELEGRAM_RECHECK_CHAT_ID') || CHAT_MAIN;   // nhóm TÁI KHÁM (chưa set -> về nhóm tư vấn)
-const CHAT_SURGERY = Deno.env.get('TELEGRAM_SURGERY_CHAT_ID') || CHAT_MAIN;   // nhóm PHẪU THUẬT (chưa set -> về nhóm tư vấn)
+const CHAT_SURGERY = Deno.env.get('TELEGRAM_SURGERY_CHAT_ID') || CHAT_MAIN;   // nhóm PHẪU THUẬT
+const CHAT_JOURNEY = Deno.env.get('TELEGRAM_JOURNEY_CHAT_ID');                // nhóm HÀNH TRÌNH KHÁCH HÀNG (chưa set -> bỏ qua) (chưa set -> về nhóm tư vấn)
 const SECRET = Deno.env.get('WEBHOOK_SECRET');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -65,14 +66,23 @@ async function nameOf(id?: string | null) {
   return data?.full_name || '';
 }
 
-async function send(chatId: string | undefined, text: string) {
+async function send(chatId: string | undefined, text: string, replyMarkup?: unknown) {
   if (!chatId) return;
   await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+    body: JSON.stringify({
+      chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    }),
   });
 }
+
+// Giờ hiện tại theo VN, dạng '14:05'
+const nowVN = () => {
+  const t = new Date(Date.now() + 7 * 3600 * 1000);
+  return `${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}`;
+};
 
 // Dòng "- Nhãn: giá trị" — bỏ qua khi trống
 const line = (label: string, value: string) => (value ? `\n- ${label}: ${value}` : '');
@@ -143,6 +153,52 @@ Deno.serve(async (req) => {
       const rt: any = globalThis as any;
       if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
     };
+
+    // ---- NHÓM HÀNH TRÌNH KHÁCH HÀNG (gửi thêm, KHÔNG chặn các nhánh dưới) ----
+    if (CHAT_JOURNEY && type === 'UPDATE' && !isRecheck) {
+      // a) Sale bấm TIẾP NHẬN khách từ lịch hẹn -> khách đã đến, đang tư vấn
+      if (rec.consult_received && !old.consult_received) {
+        await send(CHAT_JOURNEY,
+          `🙋 <b>KHÁCH ĐÃ ĐẾN — SALE ĐANG TƯ VẤN</b>` +
+          line('KH', kh) +
+          line('Dịch vụ', esc(serviceClean)) +
+          line('Giờ tiếp nhận', nowVN()) +
+          staffLines);
+      }
+      // b) Sale đánh giá sau tư vấn: CỌC / BONG / PHẪU THUẬT
+      if (rec.status !== old.status) {
+        if (rec.status === 'coc') {
+          await send(CHAT_JOURNEY,
+            `💰 <b>KHÁCH CỌC</b>` +
+            line('KH', kh) +
+            line('Dịch vụ', esc(serviceClean)) +
+            line('Tiền cọc', money(rec.deposit_amount)) +
+            line('Dự kiến mổ', dShort(rec.expected_surgery_date)) +
+            staffLines);
+        } else if (rec.status === 'bong') {
+          await send(CHAT_JOURNEY,
+            `❌ <b>KHÁCH BONG</b>` +
+            line('KH', kh) +
+            line('Dịch vụ', esc(serviceClean)) +
+            line('Ghi chú', esc(notesClean)) +
+            staffLines);
+        } else if (rec.status === 'phau_thuat') {
+          await send(CHAT_JOURNEY,
+            `⚕️ <b>CHỐT PHẪU THUẬT</b>` +
+            line('KH', kh) +
+            line('Loại phẫu thuật', esc(rec.surgery_type || serviceClean)) +
+            line('Ngày mổ', dShort(rec.surgery_date)) +
+            line('Tổng bill', money(rec.revenue)) +
+            staffLines +
+            `\n\n👇 Cập nhật hành trình bằng nút bên dưới (chỉ Điều dưỡng/Admin):`,
+            { inline_keyboard: [
+              [{ text: '🔪 Đang phẫu thuật', callback_data: `js:dang_mo:${rec.id}` }],
+              [{ text: '✅ Đã phẫu thuật xong', callback_data: `js:mo_xong:${rec.id}` }],
+              [{ text: '🏠 Khách ra viện', callback_data: `js:ra_vien:${rec.id}` }],
+            ] });
+        }
+      }
+    }
 
     // 1) LỊCH PHẪU THUẬT -> NHÓM PHẪU THUẬT, khi:
     //    • Đánh giá sau tư vấn chốt "Phẫu thuật" / đổi ngày mổ (UPDATE surgery_date)
