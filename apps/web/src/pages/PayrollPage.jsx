@@ -35,6 +35,7 @@ const PayrollPage = () => {
   const [rows, setRows] = useState([]);
   const [edits, setEdits] = useState({}); // staff_id -> { other_bonus, other_deduction }
   const [locked, setLocked] = useState(false);
+  const [exportSel, setExportSel] = useState(new Set()); // nhân sự được TÍCH để xuất ảnh
   const [history, setHistory] = useState([]);
   const [pendingSA, setPendingSA] = useState([]);          // đơn ứng lương chờ duyệt
   const [pendingPV, setPendingPV] = useState([]);          // yêu cầu XEM LƯƠNG chờ duyệt
@@ -161,6 +162,7 @@ const PayrollPage = () => {
     });
 
     setRows(computed);
+    setExportSel(new Set(computed.map(r => r.staff.id))); // mặc định tích tất cả
     setEdits(Object.fromEntries(computed.map(r => [r.staff.id, { other_bonus: r.otherBonus, other_deduction: r.otherDeduction }])));
     setLocked((payroll[0]?.status) === 'locked' && payroll.length > 0 && payroll.every(p => p.status === 'locked'));
 
@@ -295,7 +297,10 @@ const PayrollPage = () => {
 
   // Xuất bảng lương thành ẢNH PNG (vẽ canvas trực tiếp — không cần in/PDF)
   const exportImage = () => {
-    if (!rowsView.length) { toast.error('Chưa có dữ liệu lương'); return; }
+    // Chỉ xuất những nhân sự ĐÃ TÍCH trong bảng
+    const list = rowsView.filter(r => exportSel.has(r.staff.id));
+    if (!list.length) { toast.error('Hãy tích chọn ít nhất 1 nhân sự để xuất'); return; }
+    const totalSel = list.reduce((s, r) => s + r.net, 0);
     const cols = [
       { h: 'Nhân sự', v: r => r.staff.full_name, sub: r => (ROLE_LABELS[r.staff.role] || r.staff.role) + (r.staff.employment_status === 'probation' ? ' · TV' : ''), align: 'left' },
       { h: 'Công', v: r => String(r.workingDays || 0) + (r.daysOff > 0 ? ` (nghỉ ${r.daysOff})` : ''), align: 'center' },
@@ -314,7 +319,7 @@ const PayrollPage = () => {
     const PAD = 14;
     const widths = cols.map((c, i) => {
       let w = wOf(c.h, true, 13);
-      rowsView.forEach(r => {
+      list.forEach(r => {
         w = Math.max(w, wOf(c.v(r), c.bold || false, 14));
         if (c.sub) w = Math.max(w, wOf(c.sub(r), false, 11));
       });
@@ -322,7 +327,7 @@ const PayrollPage = () => {
     });
     const rowH = 46, headH = 44, titleH = 92, totalH = 56, footH = 34;
     const W = widths.reduce((s, x) => s + x, 0) + 2;
-    const H = titleH + headH + rowH * rowsView.length + totalH + footH;
+    const H = titleH + headH + rowH * list.length + totalH + footH;
     const scale = 2;
     const canvas = document.createElement('canvas');
     canvas.width = W * scale; canvas.height = H * scale;
@@ -335,7 +340,7 @@ const PayrollPage = () => {
     ctx.fillStyle = '#ffffff'; ctx.font = F(true, 22); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(`BẢNG LƯƠNG ${MONTHS[month - 1].toUpperCase()}/${year}`, 20, 34);
     ctx.font = F(false, 13); ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.fillText(`PK Dr Tuấn Hùng · ${rowsView.length} nhân sự · Tổng thực nhận: ${fmtM(totalNet)}${locked ? ' · ĐÃ CHỐT' : ' · BẢN NHÁP'}`, 20, 62);
+    ctx.fillText(`PK Dr Tuấn Hùng · ${list.length}/${rowsView.length} nhân sự · Tổng thực nhận: ${fmtM(totalSel)}${locked ? ' · ĐÃ CHỐT' : ' · BẢN NHÁP'}`, 20, 62);
 
     // Header bảng
     let y = titleH;
@@ -351,7 +356,7 @@ const PayrollPage = () => {
 
     // Từng dòng nhân sự
     y += headH;
-    rowsView.forEach((r, ri) => {
+    list.forEach((r, ri) => {
       if (ri % 2 === 1) { ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, y, W, rowH); }
       x = 0;
       cols.forEach((c, i) => {
@@ -373,7 +378,7 @@ const PayrollPage = () => {
     ctx.fillStyle = '#0f766e'; ctx.font = F(true, 15); ctx.textAlign = 'left';
     ctx.fillText('TỔNG THỰC NHẬN', PAD, y + totalH / 2);
     ctx.textAlign = 'right'; ctx.font = F(true, 17);
-    ctx.fillText(fmtM(totalNet), W - PAD, y + totalH / 2);
+    ctx.fillText(fmtM(totalSel), W - PAD, y + totalH / 2);
     y += totalH;
     ctx.font = F(false, 11); ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'left';
     ctx.fillText(`Xuất từ hệ thống lúc ${new Date().toLocaleString('vi-VN')} — Lưu hành nội bộ`, PAD, y + footH / 2);
@@ -557,8 +562,8 @@ const PayrollPage = () => {
 
       {/* Actions */}
       <div className="flex justify-end gap-2 flex-wrap">
-        <button onClick={exportImage} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
-          <ImageDown className="w-4 h-4" /> Xuất ảnh
+        <button onClick={exportImage} disabled={loading || exportSel.size === 0} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
+          <ImageDown className="w-4 h-4" /> Xuất ảnh ({exportSel.size}/{rowsView.length})
         </button>
         <button onClick={() => savePayroll(false)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-teal-200 text-teal-600 text-sm font-semibold hover:bg-teal-50 disabled:opacity-50">
           <Save className="w-4 h-4" /> Lưu nháp
@@ -576,6 +581,12 @@ const PayrollPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm whitespace-nowrap">
               <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
+                <th className="px-3 py-3">
+                  <input type="checkbox" title="Tích/bỏ tích tất cả để xuất ảnh"
+                    checked={rowsView.length > 0 && exportSel.size === rowsView.length}
+                    onChange={e => setExportSel(e.target.checked ? new Set(rowsView.map(r => r.staff.id)) : new Set())}
+                    className="w-4 h-4 accent-teal-600 cursor-pointer" />
+                </th>
                 <th className="text-left px-4 py-3 font-medium">Nhân sự</th>
                 <th className="text-center px-3 py-3 font-medium">Công</th>
                 <th className="text-right px-4 py-3 font-medium">Lương theo công</th>
@@ -590,9 +601,15 @@ const PayrollPage = () => {
               </tr></thead>
               <tbody className="divide-y divide-slate-50">
                 {rowsView.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
+                  <tr><td colSpan={12} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
                 ) : rowsView.map(r => (
-                  <tr key={r.staff.id} className="hover:bg-slate-50/50">
+                  <tr key={r.staff.id} className={`hover:bg-slate-50/50 ${exportSel.has(r.staff.id) ? '' : 'opacity-50'}`}>
+                    <td className="px-3 py-2.5">
+                      <input type="checkbox" title="Tích để đưa vào ảnh xuất"
+                        checked={exportSel.has(r.staff.id)}
+                        onChange={() => setExportSel(sel => { const s = new Set(sel); s.has(r.staff.id) ? s.delete(r.staff.id) : s.add(r.staff.id); return s; })}
+                        className="w-4 h-4 accent-teal-600 cursor-pointer" />
+                    </td>
                     <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}
                       <div className="text-[11px] text-slate-400">{ROLE_LABELS[r.staff.role] || r.staff.role}{r.staff.employment_status === 'probation' ? ' · TV' : ''}</div></td>
                     <td className="text-center px-3 py-2.5">
