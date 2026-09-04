@@ -54,7 +54,7 @@ const AppointmentManagementPage = () => {
     customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm',
     expected_bill: '', deposit_amount: '', telesale_id: '', telesale_id_2: '', sale_id: '', social_link: '', notes: '',
     service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới',
-    used_service: '', surgery_date: ''
+    used_service: '', surgery_date: '', extra_consult: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -271,6 +271,7 @@ const AppointmentManagementPage = () => {
         social_link: createForm.social_link,
         notes: createForm.notes,
         service_group: createForm.service_group,
+        extra_consult: isRecheck ? null : (createForm.extra_consult || null),
         surgery_type: createForm.surgery_type,
         customer_source: isRecheck ? 'CSKH' : createForm.customer_source,
         customer_type: isRecheck ? 'Cũ' : createForm.customer_type,
@@ -325,7 +326,8 @@ const AppointmentManagementPage = () => {
       customer_source: app.customer_source || 'Ads',
       customer_type: app.customer_type || 'Mới',
       used_service: app.used_service || '',
-      surgery_date: app.surgery_date || ''
+      surgery_date: app.surgery_date || '',
+      extra_consult: app.extra_consult || ''
     });
     setShowCreateModal(true);
   };
@@ -461,7 +463,7 @@ const AppointmentManagementPage = () => {
                 appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
                 customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
                 expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
+                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: ''
               });
               setShowCreateModal(true);
             }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
@@ -475,7 +477,7 @@ const AppointmentManagementPage = () => {
                 appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
                 customer_name: '', phone: '', service: '', test_status: 'Không cần', 
                 expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ'
+                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: ''
               });
               setShowCreateModal(true);
             }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
@@ -486,14 +488,14 @@ const AppointmentManagementPage = () => {
       </div>
 
       {!showCreateModal && !showEvalModal && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới' }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition">
+        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '' }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
 
       {/* Nút nổi (+) TÁI KHÁM cho Điều dưỡng trên mobile (desktop đã có nút riêng ở header) */}
       {!showCreateModal && !showEvalModal && ['dieu_duong', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ' }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-2xl shadow-orange-900/40 ring-4 ring-orange-500/20 flex items-center justify-center hover:bg-orange-600 active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
+        <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '' }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-2xl shadow-orange-900/40 ring-4 ring-orange-500/20 flex items-center justify-center hover:bg-orange-600 active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
           <Stethoscope className="w-6 h-6" strokeWidth={2.5} />
         </button>
       )}
@@ -876,6 +878,12 @@ const AppointmentManagementPage = () => {
                       <label className={FLD_LBL}>{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-rose-500">*</span></label>
                       <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className={FLD_INP} placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
                     </div>
+                    {createForm.appointment_type === 'new' && (
+                      <div className="md:col-span-2">
+                        <label className={FLD_LBL}>Tham khảo thêm</label>
+                        <input value={createForm.extra_consult} onChange={e => setCreateForm({...createForm, extra_consult: e.target.value})} className={FLD_INP} placeholder="VD: hàm hô (chưa báo giá)" />
+                      </div>
+                    )}
                     {createForm.appointment_type === 'recheck' && (
                       <div>
                         <label className={FLD_LBL}>Dịch vụ sử dụng</label>
