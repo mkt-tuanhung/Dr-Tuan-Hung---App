@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
           line('Thời gian', tShort(rec.appointment_time)) +
           line('KH', kh) +
           line('Dịch vụ', esc(serviceClean)) +
+          line('Tham khảo thêm', esc(rec.extra_consult)) +
           line('Tổng bill dự kiến', money(rec.expected_bill)) +
           line('Cọc', money(rec.deposit_amount)) +
           line('Xét nghiệm', esc(rec.test_status)) +
