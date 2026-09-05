@@ -27,8 +27,12 @@ const JOURNEY: Record<string, { icon: string; label: string }> = {
   mo_xong: { icon: '✅', label: 'ĐÃ PHẪU THUẬT XONG' },
   ra_vien: { icon: '🏠', label: 'ĐÃ RA VIỆN' },
 };
-// Vai trò được phép bấm nút hành trình
+// Vai trò được phép bấm nút hành trình (nếu đã liên kết Telegram trong app)
 const JOURNEY_ROLES = ['dieu_duong', 'admin'];
+// HOẶC: danh sách ID Telegram được phép bấm — secret TELEGRAM_JOURNEY_ALLOWED_IDS
+// (các ID cách nhau dấu phẩy, VD "123456789,987654321"). Không cần liên kết app.
+const ALLOWED_IDS = (Deno.env.get('TELEGRAM_JOURNEY_ALLOWED_IDS') || '')
+  .split(',').map((x) => x.trim()).filter(Boolean);
 
 Deno.serve(async (req) => {
   try {
@@ -43,21 +47,26 @@ Deno.serve(async (req) => {
       // 1b) NÚT HÀNH TRÌNH KHÁCH HÀNG: js:<trạng_thái>:<appointment_id>
       if (act === 'js') {
         const st = JOURNEY[type];
-        // Nhận diện người bấm qua Telegram đã liên kết trong app
         const presserId = String(cq.from?.id || '');
+        // Cách 1: ID nằm trong danh sách cho phép (secret TELEGRAM_JOURNEY_ALLOWED_IDS)
+        // Cách 2: đã liên kết Telegram trong app và có vai trò Điều dưỡng/Admin
         const { data: staff } = await supabase.from('profiles')
           .select('full_name, role, role_2').eq('telegram_chat_id', presserId).maybeSingle();
         const roles = [staff?.role, staff?.role_2].filter(Boolean) as string[];
-        const allowed = !!staff && roles.some((r) => JOURNEY_ROLES.includes(r));
+        const allowed = ALLOWED_IDS.includes(presserId) ||
+          (!!staff && roles.some((r) => JOURNEY_ROLES.includes(r)));
         if (!st || !allowed) {
           await api('answerCallbackQuery', {
             callback_query_id: cq.id, show_alert: true,
             text: !st
               ? 'Nút không hợp lệ.'
-              : 'Bạn không có quyền cập nhật hành trình khách.\nChỉ Điều dưỡng/Admin đã liên kết Telegram trong app (menu tài khoản → Nhận thông báo Telegram).',
+              : `Bạn chưa có quyền cập nhật hành trình khách.\n\nID Telegram của bạn: ${presserId}\nGửi ID này cho quản lý để được cấp quyền.`,
           });
           return new Response('ok');
         }
+        // Tên hiển thị: ưu tiên tên trong app, không có thì lấy tên Telegram
+        const presserName = staff?.full_name ||
+          [cq.from?.first_name, cq.from?.last_name].filter(Boolean).join(' ') || 'Thành viên nhóm';
         const { data: appt } = await supabase.from('customer_appointments')
           .select('customer_name, journey_status').eq('id', id).maybeSingle();
         if (!appt) {
@@ -71,12 +80,12 @@ Deno.serve(async (req) => {
         await supabase.from('customer_appointments').update({
           journey_status: type,
           journey_updated_at: new Date().toISOString(),
-          journey_updated_by: staff!.full_name,
+          journey_updated_by: presserName,
         }).eq('id', id);
         const t = new Date(Date.now() + 7 * 3600 * 1000);
         const hhmm = `${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}`;
         // Đăng tin cập nhật vào chính nhóm chứa nút (giữ nguyên nút để bấm bước tiếp theo)
-        await sendMessage(chatId, `${st.icon} <b>${esc(appt.customer_name)} — ${st.label}</b>\n🕒 ${hhmm} · cập nhật bởi <b>${esc(staff!.full_name)}</b>`);
+        await sendMessage(chatId, `${st.icon} <b>${esc(appt.customer_name)} — ${st.label}</b>\n🕒 ${hhmm} · cập nhật bởi <b>${esc(presserName)}</b>`);
         await api('answerCallbackQuery', { callback_query_id: cq.id, text: `Đã cập nhật: ${st.label}` });
         return new Response('ok');
       }
