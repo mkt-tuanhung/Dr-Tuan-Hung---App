@@ -54,8 +54,10 @@ Deno.serve(async (req) => {
         const { data: staff } = await supabase.from('profiles')
           .select('full_name, role, role_2').eq('telegram_chat_id', presserId).maybeSingle();
         const roles = [staff?.role, staff?.role_2].filter(Boolean) as string[];
-        const allowed = ALLOWED_IDS.includes(presserId) ||
-          (!!staff && roles.some((r) => JOURNEY_ROLES.includes(r)));
+        // AI TRONG NHÓM CŨNG BẤM ĐƯỢC (theo yêu cầu quản lý) — muốn siết lại thì
+        // đổi thành: ALLOWED_IDS.includes(presserId) || (!!staff && roles.some((r) => JOURNEY_ROLES.includes(r)))
+        void roles; void ALLOWED_IDS; void JOURNEY_ROLES;
+        const allowed = true;
         if (!st || !allowed) {
           await api('answerCallbackQuery', {
             callback_query_id: cq.id, show_alert: true,

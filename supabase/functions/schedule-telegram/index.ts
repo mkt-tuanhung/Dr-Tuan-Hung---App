@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
             line('Ngày mổ', dShort(rec.surgery_date)) +
             line('Tổng bill', money(rec.revenue)) +
             staffLines +
-            `\n\n👇 Cập nhật hành trình bằng nút bên dưới (chỉ Điều dưỡng/Admin):`,
+            `\n\n👇 Cập nhật hành trình bằng nút bên dưới:`,
             { inline_keyboard: [
               [{ text: '🧪 Đã xét nghiệm xong', callback_data: `js:xn_xong:${rec.id}` }],
               [{ text: '🔪 Đang phẫu thuật', callback_data: `js:dang_mo:${rec.id}` }],
