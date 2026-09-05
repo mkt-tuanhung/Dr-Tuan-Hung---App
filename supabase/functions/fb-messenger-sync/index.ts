@@ -59,6 +59,8 @@ async function getPageToken(pageId: string, userToken: string): Promise<string |
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // CÔNG TẮC TẠM DỪNG: secret MESSENGER_PAUSED=1 -> không kéo tin nữa (đổi 0/xoá để chạy lại)
+  if (Deno.env.get("MESSENGER_PAUSED") === "1") return json({ ok: true, paused: true });
   try {
     const userToken = Deno.env.get("FB_PAGE_TOKEN") || "";
     if (!userToken) return json({ ok: false, error: "Chưa cấu hình FB_PAGE_TOKEN" });

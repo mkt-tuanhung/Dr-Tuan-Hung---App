@@ -68,6 +68,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const url = new URL(req.url);
 
+  // CÔNG TẮC TẠM DỪNG: secret MESSENGER_PAUSED=1 -> nhận sự kiện nhưng bỏ qua,
+  // trả 200 để Facebook không retry (đổi 0/xoá secret để chạy lại)
+  if (req.method === "POST" && Deno.env.get("MESSENGER_PAUSED") === "1") {
+    return new Response("paused", { status: 200, headers: cors });
+  }
+
   // ---- Facebook xác minh webhook (GET hub.challenge) ----
   if (req.method === "GET") {
     const mode = url.searchParams.get("hub.mode");
