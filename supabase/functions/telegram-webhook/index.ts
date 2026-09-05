@@ -23,6 +23,7 @@ const esc = (s: unknown) =>
 
 // Trạng thái hành trình khách hàng (nút bấm trong nhóm HÀNH TRÌNH)
 const JOURNEY: Record<string, { icon: string; label: string }> = {
+  xn_xong: { icon: '🧪', label: 'ĐÃ XÉT NGHIỆM XONG' },
   dang_mo: { icon: '🔪', label: 'ĐANG PHẪU THUẬT' },
   mo_xong: { icon: '✅', label: 'ĐÃ PHẪU THUẬT XONG' },
   ra_vien: { icon: '🏠', label: 'ĐÃ RA VIỆN' },

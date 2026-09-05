@@ -433,6 +433,7 @@ const AppointmentManagementPage = () => {
 
   // Hành trình sau chốt mổ — cập nhật từ nút bấm trong nhóm Telegram "Hành trình khách hàng"
   const JOURNEY_BADGE = {
+    xn_xong: { label: '🧪 Đã XN xong', cls: 'bg-violet-100 text-violet-700' },
     dang_mo: { label: '🔪 Đang phẫu thuật', cls: 'bg-orange-100 text-orange-700' },
     mo_xong: { label: '✅ Đã mổ xong', cls: 'bg-emerald-100 text-emerald-700' },
     ra_vien: { label: '🏠 Đã ra viện', cls: 'bg-sky-100 text-sky-700' },
