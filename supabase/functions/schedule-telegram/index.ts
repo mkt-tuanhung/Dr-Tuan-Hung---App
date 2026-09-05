@@ -191,6 +191,7 @@ Deno.serve(async (req) => {
             staffLines +
             `\n\n👇 Cập nhật hành trình bằng nút bên dưới:`,
             { inline_keyboard: [
+              [{ text: 'Hoàn thiện hồ sơ - XN', callback_data: `js:ho_so:${rec.id}` }],
               [{ text: 'Đã xét nghiệm xong', callback_data: `js:xn_xong:${rec.id}` }],
               [{ text: 'Đang phẫu thuật', callback_data: `js:dang_mo:${rec.id}` }],
               [{ text: 'Đã phẫu thuật xong', callback_data: `js:mo_xong:${rec.id}` }],
