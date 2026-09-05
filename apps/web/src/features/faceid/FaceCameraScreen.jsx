@@ -40,6 +40,8 @@ const ERR = {
   NO_FACE: 'Đưa khuôn mặt vào khung hình',
   MULTIPLE_FACES: 'Chỉ một người được xuất hiện trước camera',
   FACE_TOO_SMALL: 'Đưa điện thoại lại gần hơn',
+  FACE_CUT: 'Đưa CẢ khuôn mặt vào trong khung hình',
+  FACE_OCCLUDED: 'Không che mặt — bỏ tay / khẩu trang / tóc che mặt ra',
   FACE_BLURRY: 'Chất lượng hình khuôn mặt quá thấp — giữ máy cố định',
   LOW_LIGHT: 'Khuôn mặt đang quá tối',
   BAD_POSE: 'Vui lòng nhìn thẳng vào camera',

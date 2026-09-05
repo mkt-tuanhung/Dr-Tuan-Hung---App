@@ -59,18 +59,25 @@ export function analyzeFrame(result, video) {
   const yaw = rad2deg(f.rotation?.angle?.yaw);
   const pitch = rad2deg(f.rotation?.angle?.pitch);
   const detScore = f.score ?? f.boxScore ?? 0;
+  // Điểm tin cậy LƯỚI mặt (faceScore từ model mesh) — tụt mạnh khi mặt bị CHE
+  // (tay, khẩu trang, tóc...). Đây là chốt chặn chống "che mặt vẫn chấm công".
+  const meshScore = typeof f.faceScore === 'number' ? f.faceScore : detScore;
+  // Mặt phải nằm TRỌN trong khung hình (chống đưa nửa mặt/cắt trán như ảnh bằng chứng mờ)
+  const cut = bx / vw < 0.01 || by / vh < 0.01 || (bx + bw) / vw > 0.99 || (by + bh) / vh > 0.99;
   // Chất lượng tổng hợp từ số liệu THẬT: điểm detect × hệ số kích thước mặt
   const quality = Math.min(1, detScore * Math.min(1, sizeRatio / 0.28));
 
   let code = 'OK';
   if (sizeRatio < 0.16) code = 'FACE_TOO_SMALL';
+  else if (cut) code = 'FACE_CUT';
   else if (Math.abs(yaw) > 28 || Math.abs(pitch) > 28) code = 'BAD_POSE';
   else if (detScore < 0.5) code = 'LOW_LIGHT';
+  else if (meshScore < 0.78) code = 'FACE_OCCLUDED';
 
   const blink = (result.gesture || []).some((g) => String(g.gesture || '').includes('blink'));
 
   return {
-    code, faces: 1, quality, yaw, pitch, detScore, blink,
+    code, faces: 1, quality, yaw, pitch, detScore, meshScore, blink,
     box: { x: bx / vw, y: by / vh, w: bw / vw, h: bh / vh }, // tỉ lệ 0..1 để overlay
     mesh: (f.meshRaw || []).length ? f.meshRaw : null,        // landmark tỉ lệ 0..1
     embedding: Array.isArray(f.embedding) && f.embedding.length ? f.embedding : null,
