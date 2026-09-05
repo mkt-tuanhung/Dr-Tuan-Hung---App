@@ -172,7 +172,6 @@ Deno.serve(async (req) => {
             `💰 <b>KHÁCH CỌC</b>` +
             line('KH', kh) +
             line('Dịch vụ', esc(serviceClean)) +
-            line('Tiền cọc', money(rec.deposit_amount)) +
             line('Dự kiến mổ', dShort(rec.expected_surgery_date)) +
             staffLines);
         } else if (rec.status === 'bong') {
