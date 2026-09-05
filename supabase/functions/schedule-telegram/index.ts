@@ -191,10 +191,10 @@ Deno.serve(async (req) => {
             staffLines +
             `\n\n👇 Cập nhật hành trình bằng nút bên dưới:`,
             { inline_keyboard: [
-              [{ text: '🧪 Đã xét nghiệm xong', callback_data: `js:xn_xong:${rec.id}` }],
-              [{ text: '🔪 Đang phẫu thuật', callback_data: `js:dang_mo:${rec.id}` }],
-              [{ text: '✅ Đã phẫu thuật xong', callback_data: `js:mo_xong:${rec.id}` }],
-              [{ text: '🏠 Khách ra viện', callback_data: `js:ra_vien:${rec.id}` }],
+              [{ text: 'Đã xét nghiệm xong', callback_data: `js:xn_xong:${rec.id}` }],
+              [{ text: 'Đang phẫu thuật', callback_data: `js:dang_mo:${rec.id}` }],
+              [{ text: 'Đã phẫu thuật xong', callback_data: `js:mo_xong:${rec.id}` }],
+              [{ text: 'Khách ra viện', callback_data: `js:ra_vien:${rec.id}` }],
             ] });
         }
       }
