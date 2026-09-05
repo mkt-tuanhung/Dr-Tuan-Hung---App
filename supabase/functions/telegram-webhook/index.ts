@@ -22,13 +22,15 @@ const esc = (s: unknown) =>
   String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Trạng thái hành trình khách hàng (nút bấm trong nhóm HÀNH TRÌNH)
-const JOURNEY: Record<string, { icon: string; label: string }> = {
-  ho_so: { icon: '📋', label: 'HOÀN THIỆN HỒ SƠ - XÉT NGHIỆM' },
-  xn_xong: { icon: '🧪', label: 'ĐÃ XÉT NGHIỆM XONG' },
-  dang_mo: { icon: '🔪', label: 'ĐANG PHẪU THUẬT' },
-  mo_xong: { icon: '✅', label: 'ĐÃ PHẪU THUẬT XONG' },
-  ra_vien: { icon: '🏠', label: 'ĐÃ RA VIỆN' },
+const JOURNEY: Record<string, { icon: string; label: string; btn: string }> = {
+  ho_so: { icon: '📋', label: 'HOÀN THIỆN HỒ SƠ - XÉT NGHIỆM', btn: 'Hoàn thiện hồ sơ - XN' },
+  xn_xong: { icon: '🧪', label: 'ĐÃ XÉT NGHIỆM XONG', btn: 'Đã xét nghiệm xong' },
+  dang_mo: { icon: '🔪', label: 'ĐANG PHẪU THUẬT', btn: 'Đang phẫu thuật' },
+  mo_xong: { icon: '✅', label: 'ĐÃ PHẪU THUẬT XONG', btn: 'Đã phẫu thuật xong' },
+  ra_vien: { icon: '🏠', label: 'ĐÃ RA VIỆN', btn: 'Khách ra viện' },
 };
+// Thứ tự hành trình — bấm bước nào thì tin cập nhật chỉ mang các bước CÒN LẠI
+const JOURNEY_ORDER = ['ho_so', 'xn_xong', 'dang_mo', 'mo_xong', 'ra_vien'];
 // Vai trò được phép bấm nút hành trình (nếu đã liên kết Telegram trong app)
 const JOURNEY_ROLES = ['dieu_duong', 'admin'];
 // HOẶC: danh sách ID Telegram được phép bấm — secret TELEGRAM_JOURNEY_ALLOWED_IDS
@@ -88,8 +90,22 @@ Deno.serve(async (req) => {
         }).eq('id', id);
         const t = new Date(Date.now() + 7 * 3600 * 1000);
         const hhmm = `${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}`;
-        // Đăng tin cập nhật vào chính nhóm chứa nút (giữ nguyên nút để bấm bước tiếp theo)
-        await sendMessage(chatId, `${st.icon} <b>${esc(appt.customer_name)} — ${st.label}</b>\n🕒 ${hhmm} · cập nhật bởi <b>${esc(presserName)}</b>`);
+        // Tin cập nhật mang theo các bước CÒN LẠI (bấm tới đâu, nút rút gọn tới đó)
+        const remaining = JOURNEY_ORDER.slice(JOURNEY_ORDER.indexOf(type) + 1);
+        const doneAll = remaining.length === 0;
+        await api('sendMessage', {
+          chat_id: chatId, parse_mode: 'HTML',
+          text: `${st.icon} <b>${esc(appt.customer_name)} — ${st.label}</b>\n🕒 ${hhmm} · cập nhật bởi <b>${esc(presserName)}</b>` +
+            (doneAll ? '\n\n🎉 Hành trình hoàn tất!' : ''),
+          ...(doneAll ? {} : {
+            reply_markup: { inline_keyboard: remaining.map((k) => [{ text: JOURNEY[k].btn, callback_data: `js:${k}:${id}` }]) },
+          }),
+        });
+        // Gỡ nút khỏi tin vừa bấm — nhóm luôn chỉ còn 1 bộ nút mới nhất
+        await api('editMessageReplyMarkup', {
+          chat_id: chatId, message_id: cq.message.message_id,
+          reply_markup: { inline_keyboard: [] },
+        }).catch(() => {});
         await api('answerCallbackQuery', { callback_query_id: cq.id, text: `Đã cập nhật: ${st.label}` });
         return new Response('ok');
       }
