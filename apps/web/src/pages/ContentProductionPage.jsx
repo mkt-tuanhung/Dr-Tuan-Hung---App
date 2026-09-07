@@ -3009,6 +3009,28 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
   const videoRef = useRef(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
+  // BẢN NHÁP: tự lưu khi gõ — lỡ chuyển tab/app hay trang bị tải lại thì mở
+  // form lên vẫn còn nguyên nội dung. Chỉ xoá nháp khi lưu thành công.
+  const DRAFT_KEY = 'draft_add_video_ads';
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+      if (d && (d.title || d.name || d.clip || d.note || d.sourceLink || (d.thumbs || []).length)) {
+        setTitle(d.title || ''); setName(d.name || ''); setPicked(d.picked || null);
+        setSourceLink(d.sourceLink || ''); setSourceId(d.sourceId || '');
+        setClip(d.clip || ''); setThumbs(d.thumbs || []); setNote(d.note || '');
+        toast.info('Đã khôi phục nội dung đang nhập dở');
+      }
+    } catch { /* noop */ }
+  }, []);
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, name, picked, sourceLink, sourceId, clip, thumbs, note })); } catch { /* noop */ }
+  }, [title, name, picked, sourceLink, sourceId, clip, thumbs, note]);
+
   const onSearch = (val) => {
     setQ(val);
     clearTimeout(timer.current);
@@ -3067,6 +3089,7 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
         clip_links: clipArr, thumb_links: thumbs, editor_note: note || null, stage: 'submitted', submitted_at: new Date().toISOString(),
       });
       if (e2) throw e2;
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* noop */ }
       toast.success('Đã thêm Video Ads'); onSaved();
     } catch (err) { toast.error('Lỗi: ' + err.message); }
     setSaving(false);
