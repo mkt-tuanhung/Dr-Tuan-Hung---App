@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { getDeviceId, getDeviceLabel } from '@/lib/device';
 
@@ -70,10 +70,13 @@ export const AuthProvider = ({ children }) => {
     return null;
   };
 
+  const lastUserIdRef = useRef(null); // user đã tải hồ sơ — chống tải lại khi refresh token
+
   useEffect(() => {
     // Khôi phục session khi load app
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        lastUserIdRef.current = session.user.id;
         setUser(session.user);
         const p = await fetchProfile(session.user.id);
         setProfile(p);
@@ -86,12 +89,19 @@ export const AuthProvider = ({ children }) => {
     // Lắng nghe thay đổi auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        setUser(session.user);
+        // Chuyển tab/app rồi quay lại: Supabase bắn SIGNED_IN/TOKEN_REFRESHED.
+        // CÙNG một user thì KHÔNG tải lại hồ sơ/quyền — tránh cả trang bị dựng
+        // lại làm mất dữ liệu form đang nhập dở (bug form Thêm Video Ads).
+        const sameUser = lastUserIdRef.current === session.user.id;
+        lastUserIdRef.current = session.user.id;
+        setUser((prev) => (prev?.id === session.user.id ? prev : session.user));
+        if (sameUser) return;
         const p = await fetchProfile(session.user.id);
-        setProfile(p);
+        if (p) setProfile(p);
         const need = await checkMfa();
         if (!need) await checkDevice(session.user.id, p?.role);
       } else {
+        lastUserIdRef.current = null;
         setUser(null);
         setProfile(null);
         setMfaRequired(false);
