@@ -233,9 +233,14 @@ Deno.serve(async (req) => {
           const b64 = btoa(bin);
           const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
           const prompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
-Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 22 từ), giọng trêu yêu dễ thương, tích cực, gọi thân mật "bé".
-Được phép "soi" nhẹ nhàng vẻ ngoài trong ảnh (tóc rối, chưa trang điểm, mặt buồn ngủ, áo quần...) theo kiểu quan tâm hài hước, thỉnh thoảng doạ vui "kẻo sếp Hùng nhắc nhé".
-TUYỆT ĐỐI KHÔNG chê cân nặng, làn da, khuyết điểm ngoại hình hay bất cứ điều gì khiến người ta tự ti. Không tục, không thô.
+Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 24 từ), giọng trêu yêu dễ thương, quan tâm, gọi thân mật "bé".
+Hãy QUAN SÁT ẢNH và nhận xét đúng thứ nhìn thấy, chọn 1 ý phù hợp:
+- Nếu ĐEO KHẨU TRANG: nhắc bỏ khẩu trang ra chụp cho rõ mặt xinh. VD: "Bé ơi check-in bỏ khẩu trang ra cho rõ mặt xinh nhé 😷".
+- Nếu da nhiều MỤN: nhắc chăm sóc da nhẹ nhàng. VD: "Bé ơi mặt hơi nhiều mụn nè, chú ý chăm sóc làn da vào nha 🧴".
+- Nếu QUẦNG THÂM / MẮT MỎI: khuyên ngủ sớm. VD: "Mắt thâm rồi đó, thức đêm ít thôi bé ơi 🌙".
+- Nếu tóc rối / chưa trang điểm / mặt buồn ngủ: trêu yêu, thỉnh thoảng doạ vui "kẻo sếp Hùng nhắc nhé".
+- Nếu xinh tươi tỉnh táo: khen 1 câu tích cực.
+Giọng luôn THƯƠNG YÊU QUAN TÂM (kiểu phòng khám thẩm mỹ nhắc nhau giữ nhan sắc), KHÔNG miệt thị, KHÔNG chê cân nặng, không tục, không làm ai tổn thương.
 Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
           const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gkey}`;
           const res = await fetch(url, {
