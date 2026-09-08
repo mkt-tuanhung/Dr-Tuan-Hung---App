@@ -218,26 +218,56 @@ Deno.serve(async (req) => {
       // Công ty 1 cơ sở -> không hiện dòng địa điểm; CHỈ cảnh báo khi sai vị trí/mạng
       if (!gpsVerified && !wifiVerified) lines.push(`📍 ⚠️ ${locationWarning || 'Ngoài văn phòng'}`);
       if (action === 'CHECK_IN' && lateMinutes > 0) lines.push(`⏰ Đi muộn ${lateMinutes} phút`);
-      const caption = lines.join('\n');
-      const sendText = () => fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+      const baseCaption = lines.join('\n');
+      const sendText = (cap: string) => fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: tgChat, text: caption }),
+        body: JSON.stringify({ chat_id: tgChat, text: cap }),
       }).catch(() => {});
+      // Nhìn ẢNH check-in -> Gemini "soi" 1 câu trêu yêu dễ thương (nền; lỗi -> bỏ qua)
+      const genFunny = async (blob: Blob): Promise<string> => {
+        const gkey = Deno.env.get('GEMINI_API_KEY');
+        if (!gkey) return '';
+        try {
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+          const b64 = btoa(bin);
+          const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
+          const prompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
+Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 22 từ), giọng trêu yêu dễ thương, tích cực, gọi thân mật "bé".
+Được phép "soi" nhẹ nhàng vẻ ngoài trong ảnh (tóc rối, chưa trang điểm, mặt buồn ngủ, áo quần...) theo kiểu quan tâm hài hước, thỉnh thoảng doạ vui "kẻo sếp Hùng nhắc nhé".
+TUYỆT ĐỐI KHÔNG chê cân nặng, làn da, khuyết điểm ngoại hình hay bất cứ điều gì khiến người ta tự ti. Không tục, không thô.
+Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gkey}`;
+          const res = await fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/jpeg', data: b64 } }] }],
+              generationConfig: { temperature: 0.95, maxOutputTokens: 80 },
+            }),
+          });
+          if (!res.ok) return '';
+          const data = await res.json();
+          const t = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0];
+          return t.slice(0, 180);
+        } catch { return ''; }
+      };
       // Telegram hay từ chối tự tải ảnh từ URL ngoài -> server TỰ TẢI ảnh về rồi
       // đẩy thẳng FILE lên Telegram (multipart). Lỗi ở bất kỳ bước nào -> gửi text.
       const tgTask = (async () => {
-        if (!snapshotUrl) { await sendText(); return; }
+        if (!snapshotUrl) { await sendText(baseCaption); return; }
         try {
           const imgRes = await fetch(snapshotUrl);
           if (!imgRes.ok) throw new Error('img fetch failed');
           const blob = await imgRes.blob();
+          const funny = await genFunny(blob);
+          const caption = funny ? `${baseCaption}\n💬 ${funny}` : baseCaption;
           const fd = new FormData();
           fd.append('chat_id', String(tgChat));
           fd.append('caption', caption);
           fd.append('photo', new File([blob], 'attendance.jpg', { type: 'image/jpeg' }));
           const r = await fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, { method: 'POST', body: fd });
           if (!r.ok) throw new Error('sendPhoto failed');
-        } catch { await sendText(); }
+        } catch { await sendText(baseCaption); }
       })();
       // Chạy nền sau khi đã trả kết quả cho app (không làm chậm lượt quét)
       // deno-lint-ignore no-explicit-any
