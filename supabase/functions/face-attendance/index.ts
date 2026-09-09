@@ -243,18 +243,26 @@ Hãy QUAN SÁT ẢNH và nhận xét đúng thứ nhìn thấy, chọn 1 ý phù
 Giọng luôn THƯƠNG YÊU QUAN TÂM (kiểu phòng khám thẩm mỹ nhắc nhau giữ nhan sắc), KHÔNG miệt thị, KHÔNG chê cân nặng, không tục, không làm ai tổn thương.
 Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
           const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gkey}`;
+          // Tắt bộ lọc an toàn cho request nội bộ này — nhận xét vẻ ngoài (mụn,
+          // thâm mắt...) dễ bị Gemini chặn -> trả rỗng -> mất câu. BLOCK_NONE để không chặn.
+          const safetySettings = [
+            'HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH',
+            'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          ].map((category) => ({ category, threshold: 'BLOCK_NONE' }));
           const res = await fetch(url, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/jpeg', data: b64 } }] }],
               generationConfig: { temperature: 0.95, maxOutputTokens: 80 },
+              safetySettings,
             }),
           });
-          if (!res.ok) return '';
+          if (!res.ok) { console.error('genFunny gemini HTTP', res.status, (await res.text()).slice(0, 300)); return ''; }
           const data = await res.json();
           const t = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0];
+          if (!t) console.error('genFunny empty', JSON.stringify(data?.candidates?.[0]?.finishReason || data));
           return t.slice(0, 180);
-        } catch { return ''; }
+        } catch (e) { console.error('genFunny err', (e as Error).message); return ''; }
       };
       // Telegram hay từ chối tự tải ảnh từ URL ngoài -> server TỰ TẢI ảnh về rồi
       // đẩy thẳng FILE lên Telegram (multipart). Lỗi ở bất kỳ bước nào -> gửi text.
