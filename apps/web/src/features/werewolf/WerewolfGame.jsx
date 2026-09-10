@@ -111,6 +111,12 @@ export const RoleCard = ({ roleId }) => {
         <div className="text-3xl font-black tracking-wide" style={{ color: r.color }}>{r.name.toUpperCase()}</div>
         <span className="inline-block mt-1.5 px-3 py-1 rounded-full text-[11px] font-bold" style={{ background: r.bg, color: r.factionColor, border: `1px solid ${r.border}` }}>{r.faction}</span>
         <p className="text-[13px] mt-2" style={{ color: WW.textSecondary }}>{r.desc}</p>
+        {r.power && (
+          <div className="mt-3 rounded-2xl px-3.5 py-3 text-left" style={{ background: r.bg, border: `1.5px solid ${r.border}` }}>
+            <div className="text-[10px] font-black tracking-widest" style={{ color: r.color }}>CHỨC NĂNG CỦA BẠN</div>
+            <div className="text-[13px] font-medium mt-1 leading-relaxed" style={{ color: WW.textPrimary }}>{r.power}</div>
+          </div>
+        )}
         <div className="mt-3 space-y-2 text-left">
           {[['Mục tiêu của bạn', r.goal], ['Ban đêm', r.night], ['Ban ngày', r.day]].map(([k, v]) => (
             <div key={k} className="rounded-2xl px-3.5 py-2.5" style={{ background: WW.surfaceAlt, border: '1px solid #EAEDFB' }}>
