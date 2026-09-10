@@ -116,15 +116,17 @@ begin
     where room_id = p_room and user_id is distinct from v_room.host_id;
   if n < 4 then raise exception 'Cần ít nhất 4 người chơi ngoài quản trò (đang có %)', n; end if;
 
+  -- LƯU Ý: phải ép ::text cho phần tử, nếu không Postgres hiểu nhầm chuỗi là
+  -- mảng -> lỗi "malformed array literal".
   roles := array['wolf', 'seer'];
-  if n >= 5  then roles := roles || 'guard'; end if;
-  if n >= 6  then roles := roles || 'wolf'; end if;
-  if n >= 7  then roles := roles || 'witch'; end if;
-  if n >= 8  then roles := roles || 'hunter'; end if;
+  if n >= 5  then roles := array_append(roles, 'guard'); end if;
+  if n >= 6  then roles := array_append(roles, 'wolf'); end if;
+  if n >= 7  then roles := array_append(roles, 'witch'); end if;
+  if n >= 8  then roles := array_append(roles, 'hunter'); end if;
   if n >= 10 then roles := roles || array['wolf', 'cupid']; end if;
-  if n >= 12 then roles := roles || 'mayor'; end if;
+  if n >= 12 then roles := array_append(roles, 'mayor'); end if;
   while coalesce(array_length(roles, 1), 0) < n loop
-    roles := roles || 'villager';
+    roles := array_append(roles, 'villager');
   end loop;
 
   -- xáo cả danh sách người chơi (trừ quản trò) lẫn danh sách vai
