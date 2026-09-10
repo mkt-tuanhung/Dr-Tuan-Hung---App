@@ -362,15 +362,18 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
   }
 
   const n = players.length;
-  const comp = composition(Math.max(n, 4));
+  // Người chơi THỰC (loại quản trò/host) — quản trò không nhận vai
+  const playersOnly = players.filter((p) => p.user_id !== room.host_id);
+  const pn = playersOnly.length;
+  const comp = composition(Math.max(pn, 4));
   const dispName = (p) => p?.profiles?.full_name || p?.guest_name || '—';
   const nameOf = (uid) => dispName(players.find((p) => p.user_id === uid));
   const slots = Math.max(4, Math.ceil(n / 4) * 4);
 
   // ================= LOBBY =================
   if (room.status === 'LOBBY') {
-    const readyCount = players.filter((p) => p.ready).length;
-    const allReady = n >= 4 && players.every((p) => p.ready);
+    const readyCount = playersOnly.filter((p) => p.ready).length;   // chỉ tính người chơi thực
+    const allReady = pn >= 4 && playersOnly.every((p) => p.ready);   // quản trò không cần tính
     return (
       <Shell>
         {/* Room summary — ảnh làng đêm trăng */}
@@ -382,7 +385,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
               <div className="font-black text-lg text-white truncate">Phòng của {nameOf(room.host_id)}</div>
               <div className="flex items-center gap-1.5 flex-wrap mt-1">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold text-white" style={{ background: 'rgba(255,255,255,0.16)' }}>
-                  <img src={ICONS.players} alt="" className="w-3.5 h-3.5 object-contain" /> {n} người · Ván {room.round}
+                  <img src={ICONS.players} alt="" className="w-3.5 h-3.5 object-contain" /> {pn} người chơi · Ván {room.round}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black text-white" style={{ background: WW.success }}>OFFLINE</span>
               </div>
@@ -420,9 +423,9 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
               <img src={ICONS.players} alt="" className="w-5 h-5 object-contain" /> Danh sách người chơi
             </span>
             <div className="flex items-center gap-1.5">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black text-white" style={{ background: 'rgba(255,255,255,0.16)' }}>{n} người tham gia</span>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black" style={{ background: readyCount === n && n > 0 ? 'rgba(103,215,201,.25)' : 'rgba(242,193,78,.22)', color: readyCount === n && n > 0 ? WW.mint : WW.gold }}>
-                {readyCount}/{n} đã sẵn sàng
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black text-white" style={{ background: 'rgba(255,255,255,0.16)' }}>{pn} người chơi</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black" style={{ background: readyCount === pn && pn > 0 ? 'rgba(103,215,201,.25)' : 'rgba(242,193,78,.22)', color: readyCount === pn && pn > 0 ? WW.mint : WW.gold }}>
+                {readyCount}/{pn} đã sẵn sàng
               </span>
             </div>
           </div>
@@ -442,7 +445,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
           </div>
           {/* Cơ cấu vai dự kiến */}
           <div className="mt-4 pt-3" style={{ borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
-            <div className="text-[10px] font-black tracking-widest text-white/55 mb-2">CƠ CẤU VAI ({Math.max(n, 4)} NGƯỜI)</div>
+            <div className="text-[10px] font-black tracking-widest text-white/55 mb-2">CƠ CẤU VAI ({Math.max(pn, 4)} NGƯỜI)</div>
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(comp).map(([rid, cnt]) => {
                 const r = ROLES[rid];
@@ -477,7 +480,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
           {isHost && (
             <div className="text-center text-[11.5px] font-semibold text-white/60">
               {!allReady
-                ? (n < 4 ? `Cần thêm ${4 - n} người nữa (tối thiểu 4)` : 'Chờ mọi người bấm SẴN SÀNG')
+                ? (pn < 4 ? `Cần thêm ${4 - pn} người chơi nữa (tối thiểu 4, chưa tính quản trò)` : 'Chờ mọi người bấm SẴN SÀNG')
                 : 'Mọi người đã sẵn sàng? Hãy bắt đầu và tận hưởng những phút giây kịch tính!'}
             </div>
           )}
@@ -499,11 +502,19 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
   }
 
   // ================= REVEAL / HANDOFF =================
-  const ackedCount = players.filter((p) => p.acked).length;
+  const ackedCount = playersOnly.filter((p) => p.acked).length;   // quản trò không tính
   const showCard = (revealed || reviewing) && myRole;
 
   return (
     <Shell>
+      {isHost && (
+        <div className="rounded-[26px] p-6 text-center" style={{ background: `linear-gradient(160deg, ${WW.navy}, #2A3C66)`, border: '1px solid rgba(255,255,255,0.14)' }}>
+          <img src={ICONS.host} alt="" className="mx-auto w-16 h-16 object-contain" />
+          <div className="font-black text-xl mt-2 text-white">Bạn là Quản trò</div>
+          <div className="text-[12.5px] mt-1 text-white/70">Bạn điều hành ván chơi và KHÔNG nhận vai. Theo dõi tiến độ nhận vai của người chơi bên dưới.</div>
+        </div>
+      )}
+      {!isHost && (<>
       <div className="text-center">
         <div className="font-black text-lg text-white">Vai trò của bạn</div>
         <div className="text-[12px] text-white/60">Ván {room.round} · Giữ bí mật tuyệt đối nhé!</div>
@@ -547,10 +558,10 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
       {/* Chờ mọi người nhận vai */}
       {room.status === 'REVEAL' && myPlayer?.acked && !reviewing && (
         <NightPanel className="text-center">
-          <div className="font-black text-white">Chờ mọi người nhận vai… {ackedCount}/{n}</div>
+          <div className="font-black text-white">Chờ mọi người nhận vai… {ackedCount}/{pn}</div>
           <div className="flex justify-center gap-1.5 mt-3 flex-wrap">
-            {players.map((p) => (
-              <span key={p.id} className="w-3 h-3 rounded-full" style={{ background: p.acked ? WW.success : 'rgba(255,255,255,0.2)' }} title={p.profiles?.full_name} />
+            {playersOnly.map((p) => (
+              <span key={p.id} className="w-3 h-3 rounded-full" style={{ background: p.acked ? WW.success : 'rgba(255,255,255,0.2)' }} title={dispName(p)} />
             ))}
           </div>
         </NightPanel>
@@ -570,21 +581,22 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
           </button>
         </div>
       )}
+      </>)}
 
-      {/* Host: CHỈ thấy tiến độ nhận vai — không thấy vai của ai (theo spec) */}
+      {/* Host (quản trò): tiến độ nhận vai + điều khiển ván */}
       {isHost && (
         <div className="pb-6">
           <NightPanel>
             <div className="flex items-center gap-2 mb-2">
               <img src={ICONS.host} alt="" className="w-7 h-7 object-contain" />
               <div>
-                <div className="font-black text-[14px] text-white">Bảng điều khiển chủ phòng</div>
-                <div className="text-[11px] text-white/60">Chủ phòng không thể xem vai của người chơi — vai là bí mật tuyệt đối.</div>
+                <div className="font-black text-[14px] text-white">Bảng điều khiển quản trò</div>
+                <div className="text-[11px] text-white/60">Quản trò không nhận vai và không xem được vai của người chơi.</div>
               </div>
             </div>
             <div className="rounded-2xl px-4 py-3 flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.07)' }}>
               <span className="text-[13px] font-bold text-white/85">Đã nhận vai</span>
-              <span className="font-black text-lg" style={{ color: ackedCount === n ? WW.mint : WW.gold }}>{ackedCount}/{n}</span>
+              <span className="font-black text-lg" style={{ color: ackedCount === pn ? WW.mint : WW.gold }}>{ackedCount}/{pn}</span>
             </div>
             {room.status === 'HANDOFF' && (
               <div className="mt-2 text-center text-[12px] font-bold" style={{ color: WW.mint }}>✓ Sẵn sàng chơi Offline — cả làng đã nhận vai!</div>
