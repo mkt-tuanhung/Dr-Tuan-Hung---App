@@ -97,27 +97,26 @@ begin
   return v_room.id;
 end $$;
 
--- 5) BẮT ĐẦU VÁN — server chia vai ngẫu nhiên theo số người
+-- 5) CHIA VAI (dùng chung cho BẮT ĐẦU và VÁN MỚI) — luôn XÁO TRỘN ngẫu nhiên
 --    Cơ cấu theo recommendedCompositions trong gói thiết kế (config/roles.json):
 --    6: 2 Sói,Tiên tri,Bảo vệ | 7: +Phù thủy | 8: +Thợ săn | 10+: 3 Sói,+Cupid
 --    12+: +Trưởng làng | 4-5 bản rút gọn | còn lại: Dân làng
-create or replace function ww_start_room(p_room uuid)
+--    Hàm nội bộ: người gọi (ww_start_room/ww_new_round) đã kiểm tra chủ phòng.
+create or replace function ww_deal_roles(p_room uuid, p_round int)
 returns void language plpgsql security definer set search_path = public as $$
 declare
   v_room ww_rooms; n int; roles text[]; ids uuid[]; i int;
 begin
   select * into v_room from ww_rooms where id = p_room;
   if v_room.id is null then raise exception 'Không tìm thấy phòng'; end if;
-  if v_room.host_id <> auth.uid() then raise exception 'Chỉ chủ phòng được bắt đầu'; end if;
-  if v_room.status <> 'LOBBY' then raise exception 'Ván đã bắt đầu rồi'; end if;
 
   -- QUẢN TRÒ (host) chỉ điều hành, KHÔNG nhận vai -> loại khỏi danh sách chia vai
   select count(*) into n from ww_players
     where room_id = p_room and user_id is distinct from v_room.host_id;
   if n < 4 then raise exception 'Cần ít nhất 4 người chơi ngoài quản trò (đang có %)', n; end if;
 
-  -- LƯU Ý: phải ép ::text cho phần tử, nếu không Postgres hiểu nhầm chuỗi là
-  -- mảng -> lỗi "malformed array literal".
+  -- LƯU Ý: dùng array_append cho phần tử đơn, nếu không Postgres hiểu nhầm
+  -- chuỗi là mảng -> lỗi "malformed array literal".
   roles := array['wolf', 'seer'];
   if n >= 5  then roles := array_append(roles, 'guard'); end if;
   if n >= 6  then roles := array_append(roles, 'wolf'); end if;
@@ -129,20 +128,33 @@ begin
     roles := array_append(roles, 'villager');
   end loop;
 
-  -- xáo cả danh sách người chơi (trừ quản trò) lẫn danh sách vai
+  -- XÁO TRỘN cả danh sách người chơi (trừ quản trò) lẫn danh sách vai ->
+  -- mỗi ván ai cũng có thể đổi vai, KHÔNG giữ nguyên vai ván trước.
   select array_agg(id order by random()) into ids from ww_players
     where room_id = p_room and user_id is distinct from v_room.host_id;
   select array_agg(r order by random()) into roles from unnest(roles) as r;
 
   for i in 1..n loop
-    update ww_players set role = roles[i], acked = false where id = ids[i];
+    update ww_players set role = roles[i], acked = false, ready = true where id = ids[i];
   end loop;
 
   -- Quản trò: không vai, coi như đã "nhận vai" để không chặn bước HANDOFF
   update ww_players set role = null, acked = true
     where room_id = p_room and user_id = v_room.host_id;
 
-  update ww_rooms set status = 'REVEAL', round = v_room.round, started_at = now() where id = p_room;
+  update ww_rooms set status = 'REVEAL', round = p_round, started_at = now() where id = p_room;
+end $$;
+
+-- BẮT ĐẦU VÁN (từ LOBBY) — server chia vai ngẫu nhiên
+create or replace function ww_start_room(p_room uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_room ww_rooms;
+begin
+  select * into v_room from ww_rooms where id = p_room;
+  if v_room.id is null then raise exception 'Không tìm thấy phòng'; end if;
+  if v_room.host_id <> auth.uid() then raise exception 'Chỉ chủ phòng được bắt đầu'; end if;
+  if v_room.status <> 'LOBBY' then raise exception 'Ván đã bắt đầu rồi'; end if;
+  perform ww_deal_roles(p_room, v_room.round);
 end $$;
 
 -- 6) XEM VAI CỦA CHÍNH MÌNH
@@ -189,15 +201,17 @@ language sql security definer set search_path = public as $$
 $$;
 grant execute on function ww_room_roles(uuid) to authenticated;
 
--- 9) VÁN MỚI (giữ nguyên người chơi, chia vai lại) / ĐÓNG PHÒNG
+-- 9) VÁN MỚI — giữ nguyên người chơi nhưng CHIA LẠI + XÁO TRỘN vai ngay,
+--    vào thẳng REVEAL để mọi người lật bài vai MỚI (không quay về lobby,
+--    không giữ nguyên vai ván trước). / ĐÓNG PHÒNG
 create or replace function ww_new_round(p_room uuid)
 returns void language plpgsql security definer set search_path = public as $$
 declare v_room ww_rooms;
 begin
   select * into v_room from ww_rooms where id = p_room;
+  if v_room.id is null then raise exception 'Không tìm thấy phòng'; end if;
   if v_room.host_id <> auth.uid() then raise exception 'Chỉ chủ phòng'; end if;
-  update ww_players set role = null, acked = false, ready = true where room_id = p_room;
-  update ww_rooms set status = 'LOBBY', round = v_room.round + 1 where id = p_room;
+  perform ww_deal_roles(p_room, v_room.round + 1);
 end $$;
 
 grant execute on function ww_create_room(text) to authenticated;

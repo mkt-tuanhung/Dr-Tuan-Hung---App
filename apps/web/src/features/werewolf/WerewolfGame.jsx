@@ -168,6 +168,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
   const [revealed, setRevealed] = useState(false);   // đã lật bài trong phiên hiện tại
   const [reviewing, setReviewing] = useState(false); // đang "xem lại vai"
   const joinedRef = useRef(false);
+  const roundRef = useRef(null); // theo dõi số ván để reset lật bài khi có VÁN MỚI
 
   const me = profile?.id;
   const isHost = room && room.host_id === me;
@@ -186,6 +187,11 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
     }
     setRoom(r);
     if (r) {
+      // VÁN MỚI: số ván tăng -> úp bài lại để mọi người tự lật vai mới
+      if (roundRef.current !== null && r.round !== roundRef.current) {
+        setRevealed(false); setReviewing(false);
+      }
+      roundRef.current = r.round;
       const { data: ps } = await supabase.from('ww_players')
         .select('id, room_id, user_id, ready, acked, joined_at, guest_name, profiles(full_name, avatar_url)')
         .eq('room_id', r.id).order('joined_at');
