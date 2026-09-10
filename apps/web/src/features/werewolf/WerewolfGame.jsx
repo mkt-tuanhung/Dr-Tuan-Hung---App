@@ -5,7 +5,8 @@
 // mascot sói thông minh, nhân vật thú PNG, icon PNG — không emoji icon).
 // Luồng: Landing -> Tạo/Vào phòng (QR) -> Lobby realtime -> Host bắt đầu
 // -> Server chia vai -> NHẤN GIỮ lật bài -> Xác nhận -> OFFLINE HANDOFF.
-// Quản trò CHỈ thấy số người đã nhận vai — không thấy vai của ai (theo spec).
+// Quản trò (host) điều hành ván ngoài đời -> xem được DANH SÁCH THÀNH VIÊN KÈM VAI
+// (RPC ww_room_roles, chỉ chủ phòng gọi được) để dẫn các pha đêm/ngày.
 // ONLINE (video + engine đêm/ngày) là capability riêng, chưa render trong
 // OFFLINE (conditional render, không display:none).
 // ============================================================
@@ -159,6 +160,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
   const [myRole, setMyRole] = useState(null);
+  const [hostRoles, setHostRoles] = useState([]); // quản trò: danh sách thành viên kèm vai
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [codeInput, setCodeInput] = useState('');
@@ -191,8 +193,13 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
       if (r.status !== 'LOBBY') {
         const { data: role } = await supabase.rpc('ww_my_role', { p_room: r.id });
         setMyRole(role || null);
-      } else { setMyRole(null); setRevealed(false); setReviewing(false); }
-    } else { setPlayers([]); setMyRole(null); }
+        // Quản trò xem danh sách thành viên kèm vai để dẫn ván (RPC chỉ chủ phòng gọi được)
+        if (r.host_id === me) {
+          const { data: hr } = await supabase.rpc('ww_room_roles', { p_room: r.id });
+          setHostRoles(hr || []);
+        } else { setHostRoles([]); }
+      } else { setMyRole(null); setRevealed(false); setReviewing(false); setHostRoles([]); }
+    } else { setPlayers([]); setMyRole(null); setHostRoles([]); }
     setLoading(false);
   }, [me]);
 
@@ -519,7 +526,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
         <div className="rounded-[26px] p-6 text-center" style={{ background: `linear-gradient(160deg, ${WW.navy}, #2A3C66)`, border: '1px solid rgba(255,255,255,0.14)' }}>
           <img src={ICONS.host} alt="" className="mx-auto w-16 h-16 object-contain" />
           <div className="font-black text-xl mt-2 text-white">Bạn là Quản trò</div>
-          <div className="text-[12.5px] mt-1 text-white/70">Bạn điều hành ván chơi và KHÔNG nhận vai. Theo dõi tiến độ nhận vai của người chơi bên dưới.</div>
+          <div className="text-[12.5px] mt-1 text-white/70">Bạn điều hành ván chơi và KHÔNG nhận vai. Xem danh sách thành viên kèm vai bên dưới để dẫn các pha đêm/ngày.</div>
         </div>
       )}
       {!isHost && (<>
@@ -599,12 +606,37 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
               <img src={ICONS.host} alt="" className="w-7 h-7 object-contain" />
               <div>
                 <div className="font-black text-[14px] text-white">Bảng điều khiển quản trò</div>
-                <div className="text-[11px] text-white/60">Quản trò không nhận vai và không xem được vai của người chơi.</div>
+                <div className="text-[11px] text-white/60">Danh sách thành viên kèm vai — chỉ quản trò xem được. Giữ kín để dẫn ván công bằng nhé!</div>
               </div>
             </div>
             <div className="rounded-2xl px-4 py-3 flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.07)' }}>
               <span className="text-[13px] font-bold text-white/85">Đã nhận vai</span>
               <span className="font-black text-lg" style={{ color: ackedCount === pn ? WW.mint : WW.gold }}>{ackedCount}/{pn}</span>
+            </div>
+
+            {/* DANH SÁCH THÀNH VIÊN KÈM VAI (Sói lên đầu) */}
+            <div className="mt-3">
+              <div className="text-[10px] font-black tracking-widest text-white/55 mb-2">DANH SÁCH THÀNH VIÊN &amp; VAI</div>
+              <div className="space-y-1.5">
+                {hostRoles.map((hr) => {
+                  const r = ROLES[hr.role] || ROLES.villager;
+                  const isWolf = hr.role === 'wolf';
+                  return (
+                    <div key={hr.player_id} className="flex items-center gap-2.5 rounded-2xl px-3 py-2"
+                      style={{ background: isWolf ? 'rgba(239,100,115,0.16)' : 'rgba(255,255,255,0.06)', border: `1px solid ${isWolf ? 'rgba(239,100,115,0.4)' : 'rgba(255,255,255,0.1)'}` }}>
+                      <img src={r.icon} alt="" className="w-7 h-7 object-contain shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-bold text-white truncate">{hr.name}</div>
+                        <div className="text-[11px] font-black" style={{ color: isWolf ? '#F0A9A2' : WW.gold }}>{r.name}</div>
+                      </div>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: hr.acked ? WW.success : 'rgba(255,255,255,0.25)' }} title={hr.acked ? 'Đã nhận vai' : 'Chưa nhận vai'} />
+                    </div>
+                  );
+                })}
+                {hostRoles.length === 0 && (
+                  <div className="text-center text-[12px] text-white/50 py-2">Đang tải danh sách vai…</div>
+                )}
+              </div>
             </div>
             {room.status === 'HANDOFF' && (
               <div className="mt-2 text-center text-[12px] font-bold" style={{ color: WW.mint }}>✓ Sẵn sàng chơi Offline — cả làng đã nhận vai!</div>
