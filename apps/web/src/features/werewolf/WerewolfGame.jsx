@@ -20,7 +20,7 @@ import { ROLES, WW, composition, MASCOT, BG_LOBBY, ICONS, AVATARS } from './wwRo
 
 const GAME_ID = 'aa50aa50-0001-4000-8000-000000000001'; // eslint-disable-line no-unused-vars
 
-const Styles = () => (
+export const Styles = () => (
   <style>{`
     @keyframes wwPop { 0% { transform: scale(.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     @keyframes wwFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
@@ -33,12 +33,12 @@ const Styles = () => (
 );
 
 const STARS = [[8, 6], [22, 14], [40, 4], [58, 10], [76, 5], [90, 12], [14, 22], [68, 20], [94, 28], [4, 34]];
-const Stars = () => STARS.map(([x, y], i) => (
+export const Stars = () => STARS.map(([x, y], i) => (
   <span key={i} className="absolute w-1 h-1 rounded-full bg-white pointer-events-none" style={{ left: `${x}%`, top: `${y}%`, animation: `wwStar ${2 + (i % 5) * 0.6}s ease-in-out infinite` }} />
 ));
 
 // Nút CTA vàng gold (primary theo design tokens)
-const GoldBtn = ({ children, className = '', ...props }) => (
+export const GoldBtn = ({ children, className = '', ...props }) => (
   <button {...props}
     className={`w-full py-3.5 rounded-[20px] font-black text-[15px] shadow-lg active:scale-[0.98] transition-transform disabled:opacity-40 ${className}`}
     style={{ background: 'linear-gradient(160deg,#FFDD7A,#F2C14E 55%,#E8AB37)', color: '#5C3D07', boxShadow: '0 6px 20px rgba(242,193,78,.35)' }}>
@@ -47,7 +47,7 @@ const GoldBtn = ({ children, className = '', ...props }) => (
 );
 
 // Panel kính mờ trên nền navy
-const NightPanel = ({ children, className = '', style = {} }) => (
+export const NightPanel = ({ children, className = '', style = {} }) => (
   <div className={`rounded-[26px] p-5 ${className}`} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', backdropFilter: 'blur(6px)', ...style }}>
     {children}
   </div>
@@ -62,7 +62,7 @@ const MascotTip = ({ children }) => (
 );
 
 // ---------- NHẤN GIỮ ĐỂ XEM VAI (1200ms theo game_modes.json) ----------
-const HoldToReveal = ({ onDone, label = 'NHẤN GIỮ ĐỂ XEM VAI' }) => {
+export const HoldToReveal = ({ onDone, label = 'NHẤN GIỮ ĐỂ XEM VAI' }) => {
   const [prog, setProg] = useState(0);
   const timer = useRef(null);
   const startAt = useRef(0);
@@ -99,7 +99,7 @@ const HoldToReveal = ({ onDone, label = 'NHẤN GIỮ ĐỂ XEM VAI' }) => {
 };
 
 // ---------- Thẻ vai (render động từ wwRoles — RoleCharacterPNG + icon + copy) ----------
-const RoleCard = ({ roleId }) => {
+export const RoleCard = ({ roleId }) => {
   const r = ROLES[roleId] || ROLES.villager;
   return (
     <div className="ww-pop rounded-[26px] overflow-hidden shadow-xl" style={{ background: '#fff', border: `2px solid ${r.border}` }}>
@@ -129,7 +129,7 @@ const RoleCard = ({ roleId }) => {
 };
 
 // ---------- Ô người chơi trong lobby (theo mockup: tile lilac + avatar thú) ----------
-const PlayerTile = ({ index, name, ready, isHost, onKick }) => (
+export const PlayerTile = ({ index, name, ready, isHost, onKick }) => (
   <div className="relative rounded-[18px] p-1.5 pb-2 text-center" style={{ background: 'linear-gradient(180deg,#E9EEFF,#DCD9FA)', border: '1.5px solid #C9CCF2' }}>
     <span className="absolute top-1 left-1.5 w-4.5 h-4.5 min-w-[18px] px-1 rounded-full text-[9px] font-black grid place-items-center text-white z-10" style={{ background: WW.primary }}>{index + 1}</span>
     <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full z-10" style={{ background: ready ? WW.success : '#C4CBE2', border: '1.5px solid #fff' }} />
@@ -179,7 +179,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
     setRoom(r);
     if (r) {
       const { data: ps } = await supabase.from('ww_players')
-        .select('id, room_id, user_id, ready, acked, joined_at, profiles(full_name, avatar_url)')
+        .select('id, room_id, user_id, ready, acked, joined_at, guest_name, profiles(full_name, avatar_url)')
         .eq('room_id', r.id).order('joined_at');
       setPlayers(ps || []);
       if (r.status !== 'LOBBY') {
@@ -236,7 +236,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
     load();
   };
   const kick = async (p) => {
-    if (!confirm(`Mời ${p.profiles?.full_name || 'người này'} ra khỏi phòng?`)) return;
+    if (!confirm(`Mời ${p.profiles?.full_name || p.guest_name || 'người này'} ra khỏi phòng?`)) return;
     await supabase.from('ww_players').delete().eq('id', p.id);
     load();
   };
@@ -363,7 +363,8 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
 
   const n = players.length;
   const comp = composition(Math.max(n, 4));
-  const nameOf = (uid) => players.find((p) => p.user_id === uid)?.profiles?.full_name || '—';
+  const dispName = (p) => p?.profiles?.full_name || p?.guest_name || '—';
+  const nameOf = (uid) => dispName(players.find((p) => p.user_id === uid));
   const slots = Math.max(4, Math.ceil(n / 4) * 4);
 
   // ================= LOBBY =================
@@ -422,7 +423,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
           <div className="grid grid-cols-4 gap-2.5">
             {players.map((p, i) => (
               <PlayerTile key={p.id} index={i}
-                name={p.user_id === me ? 'Bạn' : (p.profiles?.full_name || '—')}
+                name={p.user_id === me ? 'Bạn' : dispName(p)}
                 ready={p.ready} isHost={p.user_id === room.host_id}
                 onKick={isHost && p.user_id !== me ? () => kick(p) : null} />
             ))}
