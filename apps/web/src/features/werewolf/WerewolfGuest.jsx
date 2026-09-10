@@ -50,6 +50,7 @@ export default function WerewolfGuest({ code }) {
   const [revealed, setRevealed] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const roundRef = useRef(null); // reset lật bài khi chủ phòng mở VÁN MỚI
 
   // ---------- Đọc trạng thái phòng (anon select — RLS cho phép đọc, trừ cột role) ----------
   const load = useCallback(async () => {
@@ -58,6 +59,11 @@ export default function WerewolfGuest({ code }) {
     const r = rooms?.[0] || null;
     setRoom(r);
     if (r) {
+      // VÁN MỚI: số ván tăng -> úp bài lại để tự lật vai mới
+      if (roundRef.current !== null && r.round !== roundRef.current) {
+        setRevealed(false); setReviewing(false);
+      }
+      roundRef.current = r.round;
       const { data: ps } = await supabase.from('ww_players')
         .select('id, room_id, user_id, ready, acked, joined_at, guest_name')
         .eq('room_id', r.id).order('joined_at');
