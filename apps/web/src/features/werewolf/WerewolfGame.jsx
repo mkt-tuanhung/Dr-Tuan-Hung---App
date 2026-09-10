@@ -369,6 +369,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
 
   // ================= LOBBY =================
   if (room.status === 'LOBBY') {
+    const readyCount = players.filter((p) => p.ready).length;
     const allReady = n >= 4 && players.every((p) => p.ready);
     return (
       <Shell>
@@ -414,11 +415,16 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
 
         {/* Danh sách người chơi */}
         <NightPanel>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
             <span className="font-black text-[14px] text-white inline-flex items-center gap-1.5">
-              <img src={ICONS.players} alt="" className="w-5 h-5 object-contain" /> Danh sách người chơi ({n})
+              <img src={ICONS.players} alt="" className="w-5 h-5 object-contain" /> Danh sách người chơi
             </span>
-            {allReady && <span className="px-2 py-0.5 rounded-full text-[10px] font-black" style={{ background: 'rgba(103,215,201,.2)', color: WW.mint }}>✓ Đã đủ người</span>}
+            <div className="flex items-center gap-1.5">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black text-white" style={{ background: 'rgba(255,255,255,0.16)' }}>{n} người tham gia</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black" style={{ background: readyCount === n && n > 0 ? 'rgba(103,215,201,.25)' : 'rgba(242,193,78,.22)', color: readyCount === n && n > 0 ? WW.mint : WW.gold }}>
+                {readyCount}/{n} đã sẵn sàng
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-4 gap-2.5">
             {players.map((p, i) => (
