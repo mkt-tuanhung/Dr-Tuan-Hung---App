@@ -152,7 +152,8 @@ export default function WerewolfGuest({ code }) {
     );
   }
 
-  const n = players.length;
+  const playersOnly = players.filter((p) => !room || p.user_id !== room.host_id); // trừ quản trò
+  const n = playersOnly.length;
   const showCard = (revealed || reviewing) && myRole;
 
   // ---------- LOBBY ----------
@@ -193,7 +194,7 @@ export default function WerewolfGuest({ code }) {
   }
 
   // ---------- REVEAL / HANDOFF ----------
-  const ackedCount = players.filter((p) => p.acked).length;
+  const ackedCount = playersOnly.filter((p) => p.acked).length;
   return (
     <Shell>
       <div className="text-center">
@@ -230,7 +231,7 @@ export default function WerewolfGuest({ code }) {
         <NightPanel className="text-center">
           <div className="font-black text-white">Chờ mọi người nhận vai… {ackedCount}/{n}</div>
           <div className="flex justify-center gap-1.5 mt-3 flex-wrap">
-            {players.map((p) => (<span key={p.id} className="w-3 h-3 rounded-full" style={{ background: p.acked ? WW.success : 'rgba(255,255,255,0.2)' }} />))}
+            {playersOnly.map((p) => (<span key={p.id} className="w-3 h-3 rounded-full" style={{ background: p.acked ? WW.success : 'rgba(255,255,255,0.2)' }} />))}
           </div>
         </NightPanel>
       )}

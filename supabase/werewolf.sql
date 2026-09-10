@@ -111,8 +111,10 @@ begin
   if v_room.host_id <> auth.uid() then raise exception 'Chỉ chủ phòng được bắt đầu'; end if;
   if v_room.status <> 'LOBBY' then raise exception 'Ván đã bắt đầu rồi'; end if;
 
-  select count(*) into n from ww_players where room_id = p_room;
-  if n < 4 then raise exception 'Cần ít nhất 4 người chơi (đang có %)', n; end if;
+  -- QUẢN TRÒ (host) chỉ điều hành, KHÔNG nhận vai -> loại khỏi danh sách chia vai
+  select count(*) into n from ww_players
+    where room_id = p_room and user_id is distinct from v_room.host_id;
+  if n < 4 then raise exception 'Cần ít nhất 4 người chơi ngoài quản trò (đang có %)', n; end if;
 
   roles := array['wolf', 'seer'];
   if n >= 5  then roles := roles || 'guard'; end if;
@@ -125,13 +127,18 @@ begin
     roles := roles || 'villager';
   end loop;
 
-  -- xáo cả danh sách người lẫn danh sách vai
-  select array_agg(id order by random()) into ids from ww_players where room_id = p_room;
+  -- xáo cả danh sách người chơi (trừ quản trò) lẫn danh sách vai
+  select array_agg(id order by random()) into ids from ww_players
+    where room_id = p_room and user_id is distinct from v_room.host_id;
   select array_agg(r order by random()) into roles from unnest(roles) as r;
 
   for i in 1..n loop
     update ww_players set role = roles[i], acked = false where id = ids[i];
   end loop;
+
+  -- Quản trò: không vai, coi như đã "nhận vai" để không chặn bước HANDOFF
+  update ww_players set role = null, acked = true
+    where room_id = p_room and user_id = v_room.host_id;
 
   update ww_rooms set status = 'REVEAL', round = v_room.round, started_at = now() where id = p_room;
 end $$;
