@@ -21,7 +21,7 @@ drop policy if exists "wwp_select" on ww_players;
 drop policy if exists "wwr_select" on ww_rooms;
 create policy "wwp_select" on ww_players for select using (true);
 create policy "wwr_select" on ww_rooms  for select using (true);
-grant select (id, room_id, user_id, ready, acked, joined_at, guest_name) on ww_players to anon;
+grant select (id, room_id, user_id, ready, acked, joined_at, guest_name) on ww_players to anon, authenticated;
 grant select on ww_rooms to anon;
 
 -- 3) Phòng đang mở theo mã (helper nội bộ)
