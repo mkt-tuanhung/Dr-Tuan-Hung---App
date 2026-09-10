@@ -161,9 +161,33 @@ begin
   end if;
 end $$;
 
--- 8) Theo spec Dual Mode: CHỦ PHÒNG KHÔNG được xem vai của người khác.
---    (Host chỉ thấy số người đã nhận vai qua cột acked.) Xoá RPC cũ nếu có.
+-- 8) QUẢN TRÒ XEM DANH SÁCH THÀNH VIÊN KÈM VAI
+--    Quản trò (host) là người điều hành ván ngoài đời nên CẦN biết ai vai gì
+--    để dẫn các pha đêm/ngày. RPC security definer chỉ cho ĐÚNG chủ phòng gọi;
+--    người chơi khác gọi sẽ bị chặn -> vai vẫn bí mật với người chơi.
+--    Trả về: tên hiển thị (profiles.full_name hoặc guest_name), vai, đã nhận vai.
+--    Sắp xếp: phe Sói lên trước để quản trò gọi Sói dậy trước.
 drop function if exists ww_room_roles(uuid);
+create or replace function ww_room_roles(p_room uuid)
+returns table (player_id uuid, name text, role text, acked boolean)
+language sql security definer set search_path = public as $$
+  select
+    p.id,
+    coalesce(pr.full_name, p.guest_name, 'Người chơi') as name,
+    p.role,
+    p.acked
+  from ww_players p
+  left join profiles pr on pr.id = p.user_id
+  join ww_rooms r on r.id = p.room_id
+  where p.room_id = p_room
+    and r.host_id = auth.uid()                 -- CHỈ chủ phòng mới xem được
+    and p.user_id is distinct from r.host_id   -- bỏ quản trò khỏi danh sách vai
+  order by
+    case p.role when 'wolf' then 0 else 1 end, -- Sói lên đầu
+    p.role nulls last,
+    name;
+$$;
+grant execute on function ww_room_roles(uuid) to authenticated;
 
 -- 9) VÁN MỚI (giữ nguyên người chơi, chia vai lại) / ĐÓNG PHÒNG
 create or replace function ww_new_round(p_room uuid)
