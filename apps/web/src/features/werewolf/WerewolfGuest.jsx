@@ -75,6 +75,7 @@ export default function WerewolfGuest({ code }) {
 
   useEffect(() => { load(); }, [load]);
   useRealtimeReload('ww_rooms,ww_players', load);
+  useEffect(() => { const t = setInterval(() => load(), 3000); return () => clearInterval(t); }, [load]);
 
   // Nếu máy này đã từng join (còn ghế) -> tự nhận lại, bỏ qua bước nhập tên
   const checkedRef = useRef(false);
