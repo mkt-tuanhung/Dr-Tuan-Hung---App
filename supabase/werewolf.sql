@@ -179,7 +179,7 @@ do $$ begin alter publication supabase_realtime add table ww_rooms; exception wh
 do $$ begin alter publication supabase_realtime add table ww_players; exception when duplicate_object then null; end $$;
 
 insert into minigames (id, title, type, status, config)
-values ('aa50aa50-0001-4000-8000-000000000001', 'Ma Sói — Đêm Trăng Làng Dr Hùng', 'werewolf', 'active', '{}'::jsonb)
+values ('aa50aa50-0001-4000-8000-000000000001', 'Làng Sói Tuấn Hùng', 'werewolf', 'active', '{}'::jsonb)
 on conflict (id) do nothing;
 
 -- Kiểm tra
