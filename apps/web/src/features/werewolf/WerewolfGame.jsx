@@ -248,7 +248,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
   const copyCode = () => { navigator.clipboard?.writeText(room.code); toast.success('Đã sao chép mã phòng'); };
   const shareLink = async () => {
     const url = `${window.location.origin}/ma-soi/${room.code}`;
-    try { await navigator.share({ title: 'Ma Sói — Dr Tuấn Hùng', text: `Vào phòng Ma Sói, mã ${room.code}`, url }); }
+    try { await navigator.share({ title: 'Làng Sói Tuấn Hùng', text: `Vào phòng Làng Sói Tuấn Hùng, mã ${room.code}`, url }); }
     catch { navigator.clipboard?.writeText(url); toast.success('Đã sao chép link mời'); }
   };
 
@@ -267,7 +267,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
           )}
           <img src={ICONS.night} alt="" className="w-8 h-8 object-contain" />
           <div>
-            <div className="font-black text-lg leading-tight" style={{ color: WW.gold }}>Ma Sói</div>
+            <div className="font-black text-lg leading-tight" style={{ color: WW.gold }}>Làng Sói Tuấn Hùng</div>
             <div className="text-[10.5px] font-bold tracking-wide text-white/60">CRM MINI GAME</div>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
           <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(20,30,56,0) 30%, rgba(20,30,56,0.9) 100%)' }} />
           <img src={MASCOT} alt="Mascot sói" className="absolute bottom-0 left-3 h-[86%] object-contain ww-float" draggable={false} />
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center w-full pl-16">
-            <div className="font-black text-3xl tracking-wide" style={{ color: WW.gold, textShadow: '0 2px 12px rgba(0,0,0,.4)' }}>Ma Sói</div>
+            <div className="font-black text-3xl tracking-wide" style={{ color: WW.gold, textShadow: '0 2px 12px rgba(0,0,0,.4)' }}>Làng Sói Tuấn Hùng</div>
             <div className="text-[11.5px] font-semibold text-white/85">Trò chơi trí tuệ — Kết nối đội nhóm — Vui vẻ, công bằng, đáng nhớ!</div>
           </div>
         </div>

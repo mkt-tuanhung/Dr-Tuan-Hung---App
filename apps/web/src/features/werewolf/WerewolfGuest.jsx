@@ -108,7 +108,7 @@ export default function WerewolfGuest({ code }) {
         <div className="flex items-center gap-2.5">
           <img src={ICONS.night} alt="" className="w-8 h-8 object-contain" />
           <div>
-            <div className="font-black text-lg leading-tight" style={{ color: WW.gold }}>Ma Sói</div>
+            <div className="font-black text-lg leading-tight" style={{ color: WW.gold }}>Làng Sói Tuấn Hùng</div>
             <div className="text-[10.5px] font-bold tracking-wide text-white/60">KHÁCH THAM GIA · PHÒNG {code}</div>
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function WerewolfGuest({ code }) {
           <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(20,30,56,0) 30%, rgba(20,30,56,0.9) 100%)' }} />
           <img src={MASCOT} alt="" className="absolute bottom-0 left-3 h-[86%] object-contain ww-float" draggable={false} />
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center w-full pl-16">
-            <div className="font-black text-2xl" style={{ color: WW.gold }}>Vào làng Ma Sói</div>
+            <div className="font-black text-2xl" style={{ color: WW.gold }}>Vào Làng Sói Tuấn Hùng</div>
             <div className="text-[11.5px] font-semibold text-white/85">Nhập tên để cùng chơi — không cần tài khoản!</div>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function WerewolfGuest({ code }) {
           <GoldBtn onClick={doJoin} disabled={busy}>
             <span className="inline-flex items-center gap-2"><img src={ICONS.join} alt="" className="w-5 h-5 object-contain" /> Tham gia phòng {code}</span>
           </GoldBtn>
-          <div className="text-[11px] text-white/50 text-center">Bạn chỉ tham gia trò chơi Ma Sói, không truy cập dữ liệu nội bộ.</div>
+          <div className="text-[11px] text-white/50 text-center">Bạn chỉ tham gia trò chơi Làng Sói Tuấn Hùng, không truy cập dữ liệu nội bộ.</div>
         </NightPanel>
       </Shell>
     );

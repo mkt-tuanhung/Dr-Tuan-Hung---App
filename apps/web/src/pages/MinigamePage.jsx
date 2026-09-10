@@ -136,7 +136,7 @@ const MinigamePage = () => {
                   <button onClick={() => setCurrent(g.id)} disabled={!isOpen(g) && !isAdmin && !isMatch && !isWolf}
                     className={`flex-1 h-10 rounded-xl text-white font-bold text-sm disabled:opacity-40 inline-flex items-center justify-center gap-1.5 ${isMatch ? 'bg-emerald-600 hover:bg-emerald-700' : isWolf ? 'hover:opacity-90' : 'bg-violet-600 hover:bg-violet-700'}`}
                     style={isWolf ? { background: '#1E2A44' } : undefined}>
-                    {isWolf ? <><Play className="w-4 h-4" /> Vào làng Ma Sói</>
+                    {isWolf ? <><Play className="w-4 h-4" /> Vào Làng Sói Tuấn Hùng</>
                       : isMatch ? <><Play className="w-4 h-4" /> {isOpen(g) ? 'Dự đoán ngay' : 'Xem kết quả'}</>
                       : isOpen(g) ? <><Play className="w-4 h-4" /> Chơi ngay{left > 0 ? ` · còn ${left} lượt` : ''}</> : <><Lock className="w-4 h-4" /> Xem kết quả</>}
                   </button>
