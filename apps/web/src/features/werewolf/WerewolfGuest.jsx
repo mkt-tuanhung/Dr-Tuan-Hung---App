@@ -22,14 +22,18 @@ function getGuestToken() {
   } catch { return 'g' + Date.now(); }
 }
 
-const callGuest = async (payload) => {
-  const { data, error } = await supabase.functions.invoke('ww-guest', { body: payload });
-  if (error) {
-    // Lỗi có body JSON -> lấy message thật
-    let msg = error.message;
-    try { const j = await error.context?.json?.(); if (j?.error) msg = j.error; } catch { /* noop */ }
-    return { error: msg };
-  }
+// Khách gọi thẳng RPC (security definer) — không cần Edge Function.
+const callGuest = async ({ action, code, guestToken, guestName, ready }) => {
+  const map = {
+    join:    ['ww_guest_join',    { p_code: code, p_token: guestToken, p_name: guestName || '' }],
+    ready:   ['ww_guest_ready',   { p_code: code, p_token: guestToken, p_ready: !!ready }],
+    my_role: ['ww_guest_my_role', { p_code: code, p_token: guestToken }],
+    ack:     ['ww_guest_ack',     { p_code: code, p_token: guestToken }],
+    leave:   ['ww_guest_leave',   { p_code: code, p_token: guestToken }],
+  }[action];
+  if (!map) return { error: 'Hành động không hợp lệ' };
+  const { data, error } = await supabase.rpc(map[0], map[1]);
+  if (error) return { error: error.message };
   if (data?.error) return { error: data.error };
   return { data };
 };
