@@ -7,7 +7,7 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, MessageCircle, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -79,7 +79,6 @@ const MarketingDataPage = () => {
   const [detail, setDetail] = useState(null);    // khách đang mở console gọi/chăm sóc
   const [importOpen, setImportOpen] = useState(false);
   const [getflyOpen, setGetflyOpen] = useState(false);
-  const [msgOpen, setMsgOpen] = useState(false);   // Kéo Messenger
   const [chip, setChip] = useState('all');
   const [page, setPage] = useState(1);
   const [teleStaff, setTeleStaff] = useState([]);       // danh sách telesale để phân công
@@ -261,7 +260,6 @@ const MarketingDataPage = () => {
             <button onClick={() => setReportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-amber-300 text-amber-700 font-semibold text-sm hover:bg-amber-50"><FileText className="w-4 h-4" /> Báo cáo ngày</button>
             {canAssign && <button onClick={divideTele} disabled={dividing} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 disabled:opacity-50"><Users className="w-4 h-4" /> {dividing ? 'Đang chia…' : 'Chia đều'}</button>}
             {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
-            {['admin', 'marketing', 'truc_page'].some(r => roles.includes(r)) && <button onClick={() => setMsgOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-sky-200 text-sky-700 font-semibold text-sm hover:bg-sky-50"><MessageCircle className="w-4 h-4" /> Kéo Messenger</button>}
             {['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)) && <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>}
             <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
           </div>
@@ -449,7 +447,7 @@ const MarketingDataPage = () => {
         </div>
       )}
 
-      {canWrite && !detail && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && !msgOpen && (
+      {canWrite && !detail && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
         <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
       )}
 
@@ -504,7 +502,6 @@ const MarketingDataPage = () => {
       {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
-      {msgOpen && <MessengerSyncModal onClose={() => setMsgOpen(false)} onDone={loadData} />}
     </div>
   );
 };
@@ -539,22 +536,6 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     });
     return lines.join('\n');
   })();
-
-  // ----- Messenger: hội thoại fanpage khớp với khách này (theo data_id hoặc SĐT) -----
-  const [fbMsgs, setFbMsgs] = useState(null);   // null = đang tải
-  const loadFb = useCallback(async () => {
-    try {
-      const ors = [`data_id.eq.${row.id}`];
-      if (row.phone) ors.push(`phone.eq.${row.phone}`);
-      const { data: convs } = await supabase.from('fb_conversations').select('conv_key').or(ors.join(','));
-      if (!convs?.length) { setFbMsgs([]); return; }
-      const { data: msgs } = await supabase.from('fb_messages').select('*')
-        .in('conv_key', convs.map(c => c.conv_key)).order('created_time', { ascending: true }).limit(500);
-      setFbMsgs(msgs || []);
-    } catch { setFbMsgs([]); }
-  }, [row.id, row.phone]);
-  useEffect(() => { loadFb(); }, [loadFb]);
-  useRealtimeReload('fb_messages', loadFb);
 
   // ----- thông tin -----
   const [info, setInfo] = useState({
@@ -630,7 +611,7 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
 
   const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
   const st = APPT_STAGE(appt);
-  const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'fb', label: 'Messenger', icon: MessageCircle, n: fbMsgs?.length ?? 0 }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
+  const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
 
   return (
     <>
@@ -693,28 +674,6 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 </div>
               )}
               <Timeline items={calls} loading={loadingActs} me={me} onDelete={delAct} kind="call" />
-            </div>
-          )}
-
-          {/* ---- MESSENGER (hội thoại fanpage, realtime) ---- */}
-          {tab === 'fb' && (
-            <div className="space-y-1.5">
-              {fbMsgs === null ? <div className="text-center py-8 text-slate-300 text-sm">Đang tải hội thoại…</div>
-                : fbMsgs.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400 text-[13px] leading-relaxed">
-                    Chưa có hội thoại Messenger nào khớp với khách này.<br />
-                    <span className="text-slate-300 text-[12px]">Hệ thống tự ghép khi quét được SĐT khách trong nội dung chat của fanpage.</span>
-                  </div>
-                ) : (
-                  fbMsgs.map(m => (
-                    <div key={m.id} className={`flex ${m.is_page ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[82%] rounded-2xl px-3 py-2 text-[13px] leading-snug break-words ${m.is_page ? 'bg-teal-600 text-white rounded-br-md' : 'bg-slate-100 text-slate-700 rounded-bl-md'}`}>
-                        {m.text || <i className="opacity-70">[hình ảnh / đính kèm]</i>}
-                        <div className={`text-[9.5px] mt-1 ${m.is_page ? 'text-white/70' : 'text-slate-400'}`}>{m.is_page ? 'Page' : (m.from_name || 'Khách')} · {fmtDT(m.created_time)}</div>
-                      </div>
-                    </div>
-                  ))
-                )}
             </div>
           )}
 
@@ -1326,86 +1285,6 @@ const GetflyModal = ({ onClose, onDone }) => {
             </div>
           ))}
         </div>
-      )}
-
-      <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
-    </Modal>
-  );
-};
-
-// ================= Kéo hội thoại Messenger =================
-const MessengerSyncModal = ({ onClose, onDone }) => {
-  const [busy, setBusy] = useState('');
-  const [probe, setProbe] = useState(null);
-  const [result, setResult] = useState(null);
-
-  const doProbe = async () => {
-    setBusy('probe'); setProbe(null); setResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('fb-messenger-sync', { body: { probe: true } });
-      if (error) throw new Error(error.message);
-      if (!data?.ok) throw new Error(data?.error || 'Lỗi Messenger');
-      setProbe(data);
-      const bad = (data.pages || []).find(p => p.error);
-      if (bad) toast.error(`Page "${bad.page}": ${bad.error}`, { duration: 9000 });
-      else toast.success('Kết nối OK — đọc được hội thoại');
-    } catch (e) { toast.error('Messenger: ' + e.message, { duration: 9000 }); }
-    setBusy('');
-  };
-
-  const doSync = async () => {
-    if (!confirm('Kéo TOÀN BỘ hội thoại Messenger của các fanpage về? Hệ thống tự quét số điện thoại trong tin nhắn và gán vào Data khách hàng theo SĐT. Nhiều hội thoại có thể mất vài phút — cứ để chạy.')) return;
-    setBusy('sync'); setResult(null);
-    try {
-      // Kéo tới khi HẾT SẠCH: function trả next (điểm dừng) thì gọi tiếp từ đó.
-      // Bị Facebook giới hạn (throttled) thì CHỜ rồi kéo tiếp chứ không bỏ cuộc.
-      let resume = null, C = 0, M = 0, L = 0, F = 0, S = 0, round = 0, waits = 0;
-      for (;;) {
-        round++;
-        toast.loading(`Đang kéo Messenger — đợt ${round} (mới ${C} · bỏ qua ${S} đã có)…`, { id: 'fb-sync' });
-        const { data, error } = await supabase.functions.invoke('fb-messenger-sync', { body: resume ? { resume } : {} });
-        if (error) throw new Error(error.message);
-        if (!data?.ok) throw new Error(data?.error || 'Lỗi Messenger');
-        C += data.conversations || 0; M += data.messages || 0; L += data.linked_phone || 0; F += data.failed || 0; S += data.skipped || 0;
-        setResult({ conversations: C, messages: M, linked_phone: L, failed: F, skipped: S });
-        if (data.done || !data.next) break;   // hết sạch
-        resume = data.next;
-        if (data.throttled) {
-          waits++;
-          if (waits > 20) { toast.error('Facebook đang giới hạn gắt — nghỉ 30–60 phút rồi bấm "Kéo về" lại, hệ thống sẽ tự kéo tiếp từ chỗ dừng.', { id: 'fb-sync', duration: 15000 }); setBusy(''); return; }
-          toast.loading(`Facebook giới hạn tạm thời — chờ 30s rồi kéo tiếp (đã có ${C} hội thoại mới)…`, { id: 'fb-sync' });
-          await new Promise(r => setTimeout(r, 30000));
-        }
-        if (round > 120) break;               // chặn vòng lặp vô tận
-      }
-      toast.success(`Đã kéo HẾT: ${C} hội thoại mới · ${M} tin · gán SĐT ${L} khách · bỏ qua ${S} đã đồng bộ${F ? ` · lỗi ${F}` : ''}`, { id: 'fb-sync', duration: 12000 });
-      onDone?.();
-    } catch (e) {
-      toast.error('Messenger: ' + e.message + '. Đã kéo được một phần — bấm "Kéo về" lại để tiếp tục từ chỗ dừng.', { id: 'fb-sync', duration: 12000 });
-    }
-    setBusy('');
-  };
-
-  return (
-    <Modal title="Kéo hội thoại Messenger" onClose={onClose}>
-      <p className="text-[12px] text-slate-500 mb-3">Kéo toàn bộ hội thoại Messenger của các fanpage về CRM. Hệ thống <b>tự quét số điện thoại</b> trong nội dung chat và <b>gán vào Data khách hàng</b> theo SĐT. Mỗi khách có tab <b>Messenger</b> xem realtime. Nên bấm <b>Kiểm tra kết nối</b> trước.</p>
-      <div className="flex gap-2 flex-wrap">
-        <button type="button" onClick={doProbe} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">{busy === 'probe' ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}</button>
-        <button type="button" onClick={doSync} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-50"><Download className="w-4 h-4" /> {busy === 'sync' ? 'Đang kéo…' : 'Kéo về'}</button>
-      </div>
-
-      {probe && (
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-          {(probe.pages || []).map((p, i) => (
-            <div key={i} className="text-[12px] border-b border-slate-100 pb-2 last:border-0 last:pb-0">
-              <div className="font-bold text-slate-700">{p.page} {p.error ? <span className="text-rose-500 font-normal">· {p.error}</span> : <span className="text-teal-600 font-normal">· {p.conversations} hội thoại</span>}</div>
-              {(p.sample || []).map((s, j) => <div key={j} className="text-slate-500 mt-0.5 truncate"><b className="text-slate-600">{s.from}:</b> {s.text || '[đính kèm]'}</div>)}
-            </div>
-          ))}
-        </div>
-      )}
-      {result && (
-        <div className="mt-3 text-sm text-sky-700 font-semibold">Đã kéo {result.conversations} hội thoại · {result.messages} tin nhắn · gán SĐT {result.linked_phone} khách{result.failed ? ` · lỗi ${result.failed}` : ''}.</div>
       )}
 
       <div className="flex justify-end mt-4"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Đóng</button></div>
