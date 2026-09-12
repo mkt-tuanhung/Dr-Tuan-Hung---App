@@ -69,7 +69,7 @@ const KhachCocPage = ({ isNested = false }) => {
   const [bongForm, setBongForm] = useState({ notes: '' });
   const [refundForm, setRefundForm] = useState({ refund_amount: '', refund_date: '', notes: '' });
   const [surgeryForm, setSurgeryForm] = useState({
-    expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '',
+    expected_surgery_date: '', surgery_time: '', revenue: '', upsale_revenue: '', service: '',
     service_group: 'Tiểu phẫu', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
   });
 
@@ -223,6 +223,7 @@ const KhachCocPage = ({ isNested = false }) => {
       .update({
         status: 'phau_thuat',
         surgery_date: surgeryForm.expected_surgery_date,
+        surgery_time: surgeryForm.surgery_time || null,
         expected_surgery_date: surgeryForm.expected_surgery_date,
         revenue: surgeryForm.revenue,
         upsale_revenue: surgeryForm.upsale_revenue || 0,
@@ -249,6 +250,7 @@ const KhachCocPage = ({ isNested = false }) => {
     setSelectedApp(app);
     setSurgeryForm({
       expected_surgery_date: app.expected_surgery_date || new Date().toISOString().split('T')[0],
+      surgery_time: app.surgery_time || '',
       revenue: app.deposit_amount || '', upsale_revenue: '', service: app.service || '',
       service_group: app.service_group || 'Tiểu phẫu',
       surgery_type: app.surgery_type || 'Tiểu phẫu',
@@ -551,8 +553,11 @@ const KhachCocPage = ({ isNested = false }) => {
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
-                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="block text-sm font-semibold mb-2">Ngày &amp; giờ phẫu thuật</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                    <input type="time" value={surgeryForm.surgery_time} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" title="Giờ phẫu thuật (nếu có)" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>

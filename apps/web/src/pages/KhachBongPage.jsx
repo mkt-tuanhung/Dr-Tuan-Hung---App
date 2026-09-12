@@ -45,7 +45,7 @@ const KhachBongPage = ({ isNested = false }) => {
   // Forms
   const [careForm, setCareForm] = useState({ care_status: 'Đang chăm sóc', care_notes: '' });
   const [revertForm, setRevertForm] = useState({ appointment_date: '', appointment_time: '09:00', notes: '' });
-  const [depositForm, setDepositForm] = useState({ deposit_amount: '', deposit_date: '', expected_surgery_date: '', service: '', notes: '' });
+  const [depositForm, setDepositForm] = useState({ deposit_amount: '', deposit_date: '', expected_surgery_date: '', surgery_time: '', service: '', notes: '' });
   const [surgeryForm, setSurgeryForm] = useState({
     expected_surgery_date: '', revenue: '', upsale_revenue: '', service: '',
     service_group: 'Tiểu phẫu', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới'
@@ -157,6 +157,7 @@ const KhachBongPage = ({ isNested = false }) => {
         deposit_date: depositForm.deposit_date,
         appointment_date: depositForm.deposit_date,
         expected_surgery_date: depositForm.expected_surgery_date || null,
+        surgery_time: depositForm.surgery_time || null,
         service: depositForm.service || selectedApp.service || null,
         notes: (selectedApp.notes || '') + `\n[${new Date().toLocaleDateString('vi-VN')}] [Chốt cọc] ${amount.toLocaleString('vi-VN')}đ` + (depositForm.notes ? ` — ${depositForm.notes}` : ''),
       }).eq('id', selectedApp.id);
@@ -171,7 +172,7 @@ const KhachBongPage = ({ isNested = false }) => {
     setSelectedApp(app);
     setDepositForm({
       deposit_amount: '', deposit_date: new Date().toISOString().split('T')[0],
-      expected_surgery_date: app.expected_surgery_date || '', service: app.service || '', notes: '',
+      expected_surgery_date: app.expected_surgery_date || '', surgery_time: app.surgery_time || '', service: app.service || '', notes: '',
     });
     setShowDepositModal(true);
   };
@@ -496,8 +497,11 @@ const KhachBongPage = ({ isNested = false }) => {
                   <input type="text" value={depositForm.service} onChange={e => setDepositForm({ ...depositForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Nâng mũi..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày dự kiến PT (tuỳ chọn)</label>
-                  <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                  <label className="block text-sm font-semibold mb-2">Ngày &amp; giờ dự kiến PT (tuỳ chọn)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                    <input type="time" value={depositForm.surgery_time} onChange={e => setDepositForm({ ...depositForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" title="Giờ dự kiến PT" />
+                  </div>
                 </div>
               </div>
               <div>
