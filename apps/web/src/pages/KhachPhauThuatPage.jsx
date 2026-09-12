@@ -86,10 +86,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments,inventory_transactions,inventory_items', loadData);
 
-  const openModal = (app) => {
+  const openModal = (app, initialTab = 'phu_mo') => {
     setSelectedApp(app);
     setForm({
-      activeTab: 'phu_mo',
+      activeTab: initialTab,
       bac_si_id: app.bac_si_id || '',
       phu_mo_1_id: app.phu_mo_1_id || '',
       phu_mo_2_id: app.phu_mo_2_id || '',
@@ -356,7 +356,15 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                     <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-purple-300 transition-colors">
                       <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
                         <div>
-                          <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
+                            {isAdmin && (
+                              <button onClick={() => openModal(app, 'lich_mo')} title="Sửa ngày & giờ mổ"
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg px-2 py-1 transition-colors">
+                                <Edit className="w-3 h-3" /> Sửa lịch
+                              </button>
+                            )}
+                          </div>
                           <div className="text-slate-500 text-sm mt-0.5">{app.service}</div>
                           {app.surgery_time && (
                             <div className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">
