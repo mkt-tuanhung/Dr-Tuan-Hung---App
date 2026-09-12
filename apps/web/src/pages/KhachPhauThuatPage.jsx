@@ -44,8 +44,11 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     bac_si_id: '',
     phu_mo_1_id: '', phu_mo_2_id: '', phu_mo_3_id: '', surgery_notes: '',
     truc_dem_id: '', truc_dem_id_2: '', truc_dem_notes: '',
-    hau_phau_id: ''
+    hau_phau_id: '',
+    surgery_date: '', surgery_time: ''
   });
+
+  const isAdmin = profile?.role === 'admin';
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -95,7 +98,9 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       truc_dem_id: app.truc_dem_id || '',
       truc_dem_id_2: app.truc_dem_id_2 || '',
       truc_dem_notes: app.truc_dem_notes || '',
-      hau_phau_id: app.hau_phau_id || ''
+      hau_phau_id: app.hau_phau_id || '',
+      surgery_date: app.surgery_date ? String(app.surgery_date).slice(0, 10) : '',
+      surgery_time: app.surgery_time || ''
     });
     setShowNurseModal(true);
   };
@@ -103,18 +108,25 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const payload = {
+      bac_si_id: form.bac_si_id || null,
+      phu_mo_1_id: form.phu_mo_1_id || null,
+      phu_mo_2_id: form.phu_mo_2_id || null,
+      phu_mo_3_id: form.phu_mo_3_id || null,
+      surgery_notes: form.surgery_notes,
+      truc_dem_id: form.truc_dem_id || null,
+      truc_dem_id_2: form.truc_dem_id_2 || null,
+      truc_dem_notes: form.truc_dem_notes,
+      hau_phau_id: form.hau_phau_id || null
+    };
+    // Chỉ admin được đổi NGÀY & GIỜ mổ
+    if (isAdmin) {
+      if (!form.surgery_date) { toast.error('Vui lòng chọn ngày mổ'); setSaving(false); return; }
+      payload.surgery_date = form.surgery_date;
+      payload.surgery_time = form.surgery_time || null;
+    }
     const { error } = await supabase.from('customer_appointments')
-      .update({
-        bac_si_id: form.bac_si_id || null,
-        phu_mo_1_id: form.phu_mo_1_id || null,
-        phu_mo_2_id: form.phu_mo_2_id || null,
-        phu_mo_3_id: form.phu_mo_3_id || null,
-        surgery_notes: form.surgery_notes,
-        truc_dem_id: form.truc_dem_id || null,
-        truc_dem_id_2: form.truc_dem_id_2 || null,
-        truc_dem_notes: form.truc_dem_notes,
-        hau_phau_id: form.hau_phau_id || null
-      }).eq('id', selectedApp.id);
+      .update(payload).eq('id', selectedApp.id);
 
     if (error) toast.error(error.message);
     else {
@@ -346,6 +358,11 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         <div>
                           <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
                           <div className="text-slate-500 text-sm mt-0.5">{app.service}</div>
+                          {app.surgery_time && (
+                            <div className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">
+                              <Clock className="w-3 h-3" /> {app.surgery_time}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="text-xs text-slate-500 mb-0.5">Doanh thu</div>
@@ -452,6 +469,9 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               <button type="button" onClick={() => setForm({...form, activeTab: 'phu_mo'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'phu_mo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Phụ mổ</button>
               <button type="button" onClick={() => setForm({...form, activeTab: 'truc_dem'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'truc_dem' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Trực đêm</button>
               <button type="button" onClick={() => setForm({...form, activeTab: 'hau_phau'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'hau_phau' ? 'border-teal-600 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Chăm hậu phẫu</button>
+              {isAdmin && (
+                <button type="button" onClick={() => setForm({...form, activeTab: 'lich_mo'})} className={`px-4 py-3 font-semibold text-sm border-b-2 whitespace-nowrap ${form.activeTab === 'lich_mo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Ngày giờ mổ</button>
+              )}
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
@@ -519,6 +539,22 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                     <option value="">-- Trống --</option>
                     {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                   </select>
+                </div>
+              )}
+              {form.activeTab === 'lich_mo' && isAdmin && (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2 rounded-xl bg-purple-50 border border-purple-100 px-3 py-2 text-xs text-purple-700">
+                    <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>Chỉ quản trị viên được đổi ngày &amp; giờ mổ. Đổi ngày sẽ tự chuyển ca sang nhóm ngày mới.</span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Ngày mổ</label>
+                    <input type="date" value={form.surgery_date} onChange={e => setForm({...form, surgery_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Giờ mổ <span className="text-slate-400 font-normal">(nếu có)</span></label>
+                    <input type="time" value={form.surgery_time} onChange={e => setForm({...form, surgery_time: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500" />
+                  </div>
                 </div>
               )}
             </div>
