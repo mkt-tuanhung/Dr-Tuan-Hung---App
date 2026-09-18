@@ -384,7 +384,9 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         if (error) throw error;
       }
       if (inserts.length > 0) {
-        const { error } = await supabase.from('attendance').insert(inserts);
+        // Upsert theo (staff_id, date) để không lỗi trùng khóa khi ô chưa nạp kịp
+        // bản ghi đã tồn tại (VD nhân sự vừa tự check-in).
+        const { error } = await supabase.from('attendance').upsert(inserts, { onConflict: 'staff_id,date' });
         if (error) throw error;
       }
       
@@ -417,7 +419,11 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         const { error } = await supabase.from('attendance').update(data).eq('id', editModal.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('attendance').insert(data);
+        // Upsert theo (staff_id, date): nếu nhân sự đã có bản ghi hôm nay (VD tự
+        // check-in Face) mà state trên trang chưa nạp kịp -> tránh lỗi trùng khóa
+        // "duplicate key" khiến không chấm công được; sẽ cập nhật đúng bản ghi đó.
+        const { error } = await supabase.from('attendance')
+          .upsert(data, { onConflict: 'staff_id,date' });
         if (error) throw error;
       }
       toast.success('Đã lưu chấm công');
