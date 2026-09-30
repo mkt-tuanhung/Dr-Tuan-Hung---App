@@ -223,16 +223,10 @@ Deno.serve(async (req) => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: tgChat, text: cap }),
       }).catch(() => {});
-      // Nhìn ẢNH check-in -> Gemini "soi" 1 câu trêu yêu dễ thương (nền; lỗi -> bỏ qua)
-      const genFunny = async (blob: Blob): Promise<string> => {
-        const gkey = Deno.env.get('GEMINI_API_KEY');
-        if (!gkey) return '';
-        try {
-          const buf = new Uint8Array(await blob.arrayBuffer());
-          let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-          const b64 = btoa(bin);
-          const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
-          const prompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
+      // Nhìn ẢNH check-in -> AI "soi" 1 câu trêu yêu dễ thương (nền; lỗi -> bỏ qua).
+      // Ưu tiên Gemini; nếu Gemini lỗi/không có key -> fallback sang beeknoee.
+      const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
+      const funnyPrompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
 Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 24 từ), giọng trêu yêu dễ thương, quan tâm, gọi thân mật "bé".
 Hãy QUAN SÁT ẢNH và nhận xét đúng thứ nhìn thấy, chọn 1 ý phù hợp:
 - Nếu ĐEO KHẨU TRANG: nhắc bỏ khẩu trang ra chụp cho rõ mặt xinh. VD: "Bé ơi check-in bỏ khẩu trang ra cho rõ mặt xinh nhé 😷".
@@ -242,6 +236,13 @@ Hãy QUAN SÁT ẢNH và nhận xét đúng thứ nhìn thấy, chọn 1 ý phù
 - Nếu xinh tươi tỉnh táo: khen 1 câu tích cực.
 Giọng luôn THƯƠNG YÊU QUAN TÂM (kiểu phòng khám thẩm mỹ nhắc nhau giữ nhan sắc), KHÔNG miệt thị, KHÔNG chê cân nặng, không tục, không làm ai tổn thương.
 Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
+      const cleanLine = (s: string) => (s || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0].slice(0, 180);
+
+      // AI #1: Gemini vision
+      const genGemini = async (b64: string): Promise<string> => {
+        const gkey = Deno.env.get('GEMINI_API_KEY');
+        if (!gkey) return '';
+        try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gkey}`;
           // Tắt bộ lọc an toàn cho request nội bộ này — nhận xét vẻ ngoài (mụn,
           // thâm mắt...) dễ bị Gemini chặn -> trả rỗng -> mất câu. BLOCK_NONE để không chặn.
@@ -252,16 +253,57 @@ Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc ké
           const res = await fetch(url, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/jpeg', data: b64 } }] }],
+              contents: [{ parts: [{ text: funnyPrompt }, { inlineData: { mimeType: 'image/jpeg', data: b64 } }] }],
               generationConfig: { temperature: 0.95, maxOutputTokens: 80 },
               safetySettings,
             }),
           });
           if (!res.ok) { console.error('genFunny gemini HTTP', res.status, (await res.text()).slice(0, 300)); return ''; }
           const data = await res.json();
-          const t = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0];
-          if (!t) console.error('genFunny empty', JSON.stringify(data?.candidates?.[0]?.finishReason || data));
-          return t.slice(0, 180);
+          const t = cleanLine(data?.candidates?.[0]?.content?.parts?.[0]?.text || '');
+          if (!t) console.error('genFunny gemini empty', JSON.stringify(data?.candidates?.[0]?.finishReason || data));
+          return t;
+        } catch (e) { console.error('genFunny gemini err', (e as Error).message); return ''; }
+      };
+
+      // AI #2 (dự phòng): beeknoee — API tương thích OpenAI (chat/completions + vision).
+      // Key: Edge Secret BEE_API_KEY. Tùy chọn: BEE_BASE_URL, BEE_MODEL.
+      const genBee = async (b64: string): Promise<string> => {
+        const bkey = Deno.env.get('BEE_API_KEY');
+        if (!bkey) return '';
+        try {
+          const base = (Deno.env.get('BEE_BASE_URL') || 'https://platform.beeknoee.com/v1').replace(/\/+$/, '');
+          const model = Deno.env.get('BEE_MODEL') || 'bee/gpt-5.6-terra';
+          const res = await fetch(`${base}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bkey}` },
+            body: JSON.stringify({
+              model, temperature: 0.95, max_tokens: 80,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'text', text: funnyPrompt },
+                  { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } },
+                ],
+              }],
+            }),
+          });
+          if (!res.ok) { console.error('genFunny bee HTTP', res.status, (await res.text()).slice(0, 300)); return ''; }
+          const data = await res.json();
+          const t = cleanLine(data?.choices?.[0]?.message?.content || '');
+          if (!t) console.error('genFunny bee empty', JSON.stringify(data).slice(0, 300));
+          return t;
+        } catch (e) { console.error('genFunny bee err', (e as Error).message); return ''; }
+      };
+
+      const genFunny = async (blob: Blob): Promise<string> => {
+        try {
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+          const b64 = btoa(bin);
+          const t = await genGemini(b64);   // ưu tiên Gemini
+          if (t) return t;
+          return await genBee(b64);          // Gemini lỗi/rỗng -> beeknoee
         } catch (e) { console.error('genFunny err', (e as Error).message); return ''; }
       };
       // Telegram hay từ chối tự tải ảnh từ URL ngoài -> server TỰ TẢI ảnh về rồi
