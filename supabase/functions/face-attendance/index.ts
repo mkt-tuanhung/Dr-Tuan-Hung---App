@@ -273,7 +273,7 @@ Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc ké
         if (!bkey) return '';
         try {
           const base = (Deno.env.get('BEE_BASE_URL') || 'https://platform.beeknoee.com/v1').replace(/\/+$/, '');
-          const model = Deno.env.get('BEE_MODEL') || 'bee/gpt-5.6-terra';
+          const model = Deno.env.get('BEE_MODEL') || 'bee/gpt-5.6-luna';
           const res = await fetch(`${base}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bkey}` },
