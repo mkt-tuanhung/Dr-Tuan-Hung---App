@@ -226,16 +226,31 @@ Deno.serve(async (req) => {
       // Nhìn ẢNH check-in -> AI "soi" 1 câu trêu yêu dễ thương (nền; lỗi -> bỏ qua).
       // Ưu tiên Gemini; nếu Gemini lỗi/không có key -> fallback sang beeknoee.
       const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
+      // Nhiều "hướng" câu khác nhau -> chọn NGẪU NHIÊN mỗi lần cho đỡ lặp, lầy hơn.
+      const STYLES = [
+        'Khen nức nở, khen quá đà lên cho vui (VD: "Ui đẹp dã man, nay có hẹn hò gì đúng không bé 😍").',
+        'Troll kiểu giả vờ KHÔNG nhận xét (VD: "Thôi mình sẽ không nói là tóc bé rối đâu, giữ bí mật 🤐").',
+        'Giám khảo chấm điểm nhan sắc hôm nay x/10 kèm lý do hài (VD: "Nhan sắc hôm nay 8.5/10, trừ điểm vì mặt còn ngái ngủ 😴").',
+        'Khen tích cực làm phấn khởi đầu ngày (VD: "Nay tươi phết, cả phòng khám sáng bừng luôn ✨").',
+        'Trêu nhẹ vẻ buồn ngủ/thiếu ngủ nhưng thương (VD: "Mắt lờ đờ ghê, tối ngủ sớm bé nhé 🌙").',
+        'Bắt 1 chi tiết dễ thương trong ảnh (kính, áo, dây đeo...) rồi trêu (VD: "Cặp kính nay trí thức ghê nha 🤓").',
+        'Chê yêu rồi bẻ lái thành khen (VD: "Nhìn bặm trợn vậy mà cười cái lại xinh, ghét ghê 😆").',
+        'Doạ vui "kẻo sếp Hùng nhắc" nhưng thật ra là khen trá hình.',
+        'Khen bất ngờ, lầy lội, hơi xàm cho vui (VD: "Ok tạm xinh, khen đó, cười tươi lên coi 🙂").',
+        'Giả vờ nghiêm túc rồi quay xe cực lầy ở cuối câu.',
+      ];
+      const style = STYLES[Math.floor(Math.random() * STYLES.length)];
       const funnyPrompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
-Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 24 từ), giọng trêu yêu dễ thương, quan tâm, gọi thân mật "bé".
-Hãy QUAN SÁT ẢNH và nhận xét đúng thứ nhìn thấy, chọn 1 ý phù hợp:
-- Nếu ĐEO KHẨU TRANG: nhắc bỏ khẩu trang ra chụp cho rõ mặt xinh. VD: "Bé ơi check-in bỏ khẩu trang ra cho rõ mặt xinh nhé 😷".
-- Nếu da nhiều MỤN: nhắc chăm sóc da nhẹ nhàng. VD: "Bé ơi mặt hơi nhiều mụn nè, chú ý chăm sóc làn da vào nha 🧴".
-- Nếu QUẦNG THÂM / MẮT MỎI: khuyên ngủ sớm. VD: "Mắt thâm rồi đó, thức đêm ít thôi bé ơi 🌙".
-- Nếu tóc rối / chưa trang điểm / mặt buồn ngủ: trêu yêu, thỉnh thoảng doạ vui "kẻo sếp Hùng nhắc nhé".
-- Nếu xinh tươi tỉnh táo: khen 1 câu tích cực.
-Giọng luôn THƯƠNG YÊU QUAN TÂM (kiểu phòng khám thẩm mỹ nhắc nhau giữ nhan sắc), KHÔNG miệt thị, KHÔNG chê cân nặng, không tục, không làm ai tổn thương.
-Chỉ trả về đúng câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
+Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 24 từ), hài hước, trêu yêu dễ thương, lầy lội một chút, gọi thân mật "bé".
+
+LẦN NÀY HÃY ĐI THEO HƯỚNG: ${style}
+
+QUY TẮC:
+- QUAN SÁT giới tính trong ảnh: NAM thì có thể khen "đẹp trai / bảnh / soái"; NỮ thì khen "xinh / xinh gái / dễ thương". TUYỆT ĐỐI KHÔNG gọi nữ là "đẹp trai" hay nam là "xinh gái". Không chắc thì khen trung tính (tươi tắn, dễ thương).
+- ĐỪNG lần nào cũng nhận xét về "tóc" — mỗi lần chọn một góc KHÁC nhau, sáng tạo, bất ngờ, troll nhẹ.
+- Có thể nhận xét điều nhìn thấy (khẩu trang, mụn, quầng thâm, buồn ngủ, tóc, trang phục...) nhưng theo kiểu vui, không lặp khuôn.
+- Giọng luôn THƯƠNG YÊU QUAN TÂM, KHÔNG miệt thị, KHÔNG chê cân nặng/ngoại hình nặng nề, không tục, không làm ai tổn thương.
+Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
       const cleanLine = (s: string) => (s || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0].slice(0, 180);
 
       // AI #1: Gemini vision
