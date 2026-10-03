@@ -497,11 +497,12 @@ const KhachBongPage = ({ isNested = false }) => {
                   <input type="text" value={depositForm.service} onChange={e => setDepositForm({ ...depositForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Nâng mũi..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày &amp; giờ dự kiến PT (tuỳ chọn)</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
-                    <input type="time" value={depositForm.surgery_time} onChange={e => setDepositForm({ ...depositForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" title="Giờ dự kiến PT" />
-                  </div>
+                  <label className="block text-sm font-semibold mb-2">Ngày dự kiến PT (tuỳ chọn)</label>
+                  <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Giờ dự kiến PT (tuỳ chọn)</label>
+                  <input type="time" value={depositForm.surgery_time} onChange={e => setDepositForm({ ...depositForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
                 </div>
               </div>
               <div>
