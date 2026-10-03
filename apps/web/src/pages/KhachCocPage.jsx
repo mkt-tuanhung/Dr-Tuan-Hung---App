@@ -553,11 +553,12 @@ const KhachCocPage = ({ isNested = false }) => {
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày &amp; giờ phẫu thuật</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
-                    <input type="time" value={surgeryForm.surgery_time} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" title="Giờ phẫu thuật (nếu có)" />
-                  </div>
+                  <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
+                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Giờ phẫu thuật <span className="text-slate-400 font-normal">(nếu có)</span></label>
+                  <input type="time" value={surgeryForm.surgery_time} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
