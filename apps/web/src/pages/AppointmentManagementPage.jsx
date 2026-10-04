@@ -4,11 +4,14 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck, List, BarChart2 } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
+import ResourceCalendar from '@/features/appointments/ResourceCalendar.jsx';
+import AppointmentDrawer from '@/features/appointments/AppointmentDrawer.jsx';
+import { isRecheck } from '@/features/appointments/calendarUtils';
 
 // Style tokens dùng chung cho form lịch hẹn
 const FLD_INP = 'w-full min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[15px] outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
@@ -42,7 +45,9 @@ const AppointmentManagementPage = () => {
   
   // Forms
   const [saving, setSaving] = useState(false);
-  const [activeViewTab, setActiveViewTab] = useState('appointments');
+  // Chế độ xem: 'calendar' (lịch kiểu Ethics BOS) | 'appointments' (danh sách) | 'rechecks' | 'stats'
+  const [activeViewTab, setActiveViewTab] = useState('calendar');
+  const [drawerId, setDrawerId] = useState(null); // lịch đang mở ở ngăn kéo chi tiết
   const [viewNoteApp, setViewNoteApp] = useState(null);
   const [careHistoryApp, setCareHistoryApp] = useState(null);
   const [viewImage, setViewImage] = useState(null);
@@ -454,63 +459,138 @@ const AppointmentManagementPage = () => {
     }
   };
 
+  // Mở form tạo lịch (dùng cho nút + bấm ô trống trên lịch)
+  const canCreateNew = ['telesale', 'sale_offline', 'admin'].includes(profile?.role);
+  const canCreateRecheck = ['dieu_duong', 'admin'].includes(profile?.role);
+  const openCreate = (type, date, time) => {
+    const isRe = type === 'recheck';
+    setCreateForm({
+      appointment_type: isRe ? 'recheck' : 'new',
+      appointment_date: date || today.toISOString().split('T')[0], appointment_time: time || '09:00',
+      customer_name: '', phone: '', service: '', test_status: isRe ? 'Không cần' : 'Chưa xét nghiệm',
+      expected_bill: isRe ? 0 : '', deposit_amount: isRe ? 0 : '', telesale_id: isRe ? null : '', sale_id: '', social_link: '', notes: '',
+      service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: isRe ? 'CSKH' : 'Ads', customer_type: isRe ? 'Cũ' : 'Mới',
+      extra_consult: '', consult_do_now: false,
+    });
+    setShowCreateModal(true);
+  };
+  const createButtons = (
+    <>
+      {canCreateNew && (
+        <button onClick={() => openCreate('new')} className="flex items-center gap-2 px-4 h-10 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm whitespace-nowrap">
+          <Plus className="w-4 h-4" /> Thêm lịch hẹn
+        </button>
+      )}
+      {canCreateRecheck && (
+        <button onClick={() => openCreate('recheck')} className="flex items-center gap-2 px-4 h-10 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors whitespace-nowrap">
+          <Stethoscope className="w-4 h-4 text-violet-500" /> Tái khám
+        </button>
+      )}
+    </>
+  );
+  const listCount = Object.values(groupedByDate).reduce((n, arr) => n + arr.length, 0);
+  const drawerApp = drawerId ? appointments.find(a => a.id === drawerId) || null : null;
+
+  // Cụm nút thao tác DÙNG CHUNG cho thẻ danh sách + ngăn kéo chi tiết (cùng logic quyền)
+  const renderApptActions = (app) => (
+    <>
+                          {app.notes && (isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
+                            <button onClick={() => setViewNoteApp(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
+                              <FileText className="w-4 h-4" /> Tình trạng KH
+                            </button>
+                          )}
+                          {app.care_notes && (
+                            <button onClick={() => setCareHistoryApp(app)} className="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                              <MessageCircle className="w-4 h-4" /> Lịch sử tư vấn
+                            </button>
+                          )}
+                          {profile?.role !== 'sale_offline' && ((app.consult_image_urls || []).length > 0 || app.consult_note) && (
+                            <button onClick={() => setConsultView(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
+                              <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
+                            </button>
+                          )}
+                          {app.status === 'scheduled' && !app.consult_received && ['admin', 'sale_offline', 'telesale'].includes(profile?.role) && (
+                            <button onClick={() => receiveConsult(app)} className="w-full py-2 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
+                              <UserCheck className="w-4 h-4" /> Tiếp nhận tư vấn
+                            </button>
+                          )}
+                          {app.consult_received && app.status === 'scheduled' && (
+                            <div className="w-full py-1.5 text-center text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
+                          )}
+                          <div className="flex items-center gap-2 w-full">
+                            {profile?.role === 'admin' && (
+                              <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm py-2 rounded-xl hover:bg-teal-100 transition-colors">
+                                <Edit className="w-4 h-4" /> Đánh giá
+                              </button>
+                            )}
+                            {(profile?.role === 'admin' || (['telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled')) && (
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Sửa đầy đủ thông tin">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            {canEditCustomer && (
+                              <button onClick={() => openCustEdit(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-colors" title="Sửa tên & SĐT khách">
+                                <User className="w-4 h-4" />
+                              </button>
+                            )}
+                            {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
+                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+    </>
+  );
+  const renderRecheckActions = (app) => (
+    <>
+                            {(isAdmin || isNurse) && (
+                              <button onClick={() => setViewNoteApp(app)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm py-2 rounded-xl hover:bg-blue-100 transition-colors">
+                                <FileText className="w-4 h-4" /> Lịch sử chăm sóc
+                              </button>
+                            )}
+                            {(isAdmin || isNurse) && (
+                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-100 transition-colors" title="Sửa lịch tái khám">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            {(isAdmin || isHeadNurse) && (
+                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+    </>
+  );
+
   return (
     <div className="space-y-6">
-      {/* Header — MOBILE (xanh tối, tràn viền) */}
-      <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
-        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
-        <div className="relative">
-          <h2 className="text-2xl font-bold text-white">Lịch hẹn</h2>
-          <p className="text-white/70 text-sm mt-0.5">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
+      {/* ===== Thanh chế độ xem (Ethics BOS) ===== */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-soft inline-flex max-w-full overflow-x-auto scrollbar-hide self-start">
+          {[
+            { id: 'calendar', label: 'Lịch', icon: CalendarDays },
+            { id: 'appointments', label: `Danh sách (${listCount})`, icon: List },
+            { id: 'rechecks', label: `Tái khám (${recheckAppointments.length})`, icon: Stethoscope },
+            { id: 'stats', label: 'Thống kê', icon: BarChart2 },
+          ].map(t => (
+            <button key={t.id} onClick={() => setActiveViewTab(t.id)}
+              className={`px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+                activeViewTab === t.id ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}>
+              <t.icon className="w-4 h-4" /> {t.label}
+            </button>
+          ))}
         </div>
+        {activeViewTab !== 'calendar' && <div className="hidden lg:flex gap-2">{createButtons}</div>}
       </div>
 
-      {/* Header — DESKTOP */}
-      <div className="hidden lg:flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Lịch hẹn</h2>
-          <p className="text-slate-500 text-sm mt-1">Quản lý và đánh giá khách hàng theo lịch hẹn</p>
-        </div>
-        <div className="flex gap-2">
-          {['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-            <button onClick={() => {
-              setCreateForm({
-                appointment_type: 'new',
-                appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
-                customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', 
-                expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false
-              });
-              setShowCreateModal(true);
-            }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm">
-              <Plus className="w-4 h-4" /> Thêm lịch Tư vấn / PT
-            </button>
-          )}
-          {['dieu_duong', 'admin'].includes(profile?.role) && (
-            <button onClick={() => {
-              setCreateForm({
-                appointment_type: 'recheck',
-                appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00',
-                customer_name: '', phone: '', service: '', test_status: 'Không cần', 
-                expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '',
-                service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false
-              });
-              setShowCreateModal(true);
-            }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
-              <Plus className="w-4 h-4" /> Thêm lịch Tái khám
-            </button>
-          )}
-        </div>
-      </div>
-
-      {!showCreateModal && !showEvalModal && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
+      {!showCreateModal && !showEvalModal && !drawerApp && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
         <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
 
       {/* Nút nổi (+) TÁI KHÁM cho Điều dưỡng trên mobile (desktop đã có nút riêng ở header) */}
-      {!showCreateModal && !showEvalModal && ['dieu_duong', 'admin'].includes(profile?.role) && (
+      {!showCreateModal && !showEvalModal && !drawerApp && ['dieu_duong', 'admin'].includes(profile?.role) && (
         <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: today.toISOString().split('T')[0], appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-2xl shadow-orange-900/40 ring-4 ring-orange-500/20 flex items-center justify-center hover:bg-orange-600 active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
           <Stethoscope className="w-6 h-6" strokeWidth={2.5} />
         </button>
@@ -520,6 +600,20 @@ const AppointmentManagementPage = () => {
         <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : (
         <>
+          {/* ===== LỊCH (Ethics BOS) ===== */}
+          {activeViewTab === 'calendar' && (
+            <ResourceCalendar
+              appointments={appointments}
+              staffList={staffList}
+              selectedId={drawerId}
+              onOpen={(app) => setDrawerId(app.id)}
+              onCreateAt={(canCreateNew || canCreateRecheck) ? (ymd, time) => openCreate(canCreateNew ? 'new' : 'recheck', ymd, time) : undefined}
+              toolbarRight={<div className="hidden lg:flex gap-2">{createButtons}</div>}
+            />
+          )}
+
+          {activeViewTab === 'stats' && (
+            <div className="space-y-6">
           {/* Stats Row — số liệu THÁNG HIỆN TẠI */}
           <div className="flex items-center gap-2">
             <h3 className="text-slate-700 font-bold">Số liệu tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</h3>
@@ -586,33 +680,21 @@ const AppointmentManagementPage = () => {
               </div>
             </div>
           </div>
-
-          {/* View Tabs & Search */}
-          <div className="mt-8 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="bg-white p-1.5 rounded-2xl border border-slate-200 inline-flex shadow-sm">
-              <button 
-                onClick={() => setActiveViewTab('appointments')}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'appointments' ? 'bg-teal-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                <CalendarIcon className="w-4 h-4" /> Lịch hẹn tư vấn / phẫu thuật ({stats.total - recheckAppointments.length})
-              </button>
-              <button 
-                onClick={() => setActiveViewTab('rechecks')}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeViewTab === 'rechecks' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                <Stethoscope className="w-4 h-4" /> Lịch tái khám ({recheckAppointments.length})
-              </button>
             </div>
-            
-            <div className="relative w-full sm:w-80 shrink-0">
+          )}
+
+          {(activeViewTab === 'appointments' || activeViewTab === 'rechecks') && (
+            <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
-                placeholder="Tìm tên KH hoặc số điện thoại..." 
+              <input
+                type="text"
+                placeholder="Tìm tên KH hoặc số điện thoại..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm"
+                className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all shadow-soft"
               />
             </div>
-          </div>
+          )}
 
           {/* Tab Content */}
           {activeViewTab === 'rechecks' ? (
@@ -679,21 +761,7 @@ const AppointmentManagementPage = () => {
                           </div>
 
                           <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
-                            {(isAdmin || isNurse) && (
-                              <button onClick={() => setViewNoteApp(app)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm py-2 rounded-xl hover:bg-blue-100 transition-colors">
-                                <FileText className="w-4 h-4" /> Lịch sử chăm sóc
-                              </button>
-                            )}
-                            {(isAdmin || isNurse) && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-100 transition-colors" title="Sửa lịch tái khám">
-                                <Edit className="w-4 h-4" />
-                              </button>
-                            )}
-                            {(isAdmin || isHeadNurse) && (
-                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
+                            {renderRecheckActions(app)}
                           </div>
                         </div>
                       ))}
@@ -706,7 +774,7 @@ const AppointmentManagementPage = () => {
                 Chưa có lịch tái khám nào.
               </div>
             )
-          ) : (
+          ) : activeViewTab === 'appointments' ? (
             <div className="space-y-6">
               {Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a)).map(dateStr => (
                 <div key={dateStr} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -770,51 +838,7 @@ const AppointmentManagementPage = () => {
                         </div>
 
                         <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex flex-col gap-2 mt-auto">
-                          {app.notes && (isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
-                            <button onClick={() => setViewNoteApp(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
-                              <FileText className="w-4 h-4" /> Tình trạng KH
-                            </button>
-                          )}
-                          {app.care_notes && (
-                            <button onClick={() => setCareHistoryApp(app)} className="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
-                              <MessageCircle className="w-4 h-4" /> Lịch sử tư vấn
-                            </button>
-                          )}
-                          {profile?.role !== 'sale_offline' && ((app.consult_image_urls || []).length > 0 || app.consult_note) && (
-                            <button onClick={() => setConsultView(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
-                              <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
-                            </button>
-                          )}
-                          {app.status === 'scheduled' && !app.consult_received && ['admin', 'sale_offline', 'telesale'].includes(profile?.role) && (
-                            <button onClick={() => receiveConsult(app)} className="w-full py-2 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
-                              <UserCheck className="w-4 h-4" /> Tiếp nhận tư vấn
-                            </button>
-                          )}
-                          {app.consult_received && app.status === 'scheduled' && (
-                            <div className="w-full py-1.5 text-center text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
-                          )}
-                          <div className="flex items-center gap-2 w-full">
-                            {profile?.role === 'admin' && (
-                              <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm py-2 rounded-xl hover:bg-teal-100 transition-colors">
-                                <Edit className="w-4 h-4" /> Đánh giá
-                              </button>
-                            )}
-                            {(profile?.role === 'admin' || (['telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled')) && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Sửa đầy đủ thông tin">
-                                <Edit className="w-4 h-4" />
-                              </button>
-                            )}
-                            {canEditCustomer && (
-                              <button onClick={() => openCustEdit(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-colors" title="Sửa tên & SĐT khách">
-                                <User className="w-4 h-4" />
-                              </button>
-                            )}
-                            {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
-                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
+                          {renderApptActions(app)}
                         </div>
                       </div>
                     ))}
@@ -822,9 +846,19 @@ const AppointmentManagementPage = () => {
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </>
       )}
+
+      {/* Ngăn kéo chi tiết lịch hẹn (bấm khối lịch) — z-[45], dưới các modal z-50+ */}
+      <AppointmentDrawer
+        app={drawerApp}
+        profile={profile}
+        onClose={() => setDrawerId(null)}
+        actions={drawerApp && (isRecheck(drawerApp)
+          ? <div className="flex items-center gap-2">{renderRecheckActions(drawerApp)}</div>
+          : <div className="flex flex-col gap-2">{renderApptActions(drawerApp)}</div>)}
+      />
 
       {/* Modal Thêm Lịch Hẹn Mới */}
       {showCreateModal && (
