@@ -79,7 +79,7 @@ const PayslipViewPage = () => {
 
   const Shell = ({ children }) => (
     <div className="min-h-screen flex items-center justify-center bg-[#F3F9F9] p-4">
-      <div className="e-card p-8 max-w-sm w-full text-center">{children}</div>
+      <div className="e-card p-6 sm:p-8 max-w-sm w-full text-center">{children}</div>
     </div>
   );
 
@@ -133,34 +133,43 @@ const PayslipViewPage = () => {
   if (phase === 'approved' && data) {
     return (
       <div className="min-h-screen bg-[#F3F9F9] py-6 sm:py-10 px-4">
-        <div className="max-w-xl mx-auto space-y-4">
+        <div className="max-w-xl mx-auto space-y-3 lg:space-y-4">
           {/* Đầu phiếu */}
           <div className="flex items-center justify-between gap-3 px-1">
-            <h1 className="text-[22px] sm:text-[26px] font-bold text-slate-900">Phiếu lương <span className="font-semibold text-slate-400">· Tháng {data.m}</span></h1>
+            <h1 className="text-[19px] sm:text-[26px] font-bold text-slate-900 leading-tight sm:leading-normal">Phiếu lương <span className="font-semibold text-slate-400 max-sm:block max-sm:text-[14px] max-sm:mt-0.5">· Tháng {data.m}</span></h1>
             <span className="e-badge e-tone-brand shrink-0"><ShieldCheck /> Bảo mật</span>
           </div>
 
           {/* Thẻ nhân sự */}
-          <div className="e-card p-5 sm:p-6">
-            <div className="flex items-center gap-4">
-              <div className="e-avatar w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-teal-50"><UserRound className="w-8 h-8 sm:w-10 sm:h-10" /></div>
+          <div className="e-card p-4 sm:p-6">
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className="e-avatar w-14 h-14 sm:w-20 sm:h-20 ring-4 ring-teal-50"><UserRound className="w-7 h-7 sm:w-10 sm:h-10" /></div>
               <div className="min-w-0">
-                <div className="text-[19px] sm:text-[22px] font-bold text-slate-900 leading-tight">{data.n}</div>
-                <div className="text-[14px] text-slate-500 mt-1">{data.r}</div>
+                <div className="text-[17px] sm:text-[22px] font-bold text-slate-900 leading-tight">{data.n}</div>
+                <div className="text-[13px] sm:text-[14px] text-slate-500 mt-1">{data.r}</div>
                 {data.bank && <div className="text-[13px] text-slate-400 mt-0.5">{data.bank}</div>}
               </div>
             </div>
           </div>
 
+          {/* Điện thoại: thẻ hero "Thực nhận" ngay dưới thẻ nhân sự (Ethics M13) */}
+          <div className="lg:hidden flex items-center gap-3.5 rounded-2xl bg-teal-50 p-4">
+            <span className="w-12 h-12 rounded-full bg-white text-teal-700 flex items-center justify-center shrink-0 shadow-soft"><Wallet className="w-6 h-6" /></span>
+            <div className="min-w-0">
+              <div className="text-[13.5px] text-teal-900/70">Thực nhận · Tháng {data.m}</div>
+              <div className="text-[26px] font-bold text-teal-800 leading-tight tabular-nums">{data.net}</div>
+            </div>
+          </div>
+
           {/* Các khoản lương */}
-          <div className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white shadow-soft px-5 pt-5 pb-3">
+          <div className="rounded-2xl border border-slate-200/80 bg-white lg:border-teal-100 lg:bg-gradient-to-b lg:from-teal-50/70 lg:to-white shadow-soft px-4 pt-4 pb-1 lg:px-5 lg:pt-5 lg:pb-3">
             <h2 className="text-[17px] font-bold text-teal-700 mb-1">Thu nhập &amp; khấu trừ</h2>
-            <table className="w-full text-[14px]">
+            <table className="w-full text-[14.5px] lg:text-[14px]">
               <tbody>
                 {(data.items || []).map(([label, val], i) => (
                   <tr key={i} className="border-b border-slate-100/80 last:border-0">
-                    <td className="py-2.5 pr-2 text-slate-600">{label}</td>
-                    <td className="py-2.5 text-right font-medium text-slate-800 tabular-nums whitespace-nowrap">{val}</td>
+                    <td className="py-3.5 lg:py-2.5 pr-2 text-slate-600">{label}</td>
+                    <td className="py-3.5 lg:py-2.5 text-right font-semibold lg:font-medium text-slate-800 tabular-nums whitespace-nowrap">{val}</td>
                   </tr>
                 ))}
               </tbody>
@@ -260,7 +269,7 @@ const PayslipViewPage = () => {
             )}
 
           {/* Thực nhận */}
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 to-[#EAF7F7] px-5 py-5 sm:px-6 sm:py-6 shadow-soft">
+          <div className="hidden lg:flex items-center justify-between gap-4 rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 to-[#EAF7F7] px-5 py-5 sm:px-6 sm:py-6 shadow-soft">
             <span className="flex items-center gap-2 text-[18px] sm:text-[20px] font-bold text-teal-900"><Wallet className="w-6 h-6 text-teal-700" /> Thực nhận</span>
             <span className="text-[26px] sm:text-[32px] font-bold text-teal-800 tabular-nums">{data.net}</span>
           </div>
@@ -273,7 +282,7 @@ const PayslipViewPage = () => {
   // Nhập mã bảo mật
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F3F9F9] p-4">
-      <form onSubmit={handleSubmit} className="e-card p-8 max-w-sm w-full">
+      <form onSubmit={handleSubmit} className="e-card p-6 sm:p-8 max-w-sm w-full">
         <div className="w-16 h-16 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center mx-auto mb-4 ring-8 ring-teal-50/50">
           <Lock className="w-8 h-8" />
         </div>

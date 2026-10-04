@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle, ScanFace } from 'lucide-react';
+import { LogIn, LogOut, Clock, CalendarCheck, ChevronLeft, ChevronRight, Plus, X, MapPin, Wifi, AlertTriangle, CheckCircle, ScanFace, FileText } from 'lucide-react';
 // Helper vị trí dùng chung (tách ra lib/geo.js — dùng cho cả chấm công khuôn mặt)
 import { OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS, calcDistance, getLocation, getPublicIP } from '@/lib/geo';
 import FaceCameraScreen from '@/features/faceid/FaceCameraScreen.jsx';
@@ -324,21 +324,21 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
 
   return (
     <div className="space-y-4">
-      <p className="e-page-desc capitalize">{dateStr}</p>
+      <p className="e-page-desc capitalize hidden lg:block">{dateStr}</p>
 
       {/* Chấm công hôm nay — vòng tròn kiểu Face ID (Ethics M05/M06) */}
-      <div className="e-card e-card-pad text-center">
+      <div className="e-card e-card-pad text-center max-lg:pt-5 max-lg:pb-5 max-lg:bg-gradient-to-b max-lg:from-teal-50/70 max-lg:via-white max-lg:to-white">
         <div className="e-caption">Chấm công hôm nay</div>
         <div
-          className="mx-auto mt-4 w-[208px] h-[208px] lg:w-[228px] lg:h-[228px] rounded-full p-2 shadow-[0_16px_40px_rgba(6,123,127,0.22)]"
+          className="mx-auto mt-4 w-[236px] h-[236px] lg:w-[228px] lg:h-[228px] rounded-full p-2 shadow-[0_16px_40px_rgba(6,123,127,0.22)]"
           style={{ background: 'conic-gradient(#12A4A5, #76C2C3, #06686C, #12A4A5)' }}
         >
-          <div className="w-full h-full rounded-full bg-white grid place-content-center">
-            <div className="text-[34px] lg:text-[38px] font-bold tracking-wide text-slate-900 tabular-nums leading-none">{timeStr}</div>
-            <div className="text-[12.5px] text-slate-500 mt-2 capitalize px-6">{dateStr}</div>
+          <div className="w-full h-full rounded-full bg-white grid place-content-center max-lg:shadow-[inset_0_0_0_4px_#fff]">
+            <div className="text-[40px] lg:text-[38px] font-bold tracking-wide text-slate-900 tabular-nums leading-none">{timeStr}</div>
+            <div className="text-[13px] lg:text-[12.5px] text-slate-500 mt-2 capitalize px-6">{dateStr}</div>
           </div>
         </div>
-        <div className="mt-5">
+        <div className="mt-5 max-lg:mt-6">
         {loading ? (
           <div className="w-6 h-6 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin mx-auto" />
         ) : !todayRecord ? (
@@ -352,12 +352,12 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
             )}
             {faceReady ? (
               <button onClick={() => setFaceMode('CHECK_IN')} disabled={saving}
-                className="e-btn e-btn-primary e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98]">
+                className="e-btn e-btn-primary e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
                 <ScanFace /> Check-in bằng khuôn mặt
               </button>
             ) : (
               <button onClick={() => setShowEnroll(true)}
-                className="e-btn e-btn-outline e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98]">
+                className="e-btn e-btn-outline e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
                 <ScanFace /> {faceStatus === undefined ? 'Face ID…' : faceStatus?.status === 'NEEDS_REENROLLMENT' ? 'Đăng ký lại khuôn mặt' : 'Đăng ký Face ID để chấm công'}
               </button>
             )}
@@ -367,19 +367,19 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
           </div>
         ) : !todayRecord.check_out ? (
           <div className="space-y-3">
-            <div className="e-subtle px-4 py-2 inline-flex items-center gap-2 text-[13.5px] text-slate-700">
+            <div className="e-subtle px-4 py-2 inline-flex items-center gap-2 text-[13.5px] text-slate-700 max-lg:h-10 max-lg:rounded-full max-lg:bg-teal-50 max-lg:border-teal-100 max-lg:text-[14px]">
               <Clock className="w-4 h-4 text-teal-600" />
               <span>Vào lúc <strong className="text-slate-900 tabular-nums">{fmtTime(todayRecord.check_in)}</strong></span>
             </div>
             <div className="space-y-2">
               {faceReady ? (
                 <button onClick={() => setFaceMode('CHECK_OUT')} disabled={saving}
-                  className="e-btn e-btn-primary e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98]">
+                  className="e-btn e-btn-primary e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
                   <ScanFace /> Check-out bằng khuôn mặt
                 </button>
               ) : (
                 <button onClick={() => setShowEnroll(true)}
-                  className="e-btn e-btn-outline e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98]">
+                  className="e-btn e-btn-outline e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
                   <ScanFace /> Đăng ký Face ID để check-out
                 </button>
               )}
@@ -388,14 +388,14 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-3">
-              <div className="e-subtle px-5 py-2.5 text-center min-w-[100px]">
+              <div className="e-subtle px-5 py-2.5 text-center min-w-[100px] max-lg:flex-1 max-lg:py-3 max-lg:rounded-2xl max-lg:bg-white max-lg:border-slate-200/80">
                 <div className="text-[12px] text-slate-500">Vào</div>
-                <div className="text-[20px] font-bold text-slate-900 tabular-nums">{fmtTime(todayRecord.check_in)}</div>
+                <div className="text-[24px] lg:text-[20px] font-bold text-slate-900 tabular-nums">{fmtTime(todayRecord.check_in)}</div>
               </div>
               <div className="text-slate-300">→</div>
-              <div className="e-subtle px-5 py-2.5 text-center min-w-[100px]">
+              <div className="e-subtle px-5 py-2.5 text-center min-w-[100px] max-lg:flex-1 max-lg:py-3 max-lg:rounded-2xl max-lg:bg-white max-lg:border-slate-200/80">
                 <div className="text-[12px] text-slate-500">Ra</div>
-                <div className="text-[20px] font-bold text-slate-900 tabular-nums">{fmtTime(todayRecord.check_out)}</div>
+                <div className="text-[24px] lg:text-[20px] font-bold text-slate-900 tabular-nums">{fmtTime(todayRecord.check_out)}</div>
               </div>
             </div>
             <div className="e-badge e-tone-success">
@@ -405,12 +405,12 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
             <div className="flex items-center justify-center gap-2 flex-wrap">
               {faceReady ? (
                 <button onClick={() => setFaceMode('CHECK_OUT')} disabled={saving}
-                  className="e-btn e-btn-secondary e-btn-sm">
+                  className="e-btn e-btn-secondary e-btn-sm max-lg:h-11 max-lg:w-full max-lg:rounded-[14px] max-lg:text-[14.5px]">
                   <ScanFace /> Cập nhật giờ ra (Face)
                 </button>
               ) : (
                 <button onClick={() => setShowEnroll(true)}
-                  className="e-btn e-btn-outline e-btn-sm">
+                  className="e-btn e-btn-outline e-btn-sm max-lg:h-11 max-lg:w-full max-lg:rounded-[14px] max-lg:text-[14.5px]">
                   <ScanFace /> Đăng ký Face ID
                 </button>
               )}
@@ -438,9 +438,9 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
             <ChevronRight className="w-5 h-5 text-teal-600 shrink-0" />
           </button>
         ) : (
-          <div className="e-card-flat flex items-center gap-3 p-3">
-            <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
-              <ScanFace className="w-5 h-5" />
+          <div className="e-card-flat flex items-center gap-3 p-3 max-lg:p-4 max-lg:gap-3.5">
+            <span className="w-10 h-10 max-lg:w-12 max-lg:h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
+              <ScanFace className="w-5 h-5 max-lg:w-6 max-lg:h-6" />
             </span>
             <span className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-slate-900 text-[14px]">Face ID</span>
@@ -452,6 +452,54 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
           </div>
         )
       )}
+
+      {/* Xác thực vị trí — chỉ điện thoại (Ethics M07) */}
+      <div className="lg:hidden rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100">
+        <div className="flex items-center gap-3.5 p-4">
+          <span className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
+            <Wifi className="w-6 h-6" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[12.5px] text-slate-500">Mạng Wi‑Fi văn phòng</span>
+            <span className="block text-[14.5px] font-semibold text-slate-900 mt-0.5 truncate tabular-nums">{todayRecord?.ip_address || 'Kiểm tra khi chấm công'}</span>
+          </span>
+          <span className={`e-badge e-badge-sm shrink-0 ${todayRecord?.ip_address ? 'e-tone-success' : 'e-tone-brand'}`}>{todayRecord?.ip_address ? 'Đã ghi nhận' : 'Tự động'}</span>
+        </div>
+        <div className="flex items-center gap-3.5 p-4">
+          <span className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
+            <MapPin className="w-6 h-6" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[12.5px] text-slate-500">Vị trí GPS</span>
+            <span className="block text-[14.5px] font-semibold text-slate-900 mt-0.5">{todayRecord?.location_status === 'in_office' ? 'Trong văn phòng' : todayRecord?.location_status === 'outside' ? 'Ngoài văn phòng' : 'Ghi nhận khi chấm công'}</span>
+          </span>
+          <span className={`e-badge e-badge-sm shrink-0 ${todayRecord?.location_status === 'in_office' ? 'e-tone-success' : todayRecord?.location_status === 'outside' ? 'e-tone-warning' : 'e-tone-brand'}`}>{todayRecord?.location_status === 'in_office' ? 'Hợp lệ' : todayRecord?.location_status === 'outside' ? 'Cần kiểm tra' : 'Tự động'}</span>
+        </div>
+      </div>
+
+      {/* Tác vụ nhanh — chỉ điện thoại (Ethics M10: tạo yêu cầu) */}
+      <div className="lg:hidden grid grid-cols-2 gap-3">
+        <button
+          onClick={() => setShowLeaveForm(true)}
+          className="flex flex-col items-start gap-2.5 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-soft text-left active:scale-[0.98] active:bg-teal-50 transition"
+        >
+          <span className="w-11 h-11 rounded-full bg-teal-50 text-teal-700 grid place-items-center"><FileText className="w-[22px] h-[22px]" /></span>
+          <span className="min-w-0">
+            <span className="block text-[14.5px] font-semibold text-slate-900">Tạo đơn</span>
+            <span className="block text-[12px] text-slate-500 mt-0.5 leading-snug">Xin nghỉ · đi muộn · về sớm</span>
+          </span>
+        </button>
+        <button
+          onClick={openOtForm}
+          className="flex flex-col items-start gap-2.5 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-soft text-left active:scale-[0.98] active:bg-teal-50 transition"
+        >
+          <span className="w-11 h-11 rounded-full bg-warning-50 text-warning-600 grid place-items-center"><Clock className="w-[22px] h-[22px]" /></span>
+          <span className="min-w-0">
+            <span className="block text-[14.5px] font-semibold text-slate-900">Ghi tăng ca</span>
+            <span className="block text-[12px] text-slate-500 mt-0.5 leading-snug">Khai báo giờ làm thêm</span>
+          </span>
+        </button>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 lg:gap-4">
@@ -481,13 +529,13 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
       {/* Calendar */}
       <div className="e-card overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3.5 border-b border-slate-100">
-          <h3 className="text-[16px] font-[650] text-slate-900">Bảng chấm công</h3>
-          <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white">
-            <button onClick={prevMonth} className="w-7 h-7 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
+          <h3 className="text-[17px] lg:text-[16px] font-bold lg:font-[650] text-slate-900 max-lg:whitespace-nowrap">Bảng chấm công</h3>
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white max-lg:gap-0.5 max-lg:shrink-0">
+            <button onClick={prevMonth} className="w-8 h-8 lg:w-7 lg:h-7 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-[13px] font-semibold text-slate-700 min-w-[96px] text-center tabular-nums">{MONTHS[month-1]} {year}</span>
-            <button onClick={nextMonth} className="w-7 h-7 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
+            <span className="text-[13px] font-semibold text-slate-700 min-w-[96px] text-center tabular-nums max-lg:min-w-[88px] max-lg:whitespace-nowrap">{MONTHS[month-1]} {year}</span>
+            <button onClick={nextMonth} className="w-8 h-8 lg:w-7 lg:h-7 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -550,9 +598,10 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
         const selRec = getAttendanceForDay(selectedDay);
         const isToday = new Date(year, month-1, selectedDay).toDateString() === today.toDateString();
         return (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end sm:items-center justify-center p-4">
-            <div className="e-modal max-w-sm overflow-hidden">
-              <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center p-4 max-lg:p-0">
+            <div className="e-modal max-w-sm overflow-hidden max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88vh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-lg:overflow-y-auto">
+              <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2.5" />
+              <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100 max-lg:px-4 max-lg:pt-3">
                 <div>
                   <h3 className="e-modal-title capitalize">
                     {new Date(year, month-1, selectedDay).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -568,7 +617,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-3 space-y-1">
+              <div className="p-3 space-y-1 max-lg:pb-[calc(16px+env(safe-area-inset-bottom))]">
                 {isToday && !selRec && (
                   <button onClick={() => { setSelectedDay(null); if (faceReady) setFaceMode('CHECK_IN'); else setShowEnroll(true); }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-teal-50 transition-colors text-left">
@@ -623,23 +672,24 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
       })()}
 
       {/* Tăng ca tháng này */}
-      <div className="e-card overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3.5 border-b border-slate-100">
-          <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2">
+      <div className="e-card overflow-hidden max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none max-lg:rounded-none max-lg:overflow-visible">
+        <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3.5 border-b border-slate-100 max-lg:px-0 max-lg:pt-1 max-lg:pb-3 max-lg:border-b-0">
+          <h3 className="text-[18px] lg:text-[16px] font-bold lg:font-[650] text-slate-900 flex items-center gap-2">
             <span className="w-8 h-8 rounded-full grid place-items-center bg-warning-50 text-warning-600"><Clock className="w-4 h-4" /></span>
             Tăng ca {MONTHS[month - 1]}
           </h3>
           <span className="e-badge e-tone-warning tabular-nums">{otTotal} giờ</span>
         </div>
         {otDays.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-[13px]">Chưa có giờ tăng ca trong tháng</div>
+          <div className="text-center py-8 text-slate-400 text-[13px] max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80 max-lg:shadow-soft">Chưa có giờ tăng ca trong tháng</div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="space-y-2.5 lg:space-y-0 lg:divide-y lg:divide-slate-100">
             {otDays.map(a => {
               const d = new Date(a.date);
               const ranges = Array.isArray(a.overtime_ranges) ? a.overtime_ranges : [];
               return (
-                <div key={a.id} className="flex items-start justify-between gap-3 px-4 lg:px-5 py-3">
+                <div key={a.id} className="flex items-start justify-between gap-3 px-4 lg:px-5 py-3 max-lg:relative max-lg:overflow-hidden max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80 max-lg:shadow-soft max-lg:py-3.5 max-lg:pl-5">
+                  <span className="lg:hidden absolute left-0 inset-y-0 w-1 bg-warning-400" />
                   <div className="min-w-0">
                     <div className="text-[14px] font-semibold text-slate-800">{DAYS_SHORT[d.getDay()]} {d.toLocaleDateString('vi-VN')}</div>
                     <div className="text-[12px] text-slate-500 mt-0.5 tabular-nums">
@@ -648,7 +698,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                         : 'Không ghi khoảng giờ'}
                     </div>
                   </div>
-                  <span className="text-[14px] font-bold text-warning-600 shrink-0 tabular-nums">{Number(a.overtime_hours)}h</span>
+                  <span className="text-[14px] font-bold text-warning-600 shrink-0 tabular-nums max-lg:text-[15px] max-lg:px-2.5 max-lg:py-1 max-lg:rounded-full max-lg:bg-warning-50">{Number(a.overtime_hours)}h</span>
                 </div>
               );
             })}
@@ -657,10 +707,10 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
       </div>
 
       {/* Leave requests */}
-      <div className="e-card overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3.5 border-b border-slate-100">
-          <h3 className="text-[16px] font-[650] text-slate-900">Đơn xin phép</h3>
-          <div className="flex items-center gap-2">
+      <div className="e-card overflow-hidden max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none max-lg:rounded-none max-lg:overflow-visible">
+        <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3.5 border-b border-slate-100 max-lg:px-0 max-lg:pt-1 max-lg:pb-3 max-lg:border-b-0">
+          <h3 className="text-[18px] lg:text-[16px] font-bold lg:font-[650] text-slate-900">Đơn xin phép</h3>
+          <div className="hidden lg:flex items-center gap-2">
             <button
               onClick={openOtForm}
               className="e-btn e-btn-secondary e-btn-sm"
@@ -676,10 +726,10 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
           </div>
         </div>
         {leaveRequests.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-[13px]">Chưa có đơn xin phép</div>
+          <div className="text-center py-8 text-slate-400 text-[13px] max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80 max-lg:shadow-soft">Chưa có đơn xin phép</div>
         ) : (
           <div>
-          <div className="grid grid-cols-3 gap-2 p-3 lg:px-5 border-b border-slate-100">
+          <div className="grid grid-cols-3 gap-2 p-3 lg:px-5 border-b border-slate-100 max-lg:p-0 max-lg:mb-3 max-lg:border-b-0">
             <div className="text-center rounded-xl py-2.5 bg-warning-50">
               <div className="text-[18px] font-bold text-warning-600 tabular-nums">{leaveRequests.filter(r => r.status === 'pending').length}</div>
               <div className="text-[11.5px] font-medium text-warning-600">Chờ duyệt</div>
@@ -693,10 +743,13 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
               <div className="text-[11.5px] font-medium text-danger-600">Từ chối</div>
             </div>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="space-y-2.5 lg:space-y-0 lg:divide-y lg:divide-slate-100">
             {leaveRequests.map(r => (
-              <div key={r.id} className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3">
-                <div className="min-w-0">
+              <div key={r.id} className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3 max-lg:relative max-lg:overflow-hidden max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80 max-lg:shadow-soft max-lg:py-3.5 max-lg:gap-3.5">
+                <span className="lg:hidden w-11 h-11 rounded-full bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 grid place-items-center shrink-0">
+                  <CalendarCheck className="w-5 h-5" />
+                </span>
+                <div className="min-w-0 max-lg:flex-1">
                   <div className="text-[14px] font-semibold text-slate-800">
                     {LEAVE_TYPES.find(t => t.value === r.type)?.label}
                   </div>
@@ -715,20 +768,21 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
       </div>
 
       {/* History list */}
-      <div className="e-card overflow-hidden">
-        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100">
-          <h3 className="text-[16px] font-[650] text-slate-900">Lịch sử chi tiết</h3>
+      <div className="e-card overflow-hidden max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none max-lg:rounded-none max-lg:overflow-visible">
+        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 max-lg:px-0 max-lg:pt-1 max-lg:pb-3 max-lg:border-b-0">
+          <h3 className="text-[18px] lg:text-[16px] font-bold lg:font-[650] text-slate-900">Lịch sử chi tiết</h3>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center h-24">
+          <div className="flex items-center justify-center h-24 max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80">
             <div className="w-5 h-5 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
           </div>
         ) : history.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-[13px]">Chưa có dữ liệu chấm công</div>
+          <div className="text-center py-8 text-slate-400 text-[13px] max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80 max-lg:shadow-soft">Chưa có dữ liệu chấm công</div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="space-y-2.5 lg:space-y-0 lg:divide-y lg:divide-slate-100">
             {history.map(r => (
-              <div key={r.id} className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3">
+              <div key={r.id} className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3 max-lg:relative max-lg:overflow-hidden max-lg:rounded-2xl max-lg:bg-white max-lg:border max-lg:border-slate-200/80 max-lg:shadow-soft max-lg:py-3.5 max-lg:pl-5">
+                <span className={`lg:hidden absolute left-0 inset-y-0 w-1 ${STATUS_CONFIG[r.status]?.dot || 'bg-slate-300'}`} />
                 <div className="min-w-0">
                   <div className="text-[14px] font-semibold text-slate-800 capitalize">
                     {new Date(r.date).toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' })}
@@ -754,16 +808,17 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
 
       {/* Overtime form modal */}
       {showOtForm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="e-modal max-w-sm max-h-[90vh] overflow-y-auto">
-            <div className="e-modal-header items-center">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center p-4 max-lg:p-0">
+          <div className="e-modal max-w-sm max-h-[90vh] overflow-y-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88vh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2.5" />
+            <div className="e-modal-header items-center max-lg:px-4 max-lg:pt-3">
               <h3 className="e-modal-title flex items-center gap-2"><Clock className="w-5 h-5 text-warning-500" /> Ghi giờ tăng ca</h3>
               <button onClick={() => setShowOtForm(false)} className="e-icon-btn w-8 h-8 rounded-full"><X className="w-4 h-4" /></button>
             </div>
-            <div className="e-modal-body space-y-4">
+            <div className="e-modal-body space-y-4 max-lg:px-4">
               <div>
                 <label className="e-label">Ngày</label>
-                <input type="date" value={otForm.date} onChange={e => setOtDate(e.target.value)} className="e-input" />
+                <input type="date" value={otForm.date} onChange={e => setOtDate(e.target.value)} className="e-input max-lg:h-12 max-lg:rounded-[14px] max-lg:text-[15px]" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -775,9 +830,9 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                     const h = rangeHours(r.from, r.to);
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <input type="time" value={r.from} onChange={e => setRange(i, 'from', e.target.value)} className="e-input flex-1 min-w-0 px-2 tabular-nums" />
+                        <input type="time" value={r.from} onChange={e => setRange(i, 'from', e.target.value)} className="e-input flex-1 min-w-0 px-2 tabular-nums max-lg:h-11 max-lg:rounded-[12px] max-lg:text-[15px]" />
                         <span className="text-slate-400 text-sm shrink-0">→</span>
-                        <input type="time" value={r.to} onChange={e => setRange(i, 'to', e.target.value)} className="e-input flex-1 min-w-0 px-2 tabular-nums" />
+                        <input type="time" value={r.to} onChange={e => setRange(i, 'to', e.target.value)} className="e-input flex-1 min-w-0 px-2 tabular-nums max-lg:h-11 max-lg:rounded-[12px] max-lg:text-[15px]" />
                         <span className="text-[12.5px] font-semibold text-warning-600 w-12 text-right shrink-0 tabular-nums">{h ? h + 'h' : '—'}</span>
                         {otForm.ranges.length > 1 && <button type="button" onClick={() => removeRange(i)} className="text-slate-300 hover:text-danger-500 shrink-0"><X className="w-4 h-4" /></button>}
                       </div>
@@ -791,9 +846,9 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                 <p className="text-[12px] text-slate-400 mt-1.5">Có thể thêm nhiều khoảng (VD sáng + tối). Tăng ca CN 200%, ngày thường 150%.</p>
               </div>
             </div>
-            <div className="e-modal-footer">
-              <button onClick={() => setShowOtForm(false)} className="e-btn e-btn-secondary flex-1">Hủy</button>
-              <button onClick={handleOtSubmit} disabled={saving} className="e-btn e-btn-primary flex-1">Lưu tăng ca</button>
+            <div className="e-modal-footer max-lg:sticky max-lg:bottom-0 max-lg:px-4 max-lg:bg-white max-lg:rounded-none max-lg:pb-[calc(16px+env(safe-area-inset-bottom))]">
+              <button onClick={() => setShowOtForm(false)} className="e-btn e-btn-secondary flex-1 max-lg:h-12 max-lg:rounded-[14px]">Hủy</button>
+              <button onClick={handleOtSubmit} disabled={saving} className="e-btn e-btn-primary flex-1 max-lg:flex-[2] max-lg:h-12 max-lg:rounded-[14px] max-lg:text-[15.5px]">Lưu tăng ca</button>
             </div>
           </div>
         </div>
@@ -801,21 +856,22 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
 
       {/* Leave form modal */}
       {showLeaveForm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="e-modal max-w-sm max-h-[90vh] overflow-y-auto">
-            <div className="e-modal-header items-center">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center p-4 max-lg:p-0">
+          <div className="e-modal max-w-sm max-h-[90vh] overflow-y-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88vh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2.5" />
+            <div className="e-modal-header items-center max-lg:px-4 max-lg:pt-3">
               <h3 className="e-modal-title">Tạo đơn xin phép</h3>
               <button onClick={() => setShowLeaveForm(false)} className="e-icon-btn w-8 h-8 rounded-full">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="e-modal-body space-y-4">
+            <div className="e-modal-body space-y-4 max-lg:px-4">
               <div>
                 <label className="e-label">Loại đơn</label>
                 <div className="grid grid-cols-2 gap-2">
                   {LEAVE_TYPES.map(t => (
                     <button key={t.value} onClick={() => setLeaveForm(f => ({ ...f, type: t.value }))}
-                      className={`min-h-[40px] py-2 px-3 rounded-xl text-[13px] font-medium border transition text-left ${
+                      className={`min-h-[40px] py-2 px-3 rounded-xl text-[13px] font-medium border transition text-left max-lg:min-h-[48px] max-lg:rounded-[14px] max-lg:text-[14px] ${
                         leaveForm.type === t.value
                           ? 'border-teal-500 bg-teal-50 text-teal-800 font-semibold'
                           : 'border-slate-200 text-slate-600 hover:border-teal-300'
@@ -829,10 +885,10 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
               {leaveForm.type === 'half_day' && (
                 <div>
                   <label className="e-label">Buổi nghỉ</label>
-                  <div className="e-seg w-full">
+                  <div className="e-seg w-full max-lg:p-1.5 max-lg:rounded-[14px]">
                     {[{value:'morning',label:'Buổi sáng'},{value:'afternoon',label:'Buổi chiều'}].map(p => (
                       <button key={p.value} onClick={() => setLeaveForm(f => ({ ...f, half_day_period: p.value }))}
-                        className={`e-seg-item flex-1 ${
+                        className={`e-seg-item flex-1 max-lg:h-10 max-lg:text-[14px] ${
                           leaveForm.half_day_period === p.value
                             ? 'e-seg-active'
                             : 'text-slate-500'
@@ -848,7 +904,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                 <label className="e-label">Ngày</label>
                 <input type="date" value={leaveForm.date}
                   onChange={e => setLeaveForm(f => ({ ...f, date: e.target.value }))}
-                  className="e-input"
+                  className="e-input max-lg:h-12 max-lg:rounded-[14px] max-lg:text-[15px]"
                 />
               </div>
 
@@ -857,17 +913,17 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                 <textarea value={leaveForm.reason}
                   onChange={e => setLeaveForm(f => ({ ...f, reason: e.target.value }))}
                   rows={3} placeholder="Nhập lý do xin phép..."
-                  className="e-textarea resize-none"
+                  className="e-textarea resize-none max-lg:rounded-[14px] max-lg:text-[15px]"
                 />
               </div>
             </div>
-            <div className="e-modal-footer">
+            <div className="e-modal-footer max-lg:sticky max-lg:bottom-0 max-lg:px-4 max-lg:bg-white max-lg:rounded-none max-lg:pb-[calc(16px+env(safe-area-inset-bottom))]">
               <button onClick={() => setShowLeaveForm(false)}
-                className="e-btn e-btn-secondary flex-1">
+                className="e-btn e-btn-secondary flex-1 max-lg:h-12 max-lg:rounded-[14px]">
                 Hủy
               </button>
               <button onClick={handleLeaveSubmit} disabled={saving}
-                className="e-btn e-btn-primary flex-1">
+                className="e-btn e-btn-primary flex-1 max-lg:flex-[2] max-lg:h-12 max-lg:rounded-[14px] max-lg:text-[15.5px]">
                 {saving ? 'Đang gửi...' : 'Gửi đơn'}
               </button>
             </div>

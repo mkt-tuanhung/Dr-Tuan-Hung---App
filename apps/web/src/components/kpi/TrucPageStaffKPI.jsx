@@ -21,10 +21,10 @@ const ACCENTS = {
   violet: 'bg-lavender-50 text-lavender-600', orange: 'bg-peach-50 text-peach-600',
 };
 const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
-<div className="e-metric items-start p-3.5 lg:p-4 gap-3">
+<div className="e-metric flex-col lg:flex-row items-start p-3.5 lg:p-4 gap-2.5 lg:gap-3">
     <span className={`w-10 h-10 lg:w-11 lg:h-11 rounded-full grid place-items-center shrink-0 ${ACCENTS[accent]}`}><Icon className="w-5 h-5" /></span>
-    <div className="min-w-0">
-      <div className="e-metric-label whitespace-normal">{label}</div>
+    <div className="min-w-0 w-full lg:w-auto">
+      <div className="e-metric-label whitespace-normal text-[12.5px] lg:text-[13px]">{label}</div>
       <div className="text-[18px] lg:text-[20px] font-bold text-slate-900 leading-tight tabular-nums break-words mt-0.5">{value}</div>
       {sub && <div className="text-[11.5px] text-slate-400 mt-1">{sub}</div>}
     </div>
@@ -158,24 +158,27 @@ const TrucPageStaffKPI = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header + month nav */}
-      <div className="e-toolbar justify-between pl-4">
-        <div>
+      {/* Header + month nav (điện thoại: chỉ còn bộ chuyển tháng to, dễ bấm) */}
+      <div className="e-toolbar justify-between pl-2.5 lg:pl-4">
+        <div className="hidden lg:block">
           <h2 className="text-[15px] font-semibold text-slate-900">KPI của tôi · Trực page</h2>
           <p className="e-page-desc">{MONTHS[month - 1]} {year}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="e-icon-btn w-9 h-9"><ChevronLeft className="w-4 h-4" /></button>
-          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[104px] text-center tabular-nums">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="e-icon-btn w-9 h-9"><ChevronRight className="w-4 h-4" /></button>
+        <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
+          <button onClick={prevMonth} className="e-icon-btn w-11 h-11 lg:w-9 lg:h-9" aria-label="Tháng trước"><ChevronLeft className="w-5 h-5 lg:w-4 lg:h-4" /></button>
+          <span className="flex flex-col items-center lg:block min-w-[104px] text-center">
+            <span className="block text-[15px] lg:text-[13.5px] font-semibold text-slate-800 tabular-nums">{MONTHS[month - 1]} {year}</span>
+            <span className="lg:hidden text-[12px] text-slate-500 mt-0.5">KPI Trực page</span>
+          </span>
+          <button onClick={nextMonth} className="e-icon-btn w-11 h-11 lg:w-9 lg:h-9" aria-label="Tháng sau"><ChevronRight className="w-5 h-5 lg:w-4 lg:h-4" /></button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="e-seg">
+      <div className="e-seg flex w-full lg:inline-flex lg:w-auto">
         {[['overview', 'Tổng quan KPI'], ['report', 'Báo cáo số']].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`e-seg-item ${tab === id ? 'e-seg-active' : 'text-slate-500'}`}>{label}</button>
+            className={`e-seg-item flex-1 lg:flex-none h-10 lg:h-8 text-[14px] lg:text-[13px] ${tab === id ? 'e-seg-active' : 'text-slate-500'}`}>{label}</button>
         ))}
       </div>
 
@@ -184,29 +187,63 @@ const TrucPageStaffKPI = () => {
           {/* Chỉ tiêu được giao */}
           <div className="e-card overflow-hidden">
             <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100">
-              <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3>
+              <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Target className="w-4 h-4 text-teal-700 lg:text-current" /> KPI tháng được giao</h3>
             </div>
-            <div className="p-5">
+            <div className="p-4 lg:p-5">
               {!kpi || (!kpi.target_phones && !kpi.target_close_rate) ? (
                 <div className="e-subtle e-empty">
                   <AlertCircle className="w-12 h-12 p-3 rounded-full bg-warning-50 text-warning-600 mb-3" />
                   <div className="e-empty-title">Bạn chưa được giao KPI cho tháng này.</div>
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="e-subtle p-4">
-                    <div className="flex items-center justify-between text-sm"><span className="text-slate-500">SĐT xin được</span><span className="font-bold">{phoneProgress}%</span></div>
-                    <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{fmt(phones)}</div>
-                    <div className="text-xs text-slate-400">Mục tiêu: {fmt(kpi.target_phones)}</div>
-                    <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden"><div className="h-2 rounded-full bg-teal-500" style={{ width: `${phoneProgress}%` }} /></div>
+                <>
+                  {/* Điện thoại: vòng KPI to + dòng tiến độ (kiểu Ethics M15) */}
+                  <div className="lg:hidden">
+                    <div className="relative w-[200px] h-[200px] mx-auto mt-1 rounded-full"
+                      style={{ background: `conic-gradient(#3CA7A9 0%, #067B7F ${phoneProgress}%, #EAF4F4 ${phoneProgress}% 100%)` }}>
+                      <div className="absolute inset-[22px] rounded-full bg-white grid place-items-center text-center">
+                        <div>
+                          <div className="text-[44px] font-bold text-slate-900 leading-none tabular-nums">{phoneProgress}%</div>
+                          <div className="text-[13px] text-slate-500 mt-1.5">KPI SĐT xin được</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-5 pt-4 border-t border-slate-100 space-y-4">
+                      <div>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-[13.5px] font-medium text-slate-700">SĐT xin được</span>
+                          <span className="text-[13.5px] font-bold text-teal-700 tabular-nums">{phoneProgress}%</span>
+                        </div>
+                        <div className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums"><b className="font-semibold text-slate-900">{fmt(phones)}</b> / {fmt(kpi.target_phones)}</div>
+                        <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden"><div className="h-2 rounded-full bg-gradient-to-r from-[#067B7F] to-[#3CA7A9]" style={{ width: `${phoneProgress}%` }} /></div>
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-[13.5px] font-medium text-slate-700">Tỉ lệ xin số</span>
+                          <span className="text-[13.5px] font-bold text-teal-700 tabular-nums">{rateProgress}%</span>
+                        </div>
+                        <div className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums"><b className="font-semibold text-slate-900">{rate.toFixed(1)}%</b> / {Number(kpi.target_close_rate || 0).toFixed(1)}%</div>
+                        <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden"><div className="h-2 rounded-full bg-gradient-to-r from-[#067B7F] to-[#3CA7A9]" style={{ width: `${rateProgress}%` }} /></div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="e-subtle p-4">
-                    <div className="flex items-center justify-between text-sm"><span className="text-slate-500">Tỉ lệ xin số</span><span className="font-bold">{rateProgress}%</span></div>
-                    <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{rate.toFixed(1)}%</div>
-                    <div className="text-xs text-slate-400">Mục tiêu: {Number(kpi.target_close_rate || 0).toFixed(1)}%</div>
-                    <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden"><div className="h-2 rounded-full bg-teal-700" style={{ width: `${rateProgress}%` }} /></div>
+
+                  {/* Máy tính: giữ nguyên */}
+                  <div className="hidden lg:grid sm:grid-cols-2 gap-4">
+                    <div className="e-subtle p-4">
+                      <div className="flex items-center justify-between text-sm"><span className="text-slate-500">SĐT xin được</span><span className="font-bold">{phoneProgress}%</span></div>
+                      <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{fmt(phones)}</div>
+                      <div className="text-xs text-slate-400">Mục tiêu: {fmt(kpi.target_phones)}</div>
+                      <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden"><div className="h-2 rounded-full bg-teal-500" style={{ width: `${phoneProgress}%` }} /></div>
+                    </div>
+                    <div className="e-subtle p-4">
+                      <div className="flex items-center justify-between text-sm"><span className="text-slate-500">Tỉ lệ xin số</span><span className="font-bold">{rateProgress}%</span></div>
+                      <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{rate.toFixed(1)}%</div>
+                      <div className="text-xs text-slate-400">Mục tiêu: {Number(kpi.target_close_rate || 0).toFixed(1)}%</div>
+                      <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden"><div className="h-2 rounded-full bg-teal-700" style={{ width: `${rateProgress}%` }} /></div>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -229,42 +266,42 @@ const TrucPageStaffKPI = () => {
         <>
           {/* Form báo cáo ngày */}
           <div className="e-card e-card-pad">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Plus className="w-4 h-4" /> Báo cáo số điện thoại trong ngày</h3>
-              <button onClick={() => { setImportPreview(null); setShowImport(true); }} className="e-btn e-btn-outline e-btn-sm">
+            <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+              <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Plus className="w-4 h-4 text-teal-700 lg:text-current" /> Báo cáo số điện thoại trong ngày</h3>
+              <button onClick={() => { setImportPreview(null); setShowImport(true); }} className="e-btn e-btn-outline e-btn-sm h-11 lg:h-[34px]">
                 <Upload className="w-4 h-4" /> Import nhiều ngày
               </button>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+              <div className="col-span-2 lg:col-span-1">
                 <label className="e-label">Ngày</label>
                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  className="e-input" />
+                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px]" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="e-label">Tổng SĐT xin được</label>
                 <input type="number" min="0" value={form.total_phones} onChange={e => setForm(f => ({ ...f, total_phones: e.target.value }))}
-                  className="e-input" />
+                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="e-label">SĐT quan tâm (tính HH)</label>
                 <input type="number" min="0" value={form.total_interested_phones} onChange={e => setForm(f => ({ ...f, total_interested_phones: e.target.value }))}
-                  className="e-input" />
+                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="e-label">Tổng tin nhắn tiếp nhận</label>
                 <input type="number" min="0" value={form.total_messages} onChange={e => setForm(f => ({ ...f, total_messages: e.target.value }))}
-                  className="e-input" />
+                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="e-label">Tin nhắn spam</label>
                 <input type="number" min="0" value={form.total_spam_messages} onChange={e => setForm(f => ({ ...f, total_spam_messages: e.target.value }))}
-                  className="e-input" />
+                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums" />
               </div>
-              <div>
+              <div className="col-span-2 lg:col-span-1">
                 <label className="e-label">Telesale tiếp nhận số</label>
                 <select value={form.telesale_id} onChange={e => setForm(f => ({ ...f, telesale_id: e.target.value }))}
-                  className="e-input">
+                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px]">
                   <option value="">— Chọn telesale —</option>
                   {telesales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
@@ -272,17 +309,40 @@ const TrucPageStaffKPI = () => {
             </div>
             <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
               <button onClick={saveReport} disabled={saving}
-                className="e-btn e-btn-primary">
+                className="e-btn e-btn-primary w-full lg:w-auto h-12 lg:h-10 text-[15px] lg:text-[14px]">
                 {saving ? 'Đang lưu...' : 'Lưu báo cáo'}
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-2">* Mỗi ngày 1 báo cáo. Lưu lại cùng ngày sẽ ghi đè.</p>
+            <p className="text-xs text-slate-400 mt-2 text-center lg:text-left">* Mỗi ngày 1 báo cáo. Lưu lại cùng ngày sẽ ghi đè.</p>
           </div>
 
           {/* Bảng báo cáo */}
           <div className="e-card overflow-hidden">
             <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900">Báo cáo số theo ngày</h3></div>
-            <div className="overflow-x-auto">
+            {/* Điện thoại: danh sách thẻ */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {reports.length === 0 ? (
+                <div className="text-center py-8 text-[13px] text-slate-400">Chưa có báo cáo nào.</div>
+              ) : reports.map(r => (
+                <div key={r.id} className="px-4 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14.5px] font-semibold text-slate-900 tabular-nums">{r.date}</div>
+                      <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">Telesale nhận: {r.telesale?.full_name || '—'}</div>
+                    </div>
+                    <button onClick={() => editReport(r)} className="w-10 h-10 rounded-xl border border-slate-200 bg-white grid place-items-center text-slate-500 active:bg-teal-50 active:text-teal-700 shrink-0" title="Sửa" aria-label="Sửa"><Pencil className="w-[18px] h-[18px]" /></button>
+                    <button onClick={() => deleteReport(r.id)} className="w-10 h-10 rounded-xl bg-danger-50 grid place-items-center text-danger-600 active:brightness-95 shrink-0" title="Xoá" aria-label="Xoá"><Trash2 className="w-[18px] h-[18px]" /></button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mt-3">
+                    <div className="rounded-xl bg-teal-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-teal-700 tabular-nums leading-tight">{fmt(r.total_phones)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">SĐT</div></div>
+                    <div className="rounded-xl bg-lavender-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-lavender-600 tabular-nums leading-tight">{fmt(r.total_interested_phones)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">Quan tâm</div></div>
+                    <div className="rounded-xl bg-slate-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-slate-800 tabular-nums leading-tight">{fmt(r.total_messages)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">Tin nhắn</div></div>
+                    <div className="rounded-xl bg-slate-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-slate-400 tabular-nums leading-tight">{fmt(r.total_spam_messages)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">Spam</div></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden lg:block overflow-x-auto">
               <table className="e-table whitespace-nowrap">
                 <thead>
                   <tr>
@@ -321,15 +381,16 @@ const TrucPageStaffKPI = () => {
         </>
       )}
 
-      {/* Modal Import báo cáo số */}
+      {/* Modal Import báo cáo số (điện thoại: dạng bottom sheet) */}
       {showImport && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center lg:p-4">
+          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[88vh] lg:max-h-[90vh] rounded-b-none rounded-t-3xl lg:rounded-2xl">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
+            <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3 lg:py-4 border-b border-slate-100 shrink-0">
               <h3 className="e-modal-title">Import báo cáo số điện thoại</h3>
-              <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="e-icon-btn w-8 h-8 rounded-full shrink-0"><X className="w-4 h-4" /></button>
+              <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="e-icon-btn w-10 h-10 lg:w-8 lg:h-8 rounded-full shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-4 lg:p-6 space-y-4 overflow-y-auto">
               <div className="e-subtle p-4 text-[13px] text-slate-600 space-y-2">
                 <div className="font-semibold text-slate-800">Các cột đúng thứ tự (dòng đầu là tiêu đề):</div>
                 <ol className="list-decimal ml-5 space-y-0.5 text-xs">
@@ -340,7 +401,7 @@ const TrucPageStaffKPI = () => {
                   <li><b>so_tin_spam</b> — tin nhắn spam</li>
                 </ol>
                 <div className="text-xs text-slate-400">Trùng ngày sẽ được cập nhật đè (không tạo trùng).</div>
-                <button onClick={() => downloadCsv('mau_bao_cao_so.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 text-teal-700 font-semibold hover:underline">
+                <button onClick={() => downloadCsv('mau_bao_cao_so.csv', IMPORT_TEMPLATE)} className="mt-1 inline-flex items-center gap-1.5 min-h-[40px] lg:min-h-0 text-teal-700 font-semibold hover:underline">
                   <Download className="w-4 h-4" /> Tải file mẫu (.csv)
                 </button>
               </div>
@@ -378,9 +439,9 @@ const TrucPageStaffKPI = () => {
                 </div>
               )}
             </div>
-            <div className="e-modal-footer shrink-0">
-              <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="e-btn e-btn-secondary">Hủy</button>
-              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="e-btn e-btn-primary">
+            <div className="e-modal-footer shrink-0 rounded-b-none lg:rounded-b-2xl px-4 lg:px-5 pb-[calc(16px+env(safe-area-inset-bottom))] lg:pb-4">
+              <button onClick={() => { setShowImport(false); setImportPreview(null); }} className="e-btn e-btn-secondary flex-1 lg:flex-none h-11 lg:h-10">Hủy</button>
+              <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length} className="e-btn e-btn-primary flex-1 lg:flex-none h-11 lg:h-10">
                 {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} ngày`}
               </button>
             </div>

@@ -33,12 +33,12 @@ const ACCENTS = {
 const StatCard = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => {
   const c = ACCENTS[accent] || ACCENTS.emerald;
   return (
-    <div className="e-metric items-start p-3.5 lg:p-4 gap-3">
+    <div className="e-metric flex-col lg:flex-row items-start p-3.5 lg:p-4 gap-2.5 lg:gap-3">
       <span className={`w-10 h-10 lg:w-11 lg:h-11 rounded-full ${c.chip} grid place-items-center shrink-0`}>
         <Icon className="w-5 h-5" />
       </span>
-      <div className="min-w-0">
-        <div className="e-metric-label whitespace-normal">{label}</div>
+      <div className="min-w-0 w-full lg:w-auto">
+        <div className="e-metric-label whitespace-normal text-[12.5px] lg:text-[13px]">{label}</div>
         <div className={`text-[18px] lg:text-[20px] font-bold leading-tight tabular-nums break-words mt-0.5 ${c.value}`}>{value}</div>
         {sub && <div className="text-[11.5px] text-slate-400 mt-1">{sub}</div>}
       </div>
@@ -109,19 +109,22 @@ const SaleOfflineStaffKPI = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header + month nav */}
-      <div className="e-toolbar justify-between pl-4">
-        <div>
+      {/* Header + month nav (điện thoại: chỉ còn bộ chuyển tháng to, dễ bấm) */}
+      <div className="e-toolbar justify-between pl-2.5 lg:pl-4">
+        <div className="hidden lg:block">
           <h2 className="text-[15px] font-semibold text-slate-900">KPI của tôi · Sale Offline</h2>
           <p className="e-page-desc">{MONTHS[month - 1]} {year}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="e-icon-btn w-9 h-9">
-            <ChevronLeft className="w-4 h-4" />
+        <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
+          <button onClick={prevMonth} className="e-icon-btn w-11 h-11 lg:w-9 lg:h-9" aria-label="Tháng trước">
+            <ChevronLeft className="w-5 h-5 lg:w-4 lg:h-4" />
           </button>
-          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[104px] text-center tabular-nums">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="e-icon-btn w-9 h-9">
-            <ChevronRight className="w-4 h-4" />
+          <span className="flex flex-col items-center lg:block min-w-[104px] text-center">
+            <span className="block text-[15px] lg:text-[13.5px] font-semibold text-slate-800 tabular-nums">{MONTHS[month - 1]} {year}</span>
+            <span className="lg:hidden text-[12px] text-slate-500 mt-0.5">KPI Sale Offline</span>
+          </span>
+          <button onClick={nextMonth} className="e-icon-btn w-11 h-11 lg:w-9 lg:h-9" aria-label="Tháng sau">
+            <ChevronRight className="w-5 h-5 lg:w-4 lg:h-4" />
           </button>
         </div>
       </div>
@@ -129,10 +132,10 @@ const SaleOfflineStaffKPI = () => {
       {/* Chỉ tiêu KPI được giao */}
       <div className="e-card overflow-hidden">
         <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100">
-          <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Target className="w-4 h-4" /> Chỉ tiêu KPI được giao</h3>
+          <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Target className="w-4 h-4 text-teal-700 lg:text-current" /> Chỉ tiêu KPI được giao</h3>
           <p className="text-xs text-slate-400 mt-0.5">Mục tiêu thực hiện trong tháng {year}-{String(month).padStart(2, '0')}</p>
         </div>
-        <div className="p-5">
+        <div className="p-4 lg:p-5">
           {!kpi || (!kpi.target_revenue && !kpi.target_close_rate) ? (
             <div className="e-subtle e-empty">
               <div className="e-empty-icon bg-warning-50 text-warning-600">
@@ -142,37 +145,75 @@ const SaleOfflineStaffKPI = () => {
               <div className="e-empty-desc">Vui lòng liên hệ quản lý để được thiết lập chỉ tiêu.</div>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="e-subtle p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">KPI Doanh thu</span>
-                  <span className="font-bold text-slate-800">{revProgress}%</span>
+            <>
+              {/* Điện thoại: vòng KPI to + dòng tiến độ (kiểu Ethics M15) */}
+              <div className="lg:hidden">
+                <div className="relative w-[200px] h-[200px] mx-auto mt-1 rounded-full"
+                  style={{ background: `conic-gradient(#3CA7A9 0%, #067B7F ${revProgress}%, #EAF4F4 ${revProgress}% 100%)` }}>
+                  <div className="absolute inset-[22px] rounded-full bg-white grid place-items-center text-center">
+                    <div>
+                      <div className="text-[44px] font-bold text-slate-900 leading-none tabular-nums">{revProgress}%</div>
+                      <div className="text-[13px] text-slate-500 mt-1.5">KPI Doanh thu</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{fmtM(doanhThu)}</div>
-                <div className="text-xs text-slate-400">Mục tiêu: {fmtM(kpi.target_revenue)}</div>
-                <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden">
-                  <div className="h-2 rounded-full bg-teal-500" style={{ width: `${revProgress}%` }} />
+                <div className="mt-5 pt-4 border-t border-slate-100 space-y-4">
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[13.5px] font-medium text-slate-700">KPI Doanh thu</span>
+                      <span className="text-[13.5px] font-bold text-teal-700 tabular-nums">{revProgress}%</span>
+                    </div>
+                    <div className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums"><b className="font-semibold text-slate-900">{fmtM(doanhThu)}</b> / {fmtM(kpi.target_revenue)}</div>
+                    <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
+                      <div className="h-2 rounded-full bg-gradient-to-r from-[#067B7F] to-[#3CA7A9]" style={{ width: `${revProgress}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[13.5px] font-medium text-slate-700">KPI Tỷ lệ chốt</span>
+                      <span className="text-[13.5px] font-bold text-teal-700 tabular-nums">{rateProgress}%</span>
+                    </div>
+                    <div className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums"><b className="font-semibold text-slate-900">{closeRate.toFixed(1)}%</b> / {Number(kpi.target_close_rate || 0).toFixed(1)}%</div>
+                    <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
+                      <div className="h-2 rounded-full bg-gradient-to-r from-[#067B7F] to-[#3CA7A9]" style={{ width: `${rateProgress}%` }} />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="e-subtle p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">KPI Tỷ lệ chốt</span>
-                  <span className="font-bold text-slate-800">{rateProgress}%</span>
+
+              {/* Máy tính: giữ nguyên */}
+              <div className="hidden lg:grid sm:grid-cols-2 gap-4">
+                <div className="e-subtle p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">KPI Doanh thu</span>
+                    <span className="font-bold text-slate-800">{revProgress}%</span>
+                  </div>
+                  <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{fmtM(doanhThu)}</div>
+                  <div className="text-xs text-slate-400">Mục tiêu: {fmtM(kpi.target_revenue)}</div>
+                  <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden">
+                    <div className="h-2 rounded-full bg-teal-500" style={{ width: `${revProgress}%` }} />
+                  </div>
                 </div>
-                <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{closeRate.toFixed(1)}%</div>
-                <div className="text-xs text-slate-400">Mục tiêu: {Number(kpi.target_close_rate || 0).toFixed(1)}%</div>
-                <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden">
-                  <div className="h-2 rounded-full bg-teal-700" style={{ width: `${rateProgress}%` }} />
+                <div className="e-subtle p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">KPI Tỷ lệ chốt</span>
+                    <span className="font-bold text-slate-800">{rateProgress}%</span>
+                  </div>
+                  <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums">{closeRate.toFixed(1)}%</div>
+                  <div className="text-xs text-slate-400">Mục tiêu: {Number(kpi.target_close_rate || 0).toFixed(1)}%</div>
+                  <div className="w-full bg-white rounded-full h-2 mt-3 overflow-hidden">
+                    <div className="h-2 rounded-full bg-teal-700" style={{ width: `${rateProgress}%` }} />
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
 
       {/* Doanh thu & Hoa hồng */}
       <div>
-        <h3 className="text-[16px] font-[650] text-slate-900 mb-3">Doanh thu & Hoa hồng</h3>
+        <h3 className="text-[18px] lg:text-[16px] font-bold lg:font-[650] text-slate-900 mt-1 lg:mt-0 mb-3">Doanh thu & Hoa hồng</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard icon={CalendarCheck} label="Tổng lịch hẹn" value={fmt(total)}
             sub={`Không tính tái khám · PT: ${cntPT} · Cọc: ${cntCoc} · Bong: ${cntBong}`} accent="blue" />
@@ -182,7 +223,7 @@ const SaleOfflineStaffKPI = () => {
           <StatCard icon={ArrowUpRight} label="Doanh thu Upsale" value={fmtM(upsale)} accent="orange" />
           <StatCard icon={Coins} label="Hoa hồng doanh thu" value={fmtM(hhDoanhThu)} sub={`(Doanh thu − Upsale) × ${dtRate.toFixed(1)}%`} accent="emerald" />
           <StatCard icon={TrendingUp} label="Hoa hồng Upsale" value={fmtM(hhUpsale)} sub="3–5% / khách (theo bậc upsale)" accent="blue" />
-          <div className="col-span-2 e-card e-card-pad bg-teal-50 border-teal-100 flex flex-col justify-center">
+          <div className="col-span-2 -order-1 lg:order-none e-card e-card-pad bg-teal-50 border-teal-100 flex flex-col justify-center">
             <div className="e-caption text-teal-700">Tổng hoa hồng ước tính</div>
             <div className="text-[28px] font-bold text-teal-800 mt-1 tabular-nums">{fmtM(tongHH)}</div>
             <div className="text-[12px] text-slate-600 mt-1">HH doanh thu {fmtM(hhDoanhThu)} + HH upsale {fmtM(hhUpsale)}</div>
@@ -202,7 +243,24 @@ const SaleOfflineStaffKPI = () => {
         <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100">
           <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-teal-600" /> Lịch hẹn khách hàng của tôi</h3>
         </div>
-        <div className="overflow-x-auto">
+        {/* Điện thoại: danh sách thẻ */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {appts.length === 0 ? (
+            <div className="text-center py-8 text-[13px] text-slate-400">Chưa có lịch hẹn khách hàng nào.</div>
+          ) : appts.map((a, i) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-3.5">
+              <span className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 grid place-items-center text-[13px] font-semibold shrink-0 tabular-nums">{i + 1}</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14.5px] font-semibold text-slate-900 truncate">{a.customer_name}</div>
+                <div className="text-[12.5px] text-slate-500 mt-0.5 truncate"><span className="tabular-nums">{a.appointment_date}</span> · {a.notes || '—'}</div>
+              </div>
+              <span className={`e-badge e-badge-sm shrink-0 ${STATUS_COLOR[a.status] || 'e-tone-neutral'}`}>
+                {STATUS_LABEL[a.status] || a.status}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="hidden lg:block overflow-x-auto">
           <table className="e-table">
             <thead>
               <tr>
@@ -239,7 +297,25 @@ const SaleOfflineStaffKPI = () => {
         <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100">
           <h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Wallet className="w-4 h-4 text-teal-600" /> Doanh thu được gán</h3>
         </div>
-        <div className="overflow-x-auto">
+        {/* Điện thoại: danh sách thẻ */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {ptList.length === 0 ? (
+            <div className="text-center py-8 text-[13px] text-slate-400">Chưa có doanh thu được gán.</div>
+          ) : ptList.map((a, i) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-3.5">
+              <span className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 grid place-items-center text-[13px] font-semibold shrink-0 tabular-nums">{i + 1}</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14.5px] font-semibold text-slate-900 truncate">{a.customer_name}</div>
+                <div className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums">{a.surgery_date || a.appointment_date}</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-[14.5px] font-bold text-teal-700 tabular-nums">{fmtM(a.revenue)}</div>
+                <div className="text-[12px] text-peach-600 mt-0.5 tabular-nums">Upsale {fmtM(a.upsale_revenue)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden lg:block overflow-x-auto">
           <table className="e-table">
             <thead>
               <tr>

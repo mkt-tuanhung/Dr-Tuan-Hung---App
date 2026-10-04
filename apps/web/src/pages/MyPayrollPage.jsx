@@ -27,11 +27,11 @@ const StatCard = ({ icon: Icon, label, value, tone = 'slate', sign }) => {
     slate: 'bg-slate-100 text-slate-600',
   };
   return (
-    <div className="e-metric">
-      <div className={`e-metric-icon ${tones[tone]}`}><Icon /></div>
-      <div className="min-w-0">
-        <div className="e-metric-label">{label}</div>
-        <div className="e-metric-value">{sign}{value}</div>
+    <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2.5 max-lg:p-3.5 max-lg:shadow-soft">
+      <div className={`e-metric-icon max-lg:w-9 max-lg:h-9 max-lg:[&>svg]:w-[18px] max-lg:[&>svg]:h-[18px] ${tones[tone]}`}><Icon /></div>
+      <div className="min-w-0 max-lg:w-full">
+        <div className="e-metric-label max-lg:text-[12px]">{label}</div>
+        <div className="e-metric-value max-lg:text-[18px]">{sign}{value}</div>
       </div>
     </div>
   );
@@ -188,20 +188,30 @@ const MyPayrollPage = () => {
         </div>
       </div>
 
+      {/* Điện thoại: chọn kỳ lương dạng ô mint rộng (Ethics M12) */}
+      <div className="lg:hidden flex items-center gap-2 rounded-2xl bg-teal-50 p-1.5">
+        <button onClick={prevMonth} className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-teal-700 active:bg-white transition" aria-label="Tháng trước"><ChevronLeft className="w-5 h-5" /></button>
+        <div className="flex-1 min-w-0 text-center leading-tight">
+          <div className="text-[11.5px] font-medium text-teal-700/70">Kỳ lương</div>
+          <div className="text-[15px] font-semibold text-teal-800 tabular-nums">{MONTHS[month - 1]}/{year}</div>
+        </div>
+        <button onClick={nextMonth} className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-teal-700 active:bg-white transition" aria-label="Tháng sau"><ChevronRight className="w-5 h-5" /></button>
+      </div>
+
       {/* Đầu phiếu + thẻ nhân sự (mockup 09 Ethics) */}
-      <div className="e-card p-5 lg:p-7 space-y-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="e-card p-4 lg:p-7 space-y-0 lg:space-y-5">
+        <div className="hidden lg:flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-[20px] lg:text-[24px] font-bold text-slate-900">Phiếu lương <span className="font-semibold text-slate-400">· {MONTHS[month - 1]}/{year}</span></h2>
           <div className="flex items-center gap-1.5">
             <button onClick={prevMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng trước"><ChevronLeft className="w-4 h-4" /></button>
             <button onClick={nextMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
-        <div className="flex items-center gap-4 lg:gap-6 flex-wrap">
-          <div className="e-avatar w-16 h-16 lg:w-20 lg:h-20 ring-4 ring-teal-50"><UserRound className="w-8 h-8 lg:w-10 lg:h-10" /></div>
+        <div className="flex items-center gap-x-3.5 gap-y-3 lg:gap-6 flex-wrap">
+          <div className="e-avatar w-14 h-14 lg:w-20 lg:h-20 ring-4 ring-teal-50"><UserRound className="w-7 h-7 lg:w-10 lg:h-10" /></div>
           <div className="min-w-0 flex-1">
-            <div className="text-[20px] lg:text-[24px] font-bold text-slate-900 leading-tight">{tp?.full_name}</div>
-            <div className="text-[14px] lg:text-[16px] text-slate-500 mt-1 flex items-center flex-wrap gap-y-1">
+            <div className="text-[17px] lg:text-[24px] font-bold text-slate-900 leading-tight">{tp?.full_name}</div>
+            <div className="text-[13px] lg:text-[16px] text-slate-500 mt-1 flex items-center flex-wrap gap-y-1">
               {ROLE_LABELS[tp?.role] || tp?.role}
               {tp?.employment_status === 'probation' && <span className="e-badge e-badge-sm e-tone-warning ml-2">Thử việc (85%)</span>}
             </div>
@@ -223,15 +233,63 @@ const MyPayrollPage = () => {
         </div>
       ) : (
         <>
+          {/* Điện thoại: thẻ hero "Thực nhận" (Ethics M13) */}
+          <div className="order-1 lg:hidden rounded-2xl bg-teal-50 p-4">
+            <div className="flex items-center gap-3.5">
+              <span className="w-12 h-12 rounded-full bg-white text-teal-700 flex items-center justify-center shrink-0 shadow-soft"><Wallet className="w-6 h-6" /></span>
+              <div className="min-w-0">
+                <div className="text-[13.5px] text-teal-900/70">Thực nhận {MONTHS[month - 1]} {year}</div>
+                <div className="text-[28px] font-bold text-teal-800 leading-tight tabular-nums">{fmtM(detail.net_salary)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Điện thoại: nhóm dòng thu nhập / khấu trừ (m-pay-line) */}
+          <div className="order-3 lg:hidden">
+            <h3 className="text-[18px] font-bold text-slate-900 mt-1 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-600" /> Thu nhập</h3>
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-4 py-1">
+              {incomeRows.map(([label, val, extra], i) => (
+                <div key={i} className="flex items-center justify-between gap-3 min-h-[50px] py-2.5 border-b border-slate-100">
+                  <span className="min-w-0 text-[14.5px] text-slate-700">{label}{extra && <span className="block text-[12px] text-slate-400">{extra}</span>}</span>
+                  <span className="shrink-0 text-[14.5px] font-semibold text-teal-700 tabular-nums whitespace-nowrap">{val}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between gap-3 min-h-[54px]">
+                <span className="text-[14.5px] font-semibold text-slate-900">Tổng thu nhập</span>
+                <span className="text-[17px] font-bold text-teal-700 tabular-nums whitespace-nowrap">{fmtM(detail.gross_income)}</span>
+              </div>
+            </div>
+
+            <h3 className="text-[18px] font-bold text-slate-900 mt-5 mb-3 flex items-center gap-2"><MinusCircle className="w-5 h-5 text-danger-600" /> Khấu trừ</h3>
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-4 py-1">
+              {deductRows.length === 0 ? (
+                <p className="text-[13px] text-slate-400 py-3.5 border-b border-slate-100">Không có khoản khấu trừ.</p>
+              ) : (
+                <div>
+                  {deductRows.map(([label, val], i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 min-h-[50px] py-2.5 border-b border-slate-100">
+                      <span className="min-w-0 text-[14.5px] text-slate-700">{label}</span>
+                      <span className="shrink-0 text-[14.5px] font-semibold text-danger-600 tabular-nums whitespace-nowrap">{val}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3 min-h-[54px]">
+                <span className="text-[14.5px] font-semibold text-slate-900">Tổng khấu trừ</span>
+                <span className="text-[17px] font-bold text-danger-600 tabular-nums whitespace-nowrap">{fmtM(detail.total_deductions)}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Thực nhận nổi bật */}
-          <div className="order-3 grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 to-[#EAF7F7] px-5 py-5 lg:px-7 lg:py-6 shadow-soft">
+          <div className="hidden lg:grid order-3 grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 to-[#EAF7F7] px-5 py-5 lg:px-7 lg:py-6 shadow-soft">
             <div className="text-[18px] lg:text-[22px] font-bold text-teal-900 flex items-center gap-2"><Wallet className="w-6 h-6 text-teal-700" /> Thực nhận {MONTHS[month - 1]} {year}</div>
             <div className="col-span-2 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:row-span-2 text-[30px] lg:text-[40px] font-bold text-teal-800 leading-tight tabular-nums sm:text-right">{fmtM(detail.net_salary)}</div>
             <div className="col-span-2 sm:col-span-1 sm:col-start-1 text-[13px] text-teal-900/70">Tổng thu nhập {fmtM(detail.gross_income)} · Khấu trừ {fmtM(detail.total_deductions)}</div>
           </div>
 
           {/* Chỉ số nổi bật */}
-          <div className="order-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="order-2 lg:order-1 grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
             <StatCard icon={Banknote} label="Tổng thu nhập" value={fmtM(detail.gross_income)} tone="blue" />
             <StatCard icon={CalendarCheck} label="Ngày công" value={`${detail.working_days || 0} công`} tone="violet" />
             <StatCard icon={Award} label="Hoa hồng / thưởng" value={fmtM(detail.total_commission)} tone="emerald" />
@@ -241,7 +299,7 @@ const MyPayrollPage = () => {
           </div>
 
           {/* Bảng chi tiết */}
-          <div className="order-2 grid md:grid-cols-2 gap-4 items-stretch">
+          <div className="hidden lg:grid order-2 md:grid-cols-2 gap-4 items-stretch">
             <div className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white shadow-soft px-5 pt-5 pb-4">
               <h3 className="text-[17px] font-bold text-teal-700 mb-2 flex items-center gap-2"><TrendingUp className="w-5 h-5" /> Thu nhập</h3>
               <table className="w-full text-[14px]">

@@ -169,18 +169,18 @@ const LeaveManagementPage = () => {
 
   return (
     <div className="space-y-4">
-      {/* Thanh lọc: tháng · tìm kiếm · trạng thái */}
-      <div className="e-toolbar">
-        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
+      {/* Thanh lọc: tháng · tìm kiếm · trạng thái (điện thoại: xếp dọc, chip lọc cuộn ngang) */}
+      <div className="e-toolbar max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none max-lg:p-0 max-lg:gap-3">
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white max-lg:w-full max-lg:justify-between max-lg:h-12 max-lg:rounded-2xl max-lg:shadow-soft">
+          <button onClick={prevMonth} className="w-8 h-8 max-lg:w-10 max-lg:h-10 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-slate-800 min-w-[120px] justify-center tabular-nums"><CalendarDays className="w-4 h-4 text-teal-600" />{MONTHS[month-1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
+          <span className="inline-flex items-center gap-1.5 text-[13.5px] max-lg:text-[14.5px] font-semibold text-slate-800 min-w-[120px] justify-center tabular-nums"><CalendarDays className="w-4 h-4 text-teal-600" />{MONTHS[month-1]} {year}</span>
+          <button onClick={nextMonth} className="w-8 h-8 max-lg:w-10 max-lg:h-10 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        <div className="e-search flex-1 min-w-[180px] sm:max-w-xs">
+        <div className="e-search flex-1 min-w-[180px] sm:max-w-xs max-lg:w-full max-lg:max-w-none max-lg:basis-full max-lg:[&>input]:bg-white max-lg:[&>input]:h-11 max-lg:[&>input]:rounded-2xl max-lg:[&>input]:shadow-soft">
           <Search />
           <input
             placeholder="Tìm nhân sự..."
@@ -188,7 +188,20 @@ const LeaveManagementPage = () => {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="e-seg ml-auto overflow-x-auto max-w-full">
+        {/* Điện thoại: chip lọc trạng thái cuộn ngang */}
+        <div className="lg:hidden flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 w-[calc(100%+2rem)] [scrollbar-width:none]">
+          {[{key:'all',label:'Tất cả'},{key:'pending',label:'Chờ duyệt'},{key:'approved',label:'Đã duyệt'},{key:'rejected',label:'Từ chối'}].map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border text-[13px] font-semibold whitespace-nowrap transition ${filter === f.key ? 'bg-teal-700 border-teal-700 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
+              {f.label}
+              {f.key === 'pending' && pendingCount > 0 && (
+                <span className="inline-grid place-items-center min-w-[20px] h-5 px-1.5 rounded-full bg-danger-500 text-white text-[11px] font-bold tabular-nums">{pendingCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        {/* Máy tính: bộ chuyển trạng thái */}
+        <div className="e-seg ml-auto overflow-x-auto max-w-full hidden lg:inline-flex">
           {[{key:'all',label:'Tất cả'},{key:'pending',label:'Chờ duyệt'},{key:'approved',label:'Đã duyệt'},{key:'rejected',label:'Từ chối'}].map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`e-seg-item ${filter === f.key ? 'e-seg-active' : 'text-slate-500'}`}>
@@ -209,13 +222,13 @@ const LeaveManagementPage = () => {
           { key: 'rejected', label: 'Từ chối', color: 'bg-danger-50 text-danger-600' },
         ].map(s => (
           <button key={s.key} onClick={() => setFilter(s.key)}
-            className={`e-metric flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 p-3.5 lg:p-5 transition ${filter === s.key ? 'border-teal-500 ring-2 ring-teal-100' : 'hover:border-teal-200'}`}>
-            <span className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full grid place-items-center shrink-0 ${s.color}`}>
-              <FileText className="w-5 h-5" />
+            className={`e-metric flex-col lg:flex-row items-start lg:items-center gap-2 lg:gap-4 p-3 lg:p-5 max-lg:shadow-soft transition ${filter === s.key ? 'border-teal-500 ring-2 ring-teal-100' : 'hover:border-teal-200'}`}>
+            <span className={`w-9 h-9 lg:w-12 lg:h-12 rounded-full grid place-items-center shrink-0 ${s.color}`}>
+              <FileText className="w-[18px] h-[18px] lg:w-5 lg:h-5" />
             </span>
-            <span className="min-w-0">
-              <span className="e-metric-label block">{s.label}</span>
-              <span className="e-metric-value block">{requests.filter(r => r.status === s.key).length}</span>
+            <span className="min-w-0 flex flex-col-reverse lg:flex-col">
+              <span className="e-metric-label block max-lg:text-[12px]">{s.label}</span>
+              <span className="e-metric-value block max-lg:text-[22px]">{requests.filter(r => r.status === s.key).length}</span>
             </span>
           </button>
         ))}
@@ -224,7 +237,7 @@ const LeaveManagementPage = () => {
       {/* Tiêu đề danh sách */}
       <div className="flex items-end justify-between gap-3 pt-1">
         <div>
-          <h3 className="e-card-title">Danh sách đơn</h3>
+          <h3 className="e-card-title max-lg:text-[18px] max-lg:font-bold">Danh sách đơn</h3>
           <p className="e-card-sub">{MONTHS[month-1]} {year}</p>
         </div>
       </div>
@@ -240,7 +253,64 @@ const LeaveManagementPage = () => {
           <div className="e-empty-title">Không có đơn xin phép nào</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
+        <>
+        {/* Điện thoại: thẻ yêu cầu kiểu Ethics (avatar · loại · thời gian · lý do · Từ chối | Duyệt) */}
+        <div className="lg:hidden space-y-3">
+          {filtered.map(r => (
+            <div key={r.id} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-br from-teal-50 to-teal-100 grid place-items-center shrink-0">
+                    {r.profiles?.avatar_url ? (
+                      <img src={r.profiles.avatar_url} alt={r.profiles.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[16px] font-bold text-teal-700">{r.profiles?.full_name?.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-900 text-[15px] leading-tight truncate">{r.profiles?.full_name}</div>
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span className={`e-badge e-badge-sm ${LEAVE_TYPES[r.type]?.color}`}>
+                        {LEAVE_TYPES[r.type]?.label}
+                        {r.type === 'half_day' && r.half_day_period && ` · ${HALF_DAY[r.half_day_period]}`}
+                      </span>
+                      <span className="text-[12px] text-slate-400">{r.profiles?.employee_id}</span>
+                    </div>
+                  </div>
+                  <span className={`e-badge e-badge-sm shrink-0 ${LEAVE_STATUS[r.status]?.color}`}>
+                    {LEAVE_STATUS[r.status]?.label}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 text-[15px] font-bold text-slate-900 tabular-nums">
+                  <CalendarDays className="w-4 h-4 text-teal-600 shrink-0" />
+                  {new Date(r.date).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' })}
+                </div>
+                <div className="mt-1.5 text-[13.5px] leading-[1.45] text-slate-600 whitespace-pre-line break-words">{r.reason}</div>
+                <div className="flex items-center gap-1 text-[11.5px] text-slate-400 mt-2 tabular-nums">
+                  <Clock className="w-3.5 h-3.5" />
+                  Gửi lúc {new Date(r.created_at).toLocaleString('vi-VN')}
+                </div>
+              </div>
+
+              {r.status === 'pending' && (
+                <div className="grid grid-cols-2 gap-2.5 px-4 pb-4">
+                  <button onClick={() => handleReject(r.id)} disabled={saving === r.id}
+                    className="e-btn e-btn-danger-soft h-11 w-full">
+                    <X /> Từ chối
+                  </button>
+                  <button onClick={() => handleApprove(r.id)} disabled={saving === r.id}
+                    className="e-btn e-btn-primary h-11 w-full">
+                    <Check /> Duyệt
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Máy tính: lưới thẻ (giữ nguyên) */}
+        <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
           {filtered.map(r => (
             <div key={r.id} className="e-card overflow-hidden flex flex-col">
               <div className="p-4 flex-1">
@@ -304,6 +374,7 @@ const LeaveManagementPage = () => {
             </div>
           ))}
         </div>
+        </>
       )}
     </div>
   );
