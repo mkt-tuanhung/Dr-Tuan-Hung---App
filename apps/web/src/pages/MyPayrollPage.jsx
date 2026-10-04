@@ -292,7 +292,7 @@ const MyPayrollPage = () => {
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v >= 1e6 ? (v / 1e6) + 'tr' : v} width={42} />
                 <Tooltip formatter={(v) => fmtM(v)} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                <Bar dataKey="Thực nhận" fill="#529c96" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                <Bar dataKey="Thực nhận" fill="#12A4A5" radius={[6, 6, 0, 0]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>

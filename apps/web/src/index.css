@@ -8,42 +8,42 @@
   :root {
     /* ETHICS BUSINESS OS — nền xám ánh teal, card trắng, teal trầm.
        (khớp thang teal/slate trong tailwind.config.js) */
-    --background: 180 14% 96%;        /* #F3F6F6 */
-    --foreground: 198 22% 12%;        /* #172024 */
+    --background: 180 33% 96%;        /* #F3F9F9 bg_app */
+    --foreground: 180 8% 12%;         /* #1B2020 ink_900 */
 
     --card: 0 0% 100%;
-    --card-foreground: 198 22% 12%;
+    --card-foreground: 180 8% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 198 22% 12%;
+    --popover-foreground: 180 8% 12%;
 
-    --primary: 176 33% 41%;           /* #468A86 */
+    --primary: 182 91% 26%;           /* #067B7F */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 175 28% 92%;         /* #E6F1F0 */
-    --secondary-foreground: 177 33% 34%; /* #3A7471 */
+    --secondary: 176 55% 93%;         /* #E2F6F5 mint */
+    --secondary-foreground: 182 89% 22%; /* #06686C */
 
-    --muted: 180 13% 94%;             /* #EEF2F2 */
-    --muted-foreground: 184 7% 44%;   /* #687778 */
+    --muted: 180 27% 95%;             /* #EEF5F5 */
+    --muted-foreground: 160 1% 51%;   /* #828584 ink_500 */
 
     /* hover/focus trong menu, dropdown, select — teal nhạt (trước là cam) */
-    --accent: 175 28% 92%;
-    --accent-foreground: 177 33% 34%;
+    --accent: 176 55% 93%;
+    --accent-foreground: 182 89% 22%;
 
-    --destructive: 0 72% 58%;
+    --destructive: 0 77% 63%;          /* #E95757 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 180 12% 90%;            /* #E2E8E8 */
-    --input: 180 12% 90%;
-    --ring: 176 33% 41%;
+    --border: 176 37% 90%;            /* #DCEEED line */
+    --input: 176 37% 90%;
+    --ring: 180 80% 36%;              /* #12A4A5 */
     
     --radius: 1.25rem;
     /* Font hệ thống: iPhone/Mac dùng San Francisco, Android dùng Roboto — hiển thị tiếng Việt chuẩn, tải tức thì */
-    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-sans: 'Inter Variable', 'Inter', 'SF Pro Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
     /* Dashboard & KPI Colors */
-    --chart-1: 176 33% 41%;
-    --chart-2: 175 30% 55%;
+    --chart-1: 182 91% 26%;
+    --chart-2: 181 48% 45%;
     --chart-3: 25 85% 75%;
     --chart-4: 340 70% 70%;
     --chart-5: 210 80% 60%;
@@ -356,8 +356,8 @@ body.pink-mode [class*="ring-teal"], body.pink-mode [class*="ring-emerald"] {
 
 /* Multi-Tone Pink Charts */
 /* Emerald / Phẫu thuật -> Dark Pink */
-body.pink-mode [fill="#529c96"] { fill: #ff477e !important; }
-body.pink-mode [stroke="#529c96"] { stroke: #ff477e !important; }
+body.pink-mode [fill="#12A4A5"] { fill: #ff477e !important; }
+body.pink-mode [stroke="#12A4A5"] { stroke: #ff477e !important; }
 
 /* Amber / Chờ tư vấn -> Medium Pink */
 body.pink-mode [fill="#f59e0b"] { fill: #ff8fa3 !important; }
@@ -382,13 +382,13 @@ body.pink-mode stop[offset="100%"] {
 
 /* Làm nổi bật item khi mở từ thông báo (deep-link focus) */
 @keyframes focusFlash {
-  0%   { box-shadow: 0 0 0 0 rgba(70, 138, 134, 0.55); }
-  30%  { box-shadow: 0 0 0 5px rgba(70, 138, 134, 0.35); }
-  100% { box-shadow: 0 0 0 0 rgba(70, 138, 134, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(6, 123, 127, 0.55); }
+  30%  { box-shadow: 0 0 0 5px rgba(6, 123, 127, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(6, 123, 127, 0); }
 }
 .focus-flash {
   animation: focusFlash 1.3s ease-out 2;
-  border-color: #468A86 !important;
+  border-color: #067B7F !important;
   scroll-margin-top: 90px;
 }
 

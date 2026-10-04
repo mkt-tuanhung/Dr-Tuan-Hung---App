@@ -17,7 +17,7 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['Inter Variable', 'Inter', 'SF Pro Display', 'SF Pro Text', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -65,47 +65,46 @@ module.exports = {
           ring: "hsl(var(--sidebar-ring))",
         },
         // ============================================================
-        // NHẬN DIỆN ETHICS BUSINESS OS — teal trầm (muted) + xám ánh teal.
-        // Định nghĩa LẠI thang `teal` và `slate` của Tailwind: ~5.600 lần
-        // dùng bg-/text-/border-teal-* và slate-* trong 42 trang tự đổi
-        // theo nhận diện mới, không phải sửa tay từng trang.
-        // Giá trị gốc nằm ở bảng dưới — tinh chỉnh tại đây là đủ.
+        // NHẬN DIỆN ETHICS BUSINESS OS — lấy CHUẨN từ ethics-bos/design/tokens.json
+        // (brand teal #067B7F / #12A4A5, mint #E2F6F5, ink #1B2020).
+        // Định nghĩa LẠI thang `teal` và `slate` của Tailwind để mọi trang
+        // dùng bg-/text-/border-teal-* và slate-* tự đổi theo.
         // ============================================================
         teal: {
-          50: "#F0F7F6",
-          100: "#DDEEEC",
-          200: "#BFDFDB",
-          300: "#96C9C3",
-          400: "#6BB0AA",
-          500: "#529C96",
-          600: "#468A86", // primary — nút chính
-          700: "#3A7471", // hover / chữ nhấn
-          800: "#305E5C",
-          900: "#284D4B",
-          950: "#173130",
+          50: "#E2F6F5",  // mint_050
+          100: "#CAE8E9", // teal_100
+          200: "#A6D8D9",
+          300: "#76C2C3", // teal_300
+          400: "#3CA7A9", // teal_500
+          500: "#12A4A5", // teal_600
+          600: "#067B7F", // teal_800 — nút chính / menu đang chọn
+          700: "#06686C", // hover / chữ nhấn
+          800: "#075F63", // teal_900
+          900: "#064E52",
+          950: "#043538",
         },
         slate: {
-          50: "#F6F8F8",
-          100: "#EEF2F2",
-          200: "#E2E8E8", // đường viền
-          300: "#CAD3D3",
-          400: "#97A4A5",
-          500: "#687778", // chữ phụ (đạt tương phản AA trên nền trắng)
-          600: "#4E5C5E",
-          700: "#3A4648",
-          800: "#253033",
-          900: "#172024", // chữ chính
-          950: "#0D1417",
+          50: "#F7FAFA",  // bg_subtle
+          100: "#EEF5F5",
+          200: "#DCEEED", // line — đường viền
+          300: "#C3D3D2",
+          400: "#A3ABAA", // ink_400
+          500: "#828584", // ink_500 — chữ phụ
+          600: "#5B6B6A", // ink_600
+          700: "#3D4D4C", // ink_700
+          800: "#2A3534",
+          900: "#1B2020", // ink_900 — chữ chính
+          950: "#111515",
         },
         // Glassmorphism theme colors (đồng bộ theo teal mới)
-        "glass-primary": "#468A86",
-        "glass-primary-soft": "#6BB0AA",
+        "glass-primary": "#067B7F",
+        "glass-primary-soft": "#3CA7A9",
         "glass-accent": "#2563EB",
-        "glass-background": "#F3F6F6",
+        "glass-background": "#F3F9F9",
         "glass-card-bg": "rgba(255, 255, 255, 0.78)",
         "glass-card-border": "rgba(70, 138, 134, 0.12)",
-        "glass-text": "#172024",
-        "glass-muted": "#687778",
+        "glass-text": "#1B2020",
+        "glass-muted": "#828584",
         "glass-success": "#10B981",
         "glass-warning": "#F59E0B",
         "glass-danger": "#EF4444",
@@ -124,9 +123,10 @@ module.exports = {
         glass: "0 8px 32px rgba(40, 77, 75, 0.08)",
         "glass-sm": "0 4px 16px rgba(40, 77, 75, 0.06)",
         // Bóng mềm ám teal kiểu Ethics BOS
-        card: "0 1px 2px rgba(23, 32, 36, 0.04), 0 6px 20px -8px rgba(40, 77, 75, 0.12)",
-        soft: "0 1px 3px rgba(23, 32, 36, 0.05)",
-        float: "0 12px 32px -10px rgba(40, 77, 75, 0.25)",
+        card: "0 8px 24px rgba(7, 95, 99, 0.08)",
+        soft: "0 2px 8px rgba(7, 95, 99, 0.06)",
+        float: "0 12px 40px rgba(7, 95, 99, 0.14)",
+        nav: "0 6px 16px rgba(6, 123, 127, 0.24)",
       },
       borderRadius: {
         lg: "var(--radius)",

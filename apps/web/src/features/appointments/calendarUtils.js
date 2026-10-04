@@ -41,7 +41,7 @@ export const durationOf = (app) => (isRecheck(app) ? 30 : 60);
 export const APPT_TONE = {
   scheduled: { label: 'Chờ tư vấn', bg: '#FDF4E7', bar: '#E5A13C', text: '#7A4E0E', dot: '#E5A13C' },
   coc:       { label: 'Đã cọc',     bg: '#E9F0FB', bar: '#5B8DD6', text: '#24487E', dot: '#5B8DD6' },
-  phau_thuat:{ label: 'Phẫu thuật', bg: '#E4F1EF', bar: '#468A86', text: '#284D4B', dot: '#468A86' },
+  phau_thuat:{ label: 'Phẫu thuật', bg: '#E2F6F5', bar: '#067B7F', text: '#075F63', dot: '#067B7F' },
   bong:      { label: 'Khách bong', bg: '#FBECEC', bar: '#D9635C', text: '#7E2723', dot: '#D9635C' },
   cancelled: { label: 'Đã huỷ',     bg: '#EEF2F2', bar: '#97A4A5', text: '#4E5C5E', dot: '#97A4A5' },
   recheck:   { label: 'Tái khám',   bg: '#EFEBFA', bar: '#8B7BD8', text: '#3F3478', dot: '#8B7BD8' },

@@ -144,7 +144,7 @@ const EditorOverview = ({ profile, setActiveTab }) => {
       <Card icon={Scissors} color="#5B8DD6" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content_video')} />
       <Card icon={CheckCircle2} color="#8B7BD8" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content_video')} />
       <Card icon={Target} color="#D9635C" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content_video')} />
-      <Card icon={Wallet} color="#468A86" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
+      <Card icon={Wallet} color="#067B7F" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
     </div>
   );
 };
@@ -232,7 +232,7 @@ const Overview = ({ profile, setActiveTab, available = [] }) => {
 
   // Thao tác nhanh — chỉ hiện chức năng nhân sự này được dùng
   const QUICK = [
-    { id: 'attendance', label: 'Chấm công', icon: ScanFace, color: '#468A86' },
+    { id: 'attendance', label: 'Chấm công', icon: ScanFace, color: '#067B7F' },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#5B8DD6' },
     { id: 'data_kh', label: 'Khách hàng', icon: Database, color: '#3FA7A2' },
     { id: 'kpi', label: 'KPI của tôi', icon: Target, color: '#D9635C' },

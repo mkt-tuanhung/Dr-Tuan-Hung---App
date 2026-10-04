@@ -401,7 +401,7 @@ const KhachCocPage = ({ isNested = false }) => {
           {/* Thẻ số liệu */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { icon: Users, color: '#529c96', label: 'Khách giữ cọc', value: cocStats.count },
+              { icon: Users, color: '#12A4A5', label: 'Khách giữ cọc', value: cocStats.count },
               { icon: Wallet, color: '#3b82f6', label: 'Tổng tiền cọc', value: fmtTy(cocStats.total) },
               { icon: CalendarDays, color: '#8b5cf6', label: 'Chờ lịch bác sĩ', value: cocStats.waitDr },
               { icon: Clock, color: '#f59e0b', label: 'Khách xin hoãn', value: cocStats.postpone },

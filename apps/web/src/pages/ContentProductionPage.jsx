@@ -1590,7 +1590,7 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
     : '#e2e8f0';
   const KT = { teal: 'bg-teal-50 text-teal-600', violet: 'bg-violet-50 text-violet-600', blue: 'bg-blue-50 text-blue-600', indigo: 'bg-indigo-50 text-indigo-600', amber: 'bg-amber-50 text-amber-600' };
   const kpis = [
-    { icon: PlayCircle, tone: 'teal', spark: '#529c96', value: approved.length, label: 'Video Ads', sub: 'clip đã duyệt' },
+    { icon: PlayCircle, tone: 'teal', spark: '#12A4A5', value: approved.length, label: 'Video Ads', sub: 'clip đã duyệt' },
     { icon: Clock, tone: 'violet', spark: '#8b5cf6', value: videoCounts.pending, label: 'Clip chờ duyệt', sub: 'clip' },
     { icon: FolderOpen, tone: 'blue', spark: '#3b82f6', value: sourcesN, label: 'Nguồn media', sub: 'nguồn trong kho' },
     { icon: Film, tone: 'indigo', spark: '#6366f1', value: totalVideo, label: 'Video gốc', sub: 'video trong kho' },
@@ -1959,7 +1959,7 @@ const FbSummaryStrip = ({ clips, onReport }) => {
   const cpa = phones > 0 ? Math.round(spend / phones) : null;
   const cells = [
     { label: 'Chi phí', value: fmtM(spend) },
-    { label: 'Khách hàng tiềm năng', value: contacts, spark: '#529c96' },
+    { label: 'Khách hàng tiềm năng', value: contacts, spark: '#12A4A5' },
     { label: 'Lượt mua', value: purchases, spark: '#3b82f6' },
     { label: 'Giá/SĐT', value: cpa != null ? fmtM(cpa) : '—' },
   ];

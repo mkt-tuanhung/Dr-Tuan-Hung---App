@@ -334,7 +334,7 @@ const HauPhauPage = () => {
       <p style="color:#888;margin:0 0 16px;font-size:13px">${reviewModal.app.service || ''}</p>
       <img src="${reviewModal.dataUrl}" style="width:300px;height:300px" />
       <p style="margin-top:16px;font-size:14px">Quét mã QR để đánh giá dịch vụ</p>
-      <p style="color:#468a86;font-size:14px;font-weight:700;margin-top:8px">HOTLINE CSKH: 0886 222 678</p>
+      <p style="color:#067B7F;font-size:14px;font-weight:700;margin-top:8px">HOTLINE CSKH: 0886 222 678</p>
     </body></html>`);
     w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
   };
@@ -353,7 +353,7 @@ const HauPhauPage = () => {
       ctx.fillStyle = '#ecfdf5'; ctx.fillRect(0, 0, W, H);
       // Header gradient
       const g = ctx.createLinearGradient(0, 0, W, 260);
-      g.addColorStop(0, '#468a86'); g.addColorStop(1, '#10b981');
+      g.addColorStop(0, '#067B7F'); g.addColorStop(1, '#10b981');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, 260);
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -373,7 +373,7 @@ const HauPhauPage = () => {
       ctx.fillText(reviewModal.app.customer_name || 'Quý khách', W / 2, y);
       if (reviewModal.app.service) {
         y += 40;
-        ctx.fillStyle = '#468a86';
+        ctx.fillStyle = '#067B7F';
         ctx.font = '600 22px system-ui, sans-serif';
         // cắt bớt nếu quá dài
         let sv = reviewModal.app.service;
@@ -404,7 +404,7 @@ const HauPhauPage = () => {
       ctx.font = '700 21px system-ui, sans-serif';
       const hw = ctx.measureText(hotline).width + 56;
       ctx.fillStyle = '#f0fdfa'; rr((W - hw) / 2, ty - 29, hw, 46, 23); ctx.fill();
-      ctx.fillStyle = '#3a7471'; ctx.fillText(hotline, W / 2, ty);
+      ctx.fillStyle = '#06686C'; ctx.fillText(hotline, W / 2, ty);
 
       // footer
       ctx.fillStyle = '#cbd5e1';
@@ -829,7 +829,7 @@ const HauPhauPage = () => {
             <div className="relative w-24 h-24">
               <svg viewBox="0 0 36 36" className="w-24 h-24 -rotate-90">
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="#d1fae5" strokeWidth="4" />
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#529c96" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${metrics.progress * 0.974} 100`} />
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#12A4A5" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${metrics.progress * 0.974} 100`} />
               </svg>
               <div className="absolute inset-0 grid place-items-center"><span className="text-xl font-extrabold text-teal-600">{metrics.progress}%</span></div>
             </div>

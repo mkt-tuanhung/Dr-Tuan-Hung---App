@@ -16,7 +16,7 @@ const REACTIONS = [
 ];
 const EMOJI_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.emoji]));
 const LABEL_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.label]));
-const TEXT_COLORS = ['#0f172a', '#ef4444', '#f59e0b', '#529c96', '#3b82f6', '#8b5cf6', '#ec4899'];
+const TEXT_COLORS = ['#0f172a', '#ef4444', '#f59e0b', '#12A4A5', '#3b82f6', '#8b5cf6', '#ec4899'];
 const QUICK_COMMENTS = ['Đã xét nghiệm xong', 'Vào phẫu thuật', 'KH phẫu thuật xong', 'Khách hàng về phòng nghỉ ngơi'];
 
 // Nhận diện mốc thời gian: 9h, 9h30, 9:30, 9 giờ 30 phút, ngày 25/06(/2026)
@@ -265,7 +265,7 @@ const CommunityPage = () => {
   const renderPostHtml = (html) => {
     // Sanitize ở ĐẦU RA: nội dung có thể được chèn thẳng qua API (bỏ qua sanitize lúc soạn)
     const withChips = sanitizeHtml(html || '')
-      .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#ccfbf1;color:#3a7471;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
+      .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#ccfbf1;color:#06686C;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
       .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;cursor:pointer;margin:0 2px;font-family:inherit">👤 $1</button>');
     // Chỉ tô màu phần text (bỏ qua bên trong các thẻ <...>)
     return withChips.split(/(<[^>]+>)/).map(seg =>

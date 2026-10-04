@@ -241,7 +241,7 @@ const AppointmentManagementPage = () => {
     }
 
     const pd = [
-      { name: 'Phẫu thuật', value: st.pt, color: '#529c96' },
+      { name: 'Phẫu thuật', value: st.pt, color: '#12A4A5' },
       { name: 'Cọc', value: st.coc, color: '#3b82f6' },
       { name: 'Chờ tư vấn', value: Math.max(0, st.total - st.pt - st.coc - st.bong), color: '#f59e0b' },
       { name: 'Bong', value: st.bong, color: '#ef4444' }
@@ -623,11 +623,11 @@ const AppointmentManagementPage = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { icon: CalendarDays, color: '#3b82f6', label: 'Tổng lịch hẹn', value: stats.total, trend: trends.total },
-              { icon: Stethoscope, color: '#529c96', label: 'Phẫu thuật', value: stats.pt, trend: trends.pt },
+              { icon: Stethoscope, color: '#12A4A5', label: 'Phẫu thuật', value: stats.pt, trend: trends.pt },
               { icon: Wallet, color: '#3b82f6', label: 'Đã cọc', value: stats.coc, trend: trends.coc },
               { icon: Ban, color: '#ef4444', label: 'Khách bong', value: stats.bong, trend: trends.bong },
               { icon: Activity, color: '#f59e0b', label: 'Tổng bill dự kiến', value: stats.expected_bill.toLocaleString('vi-VN') + 'đ', trend: trends.bill },
-              { icon: Activity, color: '#529c96', label: 'Tổng đã cọc', value: stats.total_deposit.toLocaleString('vi-VN') + 'đ', trend: trends.deposit },
+              { icon: Activity, color: '#12A4A5', label: 'Tổng đã cọc', value: stats.total_deposit.toLocaleString('vi-VN') + 'đ', trend: trends.deposit },
             ].map((c, i) => (
               <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                 <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
@@ -675,7 +675,7 @@ const AppointmentManagementPage = () => {
                     <RechartsTooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} />
                     <Legend />
                     <Line type="monotone" dataKey="Tổng lịch" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#529c96" strokeWidth={3} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#12A4A5" strokeWidth={3} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
