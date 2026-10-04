@@ -99,7 +99,7 @@ const GROUP_STYLE = {
 const BOTTOM_NAV = ['overview', 'hr', 'appointments', 'kpi'];
 
 // Bảng màu cho donut cơ cấu dịch vụ (xanh → xanh dương → tím, giống mockup)
-const PIE_COLORS = ['#22c55e', '#10b981', '#14b8a6', '#3b82f6', '#8b5cf6', '#cbd5e1'];
+const PIE_COLORS = ['#22c55e', '#10b981', '#529c96', '#3b82f6', '#8b5cf6', '#cbd5e1'];
 const SUBTABS = [
   { id: 'tong_quan', label: 'Tổng quan' },
   { id: 'phan_tich', label: 'Phân tích' },
@@ -248,7 +248,7 @@ const Overview = ({ profile, setActiveTab }) => {
   const heroMonthYear = `Tháng ${hd.getMonth() + 1}, ${hd.getFullYear()}`;
   const presentPct = d.totalStaff ? Math.round(d.presentToday / d.totalStaff * 100) : 0;
   const statsDesktop = [
-    { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#14b8a6', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
+    { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#529c96', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
     { label: 'Có mặt hôm nay', value: d.presentToday, icon: UserCheck, color: '#3b82f6', tab: 'hr', bar: presentPct, sub: `${presentPct}% có mặt` },
     { label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, icon: CalendarDays, color: '#8b5cf6', tab: 'appointments', trend: trendPct(d.apptTrend), sub: 'so với hôm qua' },
     { label: 'Chờ duyệt', value: d.pendingExpenses, icon: AlertCircle, color: '#f59e0b', tab: 'advances', sub: 'Hồ sơ / yêu cầu' },
@@ -256,7 +256,7 @@ const Overview = ({ profile, setActiveTab }) => {
     { label: 'Tỷ lệ chốt khách', value: d.closeRate + '%', icon: Target, color: '#6366f1', tab: 'khach_tu_van', trend: d.closeTrend != null ? { up: d.closeTrend >= 0, txt: `${d.closeTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.closeTrend)}%` } : null, sub: 'so với tháng trước' },
   ];
   const stats = [
-    { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#14b8a6', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
+    { label: 'Nhân sự', value: d.totalStaff, icon: Users, color: '#529c96', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `↑ ${d.newStaffMonth}` } : null, sub: 'Tổng nhân sự' },
     { label: 'Lịch hẹn', value: d.appointmentsToday, icon: CalendarDays, color: '#3b82f6', tab: 'appointments', trend: trendPct(d.apptTrend), sub: 'Hôm nay' },
     { label: 'Chờ duyệt', value: d.pendingExpenses, icon: AlertCircle, color: '#f59e0b', tab: 'advances', sub: 'Hồ sơ' },
     { label: 'Doanh thu tháng', value: fmtVND(d.monthRevenue), icon: DollarSign, color: '#10b981', tab: 'finance', trend: trendPct(d.revMonthTrend), sub: 'Ca mổ' },
@@ -315,7 +315,7 @@ const Overview = ({ profile, setActiveTab }) => {
       </div>
 
       {/* Hero — DESKTOP: gradient xanh + ảnh phải */}
-      <div className="hidden lg:block relative overflow-hidden rounded-3xl text-white shadow-lg" style={{ background: 'linear-gradient(120deg,#0f766e 0%,#0d9488 55%,#14b8a6 100%)' }}>
+      <div className="hidden lg:block relative overflow-hidden rounded-3xl text-white shadow-lg" style={{ background: 'linear-gradient(120deg,#3a7471 0%,#468a86 55%,#529c96 100%)' }}>
         <div className="absolute inset-y-0 right-0 w-[32%]">
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/clinic-hero.png')" }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg,#0f9488 0%, rgba(20,184,166,0.55) 35%, rgba(20,184,166,0) 100%)' }} />
@@ -386,12 +386,12 @@ const Overview = ({ profile, setActiveTab }) => {
         <div className="text-[11px] text-slate-400">so với 6 tháng trước</div>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={d.revenue6m} margin={{ top: 12, right: 6, left: -18, bottom: 0 }}>
-            <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} /><stop offset="100%" stopColor="#14b8a6" stopOpacity={0} /></linearGradient></defs>
+            <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#529c96" stopOpacity={0.35} /><stop offset="100%" stopColor="#529c96" stopOpacity={0} /></linearGradient></defs>
             <CartesianGrid vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={40} />
             <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} formatter={(v) => [`${v} Tr`, 'Doanh thu']} />
-            <Area type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2.5} fill="url(#revA)" />
+            <Area type="monotone" dataKey="revenue" stroke="#468a86" strokeWidth={2.5} fill="url(#revA)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -401,7 +401,7 @@ const Overview = ({ profile, setActiveTab }) => {
         <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-800">Thao tác nhanh</h3><span className="text-xs text-teal-600 font-semibold">Tùy chỉnh</span></div>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: 'Thêm lịch hẹn', icon: CalendarDays, tab: 'appointments', color: '#14b8a6' },
+            { label: 'Thêm lịch hẹn', icon: CalendarDays, tab: 'appointments', color: '#529c96' },
             { label: 'Thêm khách hàng', icon: Users, tab: 'appointments', color: '#3b82f6' },
             { label: 'Báo cáo nhanh', icon: BarChart2, tab: 'pl', color: '#8b5cf6' },
             { label: 'Phiếu thu / CSKH', icon: ClipboardList, tab: 'hau_phau', color: '#f59e0b' },
@@ -458,7 +458,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <BarChart data={d.weekly} margin={{ top: 8, right: 0, left: -28, bottom: 0 }}>
               <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
               <YAxis hide /><Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: 10, border: 'none', fontSize: 12 }} formatter={(v) => [v, 'Lịch hẹn']} />
-              <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#14b8a6" barSize={16} />
+              <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#529c96" barSize={16} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -548,7 +548,7 @@ const Overview = ({ profile, setActiveTab }) => {
               <BarChart data={d.weekly} margin={{ top: 12, right: 0, left: -28, bottom: 0 }}>
                 <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                 <YAxis hide /><Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: 10, border: 'none', fontSize: 12 }} formatter={(v) => [v, 'Lịch hẹn']} />
-                <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#14b8a6" barSize={22} />
+                <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#529c96" barSize={22} />
               </BarChart>
             </ResponsiveContainer>
           </div>

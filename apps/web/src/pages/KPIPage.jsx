@@ -13,7 +13,7 @@ const ProgressRing = ({ value, size = 80 }) => {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (value / 100) * circ;
-  const color = value >= 100 ? '#14b8a6' : value >= 70 ? '#f59e0b' : '#ef4444';
+  const color = value >= 100 ? '#529c96' : value >= 70 ? '#f59e0b' : '#ef4444';
   return (
     <svg width={size} height={size} className="-rotate-90">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={6} />

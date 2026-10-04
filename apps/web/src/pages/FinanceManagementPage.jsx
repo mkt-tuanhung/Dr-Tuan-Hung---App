@@ -10,7 +10,7 @@ import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
 import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const COLORS = ['#14b8a6', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+const COLORS = ['#529c96', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#529c96'];
 
 // ===== Import doanh thu từ CSV =====
 // Thứ tự cột BẮT BUỘC (đúng theo header dưới):
@@ -593,7 +593,7 @@ const FinanceManagementPage = () => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(val) => (val/1000000) + 'M'} axisLine={false} tickLine={false} />
                     <RechartsTooltip formatter={(value) => fmt(value)} cursor={{fill: '#f8fafc'}} />
-                    <Bar dataKey="value" fill="#14b8a6" radius={[4, 4, 0, 0]} barSize={40} />
+                    <Bar dataKey="value" fill="#529c96" radius={[4, 4, 0, 0]} barSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

@@ -302,7 +302,7 @@ export default function ServiceQualityPage() {
                       <XAxis dataKey="week" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
                       <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} />
-                      <Line type="monotone" dataKey="csat" stroke="#14b8a6" strokeWidth={3} dot={{ r: 3, fill: '#14b8a6' }} name="CSAT" />
+                      <Line type="monotone" dataKey="csat" stroke="#529c96" strokeWidth={3} dot={{ r: 3, fill: '#529c96' }} name="CSAT" />
                     </LineChart>
                   </ResponsiveContainer>
                 )}

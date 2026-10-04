@@ -12,7 +12,7 @@ import WerewolfGame from '@/features/werewolf/WerewolfGame.jsx';
 // nhân sự quay — server chọn giải (RPC play_minigame), kết quả realtime.
 
 const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white';
-const PALETTE = ['#14b8a6', '#f59e0b', '#8b5cf6', '#f43f5e', '#3b82f6', '#10b981', '#f97316', '#ec4899', '#6366f1', '#84cc16'];
+const PALETTE = ['#529c96', '#f59e0b', '#8b5cf6', '#f43f5e', '#3b82f6', '#10b981', '#f97316', '#ec4899', '#6366f1', '#84cc16'];
 const fmtDT = (s) => s ? new Date(s).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
 const toLocalInput = (iso) => { if (!iso) return ''; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 

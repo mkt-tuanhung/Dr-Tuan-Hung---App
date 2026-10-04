@@ -12,7 +12,7 @@ import StatCell from '@/components/kpi/StatCell.jsx';
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
-const PIE_COLORS = ['#3b82f6', '#14b8a6', '#f59e0b']; // Cọc / Phẫu thuật / Bong
+const PIE_COLORS = ['#3b82f6', '#529c96', '#f59e0b']; // Cọc / Phẫu thuật / Bong
 
 const EMPTY = { staff_id: '', target_revenue: '', target_close_rate: '', note: '' };
 
@@ -262,7 +262,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
                     <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v) => fmtM(v)} />
                     <Legend />
-                    <Bar dataKey="Thực tế" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Thực tế" fill="#529c96" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="KPI" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -307,7 +307,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v) => fmtM(v)} />
-                    <Bar dataKey="Hoa hồng" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Hoa hồng" fill="#529c96" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

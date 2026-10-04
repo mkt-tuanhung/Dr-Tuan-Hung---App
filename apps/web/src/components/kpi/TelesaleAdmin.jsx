@@ -193,7 +193,7 @@ const TelesaleAdmin = ({ month, year }) => {
           <div className="grid lg:grid-cols-2 gap-5">
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
               <h3 className="font-bold text-teal-700 mb-4">Doanh thu theo Telesale</h3>
-              <div className="h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={revChart}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><Tooltip formatter={(v) => fmtM(v)} /><Legend /><Bar dataKey="Thực tế" fill="#14b8a6" radius={[4, 4, 0, 0]} /><Bar dataKey="KPI" fill="#cbd5e1" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>
+              <div className="h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={revChart}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><Tooltip formatter={(v) => fmtM(v)} /><Legend /><Bar dataKey="Thực tế" fill="#529c96" radius={[4, 4, 0, 0]} /><Bar dataKey="KPI" fill="#cbd5e1" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
               <h3 className="font-bold text-teal-700 mb-4">Lịch hẹn theo Telesale</h3>

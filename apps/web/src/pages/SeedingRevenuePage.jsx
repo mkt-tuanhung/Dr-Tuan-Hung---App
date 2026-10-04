@@ -55,7 +55,7 @@ export default function SeedingRevenuePage() {
   });
 
   const stats = [
-    { icon: DollarSign, color: '#14b8a6', label: `Doanh thu seeding Th${month}/${year}`, value: fmt(totalRev) },
+    { icon: DollarSign, color: '#529c96', label: `Doanh thu seeding Th${month}/${year}`, value: fmt(totalRev) },
     { icon: Banknote, color: '#f59e0b', label: 'Viện phí', value: fmt(totalFee) },
     { icon: Percent, color: '#8b5cf6', label: 'Hoa hồng (20%)', value: fmt(totalComm) },
   ];
@@ -89,7 +89,7 @@ export default function SeedingRevenuePage() {
       </div>
 
       {/* Thẻ TỔNG hoa hồng nổi bật */}
-      <div className="rounded-2xl p-5 text-white shadow-lg shadow-emerald-600/20 flex items-end justify-between gap-4" style={{ background: 'linear-gradient(120deg,#0f766e 0%,#0d9488 55%,#10b981 100%)' }}>
+      <div className="rounded-2xl p-5 text-white shadow-lg shadow-emerald-600/20 flex items-end justify-between gap-4" style={{ background: 'linear-gradient(120deg,#3a7471 0%,#468a86 55%,#10b981 100%)' }}>
         <div>
           <div className="text-white/80 text-sm">Tổng hoa hồng Seeding Th{month}/{year}</div>
           <div className="text-3xl font-bold mt-1 tabular-nums">{fmt(totalComm)}</div>

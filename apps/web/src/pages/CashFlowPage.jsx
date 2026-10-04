@@ -402,7 +402,7 @@ export default function CashFlowPage() {
                     <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#f1f5f9' }} />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar name="Thu tiền (+)" dataKey="income" fill="#14b8a6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar name="Thu tiền (+)" dataKey="income" fill="#529c96" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     <Bar name="Chi tiền (-)" dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>

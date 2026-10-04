@@ -225,7 +225,7 @@ const MarketingDataPage = () => {
   };
 
   const statCards = [
-    { icon: Users, color: '#14b8a6', label: 'Tổng khách', value: stat.total },
+    { icon: Users, color: '#529c96', label: 'Tổng khách', value: stat.total },
     { icon: CalendarClock, color: '#ef4444', label: 'Cần gọi hôm nay', value: stat.due },
     { icon: Flame, color: '#f43f5e', label: 'Khách nóng', value: stat.nong },
     { icon: CheckCircle2, color: '#3b82f6', label: 'Đã làm dịch vụ', value: stat.daDV },
@@ -820,7 +820,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const byOutcome = {}; inAppCalls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
   const byOutcomeData = Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOMES[k]?.label || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' }));
   const srcMap = {}; newRows.forEach(r => { const raw = String(r.source || '').trim(); const s = !raw ? 'Khác' : (/^\d+$/.test(raw) ? 'Nguồn #' + raw : raw); srcMap[s] = (srcMap[s] || 0) + 1; });
-  const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#14b8a6', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
+  const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#529c96', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
 
   const buildPayload = () => ({
     day, whoName: whoName || 'Tất cả telesale', generated_at: new Date().toISOString(),
@@ -928,7 +928,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
     };
     const tiles = [
       ['Cuộc gọi', p.stats.calls, '#059669'], ['Số mới', p.stats.new_count, '#2563eb'],
-      ['Mới đã gọi', p.stats.new_called, '#0d9488'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
+      ['Mới đã gọi', p.stats.new_called, '#468a86'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
     ].map(([l, v, c]) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px">${l}</div></div>`).join('');
     const callItem = (c) => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.status_label ? ` <span style="background:${c.status_color || '#94a3b8'};color:#fff;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:99px">${esc(c.status_label)}</span>` : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`;
     const newList = p.news.map(r => `<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(r.name || '—')}</b><span style="color:#64748b">${esc(r.phone)}</span>${r.source ? `<span style="color:#94a3b8">· ${esc(r.source)}</span>` : ''}<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${r.called ? '#d1fae5' : '#ffe4e6'};color:${r.called ? '#047857' : '#be123c'}">${r.called ? 'Đã gọi' : 'Chưa gọi'}</span></div>`).join('');

@@ -189,7 +189,7 @@ const DieuDuongAdmin = ({ month, year }) => {
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip formatter={(v) => fmtM(v)} />
-                  <Bar dataKey="Hoa hồng" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Hoa hồng" fill="#529c96" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

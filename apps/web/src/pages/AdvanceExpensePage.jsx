@@ -20,7 +20,7 @@ const CATEGORIES = {
   'Khac': 'Khác'
 };
 
-const COLORS = ['#14b8a6', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
+const COLORS = ['#529c96', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 export default function AdvanceExpensePage() {
   const { profile } = useAuth();
