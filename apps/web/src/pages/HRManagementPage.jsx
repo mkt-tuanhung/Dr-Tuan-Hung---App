@@ -11,8 +11,7 @@ export default function HRManagementPage({ initialTab = 'staff' }) {
     <div className="space-y-6">
       {/* Header Wrapper */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-800">Quản lý Nhân sự</h2>
-        <p className="text-slate-400 text-sm mt-0.5">Danh sách, chấm công và duyệt đơn từ</p>
+        <p className="text-[13px] text-slate-500">Danh sách, chấm công và duyệt đơn từ</p>
       </div>
 
       {/* Main Tabs */}

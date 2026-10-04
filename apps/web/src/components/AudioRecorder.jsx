@@ -69,7 +69,7 @@ export default function AudioRecorder({ onClose, onSaved }) {
       const idx = Math.floor(b / bars * N);
       const amp = Math.abs(data[idx] - 128) / 128;
       const h = Math.max(3, amp * H * 0.95);
-      ctx.fillStyle = '#14b8a6';
+      ctx.fillStyle = '#529c96';
       ctx.fillRect(b * bw + bw * 0.2, (H - h) / 2, bw * 0.6, h);
     }
     raf.current = requestAnimationFrame(draw);

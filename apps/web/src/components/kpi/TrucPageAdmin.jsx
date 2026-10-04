@@ -189,7 +189,7 @@ const TrucPageAdmin = ({ month, year }) => {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip /><Legend />
-                    <Bar dataKey="Thực tế" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Thực tế" fill="#529c96" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="KPI" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

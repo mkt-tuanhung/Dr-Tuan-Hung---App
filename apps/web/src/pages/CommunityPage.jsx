@@ -16,7 +16,7 @@ const REACTIONS = [
 ];
 const EMOJI_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.emoji]));
 const LABEL_OF = Object.fromEntries(REACTIONS.map(r => [r.key, r.label]));
-const TEXT_COLORS = ['#0f172a', '#ef4444', '#f59e0b', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
+const TEXT_COLORS = ['#0f172a', '#ef4444', '#f59e0b', '#529c96', '#3b82f6', '#8b5cf6', '#ec4899'];
 const QUICK_COMMENTS = ['Đã xét nghiệm xong', 'Vào phẫu thuật', 'KH phẫu thuật xong', 'Khách hàng về phòng nghỉ ngơi'];
 
 // Nhận diện mốc thời gian: 9h, 9h30, 9:30, 9 giờ 30 phút, ngày 25/06(/2026)
@@ -265,7 +265,7 @@ const CommunityPage = () => {
   const renderPostHtml = (html) => {
     // Sanitize ở ĐẦU RA: nội dung có thể được chèn thẳng qua API (bỏ qua sanitize lúc soạn)
     const withChips = sanitizeHtml(html || '')
-      .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#ccfbf1;color:#0f766e;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
+      .replace(/@\[([^\]]+)\]\(staff:[0-9a-fA-F-]+\)/g, '<span style="display:inline-flex;align-items:center;background:#ccfbf1;color:#3a7471;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;margin:0 2px">@$1</span>')
       .replace(/@\[([^\]]+)\]\(cust:([0-9a-fA-F-]+)\)/g, '<button type="button" data-cust="$2" style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:9999px;padding:1px 8px;font-weight:600;font-size:13px;cursor:pointer;margin:0 2px;font-family:inherit">👤 $1</button>');
     // Chỉ tô màu phần text (bỏ qua bên trong các thẻ <...>)
     return withChips.split(/(<[^>]+>)/).map(seg =>
@@ -476,14 +476,13 @@ const CommunityPage = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800">Cộng đồng</h2>
-        {isAdmin && (
+      {isAdmin && (
+        <div className="flex items-center justify-end">
           <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
             <Plus className="w-4 h-4" /> Tạo group
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {groups.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">

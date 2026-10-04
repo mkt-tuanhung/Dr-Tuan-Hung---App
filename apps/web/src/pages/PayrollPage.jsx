@@ -336,7 +336,7 @@ const PayrollPage = () => {
 
     // Nền + tiêu đề
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#0f766e'; ctx.fillRect(0, 0, W, titleH);
+    ctx.fillStyle = '#3a7471'; ctx.fillRect(0, 0, W, titleH);
     ctx.fillStyle = '#ffffff'; ctx.font = F(true, 22); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(`BẢNG LƯƠNG ${MONTHS[month - 1].toUpperCase()}/${year}`, 20, 34);
     ctx.font = F(false, 13); ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -375,7 +375,7 @@ const PayrollPage = () => {
 
     // Dòng tổng
     ctx.fillStyle = '#ecfdf5'; ctx.fillRect(0, y, W, totalH);
-    ctx.fillStyle = '#0f766e'; ctx.font = F(true, 15); ctx.textAlign = 'left';
+    ctx.fillStyle = '#3a7471'; ctx.font = F(true, 15); ctx.textAlign = 'left';
     ctx.fillText('TỔNG THỰC NHẬN', PAD, y + totalH / 2);
     ctx.textAlign = 'right'; ctx.font = F(true, 17);
     ctx.fillText(fmtM(totalSel), W - PAD, y + totalH / 2);
@@ -490,7 +490,7 @@ const PayrollPage = () => {
       .qr{text-align:center;margin-top:20px}.qr img{width:240px;height:240px}
       .note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-top:16px;color:#475569;font-size:13px;line-height:1.6}
       .watermark{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9999;pointer-events:none}
-      .watermark span{font-size:64px;font-weight:800;color:#0f766e;opacity:.12;transform:rotate(-30deg);white-space:nowrap;letter-spacing:6px}
+      .watermark span{font-size:64px;font-weight:800;color:#3a7471;opacity:.12;transform:rotate(-30deg);white-space:nowrap;letter-spacing:6px}
       @media print{.watermark span{opacity:.14;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
       <div class="watermark"><span>DR TUAN HUNG</span></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -532,8 +532,7 @@ const PayrollPage = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Bảng lương</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-teal-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
+          <p className="text-[13px] text-slate-500">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-teal-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
@@ -553,7 +552,7 @@ const PayrollPage = () => {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v) => fmtM(v)} />
-                <Bar dataKey="Tổng lương" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Tổng lương" fill="#529c96" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

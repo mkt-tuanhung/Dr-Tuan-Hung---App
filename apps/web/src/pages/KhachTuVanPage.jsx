@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, UserPlus, CalendarDays, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
+import { UserCheck, CalendarDays, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
@@ -186,46 +186,7 @@ const KhachTuVanPage = () => {
 
   return (
     <div className="fx-shell rounded-[28px] p-4 sm:p-5 space-y-4 text-slate-700">
-      {/* Hero — xanh nhạt + minh hoạ hồ sơ/ghi âm */}
-      <div className="relative overflow-hidden rounded-3xl p-5 border border-emerald-100/70 shadow-sm" style={{ background: 'linear-gradient(120deg, #eafaf1 0%, #e2f5ec 55%, #d6f0e3 100%)' }}>
-        {/* minh hoạ hồ sơ + ghi âm */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 pointer-events-none">
-          <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" aria-hidden="true">
-            <defs><linearGradient id="ktvFolder" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#5ecfa8" /><stop offset="1" stopColor="#3bb98d" /></linearGradient></defs>
-            {/* thân sau + tab */}
-            <path d="M28 28h15l5 6h25a5 5 0 0 1 5 5v34a5 5 0 0 1-5 5H28a5 5 0 0 1-5-5V33a5 5 0 0 1 5-5z" fill="url(#ktvFolder)" />
-            {/* tài liệu */}
-            <g transform="rotate(-5 50 55)">
-              <rect x="31" y="33" width="41" height="41" rx="4" fill="#ffffff" />
-              <rect x="37" y="41" width="14" height="4.5" rx="2.25" fill="#bfe9d6" />
-              <rect x="37" y="50" width="29" height="3" rx="1.5" fill="#dbe4ea" />
-              <rect x="37" y="57" width="25" height="3" rx="1.5" fill="#dbe4ea" />
-              <rect x="37" y="64" width="19" height="3" rx="1.5" fill="#dbe4ea" />
-            </g>
-            {/* túi trước */}
-            <path d="M23 50h54v22a5 5 0 0 1-5 5H28a5 5 0 0 1-5-5z" fill="#6ad4ae" />
-            {/* badge nhỏ trái */}
-            <rect x="15" y="44" width="16" height="14" rx="4" fill="#e2f5ea" />
-            <circle cx="20" cy="49" r="1.3" fill="#3bb98d" /><circle cx="26" cy="49" r="1.3" fill="#3bb98d" /><circle cx="23" cy="53" r="1.3" fill="#3bb98d" />
-            {/* vòng ghi âm */}
-            <circle cx="74" cy="71" r="15" fill="#ffffff" stroke="#e6f6ee" strokeWidth="2" />
-            <g fill="#22b183">
-              <rect x="65.5" y="67" width="2.6" height="8" rx="1.3" /><rect x="69.7" y="63" width="2.6" height="16" rx="1.3" />
-              <rect x="73.9" y="59" width="2.6" height="24" rx="1.3" /><rect x="78.1" y="64" width="2.6" height="14" rx="1.3" /><rect x="82.3" y="68" width="2.6" height="6" rx="1.3" />
-            </g>
-            {/* sparkles */}
-            <path d="M89 27l1.3 3.4 3.4 1.3-3.4 1.3-1.3 3.4-1.3-3.4-3.4-1.3 3.4-1.3z" fill="#e9f4a6" />
-            <path d="M83 36l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="#d6efb0" opacity="0.9" />
-          </svg>
-        </div>
-        <div className="relative z-10 flex items-center gap-3.5 max-w-[62%]">
-          <span className="w-14 h-14 rounded-2xl bg-white/80 text-emerald-600 grid place-items-center shrink-0 shadow-sm"><UserPlus className="w-7 h-7" strokeWidth={1.9} /></span>
-          <div className="min-w-0">
-            <h2 className="text-[24px] font-bold tracking-tight leading-tight text-slate-800">Khách tư vấn</h2>
-            <p className="text-slate-500 text-sm mt-1">Tiếp nhận • Hồ sơ • Ghi âm • Đánh giá AI</p>
-          </div>
-        </div>
-      </div>
+      <p className="text-[13px] text-slate-500">Tiếp nhận • Hồ sơ • Ghi âm • Đánh giá AI</p>
 
       {/* Chọn tháng + thùng rác */}
       <div className="flex items-center gap-3">

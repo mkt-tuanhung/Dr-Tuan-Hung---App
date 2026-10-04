@@ -313,10 +313,7 @@ const AttendancePage = () => {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Chấm công</h2>
-        <p className="text-slate-400 text-sm mt-0.5">{dateStr}</p>
-      </div>
+      <p className="text-[13px] text-slate-500">{dateStr}</p>
 
       {/* Clock & check in/out */}
       <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-6 text-white text-center">

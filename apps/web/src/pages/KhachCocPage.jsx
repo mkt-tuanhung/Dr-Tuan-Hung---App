@@ -391,8 +391,7 @@ const KhachCocPage = ({ isNested = false }) => {
           {!isNested && (
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Khách Cọc (Mini-CRM)</h2>
-                <p className="text-slate-500 text-sm mt-1">Chăm sóc khách đã cọc chờ ngày phẫu thuật</p>
+                <p className="text-[13px] text-slate-500">Chăm sóc khách đã cọc chờ ngày phẫu thuật</p>
               </div>
               <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold">{customers.length} Khách</div>
             </div>
@@ -401,7 +400,7 @@ const KhachCocPage = ({ isNested = false }) => {
           {/* Thẻ số liệu */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { icon: Users, color: '#14b8a6', label: 'Khách giữ cọc', value: cocStats.count },
+              { icon: Users, color: '#529c96', label: 'Khách giữ cọc', value: cocStats.count },
               { icon: Wallet, color: '#3b82f6', label: 'Tổng tiền cọc', value: fmtTy(cocStats.total) },
               { icon: CalendarDays, color: '#8b5cf6', label: 'Chờ lịch bác sĩ', value: cocStats.waitDr },
               { icon: Clock, color: '#f59e0b', label: 'Khách xin hoãn', value: cocStats.postpone },

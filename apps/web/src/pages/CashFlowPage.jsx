@@ -253,8 +253,7 @@ export default function CashFlowPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Kế toán dòng tiền (Vốn lưu động)</h2>
-          <p className="text-slate-500 text-sm mt-1">Quản lý nhận/chi tiền mặt và chuyển khoản theo ngày</p>
+          <p className="text-[13px] text-slate-500">Quản lý nhận/chi tiền mặt và chuyển khoản theo ngày</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
@@ -402,7 +401,7 @@ export default function CashFlowPage() {
                     <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#f1f5f9' }} />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar name="Thu tiền (+)" dataKey="income" fill="#14b8a6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar name="Thu tiền (+)" dataKey="income" fill="#529c96" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     <Bar name="Chi tiền (-)" dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>

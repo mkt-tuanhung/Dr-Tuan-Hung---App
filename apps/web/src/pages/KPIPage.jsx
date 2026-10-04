@@ -13,7 +13,7 @@ const ProgressRing = ({ value, size = 80 }) => {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (value / 100) * circ;
-  const color = value >= 100 ? '#14b8a6' : value >= 70 ? '#f59e0b' : '#ef4444';
+  const color = value >= 100 ? '#529c96' : value >= 70 ? '#f59e0b' : '#ef4444';
   return (
     <svg width={size} height={size} className="-rotate-90">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={6} />
@@ -67,8 +67,7 @@ const KPIPage = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">KPI của tôi</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month-1]} {year}</p>
+          <p className="text-[13px] text-slate-500">{MONTHS[month-1]} {year}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">

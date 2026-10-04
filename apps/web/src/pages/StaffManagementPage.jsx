@@ -268,8 +268,7 @@ const StaffManagementPage = ({ isNested = false }) => {
     <div className="space-y-5">
       {!isNested && (
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-none">Quản lý Nhân sự</h2>
-          <p className="text-slate-400 text-sm mt-2">Danh sách, chấm công và duyệt đơn từ</p>
+          <p className="text-[13px] text-slate-500">Danh sách, chấm công và duyệt đơn từ</p>
         </div>
       )}
 

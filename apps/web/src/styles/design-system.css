@@ -20,7 +20,7 @@
   --fx-shadow:    0 2px 4px rgba(15, 23, 42, .04), 0 12px 28px -8px rgba(15, 23, 42, .14);
   --fx-shadow-lg: 0 4px 8px rgba(15, 23, 42, .05), 0 30px 55px -14px rgba(15, 23, 42, .22);
   --fx-shadow-ink: 0 24px 50px -18px rgba(11, 18, 32, .60);
-  --fx-shadow-teal: 0 14px 34px -12px rgba(15, 118, 110, .30); /* ám teal khi hover */
+  --fx-shadow-teal: 0 14px 34px -12px rgba(70, 138, 134, .30); /* ám teal khi hover */
 
   /* Đường cong spring — mọi chuyển động premium dùng chung */
   --fx-ease: cubic-bezier(.32, .72, 0, 1);
@@ -30,7 +30,7 @@
 .fx-hero {
   position: relative;
   background:
-    radial-gradient(120% 140% at 100% 0%, rgba(20, 184, 166, .30) 0%, rgba(20, 184, 166, 0) 46%),
+    radial-gradient(120% 140% at 100% 0%, rgba(82, 156, 150, .30) 0%, rgba(82, 156, 150, 0) 46%),
     radial-gradient(120% 120% at 0% 100%, rgba(56, 189, 248, .16) 0%, rgba(56, 189, 248, 0) 52%),
     linear-gradient(135deg, #0d1526 0%, #101c33 55%, #0b1220 100%);
   box-shadow: var(--fx-shadow-ink), inset 0 1px 0 rgba(255, 255, 255, .06);
@@ -74,7 +74,7 @@
 .fx-card:hover {
   box-shadow: var(--fx-shadow), var(--fx-shadow-teal);
   transform: translateY(-3px);
-  border-color: rgba(20, 184, 166, .28);
+  border-color: rgba(70, 138, 134, .28);
 }
 .fx-card:active { transform: translateY(-1px) scale(.995); }
 
@@ -92,8 +92,8 @@
 
 /* -------- Nút nhấn chính có khối -------- */
 .fx-btn-primary {
-  background: linear-gradient(180deg, #16c2ad 0%, #0f9e8c 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 22px -10px rgba(15, 118, 110, .65);
+  background: linear-gradient(180deg, #56A39D 0%, #468A86 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 22px -10px rgba(70, 138, 134, .60);
   transition: filter .25s var(--fx-ease), transform .12s var(--fx-ease);
 }
 .fx-btn-primary:hover { filter: brightness(1.05); }
@@ -116,7 +116,7 @@
 .fx-shell {
   position: relative;
   background:
-    radial-gradient(85% 55% at 100% 0%, rgba(20, 184, 166, .12) 0%, rgba(20, 184, 166, 0) 55%),
+    radial-gradient(85% 55% at 100% 0%, rgba(82, 156, 150, .10) 0%, rgba(82, 156, 150, 0) 55%),
     radial-gradient(75% 55% at 0% 12%, rgba(56, 189, 248, .11) 0%, rgba(56, 189, 248, 0) 55%),
     radial-gradient(70% 60% at 60% 100%, rgba(139, 92, 246, .07) 0%, rgba(139, 92, 246, 0) 55%),
     linear-gradient(180deg, #ffffff 0%, #f5f9fb 100%);
@@ -129,7 +129,7 @@
   border-radius: inherit;
   pointer-events: none;
   background:
-    radial-gradient(40% 40% at 85% 15%, rgba(45, 212, 191, .16), transparent 70%),
+    radial-gradient(40% 40% at 85% 15%, rgba(107, 176, 170, .14), transparent 70%),
     radial-gradient(35% 35% at 12% 30%, rgba(96, 165, 250, .14), transparent 70%);
   filter: blur(30px);
   opacity: .9;
@@ -150,8 +150,8 @@
 /* Trạng thái đang chọn — trắng đậm hơn + viền teal */
 .fx-glass-active {
   background: rgba(255, 255, 255, .96);
-  border: 1px solid rgba(20, 184, 166, .5);
-  box-shadow: 0 12px 30px -16px rgba(15, 118, 110, .28), inset 0 0 0 1px rgba(20, 184, 166, .18);
+  border: 1px solid rgba(70, 138, 134, .5);
+  box-shadow: 0 12px 30px -16px rgba(70, 138, 134, .28), inset 0 0 0 1px rgba(70, 138, 134, .18);
 }
 
 /* -------- Số liệu canh cột đều -------- */

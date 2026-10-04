@@ -480,7 +480,7 @@ export default function ServiceReviewPublicPage() {
               );
             })}
           </div>
-          <div className="text-center mt-4 h-5 text-sm font-semibold" style={{ color: answers[q.code] && answers[q.code] !== 'na' ? FACE_COLORS[answers[q.code]] : '#14b8a6' }}>{answers[q.code] && answers[q.code] !== 'na' ? RATING_LABELS[answers[q.code]] : ''}</div>
+          <div className="text-center mt-4 h-5 text-sm font-semibold" style={{ color: answers[q.code] && answers[q.code] !== 'na' ? FACE_COLORS[answers[q.code]] : '#529c96' }}>{answers[q.code] && answers[q.code] !== 'na' ? RATING_LABELS[answers[q.code]] : ''}</div>
           {q.na && (
             <button onClick={() => setAns(q.code, 'na')} className={`mt-2 w-full py-2.5 rounded-xl text-sm font-medium border transition ${answers[q.code] === 'na' ? 'border-slate-400 bg-slate-100 text-slate-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{q.naLabel}</button>
           )}

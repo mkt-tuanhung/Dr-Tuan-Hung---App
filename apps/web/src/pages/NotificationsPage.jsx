@@ -43,8 +43,7 @@ export default function NotificationsPage() {
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Thông báo</h2>
-          <p className="text-sm text-slate-400">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
+          <p className="text-[13px] text-slate-500">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
         </div>
         {unread > 0 && (
           <button onClick={markAllRead} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">

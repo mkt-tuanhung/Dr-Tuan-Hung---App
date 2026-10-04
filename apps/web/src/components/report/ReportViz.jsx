@@ -3,7 +3,7 @@ import React from 'react';
 // Màu theo trạng thái khách (tệp khách) & kết quả gọi — dùng chung modal + trang công khai.
 export const STATUS_COLORS = {
   tiep_can: '#64748b', nong: '#f43f5e', tiem_nang: '#f59e0b', da_hen_lich: '#3b82f6',
-  coc: '#8b5cf6', da_lam_dv: '#14b8a6', sai_gon: '#06b6d4', chot_fail: '#fb923c', mat: '#94a3b8',
+  coc: '#8b5cf6', da_lam_dv: '#529c96', sai_gon: '#06b6d4', chot_fail: '#fb923c', mat: '#94a3b8',
 };
 export const OUTCOME_COLORS = {
   nghe_may: '#10b981', khong_nghe: '#94a3b8', may_ban: '#f59e0b', hen_goi_lai: '#3b82f6',
@@ -19,7 +19,7 @@ export const Bars = ({ data }) => {
         <div key={i} className="flex items-center gap-2 text-[12px]">
           <span className="w-24 shrink-0 text-slate-500 truncate">{d.label}</span>
           <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${(d.value / max) * 100}%`, background: d.color || '#14b8a6' }} />
+            <div className="h-full rounded-full transition-all" style={{ width: `${(d.value / max) * 100}%`, background: d.color || '#529c96' }} />
           </div>
           <b className="w-9 text-right text-slate-700 tabular-nums">{d.value}</b>
         </div>

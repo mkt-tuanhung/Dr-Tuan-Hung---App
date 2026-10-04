@@ -42,8 +42,7 @@ const KPIManagementPage = () => {
       {/* Header + month nav */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">KPI & Hoa hồng</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year}</p>
+          <p className="text-[13px] text-slate-500">{MONTHS[month - 1]} {year}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">

@@ -248,13 +248,7 @@ export default function ServiceQualityPage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-2xl bg-teal-100 text-teal-600 grid place-items-center shrink-0"><Smile className="w-6 h-6" /></span>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Đánh giá dịch vụ</h2>
-            <p className="text-slate-400 text-sm">Giám sát chất lượng nhân sự &amp; dịch vụ từ phản hồi khách hàng</p>
-          </div>
-        </div>
+        <p className="text-[13px] text-slate-500">Giám sát chất lượng nhân sự &amp; dịch vụ từ phản hồi khách hàng</p>
         <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
@@ -302,7 +296,7 @@ export default function ServiceQualityPage() {
                       <XAxis dataKey="week" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
                       <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} />
-                      <Line type="monotone" dataKey="csat" stroke="#14b8a6" strokeWidth={3} dot={{ r: 3, fill: '#14b8a6' }} name="CSAT" />
+                      <Line type="monotone" dataKey="csat" stroke="#529c96" strokeWidth={3} dot={{ r: 3, fill: '#529c96' }} name="CSAT" />
                     </LineChart>
                   </ResponsiveContainer>
                 )}

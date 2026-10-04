@@ -20,20 +20,15 @@ export default function DepositManagementPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header — MOBILE (xanh tối, tràn viền) */}
-      <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
-        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
-        <div className="relative">
-          <h2 className="text-2xl font-bold text-white">Quản lý Đặt cọc</h2>
-          <p className="text-white/70 text-sm mt-0.5 mb-4">Theo dõi và quản lý thông tin đặt cọc khách hàng</p>
-          <Tabs dark />
-        </div>
+      {/* Header — MOBILE */}
+      <div className="lg:hidden rounded-2xl bg-white shadow-card border border-slate-200/70 p-4">
+        <p className="text-[13px] text-slate-500 mb-3">Theo dõi và quản lý thông tin đặt cọc khách hàng</p>
+        <Tabs />
       </div>
 
       {/* Header — DESKTOP */}
       <div className="hidden lg:block">
-        <h2 className="text-2xl font-bold text-slate-800">Quản lý Đặt cọc (Mini-CRM)</h2>
-        <p className="text-slate-400 text-sm mt-0.5 mb-4">Theo dõi khách hàng chờ phẫu thuật và xử lý khách rớt</p>
+        <p className="text-[13px] text-slate-500 mb-4">Theo dõi khách hàng chờ phẫu thuật và xử lý khách rớt</p>
         <Tabs />
       </div>
 
