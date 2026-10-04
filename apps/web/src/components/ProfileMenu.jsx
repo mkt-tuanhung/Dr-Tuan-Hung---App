@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { uploadToR2 } from '@/lib/r2Client';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft, Send, CheckCircle2, BellRing } from 'lucide-react';
+import { User, Key, Building2, LogOut, FileText, Settings, X, ShieldAlert, Camera, Loader2, Pencil, Search, ChevronLeft, ChevronRight, Phone, Send, CheckCircle2, BellRing } from 'lucide-react';
 import TwoFactorSettings from '@/components/TwoFactorSettings.jsx';
 import { pushSupported, enablePush, disablePush, isPushOn } from '@/lib/webpush';
 
@@ -197,7 +197,8 @@ export default function ProfileMenu({ children, mobile = false }) {
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-          <div className="absolute z-50 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden w-64 top-full mt-2 right-0">
+          {/* ===== Máy tính: dropdown giữ nguyên ===== */}
+          <div className="hidden lg:block absolute z-50 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden w-64 top-full mt-2 right-0">
             <div className="p-4 border-b bg-teal-50/50">
               <div className="font-bold text-slate-800 truncate">{profile?.full_name}</div>
               <div className="text-xs text-teal-600 mt-0.5">{profile?.position || profile?.role} · {profile?.employee_id}</div>
@@ -253,27 +254,144 @@ export default function ProfileMenu({ children, mobile = false }) {
               </button>
             </div>
           </div>
+          {/* ===== Điện thoại (Ethics M16): màn Tài khoản toàn màn — portal ra body để phủ cả thanh dưới ===== */}
+          {createPortal((
+          <div className="lg:hidden fixed inset-0 z-[60] h-[100dvh] overflow-y-auto overscroll-contain bg-[#F3F9F9] animate-page cursor-default">
+            <div className="sticky top-0 z-10 grid grid-cols-[88px_minmax(0,1fr)_88px] items-center h-14 px-2 bg-[#F3F9F9]/95 backdrop-blur">
+              <button onClick={() => setMenuOpen(false)} className="w-11 h-11 grid place-items-center rounded-xl text-slate-900 active:bg-teal-50" aria-label="Đóng">
+                <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2} />
+              </button>
+              <div className="font-bold text-slate-900 text-[18px] truncate text-center">Tài khoản</div>
+              <span />
+            </div>
+
+            <div className="px-4 pb-[calc(32px+env(safe-area-inset-bottom))]">
+              {/* Avatar + tên + chức danh */}
+              <div className="flex flex-col items-center text-center pt-2 pb-4">
+                <div className="p-1.5 rounded-full bg-gradient-to-br from-teal-100 via-white to-teal-50 ring-1 ring-teal-100 shadow-soft">
+                  <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white bg-gradient-to-br from-teal-50 to-teal-100">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-teal-600">
+                        <User className="w-12 h-12" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-3 text-[22px] leading-tight font-bold text-slate-900 max-w-full truncate">{profile?.full_name}</div>
+                <div className="mt-1 text-[13.5px] text-slate-500">{[profile?.position || profile?.role, profile?.employee_id].filter(Boolean).join(' · ')}</div>
+              </div>
+
+              {/* Thông tin */}
+              <h2 className="text-[18px] font-bold text-slate-900 mt-2 mb-3">Thông tin</h2>
+              <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100">
+                <div className="flex items-center gap-3 p-4">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Phone className="w-[18px] h-[18px]" /></span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-slate-500">Số điện thoại</div>
+                    <div className="text-[14.5px] font-semibold text-slate-800 truncate tabular-nums">{profile?.phone || 'Chưa cập nhật'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Building2 className="w-[18px] h-[18px]" /></span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-slate-500">Tài khoản nhận lương</div>
+                    <div className="text-[14.5px] font-semibold text-slate-800 truncate tabular-nums">{profile?.bank_name ? `${profile.bank_name} - ${profile.bank_account}` : 'Chưa cập nhật'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tài khoản & thông báo */}
+              <h2 className="text-[18px] font-bold text-slate-900 mt-5 mb-3">Cài đặt</h2>
+              <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100 overflow-hidden">
+                <button onClick={openProfileModal} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><User className="w-[18px] h-[18px]" /></span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[14.5px] font-semibold text-slate-800">Hồ sơ cá nhân</span>
+                    <span className="block text-[12px] text-slate-500 truncate">Ảnh, ngân hàng, mật khẩu, bảo mật</span>
+                  </span>
+                  <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" />
+                </button>
+
+                <button onClick={() => { openProfileModal(); setActiveTab('password'); }} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Key className="w-[18px] h-[18px]" /></span>
+                  <span className="flex-1 min-w-0 block text-[14.5px] font-semibold text-slate-800">Đổi mật khẩu</span>
+                  <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" />
+                </button>
+
+                {pushSupported() && (
+                  <button onClick={togglePush} disabled={pushBusy} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors disabled:opacity-60">
+                    <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><BellRing className="w-[18px] h-[18px]" /></span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[14.5px] font-semibold text-slate-800">{pushOn ? 'Thông báo về máy đã bật' : 'Bật thông báo về máy'}</span>
+                      <span className="block text-[12px] text-slate-500 truncate">Hiện thông báo trên điện thoại này</span>
+                    </span>
+                    {pushBusy ? <Loader2 className="w-5 h-5 animate-spin text-slate-400 shrink-0" /> : (pushOn && <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0" />)}
+                  </button>
+                )}
+
+                <button onClick={linkTelegram} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Send className="w-[18px] h-[18px]" /></span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[14.5px] font-semibold text-slate-800">{profile?.telegram_chat_id ? 'Telegram đã liên kết' : 'Nhận thông báo Telegram'}</span>
+                    <span className="block text-[12px] text-slate-500 truncate">Nhận tin qua bot Telegram của phòng khám</span>
+                  </span>
+                  {profile?.telegram_chat_id && <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0" />}
+                </button>
+
+                <button onClick={togglePinkMode} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Settings className="w-[18px] h-[18px]" /></span>
+                  <span className="flex-1 min-w-0 block text-[14.5px] font-semibold text-slate-800">Pink Mode</span>
+                  <div className={`w-11 h-6 flex items-center rounded-full p-1 shrink-0 transition-colors duration-300 ${isPinkMode ? 'bg-gradient-to-r from-rose-400 to-orange-300' : 'bg-slate-200'}`}>
+                    <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${isPinkMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                </button>
+              </div>
+
+              {/* Phòng khám */}
+              <h2 className="text-[18px] font-bold text-slate-900 mt-5 mb-3">Phòng khám</h2>
+              <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100 overflow-hidden">
+                <button onClick={() => { setMenuOpen(false); toast.info('Chưa có nội quy mới'); }} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><ShieldAlert className="w-[18px] h-[18px]" /></span>
+                  <span className="flex-1 min-w-0 block text-[14.5px] font-semibold text-slate-800">Nội quy phòng khám</span>
+                  <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" />
+                </button>
+                <button onClick={() => { setMenuOpen(false); toast.info('Kho tài liệu trống'); }} className="w-full flex items-center gap-3 p-4 text-left active:bg-slate-50 transition-colors">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><FileText className="w-[18px] h-[18px]" /></span>
+                  <span className="flex-1 min-w-0 block text-[14.5px] font-semibold text-slate-800">Giấy tờ & Tài liệu</span>
+                  <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" />
+                </button>
+              </div>
+
+              <button onClick={handleLogout} className="mt-5 w-full h-12 rounded-2xl bg-danger-50 border border-danger-100 text-danger-600 text-[15px] font-bold flex items-center justify-center gap-2 active:bg-danger-100 transition-colors">
+                <LogOut className="w-5 h-5" /> Đăng xuất
+              </button>
+            </div>
+          </div>
+          ), document.body)}
         </>
       )}
 
       {/* Profile Modal — portal ra body để không kẹt trong containing block của header (backdrop-blur) */}
       {modalOpen && createPortal((
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-start sm:items-center justify-center p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="flex bg-slate-50 border-b shrink-0">
-              <button onClick={() => setActiveTab('profile')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-end lg:items-center justify-center p-0 lg:p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-t-3xl lg:rounded-2xl w-full lg:max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] lg:max-h-[92vh] animate-page">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 mb-1 shrink-0" />
+            <div className="flex bg-white lg:bg-slate-50 border-b border-slate-100 lg:border-slate-200 shrink-0 px-2 lg:px-0">
+              <button onClick={() => setActiveTab('profile')} className={`flex-1 min-h-[48px] py-3.5 px-1 text-[14px] lg:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-600 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Cá nhân
               </button>
-              <button onClick={() => setActiveTab('password')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'password' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('password')} className={`flex-1 min-h-[48px] py-3.5 px-1 text-[14px] lg:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'password' ? 'border-teal-600 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Mật khẩu
               </button>
-              <button onClick={() => setActiveTab('2fa')} className={`flex-1 py-3.5 px-1 text-xs sm:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === '2fa' ? 'border-teal-500 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('2fa')} className={`flex-1 min-h-[48px] py-3.5 px-1 text-[14px] lg:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === '2fa' ? 'border-teal-600 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 Bảo mật
               </button>
-              <button onClick={() => setModalOpen(false)} className="px-3 sm:px-4 text-slate-400 hover:text-slate-600 shrink-0"><X className="w-5 h-5"/></button>
+              <button onClick={() => setModalOpen(false)} className="w-11 lg:w-auto px-0 lg:px-4 grid place-items-center text-slate-400 hover:text-slate-600 shrink-0" aria-label="Đóng"><X className="w-5 h-5"/></button>
             </div>
 
-            <div className="p-5 sm:p-6 overflow-y-auto flex-1">
+            <div className="px-4 pt-5 pb-[calc(20px+env(safe-area-inset-bottom))] lg:p-6 overflow-y-auto flex-1">
               {activeTab === 'profile' ? (
                 selectingBank ? (
                   <div className="flex flex-col h-[60vh]">
@@ -287,7 +405,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                         type="text" 
                         autoFocus
                         placeholder="Tìm theo tên ngân hàng hoặc mã (VD: MB, VCB)..." 
-                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none text-sm"
+                        className="w-full h-11 lg:h-auto pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none text-base lg:text-sm"
                         value={bankSearch}
                         onChange={e => setBankSearch(e.target.value)}
                       />
@@ -313,7 +431,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                   <form onSubmit={handleSaveProfile} className="space-y-4">
                     {/* Avatar Upload */}
                     <div className="flex flex-col items-center justify-center mb-6">
-                      <div className="relative w-24 h-24 rounded-full overflow-hidden bg-slate-100 border-2 border-slate-200 group">
+                      <div className="relative w-28 h-28 lg:w-24 lg:h-24 rounded-full overflow-hidden bg-slate-100 border-4 lg:border-2 border-teal-50 lg:border-slate-200 shadow-soft lg:shadow-none group">
                         {form.avatar_url ? (
                           <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
@@ -322,7 +440,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                           </div>
                         )}
                         
-                        <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        <label className="absolute inset-0 flex flex-col items-center justify-end pb-2 bg-gradient-to-t from-black/55 via-black/10 to-transparent text-white opacity-100 lg:justify-center lg:pb-0 lg:bg-none lg:bg-black/40 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-pointer">
                           {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
                           <span className="text-[10px] mt-1 font-medium">{uploading ? 'Đang tải...' : 'Thay đổi'}</span>
                           <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={uploading} />
@@ -338,7 +456,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                       <label className="block text-sm font-bold text-slate-700 mb-1">Số điện thoại</label>
                       <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Ngân hàng</label>
                         <button type="button" onClick={() => setSelectingBank(true)} className="w-full text-left border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 hover:bg-white transition-colors min-h-[46px] truncate">
@@ -355,9 +473,9 @@ export default function ProfileMenu({ children, mobile = false }) {
                       </div>
                     </div>
 
-                    <div className="pt-4 flex justify-end gap-3 border-t">
-                      <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
-                      <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
+                    <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 lg:border-slate-200">
+                      <button type="button" onClick={() => setIsEditing(false)} className="flex-1 lg:flex-none h-12 lg:h-auto px-5 py-2.5 text-[15px] lg:text-sm font-bold text-slate-600 lg:text-slate-500 bg-white border border-slate-200 lg:border-transparent hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
+                      <button type="submit" disabled={saving} className="flex-1 lg:flex-none h-12 lg:h-auto px-5 py-2.5 text-[15px] lg:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Lưu thay đổi</button>
                     </div>
                   </form>
                 ) : (
@@ -408,7 +526,7 @@ export default function ProfileMenu({ children, mobile = false }) {
                       </div>
                     )}
 
-                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors">
+                    <button onClick={() => setIsEditing(true)} className="w-full h-12 lg:h-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-teal-50 lg:bg-slate-100 text-teal-800 lg:text-slate-700 font-bold hover:bg-slate-200 transition-colors">
                       <Pencil className="w-4 h-4" /> Chỉnh sửa hồ sơ
                     </button>
                   </div>
@@ -428,9 +546,9 @@ export default function ProfileMenu({ children, mobile = false }) {
                     <label className="block text-sm font-bold text-slate-700 mb-1">Xác nhận mật khẩu</label>
                     <input type="password" minLength="6" value={pwdForm.confirmPassword} onChange={e => setPwdForm({...pwdForm, confirmPassword: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-slate-50 focus:bg-white transition-colors" required />
                   </div>
-                  <div className="pt-4 flex justify-end gap-3 border-t">
-                    <button type="button" onClick={() => setModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
-                    <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Cập nhật mật khẩu</button>
+                  <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 lg:border-slate-200">
+                    <button type="button" onClick={() => setModalOpen(false)} className="flex-1 lg:flex-none h-12 lg:h-auto px-5 py-2.5 text-[15px] lg:text-sm font-bold text-slate-600 lg:text-slate-500 bg-white border border-slate-200 lg:border-transparent hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
+                    <button type="submit" disabled={saving} className="flex-1 lg:flex-none h-12 lg:h-auto px-5 py-2.5 text-[15px] lg:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-sm disabled:opacity-50">Cập nhật mật khẩu</button>
                   </div>
                 </form>
               )}
