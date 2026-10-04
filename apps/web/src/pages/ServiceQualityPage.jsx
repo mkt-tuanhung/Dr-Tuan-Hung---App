@@ -35,11 +35,11 @@ const TICKET_STATUS = {
 };
 const OPEN_STATUSES = ['new', 'in_progress', 'contacting', 'escalated'];
 const STATUS_STYLE = {
-  new: 'bg-rose-100 text-rose-700', in_progress: 'bg-amber-100 text-amber-700', contacting: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-teal-100 text-teal-700', closed: 'bg-slate-200 text-slate-600', no_contact: 'bg-slate-100 text-slate-500', escalated: 'bg-purple-100 text-purple-700',
+  new: 'bg-danger-50 text-danger-600', in_progress: 'bg-warning-50 text-warning-600', contacting: 'bg-info-50 text-info-600',
+  resolved: 'bg-success-50 text-success-600', closed: 'bg-slate-100 text-slate-600', no_contact: 'bg-slate-100 text-slate-500', escalated: 'bg-lavender-50 text-lavender-600',
 };
 const PRIORITY = {
-  urgent: { label: 'Khẩn', c: 'bg-rose-500 text-white' }, high: { label: 'Cao', c: 'bg-orange-100 text-orange-700' },
+  urgent: { label: 'Khẩn', c: 'bg-danger-50 text-danger-600' }, high: { label: 'Cao', c: 'bg-peach-50 text-peach-600' },
   normal: { label: 'Thường', c: 'bg-slate-100 text-slate-600' }, low: { label: 'Thấp', c: 'bg-slate-100 text-slate-500' },
 };
 const isOverdue = (t) => OPEN_STATUSES.includes(t.status) && t.sla_due_at && new Date(t.sla_due_at) < new Date();
@@ -234,36 +234,36 @@ export default function ServiceQualityPage() {
   }, [periodTickets, ticketFilter, ql]);
 
   const StatCard = ({ icon: Icon, label, value, sub, tone }) => (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-500">{label}</span>
-        <span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon className="w-4 h-4" /></span>
+    <div className="e-metric gap-3 sm:gap-4 p-3.5 sm:p-4 lg:p-5">
+      <span className={`e-metric-icon w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 ${tone}`}><Icon /></span>
+      <div className="min-w-0 flex-1">
+        <div className="e-metric-label">{label}</div>
+        <div className="e-metric-value">{value}</div>
+        {sub && <div className="e-metric-hint">{sub}</div>}
       </div>
-      <div className="text-2xl font-bold text-slate-800 mt-2 tabular-nums">{value}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
     </div>
   );
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Đầu màn: mô tả + khoảng thời gian */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-[13px] text-slate-500">Giám sát chất lượng nhân sự &amp; dịch vụ từ phản hồi khách hàng</p>
-        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
+        <p className="e-page-desc">Giám sát chất lượng nhân sự &amp; dịch vụ từ phản hồi khách hàng</p>
+        <div className="e-seg max-w-full overflow-x-auto">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${period === p.key ? 'bg-teal-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>{p.label}</button>
+              className={`e-seg-item ${period === p.key ? 'e-seg-active' : ''}`}>{p.label}</button>
           ))}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Tabs — gạch chân teal */}
+      <div className="e-tabs">
         {[['overview', 'Tổng quan'], ['staff', 'Nhân sự'], ['responses', 'Phản hồi'], ['tickets', 'Xử lý phản hồi']].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition relative ${tab === k ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>
+            className={`e-tab shrink-0 ${tab === k ? 'e-tab-active' : ''}`}>
             {l}
-            {k === 'tickets' && openTickets.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold align-middle">{openTickets.length}</span>}
+            {k === 'tickets' && openTickets.length > 0 && <span className="e-badge e-badge-sm e-tone-danger min-w-[22px] justify-center px-1.5 tabular-nums">{openTickets.length}</span>}
           </button>
         ))}
       </div>
@@ -275,28 +275,28 @@ export default function ServiceQualityPage() {
           {/* ---------------- TỔNG QUAN ---------------- */}
           {tab === 'overview' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={Smile} label="CSAT (TB 1–5)" value={fmt1(stats.csat)} sub={`${stats.respCount} phản hồi hợp lệ`} tone="bg-teal-50 text-teal-600" />
-                <StatCard icon={ThumbsUp} label="NPS" value={stats.nps == null ? '—' : stats.nps} sub="−100 … +100" tone="bg-emerald-50 text-emerald-600" />
-                <StatCard icon={TrendingUp} label="Tỷ lệ hoàn thành" value={`${stats.completeRate}%`} sub={`${stats.completed}/${stats.total} phiếu`} tone="bg-blue-50 text-blue-600" />
-                <StatCard icon={AlertTriangle} label="Phản hồi tiêu cực" value={stats.negative} sub="điểm tổng thể 1–2" tone="bg-rose-50 text-rose-600" />
-                <StatCard icon={Ticket} label="Ticket đang mở" value={openTickets.length} sub="cần xử lý" tone="bg-indigo-50 text-indigo-600" />
-                <StatCard icon={Clock} label="Quá hạn SLA" value={overdueTickets.length} sub="xử lý gấp" tone="bg-rose-50 text-rose-600" />
-                <StatCard icon={PhoneCall} label="Yêu cầu liên hệ" value={stats.wantContact} sub="khách muốn hỗ trợ" tone="bg-amber-50 text-amber-600" />
-                <StatCard icon={ShieldAlert} label="Nghi ngờ gian lận" value={stats.suspect} sub="đã loại khỏi KPI" tone="bg-purple-50 text-purple-600" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                <StatCard icon={Smile} label="CSAT (TB 1–5)" value={fmt1(stats.csat)} sub={`${stats.respCount} phản hồi hợp lệ`} tone="bg-teal-50 text-teal-700" />
+                <StatCard icon={ThumbsUp} label="NPS" value={stats.nps == null ? '—' : stats.nps} sub="−100 … +100" tone="bg-success-50 text-success-600" />
+                <StatCard icon={TrendingUp} label="Tỷ lệ hoàn thành" value={`${stats.completeRate}%`} sub={`${stats.completed}/${stats.total} phiếu`} tone="bg-info-50 text-info-600" />
+                <StatCard icon={AlertTriangle} label="Phản hồi tiêu cực" value={stats.negative} sub="điểm tổng thể 1–2" tone="bg-danger-50 text-danger-600" />
+                <StatCard icon={Ticket} label="Ticket đang mở" value={openTickets.length} sub="cần xử lý" tone="bg-warning-50 text-warning-600" />
+                <StatCard icon={Clock} label="Quá hạn SLA" value={overdueTickets.length} sub="xử lý gấp" tone="bg-danger-50 text-danger-600" />
+                <StatCard icon={PhoneCall} label="Yêu cầu liên hệ" value={stats.wantContact} sub="khách muốn hỗ trợ" tone="bg-peach-50 text-peach-600" />
+                <StatCard icon={ShieldAlert} label="Nghi ngờ gian lận" value={stats.suspect} sub="đã loại khỏi KPI" tone="bg-lavender-50 text-lavender-600" />
               </div>
 
               {/* Xu hướng CSAT */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                <h3 className="font-bold text-slate-800 mb-1">Xu hướng CSAT theo tuần</h3>
-                {trend.length === 0 ? <p className="text-sm text-slate-400 py-8 text-center">Chưa đủ dữ liệu.</p> : (
+              <div className="e-card e-card-pad">
+                <h3 className="e-card-title mb-3">Xu hướng CSAT theo tuần</h3>
+                {trend.length === 0 ? <p className="e-empty text-[13px] text-slate-400">Chưa đủ dữ liệu.</p> : (
                   <ResponsiveContainer width="100%" height={220}>
                     <LineChart data={trend} margin={{ top: 10, right: 8, left: -8, bottom: 0 }}>
-                      <CartesianGrid vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="week" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
+                      <CartesianGrid vertical={false} stroke="#EAF4F4" />
+                      <XAxis dataKey="week" tick={{ fontSize: 11, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: '#A3ABAA' }} axisLine={false} tickLine={false} width={28} />
                       <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} />
-                      <Line type="monotone" dataKey="csat" stroke="#12A4A5" strokeWidth={3} dot={{ r: 3, fill: '#12A4A5' }} name="CSAT" />
+                      <Line type="monotone" dataKey="csat" stroke="#067B7F" strokeWidth={2.5} dot={{ r: 3, fill: '#067B7F' }} name="CSAT" />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -304,30 +304,30 @@ export default function ServiceQualityPage() {
 
               {/* Heatmap điểm chạm + Top vấn đề */}
               <div className="grid lg:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                  <h3 className="font-bold text-slate-800 mb-3">Điểm theo từng điểm chạm</h3>
-                  <div className="space-y-2.5">
+                <div className="e-card e-card-pad">
+                  <h3 className="e-card-title mb-4">Điểm theo từng điểm chạm</h3>
+                  <div className="space-y-3">
                     {perQuestion.map(pq => {
                       const pct = pq.avg ? (pq.avg / 5) * 100 : 0;
-                      const color = pq.avg >= 4 ? 'bg-emerald-500' : pq.avg >= 3 ? 'bg-amber-500' : 'bg-rose-500';
+                      const color = pq.avg >= 4 ? 'bg-success-500' : pq.avg >= 3 ? 'bg-warning-500' : 'bg-danger-500';
                       return (
                         <div key={pq.code}>
-                          <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">{pq.title}</span><span className="font-bold text-slate-700 tabular-nums">{fmt1(pq.avg)} <span className="text-slate-300 font-normal">({pq.n})</span></span></div>
+                          <div className="flex justify-between gap-3 text-[13px] mb-1.5"><span className="text-slate-600 min-w-0">{pq.title}</span><span className="font-semibold text-slate-900 tabular-nums shrink-0">{fmt1(pq.avg)} <span className="text-slate-400 font-normal text-[12px]">({pq.n})</span></span></div>
                           <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} /></div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                  <h3 className="font-bold text-slate-800 mb-3">Chủ đề khách nhắc nhiều</h3>
-                  {topTopics.length === 0 ? <p className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu.</p> : (
-                    <div className="space-y-2">
+                <div className="e-card e-card-pad">
+                  <h3 className="e-card-title mb-4">Chủ đề khách nhắc nhiều</h3>
+                  {topTopics.length === 0 ? <p className="e-empty text-[13px] text-slate-400">Chưa có dữ liệu.</p> : (
+                    <div className="space-y-1">
                       {topTopics.map(([t, c]) => (
-                        <div key={t} className="flex items-center gap-3">
-                          <span className="text-sm text-slate-600 flex-1">{t}</span>
-                          <div className="w-24 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-teal-400 rounded-full" style={{ width: `${(c / topTopics[0][1]) * 100}%` }} /></div>
-                          <span className="text-xs font-bold text-slate-500 w-6 text-right tabular-nums">{c}</span>
+                        <div key={t} className="flex items-center gap-3 min-h-[32px]">
+                          <span className="text-[13px] text-slate-600 flex-1 min-w-0">{t}</span>
+                          <div className="w-24 sm:w-32 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-teal-500 rounded-full" style={{ width: `${(c / topTopics[0][1]) * 100}%` }} /></div>
+                          <span className="text-[13px] font-semibold text-slate-900 w-7 text-right tabular-nums">{c}</span>
                         </div>
                       ))}
                     </div>
@@ -337,32 +337,32 @@ export default function ServiceQualityPage() {
 
               {/* Tiếng nói khách hàng */}
               <div className="grid lg:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                  <div className="flex items-center gap-2 mb-3"><Megaphone className="w-5 h-5 text-violet-500" /><h3 className="font-bold text-slate-800">Cảm xúc khách hàng</h3></div>
-                  <div className="space-y-2">
+                <div className="e-card e-card-pad">
+                  <div className="flex items-center gap-2 mb-4"><Megaphone className="w-5 h-5 text-teal-600" /><h3 className="e-card-title">Cảm xúc khách hàng</h3></div>
+                  <div className="space-y-1">
                     {voc.sentiment.map(({ s, n }) => {
                       const total = voc.sentiment.reduce((x, y) => x + y.n, 0) || 1;
                       return (
-                        <div key={s} className="flex items-center gap-3">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-24 text-center first-letter:uppercase ${SENTIMENT_STYLE[s]}`}>{s}</span>
-                          <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                            <div className={`h-full rounded-full ${s.includes('tiêu cực') ? 'bg-rose-400' : s === 'trung lập' ? 'bg-slate-300' : 'bg-emerald-400'}`} style={{ width: `${(n / total) * 100}%` }} />
+                        <div key={s} className="flex items-center gap-3 min-h-[32px]">
+                          <span className={`e-badge e-badge-sm w-24 justify-center first-letter:uppercase ${SENTIMENT_STYLE[s]}`}>{s}</span>
+                          <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div className={`h-full rounded-full ${s.includes('tiêu cực') ? 'bg-danger-400' : s === 'trung lập' ? 'bg-slate-300' : 'bg-success-500'}`} style={{ width: `${(n / total) * 100}%` }} />
                           </div>
-                          <span className="text-xs font-bold text-slate-500 w-6 text-right tabular-nums">{n}</span>
+                          <span className="text-[13px] font-semibold text-slate-900 w-7 text-right tabular-nums">{n}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                  <div className="flex items-center gap-2 mb-3"><RefreshCw className="w-5 h-5 text-teal-500" /><h3 className="font-bold text-slate-800">Hiệu quả xử lý phản hồi</h3></div>
+                <div className="e-card e-card-pad">
+                  <div className="flex items-center gap-2 mb-4"><RefreshCw className="w-5 h-5 text-teal-600" /><h3 className="e-card-title">Hiệu quả xử lý phản hồi</h3></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{voc.closedCount}</div><div className="text-[11px] text-slate-400">Ticket đã xử lý</div></div>
-                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{voc.onTimeRate == null ? '—' : voc.onTimeRate + '%'}</div><div className="text-[11px] text-slate-400">Đúng hạn SLA</div></div>
-                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{voc.resolvedRate == null ? '—' : voc.resolvedRate + '%'}</div><div className="text-[11px] text-slate-400">Khách xác nhận đã giải quyết</div></div>
-                    <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{fmt1(voc.satAfter)}</div><div className="text-[11px] text-slate-400">Hài lòng sau xử lý ({voc.resurveyCount})</div></div>
+                    <div className="e-subtle px-4 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{voc.closedCount}</div><div className="text-[12px] text-slate-500 mt-0.5">Ticket đã xử lý</div></div>
+                    <div className="e-subtle px-4 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{voc.onTimeRate == null ? '—' : voc.onTimeRate + '%'}</div><div className="text-[12px] text-slate-500 mt-0.5">Đúng hạn SLA</div></div>
+                    <div className="e-subtle px-4 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{voc.resolvedRate == null ? '—' : voc.resolvedRate + '%'}</div><div className="text-[12px] text-slate-500 mt-0.5">Khách xác nhận đã giải quyết</div></div>
+                    <div className="e-subtle px-4 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{fmt1(voc.satAfter)}</div><div className="text-[12px] text-slate-500 mt-0.5">Hài lòng sau xử lý ({voc.resurveyCount})</div></div>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-3">Số liệu từ phiếu <b>khảo sát lại</b> gửi khách sau khi đóng ticket.</p>
+                  <p className="text-[12px] text-slate-400 mt-3">Số liệu từ phiếu <b>khảo sát lại</b> gửi khách sau khi đóng ticket.</p>
                 </div>
               </div>
             </div>
@@ -370,25 +370,31 @@ export default function ServiceQualityPage() {
 
           {/* ---------------- NHÂN SỰ ---------------- */}
           {tab === 'staff' && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <div className="flex items-center gap-2 mb-1"><Award className="w-5 h-5 text-amber-500" /><h3 className="font-bold text-slate-800">Điểm trung bình theo nhân sự</h3></div>
-              <p className="text-xs text-slate-400 mb-4">Chỉ tính phản hồi hợp lệ. Cần tối thiểu {MIN_SAMPLE} lượt để xếp hạng công bằng (PRD §24).</p>
-              {staffScores.length === 0 ? <p className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu đánh giá nhân sự.</p> : (
-                <div className="space-y-2">
+            <div className="e-card e-card-pad">
+              <div className="e-card-header mb-3">
+                <div className="min-w-0">
+                  <h3 className="e-card-title flex items-center gap-2"><Award className="w-5 h-5 text-teal-600 shrink-0" />Điểm trung bình theo nhân sự</h3>
+                  <p className="e-card-sub">Chỉ tính phản hồi hợp lệ. Cần tối thiểu {MIN_SAMPLE} lượt để xếp hạng công bằng (PRD §24).</p>
+                </div>
+              </div>
+              {staffScores.length === 0 ? (
+                <div className="e-empty"><div className="e-empty-icon"><Users /></div><div className="e-empty-title">Chưa có dữ liệu đánh giá nhân sự.</div></div>
+              ) : (
+                <div className="divide-y divide-slate-100">
                   {staffScores.map((s, i) => {
                     const enough = s.cnt >= MIN_SAMPLE;
-                    const tone = !enough ? 'text-slate-400' : s.avg >= 4 ? 'text-emerald-600' : s.avg >= 3 ? 'text-amber-600' : 'text-rose-600';
+                    const tone = !enough ? 'text-slate-400' : s.avg >= 4 ? 'text-success-600' : s.avg >= 3 ? 'text-warning-600' : 'text-danger-600';
                     return (
-                      <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50">
-                        <span className={`w-7 text-center font-bold ${i < 3 && enough ? 'text-amber-500' : 'text-slate-300'}`}>{i + 1}</span>
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 text-white grid place-items-center text-xs font-bold shrink-0">{(s.name || '?').trim().split(/\s+/).slice(-1)[0][0]}</div>
+                      <div key={s.id} className="flex items-center gap-3 py-3 px-1">
+                        <span className={`w-7 h-7 shrink-0 rounded-full grid place-items-center text-[12px] font-bold tabular-nums ${i < 3 && enough ? 'bg-warning-50 text-warning-600' : 'bg-slate-50 text-slate-400'}`}>{i + 1}</span>
+                        <div className="e-avatar w-10 h-10 text-[14px]">{(s.name || '?').trim().split(/\s+/).slice(-1)[0][0]}</div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-slate-700 text-sm truncate">{s.name}</div>
-                          <div className="text-xs text-slate-400">{STAFF_ROLE_LABELS[s.role] || s.role} · {s.cnt} lượt {!enough && <span className="text-amber-500">· chưa đủ mẫu</span>}</div>
+                          <div className="text-[14px] font-semibold text-slate-900 truncate">{s.name}</div>
+                          <div className="text-[12px] text-slate-500 truncate">{STAFF_ROLE_LABELS[s.role] || s.role} · {s.cnt} lượt {!enough && <span className="text-warning-600 font-medium">· chưa đủ mẫu</span>}</div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0 h-[28px] px-2.5 rounded-full bg-slate-50">
                           <Star className={`w-4 h-4 ${enough ? 'fill-current' : ''} ${tone}`} />
-                          <span className={`font-bold tabular-nums ${tone}`}>{fmt1(s.avg)}</span>
+                          <span className={`text-[14px] font-bold tabular-nums ${tone}`}>{fmt1(s.avg)}</span>
                         </div>
                       </div>
                     );
@@ -401,30 +407,32 @@ export default function ServiceQualityPage() {
           {/* ---------------- PHẢN HỒI ---------------- */}
           {tab === 'responses' && (
             <div className="space-y-3">
-              <div className="flex gap-2 flex-wrap">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên khách / nội dung…" className="w-full pl-10 pr-3 h-11 rounded-2xl bg-white border border-slate-200 text-sm outline-none focus:border-teal-400" />
+              <div className="e-toolbar">
+                <div className="e-search flex-1 min-w-[200px]">
+                  <Search />
+                  <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên khách / nội dung…" />
                 </div>
-                <button onClick={() => setOnlyNegative(v => !v)} className={`px-4 h-11 rounded-2xl text-sm font-semibold border transition ${onlyNegative ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-slate-600 border-slate-200'}`}>Chỉ tiêu cực</button>
+                <button onClick={() => setOnlyNegative(v => !v)} className={`e-chip ${onlyNegative ? 'e-chip-active' : ''}`}><AlertTriangle className="w-4 h-4" />Chỉ tiêu cực</button>
               </div>
               {listResps.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-400">Chưa có phản hồi phù hợp.</div>
+                <div className="e-card e-empty"><div className="e-empty-icon"><MessageSquare /></div><div className="e-empty-title">Chưa có phản hồi phù hợp.</div></div>
               ) : listResps.map(r => (
-                <button key={r.id} onClick={() => setDetail(r)} className="w-full text-left bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3 hover:border-teal-300 transition">
-                  <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 font-bold ${r.overall_score <= 2 ? 'bg-rose-50 text-rose-600' : r.overall_score === 3 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                    <div className="flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-current" />{r.overall_score ?? '—'}</div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800 truncate">{r.invitation?.customer_name || 'Khách'}</span>
-                      {FRAUD.includes(r.fraud_status) && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold shrink-0">Nghi ngờ</span>}
-                      {r.wants_contact && r.wants_contact !== 'none' && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold shrink-0">Cần liên hệ</span>}
+                <button key={r.id} onClick={() => setDetail(r)} className={`e-card-flat e-card-hover w-full text-left p-4 flex flex-col gap-2.5 ${r.overall_score <= 2 ? 'border-danger-100 ring-1 ring-danger-50' : ''}`}>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className={`w-11 h-11 rounded-full grid place-items-center shrink-0 text-[14px] font-bold tabular-nums ${r.overall_score <= 2 ? 'bg-danger-50 text-danger-600' : r.overall_score === 3 ? 'bg-warning-50 text-warning-600' : 'bg-success-50 text-success-600'}`}>
+                      <div className="flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-current" />{r.overall_score ?? '—'}</div>
                     </div>
-                    <div className="text-xs text-slate-400 truncate mt-0.5">{r.invitation?.service || '—'} · {dstr(r.submitted_at)}</div>
-                    {r.comment && <div className="text-xs text-slate-500 truncate mt-0.5 italic">“{r.comment}”</div>}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[15px] font-semibold text-slate-900 truncate">{r.invitation?.customer_name || 'Khách'}</div>
+                      <div className="text-[12px] text-slate-500 truncate mt-0.5">{r.invitation?.service || '—'} · {dstr(r.submitted_at)}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                  {r.comment && <p className="text-[14px] text-slate-700 leading-relaxed line-clamp-2">“{r.comment}”</p>}
+                  <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-slate-100 w-full empty:hidden">
+                    {FRAUD.includes(r.fraud_status) && <span className="e-badge e-badge-sm e-tone-lavender">Nghi ngờ</span>}
+                    {r.wants_contact && r.wants_contact !== 'none' && <span className="e-badge e-badge-sm e-tone-warning"><PhoneCall />Cần liên hệ</span>}
+                  </div>
                 </button>
               ))}
             </div>
@@ -433,46 +441,48 @@ export default function ServiceQualityPage() {
           {/* ---------------- XỬ LÝ PHẢN HỒI (TICKETS) ---------------- */}
           {tab === 'tickets' && (
             <div className="space-y-3">
-              <div className="flex gap-2 flex-wrap items-center">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên khách…" className="w-full pl-10 pr-3 h-11 rounded-2xl bg-white border border-slate-200 text-sm outline-none focus:border-teal-400" />
+              <div className="e-toolbar">
+                <div className="e-search flex-1 min-w-[200px]">
+                  <Search />
+                  <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên khách…" />
                 </div>
-                <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1">
+                <div className="e-seg">
                   {[['open', 'Đang mở'], ['all', 'Tất cả']].map(([k, l]) => (
-                    <button key={k} onClick={() => setTicketFilter(k)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${ticketFilter === k ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{l}</button>
+                    <button key={k} onClick={() => setTicketFilter(k)} className={`e-seg-item ${ticketFilter === k ? 'e-seg-active' : ''}`}>{l}</button>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 text-xs text-teal-700 flex items-start gap-2 leading-relaxed">
-                <Ticket className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>Phản hồi điểm thấp (1–2) hoặc khách yêu cầu liên hệ sẽ <b>tự động tạo ticket</b> để giao xử lý. Xử lý xong nhớ ghi nguyên nhân &amp; cách khắc phục rồi đóng ticket.</span>
+              <div className="e-subtle px-4 py-3 text-[13px] text-slate-600 flex items-start gap-2.5 leading-relaxed">
+                <Ticket className="w-4 h-4 shrink-0 mt-0.5 text-teal-600" />
+                <span>Phản hồi điểm thấp (1–2) hoặc khách yêu cầu liên hệ sẽ <b className="text-slate-800">tự động tạo ticket</b> để giao xử lý. Xử lý xong nhớ ghi nguyên nhân &amp; cách khắc phục rồi đóng ticket.</span>
               </div>
 
               {listTickets.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-400">{ticketFilter === 'open' ? 'Không có ticket nào đang mở. 🎉' : 'Chưa có ticket nào.'}</div>
+                <div className="e-card e-empty"><div className="e-empty-icon"><CheckCircle2 /></div><div className="e-empty-title">{ticketFilter === 'open' ? 'Không có ticket nào đang mở. 🎉' : 'Chưa có ticket nào.'}</div></div>
               ) : listTickets.map(t => {
                 const overdue = isOverdue(t);
                 return (
-                  <button key={t.id} onClick={() => setTicketDetail(t)} className={`w-full text-left bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 transition hover:border-teal-300 ${overdue ? 'border-rose-300' : 'border-slate-200'}`}>
-                    <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 font-bold ${t.overall_score <= 2 ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
-                      <div className="flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-current" />{t.overall_score ?? '!'}</div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-800 truncate">{t.customer_name || 'Khách'}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${PRIORITY[t.priority]?.c || PRIORITY.normal.c}`}>{PRIORITY[t.priority]?.label || t.priority}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${STATUS_STYLE[t.status]}`}>{TICKET_STATUS[t.status] || t.status}</span>
-                        {overdue && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-rose-500 text-white">Quá hạn</span>}
+                  <button key={t.id} onClick={() => setTicketDetail(t)} className={`e-card-flat e-card-hover w-full text-left p-4 flex flex-col gap-2.5 ${overdue ? 'border-danger-200 ring-1 ring-danger-100' : ''}`}>
+                    <div className="flex items-center gap-3 w-full">
+                      <div className={`w-11 h-11 rounded-full grid place-items-center shrink-0 text-[14px] font-bold tabular-nums ${t.overall_score <= 2 ? 'bg-danger-50 text-danger-600' : 'bg-warning-50 text-warning-600'}`}>
+                        <div className="flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-current" />{t.overall_score ?? '!'}</div>
                       </div>
-                      <div className="text-xs text-slate-400 truncate mt-0.5">{t.category ? `${t.category} · ` : ''}{t.response?.comment ? `“${t.response.comment}”` : t.response?.invitation?.service || '—'}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {t.assigned_to ? <>Giao: <b className="text-slate-600">{staffMap[t.assigned_to] || '—'}</b> · </> : <span className="text-rose-500 font-semibold">Chưa giao · </span>}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[15px] font-semibold text-slate-900 truncate">{t.customer_name || 'Khách'}</div>
+                        <div className="text-[12px] text-slate-500 truncate mt-0.5">{t.category ? `${t.category} · ` : ''}{t.response?.comment ? `“${t.response.comment}”` : t.response?.invitation?.service || '—'}</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-slate-100 w-full">
+                      <span className={`e-badge e-badge-sm ${PRIORITY[t.priority]?.c || PRIORITY.normal.c}`}>{PRIORITY[t.priority]?.label || t.priority}</span>
+                      <span className={`e-badge e-badge-sm e-badge-dot ${STATUS_STYLE[t.status]}`}>{TICKET_STATUS[t.status] || t.status}</span>
+                      {overdue && <span className="e-badge e-badge-sm e-tone-danger"><Clock />Quá hạn</span>}
+                      <span className="ml-auto text-[12px] text-slate-500 tabular-nums">
+                        {t.assigned_to ? <>Giao: <b className="text-slate-800 font-semibold">{staffMap[t.assigned_to] || '—'}</b> · </> : <span className="text-danger-600 font-semibold">Chưa giao · </span>}
                         Hạn: {t.sla_due_at ? dtstr(t.sla_due_at) : '—'}
-                      </div>
+                      </span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </button>
                 );
               })}
@@ -490,24 +500,28 @@ export default function ServiceQualityPage() {
 
       {/* QR phiếu khảo sát lại */}
       {resurveyQR && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setResurveyQR(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-br from-teal-500 to-emerald-500 px-6 pt-6 pb-8 text-center relative">
-              <button onClick={() => setResurveyQR(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20"><X className="w-4 h-4" /></button>
-              <div className="w-12 h-12 rounded-2xl bg-white/20 grid place-items-center mx-auto mb-2"><RefreshCw className="w-6 h-6 text-white" /></div>
-              <h3 className="font-bold text-white text-lg">Phiếu khảo sát lại</h3>
-              <p className="text-teal-50 text-sm mt-0.5">{resurveyQR.name}</p>
-            </div>
-            <div className="px-6 -mt-5">
-              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex flex-col items-center">
-                <img src={resurveyQR.dataUrl} alt="QR khảo sát lại" className="w-56 h-56" />
-                <p className="text-xs text-slate-400 mt-2 text-center">Gửi khách quét để xác nhận đã hài lòng sau xử lý</p>
+        <div className="e-modal-backdrop z-[60] flex items-center justify-center p-4" onClick={() => setResurveyQR(null)}>
+          <div className="e-modal max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="e-metric-icon w-11 h-11 lg:w-11 lg:h-11"><RefreshCw /></span>
+                <div className="min-w-0">
+                  <h3 className="e-modal-title">Phiếu khảo sát lại</h3>
+                  <p className="text-[13px] text-slate-500 truncate">{resurveyQR.name}</p>
+                </div>
               </div>
+              <button onClick={() => setResurveyQR(null)} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 pt-4">
-              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
-                <span className="text-xs text-slate-500 truncate flex-1">{resurveyQR.url}</span>
-                <button onClick={copyResurvey} className="shrink-0 text-teal-600 hover:text-teal-700 flex items-center gap-1 text-sm font-semibold"><Copy className="w-4 h-4" /> Sao chép</button>
+            <div className="e-modal-body flex flex-col items-center">
+              <div className="e-subtle p-3 bg-white">
+                <img src={resurveyQR.dataUrl} alt="QR khảo sát lại" className="w-56 h-56" />
+              </div>
+              <p className="text-[12.5px] text-slate-500 mt-3 text-center">Gửi khách quét để xác nhận đã hài lòng sau xử lý</p>
+            </div>
+            <div className="e-modal-footer">
+              <div className="flex items-center gap-2 w-full min-w-0">
+                <span className="e-input flex items-center text-[12.5px] text-slate-500 bg-white min-w-0 flex-1"><span className="truncate">{resurveyQR.url}</span></span>
+                <button onClick={copyResurvey} className="e-btn e-btn-primary e-btn-sm shrink-0"><Copy className="w-4 h-4" /> Sao chép</button>
               </div>
             </div>
           </div>
@@ -516,38 +530,62 @@ export default function ServiceQualityPage() {
 
       {/* Chi tiết phản hồi */}
       {detail && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={() => setDetail(null)}>
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-2xl max-h-[88vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-800">{detail.invitation?.customer_name || 'Khách'}</h3>
-                <p className="text-xs text-slate-400">{detail.invitation?.service || '—'} · {dstr(detail.submitted_at)}</p>
+        <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setDetail(null)}>
+          <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[88vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center">
+              <div className="min-w-0">
+                <h3 className="e-modal-title truncate">{detail.invitation?.customer_name || 'Khách'}</h3>
+                <p className="text-[12.5px] text-slate-500 mt-0.5">{detail.invitation?.service || '—'} · {dstr(detail.submitted_at)}</p>
               </div>
-              <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              <button onClick={() => setDetail(null)} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{detail.overall_score ?? '—'}</div><div className="text-[11px] text-slate-400">Tổng thể</div></div>
-                <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{fmt1(detail.csat_score)}</div><div className="text-[11px] text-slate-400">CSAT</div></div>
-                <div className="bg-slate-50 rounded-xl p-3"><div className="text-2xl font-bold text-slate-800">{detail.nps_score ?? '—'}</div><div className="text-[11px] text-slate-400">NPS</div></div>
+            <div className="e-modal-body space-y-5 overflow-y-auto">
+              <div className="grid grid-cols-3 gap-2.5 text-center">
+                <div className="e-subtle px-2 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{detail.overall_score ?? '—'}</div><div className="text-[12px] text-slate-500 mt-0.5">Tổng thể</div></div>
+                <div className="e-subtle px-2 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{fmt1(detail.csat_score)}</div><div className="text-[12px] text-slate-500 mt-0.5">CSAT</div></div>
+                <div className="e-subtle px-2 py-3"><div className="text-[22px] font-bold text-slate-900 leading-tight tabular-nums">{detail.nps_score ?? '—'}</div><div className="text-[12px] text-slate-500 mt-0.5">NPS</div></div>
               </div>
 
+              {detail.comment && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-[14px] text-slate-700 leading-relaxed flex gap-2.5"><MessageSquare className="w-4 h-4 text-teal-600 shrink-0 mt-1" /><span>“{detail.comment}”</span></div>
+              )}
+
+              {detail.comment && (
+                detail.ai_summary ? (
+                  <div className="rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3 text-[14px] text-slate-700 leading-relaxed">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="e-badge e-badge-sm e-tone-brand"><Sparkles /> Tóm tắt AI</span>
+                      <button onClick={() => analyzeResponse(detail)} disabled={analyzingId === detail.id} className="e-btn e-btn-ghost e-btn-sm h-7 px-2 text-[12px]">{analyzingId === detail.id ? 'Đang…' : 'Phân tích lại'}</button>
+                    </div>
+                    {detail.ai_summary}
+                  </div>
+                ) : (
+                  <button onClick={() => analyzeResponse(detail)} disabled={analyzingId === detail.id}
+                    className="e-btn e-btn-outline e-btn-block">
+                    {analyzingId === detail.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Tóm tắt & phân tích bằng AI
+                  </button>
+                )
+              )}
+
               {/* Điểm từng câu */}
-              <div className="space-y-1.5">
+              <div>
+                <div className="e-caption mb-2">Điểm từng điểm chạm</div>
+                <div className="divide-y divide-slate-100">
                 {QUESTIONS.filter(qq => qq.type === 'rating5').map(qq => {
                   const v = detail.answers?.[qq.code];
                   if (v == null) return null;
-                  return <div key={qq.code} className="flex justify-between text-sm"><span className="text-slate-500">{qq.title}</span><span className="font-semibold text-slate-700">{v === 'na' ? 'Không áp dụng' : `${v}/5 · ${RATING_LABELS[v] || ''}`}</span></div>;
+                  return <div key={qq.code} className="flex justify-between gap-3 py-2 text-[13.5px]"><span className="text-slate-500 min-w-0">{qq.title}</span><span className="font-semibold text-slate-900 shrink-0 tabular-nums">{v === 'na' ? 'Không áp dụng' : `${v}/5 · ${RATING_LABELS[v] || ''}`}</span></div>;
                 })}
+                </div>
               </div>
 
               {/* Nhân sự */}
               {(detail.staff_ratings || []).length > 0 && (
                 <div>
-                  <div className="text-xs font-bold text-slate-400 uppercase mb-1.5">Đánh giá nhân sự</div>
-                  <div className="space-y-1">
+                  <div className="e-caption mb-2">Đánh giá nhân sự</div>
+                  <div className="divide-y divide-slate-100">
                     {detail.staff_ratings.map((sr, i) => (
-                      <div key={i} className="flex justify-between text-sm"><span className="text-slate-600">{sr.name} <span className="text-slate-400">({STAFF_ROLE_LABELS[sr.role] || sr.role})</span></span><span className="font-bold text-teal-600 flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-current" />{sr.score}</span></div>
+                      <div key={i} className="flex justify-between items-center gap-3 py-2 text-[13.5px]"><span className="text-slate-700 min-w-0">{sr.name} <span className="text-slate-400">({STAFF_ROLE_LABELS[sr.role] || sr.role})</span></span><span className="e-badge e-badge-sm e-tone-brand tabular-nums shrink-0"><Star className="fill-current" />{sr.score}</span></div>
                     ))}
                   </div>
                 </div>
@@ -555,36 +593,17 @@ export default function ServiceQualityPage() {
 
               {(detail.selected_topics || []).length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {detail.selected_topics.map(t => <span key={t} className="text-xs bg-teal-50 text-teal-700 px-2.5 py-1 rounded-full">{t}</span>)}
+                  {detail.selected_topics.map(t => <span key={t} className="e-badge e-badge-sm e-tone-neutral">{t}</span>)}
                 </div>
               )}
 
               {detail.sentiment && (
-                <div className="flex items-center gap-2 text-sm"><span className="text-slate-500">Cảm xúc:</span><span className={`text-xs font-semibold px-2.5 py-1 rounded-full first-letter:uppercase ${SENTIMENT_STYLE[detail.sentiment] || 'bg-slate-100 text-slate-600'}`}>{detail.sentiment}</span></div>
-              )}
-
-              {detail.comment && (
-                <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-slate-700 flex gap-2"><MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" /><span className="italic">{detail.comment}</span></div>
-              )}
-
-              {detail.comment && (
-                detail.ai_summary ? (
-                  <div className="bg-violet-50 border border-violet-100 rounded-xl p-3.5 text-sm text-slate-700">
-                    <div className="text-xs font-bold text-violet-500 mb-1 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Tóm tắt AI</div>
-                    {detail.ai_summary}
-                    <button onClick={() => analyzeResponse(detail)} disabled={analyzingId === detail.id} className="ml-2 text-xs text-violet-500 hover:underline disabled:opacity-50">{analyzingId === detail.id ? 'Đang…' : 'Phân tích lại'}</button>
-                  </div>
-                ) : (
-                  <button onClick={() => analyzeResponse(detail)} disabled={analyzingId === detail.id}
-                    className="w-full py-2.5 rounded-xl border border-violet-200 text-violet-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-violet-50 disabled:opacity-50">
-                    {analyzingId === detail.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Tóm tắt & phân tích bằng AI
-                  </button>
-                )
+                <div className="flex items-center gap-2 text-[13px]"><span className="text-slate-500">Cảm xúc:</span><span className={`e-badge e-badge-sm first-letter:uppercase ${SENTIMENT_STYLE[detail.sentiment] || 'bg-slate-100 text-slate-600'}`}>{detail.sentiment}</span></div>
               )}
 
               {(detail.answers?._attachments || []).length > 0 && (
                 <div>
-                  <div className="text-xs font-bold text-slate-400 uppercase mb-1.5">Ảnh / ghi âm đính kèm</div>
+                  <div className="e-caption mb-2">Ảnh / ghi âm đính kèm</div>
                   <div className="flex flex-wrap items-center gap-2">
                     {detail.answers._attachments.map((a, i) => a.type === 'image'
                       ? <a key={i} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt="" className="w-20 h-20 rounded-xl object-cover border border-slate-200" /></a>
@@ -594,11 +613,11 @@ export default function ServiceQualityPage() {
               )}
 
               {detail.wants_contact && detail.wants_contact !== 'none' && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-700 font-medium flex items-center gap-2"><PhoneCall className="w-4 h-4" /> Khách muốn được liên hệ {detail.wants_contact === 'urgent' ? 'sớm nhất' : 'trong giờ hành chính'}</div>
+                <div className="rounded-xl bg-warning-50 px-4 py-3 text-[13.5px] text-warning-600 font-medium flex items-center gap-2"><PhoneCall className="w-4 h-4 shrink-0" /> Khách muốn được liên hệ {detail.wants_contact === 'urgent' ? 'sớm nhất' : 'trong giờ hành chính'}</div>
               )}
 
-              <div className="flex items-center gap-2 text-xs text-slate-400 pt-2 border-t">
-                <ShieldAlert className="w-3.5 h-3.5" /> Mức xác thực L{detail.verification_level} · Điểm rủi ro {detail.fraud_score}/100 · {FRAUD.includes(detail.fraud_status) ? <span className="text-purple-600 font-semibold">nghi ngờ gian lận</span> : 'hợp lệ'}
+              <div className="flex items-center gap-2 text-[12px] text-slate-400 pt-3 border-t border-slate-100">
+                <ShieldAlert className="w-3.5 h-3.5 shrink-0" /> Mức xác thực L{detail.verification_level} · Điểm rủi ro {detail.fraud_score}/100 · {FRAUD.includes(detail.fraud_status) ? <span className="text-lavender-600 font-semibold">nghi ngờ gian lận</span> : 'hợp lệ'}
               </div>
             </div>
           </div>
@@ -643,115 +662,126 @@ function TicketDetailModal({ ticket, staffList, onClose, onSave, onResurvey, res
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+    <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="e-modal-header items-center">
           <div className="min-w-0">
-            <h3 className="font-bold text-slate-800 truncate">{ticket.customer_name || 'Khách'}</h3>
-            <p className="text-xs text-slate-400">{resp.invitation?.service || '—'}{resp.invitation?.phone ? ` · ${resp.invitation.phone}` : ''}</p>
+            <h3 className="e-modal-title truncate">{ticket.customer_name || 'Khách'}</h3>
+            <p className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums">{resp.invitation?.service || '—'}{resp.invitation?.phone ? ` · ${resp.invitation.phone}` : ''}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 shrink-0"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto">
+        <div className="e-modal-body space-y-5 overflow-y-auto">
           {/* Tóm tắt phản hồi */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${PRIORITY[ticket.priority]?.c || PRIORITY.normal.c}`}>Ưu tiên: {PRIORITY[ticket.priority]?.label}</span>
-            <span className="text-xs px-2 py-1 rounded-full font-semibold bg-slate-100 text-slate-600">Điểm: {ticket.overall_score ?? '—'}/5</span>
-            {ticket.wants_contact && ticket.wants_contact !== 'none' && <span className="text-xs px-2 py-1 rounded-full font-semibold bg-amber-100 text-amber-700">Muốn liên hệ {ticket.wants_contact === 'urgent' ? 'gấp' : 'giờ HC'}</span>}
-            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${overdue ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500'}`}>Hạn: {ticket.sla_due_at ? dtstr(ticket.sla_due_at) : '—'}</span>
-          </div>
-          {resp.comment && <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-slate-700 italic flex gap-2"><MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />“{resp.comment}”</div>}
-          {(resp.selected_topics || []).length > 0 && (
-            <div className="flex flex-wrap gap-1.5">{resp.selected_topics.map(t => <span key={t} className="text-xs bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full">{t}</span>)}</div>
-          )}
-          {(resp.answers?._attachments || []).length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {resp.answers._attachments.map((a, i) => a.type === 'image'
-                ? <a key={i} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" /></a>
-                : <audio key={i} src={a.url} controls className="h-9 max-w-[180px]" />)}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`e-badge e-badge-sm ${PRIORITY[ticket.priority]?.c || PRIORITY.normal.c}`}>Ưu tiên: {PRIORITY[ticket.priority]?.label}</span>
+              <span className="e-badge e-badge-sm e-tone-neutral tabular-nums"><Star className="fill-current" />Điểm: {ticket.overall_score ?? '—'}/5</span>
+              {ticket.wants_contact && ticket.wants_contact !== 'none' && <span className="e-badge e-badge-sm e-tone-warning"><PhoneCall />Muốn liên hệ {ticket.wants_contact === 'urgent' ? 'gấp' : 'giờ HC'}</span>}
+              <span className={`e-badge e-badge-sm tabular-nums ${overdue ? 'e-tone-danger' : 'e-tone-neutral'}`}><Clock />Hạn: {ticket.sla_due_at ? dtstr(ticket.sla_due_at) : '—'}</span>
             </div>
-          )}
+            {resp.comment && <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-[14px] text-slate-700 leading-relaxed flex gap-2.5"><MessageSquare className="w-4 h-4 text-teal-600 shrink-0 mt-1" /><span>“{resp.comment}”</span></div>}
+            {(resp.selected_topics || []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5">{resp.selected_topics.map(t => <span key={t} className="e-badge e-badge-sm e-tone-rose">{t}</span>)}</div>
+            )}
+            {(resp.answers?._attachments || []).length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                {resp.answers._attachments.map((a, i) => a.type === 'image'
+                  ? <a key={i} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" /></a>
+                  : <audio key={i} src={a.url} controls className="h-9 max-w-[180px]" />)}
+              </div>
+            )}
+          </div>
 
           {/* Giao việc + trạng thái + ưu tiên */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <span className="text-xs font-semibold text-slate-500">Giao cho</span>
-              <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="mt-1 w-full h-10 px-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-teal-400">
-                <option value="">— Chưa giao —</option>
-                {staffList.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="text-xs font-semibold text-slate-500">Trạng thái</span>
-              <select value={status} onChange={e => setStatus(e.target.value)} className="mt-1 w-full h-10 px-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-teal-400">
-                {Object.entries(TICKET_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-              </select>
-            </label>
-            <label className="text-sm col-span-2">
-              <span className="text-xs font-semibold text-slate-500">Độ ưu tiên</span>
-              <select value={priority} onChange={e => setPriority(e.target.value)} className="mt-1 w-full h-10 px-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-teal-400">
-                {Object.entries(PRIORITY).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </label>
+          <div className="pt-4 border-t border-slate-100">
+            <div className="e-caption mb-3">Phân công &amp; trạng thái</div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block min-w-0">
+                <span className="e-label">Giao cho</span>
+                <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="e-input">
+                  <option value="">— Chưa giao —</option>
+                  {staffList.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                </select>
+              </label>
+              <label className="block min-w-0">
+                <span className="e-label">Trạng thái</span>
+                <select value={status} onChange={e => setStatus(e.target.value)} className="e-input">
+                  {Object.entries(TICKET_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </select>
+              </label>
+              <label className="block col-span-2">
+                <span className="e-label">Độ ưu tiên</span>
+                <select value={priority} onChange={e => setPriority(e.target.value)} className="e-input">
+                  {Object.entries(PRIORITY).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </label>
+            </div>
           </div>
 
           {/* Nguyên nhân & khắc phục */}
-          <label className="block text-sm">
-            <span className="text-xs font-semibold text-slate-500">Nguyên nhân gốc</span>
-            <textarea value={rootCause} onChange={e => setRootCause(e.target.value)} rows={2} placeholder="Vì sao khách chưa hài lòng?" className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm outline-none focus:border-teal-400 resize-none" />
-          </label>
-          <label className="block text-sm">
-            <span className="text-xs font-semibold text-slate-500">Cách khắc phục <span className="text-slate-300">(bắt buộc khi đóng)</span></span>
-            <textarea value={resolution} onChange={e => setResolution(e.target.value)} rows={2} placeholder="Đã làm gì để khắc phục / hỗ trợ khách?" className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm outline-none focus:border-teal-400 resize-none" />
-          </label>
+          <div className="pt-4 border-t border-slate-100 space-y-3">
+            <div className="e-caption">Nguyên nhân &amp; khắc phục</div>
+            <label className="block">
+              <span className="e-label">Nguyên nhân gốc</span>
+              <textarea value={rootCause} onChange={e => setRootCause(e.target.value)} rows={2} placeholder="Vì sao khách chưa hài lòng?" className="e-textarea resize-none" />
+            </label>
+            <label className="block">
+              <span className="e-label">Cách khắc phục <span className="text-slate-400 font-normal">(bắt buộc khi đóng)</span></span>
+              <textarea value={resolution} onChange={e => setResolution(e.target.value)} rows={2} placeholder="Đã làm gì để khắc phục / hỗ trợ khách?" className="e-textarea resize-none" />
+            </label>
+          </div>
 
           {/* Nhật ký xử lý */}
-          {activities.length > 0 && (
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase mb-1.5">Nhật ký xử lý</div>
-              <div className="space-y-2">
-                {activities.map(a => (
-                  <div key={a.id} className="text-sm bg-slate-50 rounded-xl p-2.5">
-                    <div className="text-slate-700">{a.content}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{staffMap[a.created_by] || 'Hệ thống'} · {dtstr(a.created_at)}</div>
-                  </div>
-                ))}
+          <div className="pt-4 border-t border-slate-100 space-y-3">
+            {activities.length > 0 && (
+              <div>
+                <div className="e-caption mb-2.5">Nhật ký xử lý</div>
+                <ol className="relative space-y-3 pl-5 before:absolute before:left-[5px] before:top-1.5 before:bottom-1.5 before:w-px before:bg-slate-200">
+                  {activities.map(a => (
+                    <li key={a.id} className="relative text-[13.5px]">
+                      <span className="absolute -left-5 top-1.5 w-[11px] h-[11px] rounded-full bg-white border-2 border-teal-400" />
+                      <div className="text-slate-700 leading-relaxed">{a.content}</div>
+                      <div className="text-[12px] text-slate-400 mt-0.5">{staffMap[a.created_by] || 'Hệ thống'} · {dtstr(a.created_at)}</div>
+                    </li>
+                  ))}
+                </ol>
               </div>
-            </div>
-          )}
-          <label className="block text-sm">
-            <span className="text-xs font-semibold text-slate-500">Ghi chú xử lý (thêm vào nhật ký)</span>
-            <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="Ví dụ: Đã gọi khách lúc 15h, khách đồng ý tái khám…" className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm outline-none focus:border-teal-400 resize-none" />
-          </label>
+            )}
+            <label className="block">
+              <span className="e-label">Ghi chú xử lý (thêm vào nhật ký)</span>
+              <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="Ví dụ: Đã gọi khách lúc 15h, khách đồng ý tái khám…" className="e-textarea resize-none" />
+            </label>
+          </div>
 
           {/* Khảo sát lại sau xử lý (PRD §10) */}
-          <div className="border border-teal-100 bg-teal-50/50 rounded-xl p-3.5">
-            <div className="flex items-center gap-2 mb-1"><RefreshCw className="w-4 h-4 text-teal-600" /><span className="text-sm font-bold text-teal-700">Khảo sát lại sau xử lý</span></div>
+          <div className="rounded-xl border border-teal-100 bg-teal-50/40 px-4 py-3.5">
+            <div className="flex items-center gap-2 mb-1.5"><RefreshCw className="w-4 h-4 text-teal-600" /><span className="text-[14px] font-semibold text-slate-900">Khảo sát lại sau xử lý</span></div>
             {resurveyResp ? (
-              <div className="text-sm text-slate-700">
-                Khách đã phản hồi: <b>{resurveyResp.answers?.rs_resolved || '—'}</b> · hài lòng <b>{resurveyResp.overall_score ?? '—'}/5</b>
-                {resurveyResp.answers?.rs_need === 'Vẫn cần được hỗ trợ' && <span className="text-rose-600 font-semibold"> · vẫn cần hỗ trợ</span>}
-                {resurveyResp.comment && <div className="text-xs text-slate-500 italic mt-1">“{resurveyResp.comment}”</div>}
+              <div className="text-[13.5px] text-slate-700 leading-relaxed">
+                Khách đã phản hồi: <b className="font-semibold text-slate-900">{resurveyResp.answers?.rs_resolved || '—'}</b> · hài lòng <b className="font-semibold text-slate-900 tabular-nums">{resurveyResp.overall_score ?? '—'}/5</b>
+                {resurveyResp.answers?.rs_need === 'Vẫn cần được hỗ trợ' && <span className="text-danger-600 font-semibold"> · vẫn cần hỗ trợ</span>}
+                {resurveyResp.comment && <div className="text-[12.5px] text-slate-500 mt-1">“{resurveyResp.comment}”</div>}
               </div>
             ) : (
               <>
-                <p className="text-xs text-slate-500 mb-2">Sau khi liên hệ & khắc phục, tạo phiếu ngắn để khách xác nhận đã hài lòng chưa (tránh đóng ticket khi khách còn chưa ưng).</p>
-                <button type="button" onClick={onResurvey} className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 px-3.5 py-1.5 rounded-lg"><RefreshCw className="w-4 h-4" /> Tạo phiếu khảo sát lại</button>
+                <p className="text-[12.5px] text-slate-500 mb-3 leading-relaxed">Sau khi liên hệ & khắc phục, tạo phiếu ngắn để khách xác nhận đã hài lòng chưa (tránh đóng ticket khi khách còn chưa ưng).</p>
+                <button type="button" onClick={onResurvey} className="e-btn e-btn-outline e-btn-sm"><RefreshCw className="w-4 h-4" /> Tạo phiếu khảo sát lại</button>
               </>
             )}
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t flex items-center gap-2">
-          <button onClick={() => save(false)} disabled={saving} className="flex-1 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Lưu cập nhật
-          </button>
+        <div className="e-modal-footer">
           {ticket.status !== 'closed' && (
-            <button onClick={() => save(true)} disabled={saving} className="py-2.5 px-4 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50 flex items-center justify-center gap-2">
+            <button onClick={() => save(true)} disabled={saving} className="e-btn e-btn-outline">
               <CheckCircle2 className="w-4 h-4" /> Đóng ticket
             </button>
           )}
+          <button onClick={() => save(false)} disabled={saving} className="e-btn e-btn-primary flex-1 sm:flex-none">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Lưu cập nhật
+          </button>
         </div>
       </div>
     </div>
