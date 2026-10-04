@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, B
 import { 
   Plus, RefreshCw, Trash2, ArrowDownLeft, FileText, Users, BarChart2,
   Calendar, Filter, Search, CheckCircle, XCircle, Clock, Image as ImageIcon,
-  MoreVertical, X, UploadCloud, Loader2, Wallet, ChevronDown
+  MoreVertical, X, UploadCloud, Loader2, Wallet, ChevronDown, HandCoins, UserRound
 } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
@@ -21,7 +21,7 @@ const CATEGORIES = {
   'Khac': 'Khác'
 };
 
-const COLORS = ['#12A4A5', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
+const COLORS = ['#067B7F', '#3CA7A9', '#76C2C3', '#F4B183', '#A99BE0'];
 
 export default function AdvanceExpensePage() {
   const { profile } = useAuth();
@@ -288,109 +288,116 @@ export default function AdvanceExpensePage() {
   };
 
   const renderStatus = (d) => {
-    if (d.status === 'pending') return <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-lg text-xs font-bold"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
-    if (d.status === 'approved') return <span className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3 h-3" /> Đã duyệt</span>;
-    if (d.status === 'paid') return <span className="inline-flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3 h-3" /> Đã hoàn ứng</span>;
-    if (d.status === 'rejected') return <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-lg text-xs font-bold"><XCircle className="w-3 h-3" /> Từ chối</span>;
+    if (d.status === 'pending') return <span className="e-badge e-badge-sm e-tone-warning"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
+    if (d.status === 'approved') return <span className="e-badge e-badge-sm e-tone-info"><CheckCircle className="w-3 h-3" /> Đã duyệt</span>;
+    if (d.status === 'paid') return <span className="e-badge e-badge-sm e-tone-success"><CheckCircle className="w-3 h-3" /> Đã hoàn ứng</span>;
+    if (d.status === 'rejected') return <span className="e-badge e-badge-sm e-tone-danger"><XCircle className="w-3 h-3" /> Từ chối</span>;
     return null;
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <p className="text-[13px] text-slate-500">Nhân sự chi hộ công ty và gửi đề nghị kế toán hoàn tiền</p>
-        </div>
+    <div className="space-y-4">
+      {/* Thanh công cụ: mô tả + hành động (nút chính bên phải) */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <p className="e-page-desc">Nhân sự chi hộ công ty và gửi đề nghị kế toán hoàn tiền</p>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={loadData} className="px-4 py-2 bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
-            <RefreshCw className="w-4 h-4" /> Làm mới
+          <button onClick={loadData} className="e-btn e-btn-secondary" title="Làm mới">
+            <RefreshCw /> Làm mới
           </button>
           {isAdminOrAccountant && (
-            <button onClick={openRepayFast} className="px-4 py-2 bg-teal-50 text-teal-600 border border-teal-200 hover:bg-teal-100 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
+            <button onClick={openRepayFast} className="e-btn e-btn-outline">
               <ArrowDownLeft className="w-4 h-4" /> Ghi nhận hoàn ứng
             </button>
           )}
           {isAdminOrAccountant && (
-            <button onClick={() => { setShowTrash(true); loadTrash(); }} className="px-4 py-2 bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 font-semibold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-colors">
+            <button onClick={() => { setShowTrash(true); loadTrash(); }} className="e-btn e-btn-secondary">
               <Trash2 className="w-4 h-4" /> Lịch sử xoá
             </button>
           )}
-          <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 font-bold rounded-xl text-sm shadow-md flex items-center gap-2 transition-colors">
-            <Plus className="w-4 h-4" /> Tạo phiếu tạm ứng chi
+          <button onClick={() => setShowCreateModal(true)} className="e-btn e-btn-primary">
+            <Plus /> Tạo phiếu tạm ứng chi
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm">
-          <div className="text-amber-600 text-sm font-bold flex items-center gap-2 mb-2"><ArrowDownLeft className="w-4 h-4" /> {isAdminOrAccountant ? 'Tổng đã chi' : 'Tổng đã chi của tôi'}</div>
-          <div className="text-2xl font-black text-amber-700">{fmt(totalSpent)}</div>
+      {/* Thẻ chỉ số */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-peach"><HandCoins /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">{isAdminOrAccountant ? 'Tổng đã chi' : 'Tổng đã chi của tôi'}</div>
+            <div className="e-metric-value">{fmt(totalSpent)}</div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-teal-200 shadow-sm">
-          <div className="text-teal-600 text-sm font-bold flex items-center gap-2 mb-2"><ArrowDownLeft className="w-4 h-4" /> {isAdminOrAccountant ? 'Tổng đã hoàn ứng' : 'Đã được hoàn ứng'}</div>
-          <div className="text-2xl font-black text-teal-700">{fmt(totalRepaid)}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-success"><ArrowDownLeft /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">{isAdminOrAccountant ? 'Tổng đã hoàn ứng' : 'Đã được hoàn ứng'}</div>
+            <div className="e-metric-value">{fmt(totalRepaid)}</div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-red-200 shadow-sm">
-          <div className="text-red-600 text-sm font-bold flex items-center gap-2 mb-2"><Wallet className="w-4 h-4" /> Còn thiếu</div>
-          <div className="text-2xl font-black text-red-700">{fmt(totalMissing)}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-danger"><Wallet /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Còn thiếu</div>
+            <div className="e-metric-value text-danger-600">{fmt(totalMissing)}</div>
+          </div>
         </div>
         {isAdminOrAccountant && (
-          <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm">
-            <div className="text-blue-600 text-sm font-bold flex items-center gap-2 mb-2"><BarChart2 className="w-4 h-4" /> Tổng giao dịch hợp lệ</div>
-            <div className="text-2xl font-black text-blue-700">{validTx}</div>
+          <div className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-y-0">
+            <div className="contents e-metric-label"><BarChart2 className="row-span-2 w-12 h-12 lg:w-14 lg:h-14 p-3 lg:p-4 rounded-full bg-info-50 text-info-600" /> Tổng giao dịch hợp lệ</div>
+            <div className="e-metric-value">{validTx}</div>
           </div>
         )}
       </div>
 
-      {/* Tabs & Filters */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-        <div className="flex bg-slate-50 border-b overflow-x-auto">
-          <button onClick={() => setActiveTab('list')} className={`px-6 py-4 font-semibold text-sm transition-colors shrink-0 ${activeTab === 'list' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+      {/* Tab + bộ lọc */}
+      <div className="e-card overflow-hidden flex flex-col">
+        <div className="e-tabs px-2 lg:px-3">
+          <button onClick={() => setActiveTab('list')} className={`e-tab shrink-0 ${activeTab === 'list' ? 'e-tab-active' : 'text-slate-500'}`}>
             Danh sách phiếu
           </button>
           {isAdminOrAccountant && (
             <>
-              <button onClick={() => setActiveTab('staff')} className={`px-6 py-4 font-semibold text-sm transition-colors shrink-0 ${activeTab === 'staff' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>Theo dõi nhân sự</button>
-              <button onClick={() => setActiveTab('stats')} className={`px-6 py-4 font-semibold text-sm transition-colors shrink-0 ${activeTab === 'stats' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>Thống kê</button>
+              <button onClick={() => setActiveTab('staff')} className={`e-tab shrink-0 ${activeTab === 'staff' ? 'e-tab-active' : 'text-slate-500'}`}>Theo dõi nhân sự</button>
+              <button onClick={() => setActiveTab('stats')} className={`e-tab shrink-0 ${activeTab === 'stats' ? 'e-tab-active' : 'text-slate-500'}`}>Thống kê</button>
             </>
           )}
         </div>
 
         {activeTab === 'list' && (
           <>
-            <div className="p-4 border-b flex flex-wrap gap-4 items-center bg-white">
-              <div className="flex items-center gap-2 text-slate-500"><Filter className="w-4 h-4" /> Bộ lọc:</div>
-              <div className="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">
+            <div className="px-4 lg:px-5 py-3 border-b border-slate-100 flex flex-wrap gap-2 items-center">
+              <div className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 mr-1"><Filter className="w-4 h-4" /> Bộ lọc:</div>
+              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
                 </select>
                 <span className="text-slate-300">/</span>
-                <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
                   {Array.from({ length: 4 }, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               {isAdminOrAccountant && (
-                <div className="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">
+                <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
                   <Users className="w-4 h-4 text-slate-400" />
-                  <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                  <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
                     <option value="all">Tất cả nhân sự</option>
                     {staffList.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                   </select>
                 </div>
               )}
-              <div className="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">
+              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
                 <Filter className="w-4 h-4 text-slate-400" />
-                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
                   <option value="all">Tất cả danh mục</option>
                   {Object.entries(CATEGORIES).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
-              <div className="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">
+              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
                 <CheckCircle className="w-4 h-4 text-slate-400" />
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-transparent text-sm font-semibold outline-none text-slate-700">
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
                   <option value="all">Tất cả trạng thái</option>
                   <option value="pending">Chờ duyệt</option>
                   <option value="approved">Đã duyệt (Chờ hoàn)</option>
@@ -401,39 +408,45 @@ export default function AdvanceExpensePage() {
             </div>
 
             {/* Mobile: dạng thẻ */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
               {loading ? (
-                <div className="text-center py-10 text-slate-400 text-sm">Đang tải...</div>
+                <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
               ) : data.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-sm">Không có dữ liệu</div>
+                <div className="e-empty text-[13px] text-slate-400">Không có dữ liệu</div>
               ) : data.map(d => (
-                <div key={d.id} className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="font-bold text-slate-800">{d.profiles?.full_name}</div>
-                      <div className="text-xs text-slate-400">{new Date(d.date).toLocaleDateString('vi-VN')} · {CATEGORIES[d.category] || d.category}</div>
+                <div key={d.id} className="e-card-flat p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="e-avatar w-11 h-11"><UserRound className="w-5 h-5" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-[15px] text-slate-900 truncate">{d.profiles?.full_name}</div>
+                      <div className="text-[12px] text-slate-500">{new Date(d.date).toLocaleDateString('vi-VN')} · {CATEGORIES[d.category] || d.category}</div>
                     </div>
-                    <div className="font-bold text-slate-800 text-base shrink-0">{fmt(d.amount)}</div>
+                    <div className="shrink-0">{renderStatus(d)}</div>
                   </div>
-                  {d.description && <div className="text-sm text-slate-500 mt-1">{d.description}</div>}
-                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                    {renderStatus(d)}
-                    {d.status === 'rejected' && <span className="text-xs text-red-500 italic">"{d.reject_reason}"</span>}
+                  {d.description && <div className="text-[13px] text-slate-600 mt-2.5">{d.description}</div>}
+                  {d.status === 'rejected' && <div className="text-[12px] text-danger-600 italic mt-1">"{d.reject_reason}"</div>}
+                  <div className="mt-3 flex items-end justify-between gap-3">
+                    <div>
+                      <div className="e-kv-label">Số tiền</div>
+                      <div className="text-[17px] font-bold text-slate-900 tabular-nums">{fmt(d.amount)}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="e-icon-btn inline-flex items-center justify-center gap-1 w-auto min-w-[34px] h-[34px] px-2 rounded-[10px]" title="Bill chi"><ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-[12px] font-semibold">{d.proof_image_urls.length}</span>}</button>}
+                      {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-success-600" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
+                    </div>
                   </div>
-                  <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg inline-flex items-center gap-1" title="Bill chi"><ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-xs font-bold">{d.proof_image_urls.length}</span>}</button>}
-                    {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-teal-50 text-teal-600 rounded-lg" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 empty:hidden">
                     {isAdminOrAccountant && d.status === 'pending' && (
                       <>
-                        <button onClick={() => handleApprove(d.id)} className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold text-xs">Duyệt</button>
-                        <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="flex-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg font-semibold text-xs">Từ chối</button>
+                        <button onClick={() => handleApprove(d.id)} className="e-btn e-btn-primary e-btn-sm flex-1">Duyệt</button>
+                        <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="e-btn e-btn-danger-soft e-btn-sm flex-1">Từ chối</button>
                       </>
                     )}
                     {isAdminOrAccountant && d.status === 'approved' && (
-                      <button onClick={() => { setSelectedExpense(d); setRepayForm(prev => ({ ...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount) })); setShowRepayModal(true); }} className="flex-1 px-3 py-2 bg-amber-500 text-white rounded-lg font-semibold text-xs">Hoàn ứng</button>
+                      <button onClick={() => { setSelectedExpense(d); setRepayForm(prev => ({ ...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount) })); setShowRepayModal(true); }} className="e-btn e-btn-primary e-btn-sm flex-1">Hoàn ứng</button>
                     )}
                     {isAdminOrAccountant && (
-                      <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="p-2 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors ml-auto"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-slate-400 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50 ml-auto"><Trash2 className="w-4 h-4" /></button>
                     )}
                   </div>
                 </div>
@@ -441,53 +454,60 @@ export default function AdvanceExpensePage() {
             </div>
 
             {/* Desktop: bảng */}
-            <div className="hidden md:block overflow-x-auto bg-white">
-              <table className="w-full text-left border-collapse">
+            <div className="hidden md:block e-table-wrap">
+              <table className="e-table">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b">
-                    <th className="px-6 py-4 font-semibold">Ngày</th>
-                    <th className="px-6 py-4 font-semibold">Người YC</th>
-                    <th className="px-6 py-4 font-semibold">Danh mục</th>
-                    <th className="px-6 py-4 font-semibold">Số tiền</th>
-                    <th className="px-6 py-4 font-semibold">Trạng thái</th>
-                    <th className="px-6 py-4 font-semibold text-center">Thao tác</th>
+                  <tr className="text-left">
+                    <th className="text-left">Ngày</th>
+                    <th className="text-left">Người YC</th>
+                    <th className="text-left">Danh mục</th>
+                    <th className="num">Số tiền</th>
+                    <th className="text-left">Trạng thái</th>
+                    <th className="text-center">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="align-middle">
                   {loading ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-[13px] text-slate-400">Đang tải...</td></tr>
                   ) : data.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Không có dữ liệu</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-[13px] text-slate-400">Không có dữ liệu</td></tr>
                   ) : data.map(d => (
-                    <tr key={d.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 text-slate-600 font-medium">
+                    <tr key={d.id} className="transition-colors">
+                      <td className="text-slate-600 tabular-nums whitespace-nowrap">
                         {new Date(d.date).toLocaleDateString('vi-VN')}
-                        <div className="text-xs text-slate-400 mt-0.5">{d.description?.substring(0, 30)}...</div>
                       </td>
-                      <td className="px-6 py-4 font-bold text-slate-800">{d.profiles?.full_name}</td>
-                      <td className="px-6 py-4"><span className="bg-slate-100 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600">{CATEGORIES[d.category] || d.category}</span></td>
-                      <td className="px-6 py-4 font-bold text-slate-800 text-base">{fmt(d.amount)}</td>
-                      <td className="px-6 py-4">
+                      <td className="min-w-[220px]">
+                        <div className="flex items-center gap-3">
+                          <span className="e-avatar w-9 h-9"><UserRound className="w-4 h-4" /></span>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900 truncate">{d.profiles?.full_name}</div>
+                            <div className="text-[12px] text-slate-400 mt-0.5 max-w-[240px] truncate">{d.description?.substring(0, 30)}...</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap"><span className="e-badge e-badge-sm e-tone-neutral">{CATEGORIES[d.category] || d.category}</span></td>
+                      <td className="text-right font-bold text-slate-900 tabular-nums whitespace-nowrap">{fmt(d.amount)}</td>
+                      <td className="min-w-[150px]">
                         {renderStatus(d)}
-                        {d.status === 'rejected' && <div className="text-xs text-red-500 mt-1 italic">"{d.reject_reason}"</div>}
-                        {d.status === 'paid' && <div className="text-xs text-teal-500 mt-1">Đã ck {new Date(d.advance_repaid_at).toLocaleDateString('vi-VN')}</div>}
+                        {d.status === 'rejected' && <div className="text-[12px] text-danger-600 mt-1 italic">"{d.reject_reason}"</div>}
+                        {d.status === 'paid' && <div className="text-[12px] text-success-600 mt-1">Đã ck {new Date(d.advance_repaid_at).toLocaleDateString('vi-VN')}</div>}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
                           {d.proof_image_urls?.length > 0 && (
-                            <button onClick={() => setViewImage(d.proof_image_urls)} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1" title="Xem bill chi">
-                              <ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-xs font-bold">{d.proof_image_urls.length}</span>}
+                            <button onClick={() => setViewImage(d.proof_image_urls)} className="e-icon-btn inline-flex items-center justify-center gap-1 w-auto min-w-[34px] h-[34px] px-2 rounded-[10px]" title="Xem bill chi">
+                              <ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-[12px] font-semibold">{d.proof_image_urls.length}</span>}
                             </button>
                           )}
                           {d.advance_repaid_proof && (
-                            <button onClick={() => setViewImage(d.advance_repaid_proof)} className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg transition-colors" title="Xem bill hoàn">
+                            <button onClick={() => setViewImage(d.advance_repaid_proof)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-success-600" title="Xem bill hoàn">
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
                           {isAdminOrAccountant && d.status === 'pending' && (
                             <>
-                              <button onClick={() => handleApprove(d.id)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors">Duyệt</button>
-                              <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-semibold text-xs transition-colors">Từ chối</button>
+                              <button onClick={() => handleApprove(d.id)} className="e-btn e-btn-primary e-btn-sm">Duyệt</button>
+                              <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="e-btn e-btn-danger-soft e-btn-sm">Từ chối</button>
                             </>
                           )}
                           {isAdminOrAccountant && d.status === 'approved' && (
@@ -495,10 +515,10 @@ export default function AdvanceExpensePage() {
                               setSelectedExpense(d);
                               setRepayForm(prev => ({...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount)}));
                               setShowRepayModal(true);
-                            }} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors">Hoàn ứng</button>
+                            }} className="e-btn e-btn-primary e-btn-sm">Hoàn ứng</button>
                           )}
                           {isAdminOrAccountant && (
-                            <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-slate-400 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button>
                           )}
                         </div>
                       </td>
@@ -527,19 +547,19 @@ export default function AdvanceExpensePage() {
             return (
               <div className="space-y-2">
                 {items.length === 0 ? <div className="text-sm text-slate-400 italic py-2">Không có khoản chi.</div> : items.map(d => (
-                  <div key={d.id} className="bg-white rounded-lg border border-slate-100 p-3 flex items-start gap-3">
+                  <div key={d.id} className="bg-white rounded-xl border border-slate-200/80 p-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{CATEGORIES[d.category] || d.category}</span>
-                        <span className="text-[11px] text-slate-400">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
-                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${d.status === 'paid' ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>{d.status === 'paid' ? 'Đã hoàn' : 'Đã duyệt'}</span>
+                        <span className="e-badge e-badge-sm e-tone-neutral">{CATEGORIES[d.category] || d.category}</span>
+                        <span className="text-[12px] text-slate-400 tabular-nums">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
+                        <span className={`e-badge e-badge-sm ${d.status === 'paid' ? 'e-tone-success' : 'e-tone-info'}`}>{d.status === 'paid' ? 'Đã hoàn' : 'Đã duyệt'}</span>
                       </div>
-                      <div className="text-sm text-slate-700 mt-1 font-medium">{d.description || <span className="text-slate-400 italic font-normal">(không ghi nội dung)</span>}</div>
-                      {d.notes && <div className="text-[11px] text-slate-400 mt-0.5">{d.notes}</div>}
+                      <div className="text-[13px] text-slate-700 mt-1.5 font-medium">{d.description || <span className="text-slate-400 italic font-normal">(không ghi nội dung)</span>}</div>
+                      {d.notes && <div className="text-[12px] text-slate-400 mt-0.5">{d.notes}</div>}
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="font-bold text-amber-600">{fmt(d.amount)}</div>
-                      {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="mt-1 text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" />{d.proof_image_urls.length} ảnh</button>}
+                      <div className="font-bold text-slate-900 tabular-nums">{fmt(d.amount)}</div>
+                      {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="mt-1 text-[12px] font-semibold text-teal-700 hover:underline inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" />{d.proof_image_urls.length} ảnh</button>}
                     </div>
                   </div>
                 ))}
@@ -547,24 +567,27 @@ export default function AdvanceExpensePage() {
             );
           };
           return (
-            <div className="p-4 sm:p-6 bg-white">
-              <h3 className="font-bold text-slate-800 mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
+            <div className="p-4 lg:p-5">
+              <h3 className="e-card-title mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
 
               {/* Mobile: thẻ */}
               <div className="md:hidden space-y-3">
-                {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có dữ liệu</div> : rows.map((s, i) => (
-                  <div key={i} className="border border-slate-200 rounded-2xl p-4">
-                    <button onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="w-full flex items-center justify-between">
-                      <span className="font-bold text-slate-800">{s.name}</span>
+                {rows.length === 0 ? <div className="e-empty text-[13px] text-slate-400">Chưa có dữ liệu</div> : rows.map((s, i) => (
+                  <div key={i} className="e-card-flat p-4">
+                    <button onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="w-full flex items-center justify-between gap-2 text-left">
+                      <span className="flex items-center gap-3 min-w-0">
+                        <span className="e-avatar w-10 h-10"><UserRound className="w-5 h-5" /></span>
+                        <span className="font-semibold text-[15px] text-slate-900 truncate">{s.name}</span>
+                      </span>
                       <span className="flex items-center gap-2">
-                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{s.count} phiếu</span>
+                        <span className="e-badge e-badge-sm e-tone-neutral">{s.count} phiếu</span>
                         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedStaff === s.staff_id ? 'rotate-180' : ''}`} />
                       </span>
                     </button>
                     <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-                      <div className="bg-amber-50 rounded-lg py-2"><div className="text-[10px] text-amber-500 uppercase">Đã chi</div><div className="font-bold text-amber-600 text-sm">{fmt(s.total)}</div></div>
-                      <div className="bg-teal-50 rounded-lg py-2"><div className="text-[10px] text-teal-500 uppercase">Đã hoàn</div><div className="font-bold text-teal-600 text-sm">{fmt(s.repaid)}</div></div>
-                      <div className="bg-red-50 rounded-lg py-2"><div className="text-[10px] text-red-500 uppercase">Còn nợ</div><div className="font-bold text-red-600 text-sm">{fmt(s.total - s.repaid)}</div></div>
+                      <div className="e-subtle py-2"><div className="text-[11px] text-slate-500">Đã chi</div><div className="font-bold text-slate-900 text-[13px] tabular-nums">{fmt(s.total)}</div></div>
+                      <div className="e-subtle py-2"><div className="text-[11px] text-slate-500">Đã hoàn</div><div className="font-bold text-success-600 text-[13px] tabular-nums">{fmt(s.repaid)}</div></div>
+                      <div className="e-subtle py-2"><div className="text-[11px] text-slate-500">Còn nợ</div><div className="font-bold text-danger-600 text-[13px] tabular-nums">{fmt(s.total - s.repaid)}</div></div>
                     </div>
                     {expandedStaff === s.staff_id && <div className="mt-3 pt-3 border-t border-slate-100"><StaffDetail staffId={s.staff_id} /></div>}
                   </div>
@@ -572,31 +595,37 @@ export default function AdvanceExpensePage() {
               </div>
 
               {/* Desktop: bảng */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse border border-slate-200">
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200">
+                <table className="e-table">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-600 text-sm">
-                      <th className="p-3 border">Nhân sự</th>
-                      <th className="p-3 border">Tổng phiếu hợp lệ</th>
-                      <th className="p-3 border">Đã chi (Tạm ứng)</th>
-                      <th className="p-3 border">Đã hoàn ứng</th>
-                      <th className="p-3 border">Còn nợ (Cần hoàn)</th>
+                    <tr className="text-left">
+                      <th className="text-left">Nhân sự</th>
+                      <th className="text-center">Tổng phiếu hợp lệ</th>
+                      <th className="num">Đã chi (Tạm ứng)</th>
+                      <th className="num">Đã hoàn ứng</th>
+                      <th className="num">Còn nợ (Cần hoàn)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((s, i) => (
                       <React.Fragment key={i}>
-                      <tr onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="hover:bg-slate-50 cursor-pointer">
-                        <td className="p-3 border font-semibold text-slate-800"><span className="inline-flex items-center gap-1.5"><ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedStaff === s.staff_id ? 'rotate-180' : ''}`} />{s.name}</span></td>
-                        <td className="p-3 border text-center">{s.count}</td>
-                        <td className="p-3 border font-bold text-amber-600">{fmt(s.total)}</td>
-                        <td className="p-3 border font-bold text-teal-600">{fmt(s.repaid)}</td>
-                        <td className="p-3 border font-bold text-red-600">{fmt(s.total - s.repaid)}</td>
+                      <tr onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="cursor-pointer">
+                        <td>
+                          <span className="inline-flex items-center gap-3">
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedStaff === s.staff_id ? 'rotate-180' : ''}`} />
+                            <span className="e-avatar w-9 h-9"><UserRound className="w-4 h-4" /></span>
+                            <span className="font-semibold text-slate-900">{s.name}</span>
+                          </span>
+                        </td>
+                        <td className="text-center tabular-nums">{s.count}</td>
+                        <td className="text-right font-bold text-slate-900 tabular-nums">{fmt(s.total)}</td>
+                        <td className="text-right font-bold text-success-600 tabular-nums">{fmt(s.repaid)}</td>
+                        <td className="text-right font-bold text-danger-600 tabular-nums">{fmt(s.total - s.repaid)}</td>
                       </tr>
                       {expandedStaff === s.staff_id && (
                         <tr>
-                          <td colSpan={5} className="p-3 border bg-slate-50">
-                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Chi tiết các khoản chi — {s.name}</div>
+                          <td colSpan={5} className="py-3 bg-slate-50/70">
+                            <div className="e-caption mb-2">Chi tiết các khoản chi — {s.name}</div>
                             <StaffDetail staffId={s.staff_id} />
                           </td>
                         </tr>
@@ -611,9 +640,9 @@ export default function AdvanceExpensePage() {
         })()}
 
         {isAdminOrAccountant && activeTab === 'stats' && (
-          <div className="p-6 bg-white grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="border rounded-2xl p-6 shadow-sm">
-              <h3 className="font-bold text-slate-800 mb-6 text-center">Tỷ trọng chi tiêu theo danh mục</h3>
+          <div className="p-4 lg:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="e-card-flat e-card-pad">
+              <h3 className="e-card-title mb-4">Tỷ trọng chi tiêu theo danh mục</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -634,8 +663,8 @@ export default function AdvanceExpensePage() {
               </div>
             </div>
 
-            <div className="border rounded-2xl p-6 shadow-sm">
-              <h3 className="font-bold text-slate-800 mb-6 text-center">Thống kê chi tiêu theo nhân sự</h3>
+            <div className="e-card-flat e-card-pad">
+              <h3 className="e-card-title mb-4">Thống kê chi tiêu theo nhân sự</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={(() => {
@@ -648,11 +677,11 @@ export default function AdvanceExpensePage() {
                     });
                     return Object.values(staffMap).sort((a,b) => b.value - a.value);
                   })()} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#f1f5f9' }} />
-                    <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#EAF4F4' }} />
+                    <Bar dataKey="value" fill="#3CA7A9" radius={[4, 4, 0, 0]} maxBarSize={50} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -663,32 +692,33 @@ export default function AdvanceExpensePage() {
 
       {/* Image Viewer Modal */}
       {showTrash && (
-        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowTrash(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2"><Trash2 className="w-5 h-5 text-rose-500" /> Lịch sử xoá — {trashData.length} giao dịch</h3>
-              <button onClick={() => setShowTrash(false)}><X className="w-5 h-5 text-slate-400" /></button>
+        <div className="e-modal-backdrop z-[90] flex items-center justify-center p-4" onClick={() => setShowTrash(false)}>
+          <div className="e-modal max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title flex items-center gap-2"><Trash2 className="w-5 h-5 text-danger-500" /> Lịch sử xoá — {trashData.length} giao dịch</h3>
+              <button onClick={() => setShowTrash(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-4 overflow-y-auto space-y-2">
-              {trashLoading ? <div className="text-center py-8 text-slate-400 text-sm">Đang tải...</div>
-                : trashData.length === 0 ? <div className="text-center py-10 text-slate-400 text-sm">Chưa có giao dịch nào bị xoá.</div>
+            <div className="e-modal-body overflow-y-auto space-y-2">
+              {trashLoading ? <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
+                : trashData.length === 0 ? <div className="e-empty text-[13px] text-slate-400">Chưa có giao dịch nào bị xoá.</div>
                   : trashData.map(d => (
-                    <div key={d.id} className="border border-slate-100 rounded-xl p-3 flex items-start gap-3">
+                    <div key={d.id} className="rounded-xl border border-slate-200/80 bg-white p-3 flex items-start gap-3">
+                      <span className="e-avatar w-10 h-10"><UserRound className="w-5 h-5" /></span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-800">{d.profiles?.full_name}</span>
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{CATEGORIES[d.category] || d.category}</span>
-                          <span className="text-[11px] text-slate-400">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
+                          <span className="font-semibold text-slate-900">{d.profiles?.full_name}</span>
+                          <span className="e-badge e-badge-sm e-tone-neutral">{CATEGORIES[d.category] || d.category}</span>
+                          <span className="text-[12px] text-slate-400 tabular-nums">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
                         </div>
-                        <div className="text-sm text-slate-700 mt-1">{d.description || <span className="text-slate-400 italic">(không ghi nội dung)</span>}</div>
-                        <div className="text-[11px] text-slate-400 mt-1">Xoá lúc {d.deleted_at ? new Date(d.deleted_at).toLocaleString('vi-VN') : '—'}{d.remover?.full_name ? ` · bởi ${d.remover.full_name}` : ''}</div>
-                        {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="mt-1 text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" />{d.proof_image_urls.length} ảnh</button>}
+                        <div className="text-[13px] text-slate-700 mt-1">{d.description || <span className="text-slate-400 italic">(không ghi nội dung)</span>}</div>
+                        <div className="text-[12px] text-slate-400 mt-1">Xoá lúc {d.deleted_at ? new Date(d.deleted_at).toLocaleString('vi-VN') : '—'}{d.remover?.full_name ? ` · bởi ${d.remover.full_name}` : ''}</div>
+                        {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="mt-1 text-[12px] font-semibold text-teal-700 hover:underline inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" />{d.proof_image_urls.length} ảnh</button>}
                       </div>
                       <div className="text-right shrink-0 flex flex-col items-end gap-2">
-                        <span className="font-bold text-amber-600">{fmt(d.amount)}</span>
+                        <span className="font-bold text-slate-900 tabular-nums">{fmt(d.amount)}</span>
                         <div className="flex gap-1.5">
-                          <button onClick={() => handleRestore(d)} className="px-2.5 py-1.5 rounded-lg border border-teal-200 text-teal-700 text-xs font-bold inline-flex items-center gap-1 hover:bg-teal-50"><RefreshCw className="w-3.5 h-3.5" />Khôi phục</button>
-                          {isAdmin && <button onClick={() => handlePermanentDelete(d)} className="px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" />Xoá vĩnh viễn</button>}
+                          <button onClick={() => handleRestore(d)} className="e-btn e-btn-outline e-btn-sm h-8 px-2.5 text-[12px] gap-1"><RefreshCw className="w-3.5 h-3.5" />Khôi phục</button>
+                          {isAdmin && <button onClick={() => handlePermanentDelete(d)} className="e-btn e-btn-danger-soft e-btn-sm h-8 px-2.5 text-[12px] gap-1"><Trash2 className="w-3.5 h-3.5" />Xoá vĩnh viễn</button>}
                         </div>
                       </div>
                     </div>
@@ -699,7 +729,7 @@ export default function AdvanceExpensePage() {
       )}
 
       {viewImage && (() => { const imgs = Array.isArray(viewImage) ? viewImage : [viewImage]; return (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-start justify-center p-4 pt-16 overflow-y-auto backdrop-blur-sm" onClick={() => setViewImage(null)}>
+        <div className="fixed inset-0 bg-slate-900/85 z-[100] flex items-start justify-center p-4 pt-16 overflow-y-auto backdrop-blur-sm" onClick={() => setViewImage(null)}>
           <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 text-white hover:text-slate-300 p-2 z-10"><X className="w-8 h-8" /></button>
           <div className="relative max-w-5xl w-full flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
             {imgs.length > 1 && <span className="text-white/80 text-sm font-semibold">{imgs.length} ảnh chứng từ</span>}
@@ -710,53 +740,53 @@ export default function AdvanceExpensePage() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleCreateSubmit} className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
-              <h3 className="font-bold text-slate-800 text-lg">Tạo phiếu tạm ứng chi</h3>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleCreateSubmit} className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Tạo phiếu tạm ứng chi</h3>
               <button type="button" onClick={() => setShowCreateModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
             
-            <div className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="e-modal-body overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {isAdminOrAccountant && (
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-slate-700">Người yêu cầu *</label>
-                    <select required value={form.staff_id} onChange={e => setForm({...form, staff_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                    <label className="e-label">Người yêu cầu *</label>
+                    <select required value={form.staff_id} onChange={e => setForm({...form, staff_id: e.target.value})} className="e-input">
                       <option value="">-- Chọn nhân sự --</option>
                       {staffList.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                     </select>
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Ngày chi *</label>
-                  <input required type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Ngày chi *</label>
+                  <input required type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Danh mục chi *</label>
-                  <select required value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Danh mục chi *</label>
+                  <select required value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="e-input">
                     {Object.entries(CATEGORIES).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền (VNĐ) *</label>
-                  <input required type="text" value={form.amount} onChange={e => setForm({...form, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-teal-700 text-lg" placeholder="0" />
+                  <label className="e-label">Số tiền (VNĐ) *</label>
+                  <input required type="text" value={form.amount} onChange={e => setForm({...form, amount: formatCurrencyInput(e.target.value)})} className="e-input font-bold text-[16px] text-slate-900 tabular-nums" placeholder="0" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Lý do / Mô tả chi tiết *</label>
-                <textarea required value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full border p-3 rounded-xl outline-none focus:border-teal-500 h-24 resize-none" placeholder="Nhập chi tiết mục đích chi tiền..." />
+                <label className="e-label">Lý do / Mô tả chi tiết *</label>
+                <textarea required value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="e-textarea h-24 resize-none" placeholder="Nhập chi tiết mục đích chi tiền..." />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Nơi mua / Nhà cung cấp</label>
-                  <input type="text" value={form.provider} onChange={e => setForm({...form, provider: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Tên cửa hàng, siêu thị..." />
+                  <label className="e-label">Nơi mua / Nhà cung cấp</label>
+                  <input type="text" value={form.provider} onChange={e => setForm({...form, provider: e.target.value})} className="e-input" placeholder="Tên cửa hàng, siêu thị..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Hình thức thanh toán</label>
-                  <select value={form.method} onChange={e => setForm({...form, method: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Hình thức thanh toán</label>
+                  <select value={form.method} onChange={e => setForm({...form, method: e.target.value})} className="e-input">
                     <option value="transfer">Chuyển khoản</option>
                     <option value="cash">Tiền mặt</option>
                   </select>
@@ -764,18 +794,18 @@ export default function AdvanceExpensePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Chứng từ đính kèm (Hóa đơn, bill... — có thể chọn nhiều ảnh)</label>
+                <label className="e-label">Chứng từ đính kèm (Hóa đơn, bill... — có thể chọn nhiều ảnh)</label>
                 <div className="flex flex-wrap gap-2.5">
                   {(form.proofs || []).map((u, i) => (
                     <div key={i} className="relative w-20 h-20">
                       <img src={u} alt="" className="w-full h-full object-cover rounded-xl border border-slate-200" />
-                      <button type="button" onClick={() => removeProof(i)} className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow hover:bg-rose-600"><X className="w-3 h-3" /></button>
+                      <button type="button" onClick={() => removeProof(i)} className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger-500 text-white flex items-center justify-center shadow hover:bg-danger-600"><X className="w-3 h-3" /></button>
                     </div>
                   ))}
                   <button
                     type="button"
                     onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                    className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-teal-400 bg-slate-50 flex flex-col items-center justify-center text-teal-600 gap-1 transition-colors"
+                    className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 hover:border-teal-400 hover:bg-teal-50/40 bg-slate-50 flex flex-col items-center justify-center text-teal-700 gap-1 transition"
                   >
                     {uploadingImage
                       ? <Loader2 className="w-5 h-5 animate-spin" />
@@ -783,13 +813,13 @@ export default function AdvanceExpensePage() {
                   </button>
                   <input type="file" accept="image/*" multiple className="hidden" ref={fileInputRef} onChange={handleMultiUpload} />
                 </div>
-                <p className="text-xs text-slate-400 mt-1.5">Có thể chọn nhiều ảnh cùng lúc. JPG, PNG (Max 5MB/ảnh).</p>
+                <p className="text-[12px] text-slate-400 mt-1.5">Có thể chọn nhiều ảnh cùng lúc. JPG, PNG (Max 5MB/ảnh).</p>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setShowCreateModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
-              <button type="submit" disabled={saving || uploadingImage} className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Gửi yêu cầu</button>
+            <div className="e-modal-footer shrink-0">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+              <button type="submit" disabled={saving || uploadingImage} className="e-btn e-btn-primary">Gửi yêu cầu</button>
             </div>
           </form>
         </div>
@@ -797,21 +827,21 @@ export default function AdvanceExpensePage() {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[60] flex items-center justify-center p-4">
-          <form onSubmit={handleRejectSubmit} className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-red-50">
-              <h3 className="font-bold text-red-800">Từ chối phiếu tạm ứng</h3>
-              <button type="button" onClick={() => setShowRejectModal(false)}><X className="w-5 h-5 text-red-400" /></button>
+        <div className="e-modal-backdrop z-[60] flex items-center justify-center p-4">
+          <form onSubmit={handleRejectSubmit} className="e-modal max-w-sm overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Từ chối phiếu tạm ứng</h3>
+              <button type="button" onClick={() => setShowRejectModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-600">Bạn đang từ chối phiếu trị giá <b>{fmt(selectedExpense?.amount)}</b> của <b>{selectedExpense?.profiles?.full_name}</b>.</p>
+            <div className="e-modal-body space-y-4">
+              <p className="text-[13px] text-slate-600">Bạn đang từ chối phiếu trị giá <b>{fmt(selectedExpense?.amount)}</b> của <b>{selectedExpense?.profiles?.full_name}</b>.</p>
               <div>
-                <label className="block text-sm font-semibold mb-2">Lý do từ chối *</label>
-                <textarea required value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="w-full border p-3 rounded-xl outline-none focus:border-red-500 h-24" placeholder="Nhập lý do..." />
+                <label className="e-label">Lý do từ chối *</label>
+                <textarea required value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="e-textarea h-24 resize-none" placeholder="Nhập lý do..." />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl">Xác nhận Từ chối</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-danger">Xác nhận Từ chối</button>
             </div>
           </form>
         </div>
@@ -819,17 +849,17 @@ export default function AdvanceExpensePage() {
 
       {/* Repay Modal */}
       {showRepayModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[60] flex items-center justify-center p-4">
-          <form onSubmit={handleRepaySubmit} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
-              <h3 className="font-bold text-teal-800">Ghi nhận hoàn ứng (Thanh toán)</h3>
-              <button type="button" onClick={() => setShowRepayModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
+        <div className="e-modal-backdrop z-[60] flex items-center justify-center p-4">
+          <form onSubmit={handleRepaySubmit} className="e-modal max-w-lg overflow-hidden flex flex-col">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Ghi nhận hoàn ứng (Thanh toán)</h3>
+              <button type="button" onClick={() => setShowRepayModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+            <div className="e-modal-body space-y-4 overflow-y-auto max-h-[70vh]">
               <div>
-                <label className="block text-sm font-semibold mb-2">Chọn phiếu tạm ứng cần hoàn *</label>
+                <label className="e-label">Chọn phiếu tạm ứng cần hoàn *</label>
                 <select 
-                  className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 bg-white text-slate-700 font-semibold"
+                  className="e-input font-medium"
                   value={selectedExpense?.id || ''}
                   onChange={(e) => {
                     const exp = data.find(d => d.id === e.target.value);
@@ -848,36 +878,36 @@ export default function AdvanceExpensePage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày hoàn tiền *</label>
-                  <input required type="date" value={repayForm.date} onChange={e => setRepayForm({...repayForm, date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none" />
+                  <label className="e-label">Ngày hoàn tiền *</label>
+                  <input required type="date" value={repayForm.date} onChange={e => setRepayForm({...repayForm, date: e.target.value})} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Số tiền hoàn (VNĐ) *</label>
-                  <input required type="text" value={repayForm.amount} onChange={e => setRepayForm({...repayForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none font-bold text-teal-600" />
+                  <label className="e-label">Số tiền hoàn (VNĐ) *</label>
+                  <input required type="text" value={repayForm.amount} onChange={e => setRepayForm({...repayForm, amount: formatCurrencyInput(e.target.value)})} className="e-input font-bold text-[16px] text-slate-900 tabular-nums" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Hình thức chuyển</label>
-                <select value={repayForm.method} onChange={e => setRepayForm({...repayForm, method: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none">
+                <label className="e-label">Hình thức chuyển</label>
+                <select value={repayForm.method} onChange={e => setRepayForm({...repayForm, method: e.target.value})} className="e-input">
                   <option value="transfer">Chuyển khoản</option>
                   <option value="cash">Tiền mặt</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Ghi chú</label>
-                <textarea value={repayForm.note} onChange={e => setRepayForm({...repayForm, note: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none h-20 resize-none" placeholder="VD: Chuyển khoản Techcombank đợt 1..." />
+                <label className="e-label">Ghi chú</label>
+                <textarea value={repayForm.note} onChange={e => setRepayForm({...repayForm, note: e.target.value})} className="e-textarea h-20 resize-none" placeholder="VD: Chuyển khoản Techcombank đợt 1..." />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Chứng từ (UNC, Phiếu chi...)</label>
-                <div onClick={() => !uploadingImage && repayFileInputRef.current?.click()} className="border border-dashed border-teal-300 rounded-xl p-6 text-center cursor-pointer bg-teal-50/50 hover:bg-teal-50 transition-colors">
+                <label className="e-label">Chứng từ (UNC, Phiếu chi...)</label>
+                <div onClick={() => !uploadingImage && repayFileInputRef.current?.click()} className="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center cursor-pointer bg-slate-50 hover:border-teal-400 hover:bg-teal-50/40 transition">
                   <input type="file" accept="image/*" className="hidden" ref={repayFileInputRef} onChange={(e) => handleImageUpload(e, url => setRepayForm({...repayForm, proof: url}))} />
                   {uploadingImage ? <span className="text-teal-600 font-semibold text-sm">Đang tải...</span> : repayForm.proof ? <span className="text-teal-700 font-semibold text-sm flex items-center justify-center gap-1"><CheckCircle className="w-4 h-4"/> Đã tải</span> : <span className="text-teal-600 font-semibold text-sm flex items-center justify-center gap-1"><UploadCloud className="w-4 h-4"/> Click để tải lên</span>}
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setShowRepayModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold">Hủy</button>
-              <button type="submit" disabled={saving || uploadingImage} className="px-6 py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-xl">Xác nhận hoàn ứng</button>
+            <div className="e-modal-footer shrink-0">
+              <button type="button" onClick={() => setShowRepayModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+              <button type="submit" disabled={saving || uploadingImage} className="e-btn e-btn-primary">Xác nhận hoàn ứng</button>
             </div>
           </form>
         </div>

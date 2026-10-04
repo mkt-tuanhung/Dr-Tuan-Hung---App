@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X, Trash2 } from 'lucide-react';
+import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X, Trash2, AlertTriangle, Users, UserRound } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 export default function InventoryManagementPage({ isNested = false }) {
@@ -139,54 +139,63 @@ export default function InventoryManagementPage({ isNested = false }) {
   const filteredItems = items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {!isNested && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Quản lý Kho / Vật tư y tế</h2>
-            <p className="text-slate-500 text-sm mt-1">Theo dõi tồn kho và lịch sử nhập xuất tiêu hao</p>
+            <h2 className="e-card-title">Quản lý Kho / Vật tư y tế</h2>
+            <p className="e-page-desc mt-0.5">Theo dõi tồn kho và lịch sử nhập xuất tiêu hao</p>
           </div>
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* Thẻ chỉ số */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-indigo-100 shadow-sm flex flex-col">
-          <div className="text-indigo-600 font-bold text-sm mb-2 flex items-center gap-2"><Archive className="w-4 h-4"/> Tổng Danh mục Vật tư</div>
-          <div className="text-3xl font-black text-slate-800">{items.length}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon"><Archive /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Tổng Danh mục Vật tư</div>
+            <div className="e-metric-value">{items.length}</div>
+          </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm flex flex-col">
-          <div className="text-red-600 font-bold text-sm mb-2 flex items-center gap-2"><ArrowUpRight className="w-4 h-4"/> Vật tư sắp hết (Dưới mức tối thiểu)</div>
-          <div className="text-3xl font-black text-red-600">{items.filter(i => i.current_stock <= i.min_stock).length}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-danger"><AlertTriangle /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Vật tư sắp hết (Dưới mức tối thiểu)</div>
+            <div className="e-metric-value text-danger-600">{items.filter(i => i.current_stock <= i.min_stock).length}</div>
+          </div>
         </div>
-        <div className="bg-teal-600 p-6 rounded-2xl shadow-md flex flex-col text-white">
-          <div className="text-teal-100 font-bold text-sm mb-2 flex items-center gap-2"><ArrowDownLeft className="w-4 h-4"/> Giao dịch nhập xuất (Gần đây)</div>
-          <div className="text-3xl font-black">{transactions.length}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-info"><ArrowDownLeft /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Giao dịch nhập xuất (Gần đây)</div>
+            <div className="e-metric-value">{transactions.length}</div>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-        {/* Tabs & Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-center p-4 border-b bg-slate-50 gap-4">
-          <div className="flex bg-white rounded-xl border p-1 shadow-sm w-full md:w-auto">
-            <button onClick={() => setActiveTab('stock')} className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'stock' ? 'bg-indigo-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <PackageOpen className="w-4 h-4 inline-block mr-2" /> Tồn kho
+      {/* Nội dung chính */}
+      <div className="e-card overflow-hidden flex flex-col">
+        {/* Tab + hành động */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-2 lg:px-3 border-b border-slate-200">
+          <div className="e-tabs border-b-0 w-full md:w-auto">
+            <button onClick={() => setActiveTab('stock')} className={`e-tab ${activeTab === 'stock' ? 'e-tab-active' : ''}`}>
+              <PackageOpen /> Tồn kho
             </button>
-            <button onClick={() => setActiveTab('history')} className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <History className="w-4 h-4 inline-block mr-2" /> Lịch sử Nhập / Xuất
+            <button onClick={() => setActiveTab('history')} className={`e-tab ${activeTab === 'history' ? 'e-tab-active' : ''}`}>
+              <History /> Lịch sử Nhập / Xuất
             </button>
-            <button onClick={() => setActiveTab('by_customer')} className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'by_customer' ? 'bg-indigo-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <PackageOpen className="w-4 h-4 inline-block mr-2" /> Vật tư theo khách
+            <button onClick={() => setActiveTab('by_customer')} className={`e-tab ${activeTab === 'by_customer' ? 'e-tab-active' : ''}`}>
+              <Users /> Vật tư theo khách
             </button>
           </div>
 
           {activeTab === 'stock' && canWrite && (
-            <div className="flex gap-2 w-full md:w-auto">
-              <button onClick={() => { setItemForm({ id: null, name: '', unit: '', min_stock: 10, notes: '' }); setShowItemModal(true); }} className="flex-1 md:flex-none bg-white border border-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-sm flex items-center justify-center gap-2">
+            <div className="flex gap-2 w-full md:w-auto pb-3 md:pb-0 px-2 md:px-0">
+              <button onClick={() => { setItemForm({ id: null, name: '', unit: '', min_stock: 10, notes: '' }); setShowItemModal(true); }} className="e-btn e-btn-secondary e-btn-sm flex-1 md:flex-none">
                 <Plus className="w-4 h-4" /> Danh mục mới
               </button>
-              <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center gap-2">
+              <button onClick={() => setShowImportModal(true)} className="e-btn e-btn-primary e-btn-sm flex-1 md:flex-none">
                 <ArrowDownLeft className="w-4 h-4" /> Nhập Kho
               </button>
             </div>
@@ -196,81 +205,87 @@ export default function InventoryManagementPage({ isNested = false }) {
         {/* Tab: Stock */}
         {activeTab === 'stock' && (
           <div className="flex flex-col h-[600px]">
-            <div className="p-4 border-b bg-white">
-              <div className="relative max-w-md">
+            <div className="px-4 lg:px-5 py-3 border-b border-slate-100">
+              <div className="e-search max-w-md">
                 <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input 
                   type="text" placeholder="Tìm kiếm tên vật tư..." 
                   value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-transparent focus:bg-white border rounded-xl outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full"
                 />
               </div>
             </div>
             {/* Mobile: dạng thẻ */}
-            <div className="md:hidden overflow-auto flex-1 divide-y divide-slate-100">
+            <div className="md:hidden overflow-auto flex-1 p-3 space-y-3 bg-slate-50/60">
               {loading ? (
-                <div className="text-center py-10 text-slate-400 text-sm">Đang tải...</div>
+                <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
               ) : filteredItems.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-sm">Chưa có vật tư nào</div>
+                <div className="e-empty text-[13px] text-slate-400">Chưa có vật tư nào</div>
               ) : filteredItems.map((item) => (
-                <div key={item.id} className="p-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-bold text-slate-800">{item.name}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{item.unit} · Tối thiểu {item.min_stock}{item.notes ? ' · ' + item.notes : ''}</div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg font-bold text-sm ${item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'}`}>
+                <div key={item.id} className="e-card-flat p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="e-avatar w-11 h-11 rounded-xl"><PackageOpen className="w-5 h-5" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-[15px] text-slate-900">{item.name}</div>
+                      <div className="text-[12px] text-slate-500 mt-0.5">{item.unit} · Tối thiểu {item.min_stock}{item.notes ? ' · ' + item.notes : ''}</div>
+                    </div>
+                    <span className={`e-badge tabular-nums shrink-0 ${item.current_stock <= item.min_stock ? 'e-tone-danger' : 'e-tone-success'}`}>
                       {item.current_stock}{item.current_stock <= item.min_stock ? ' ⚠️' : ''}
                     </span>
-                    {canWrite && (
-                      <>
-                        <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Cập nhật</button>
-                        <button onClick={() => openStock(item)} title="Sửa tồn kho" className="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-teal-600 border border-teal-200 hover:bg-teal-50">Sửa</button>
-                        <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                      </>
-                    )}
                   </div>
+                  {canWrite && (
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                      <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="e-btn e-btn-secondary e-btn-sm flex-1">Cập nhật</button>
+                      <button onClick={() => openStock(item)} title="Sửa tồn kho" className="e-btn e-btn-outline e-btn-sm flex-1">Sửa</button>
+                      <button onClick={() => deleteItem(item)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-slate-400 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* Desktop: bảng */}
             <div className="hidden md:block overflow-auto flex-1">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 sticky top-0 z-10">
-                  <tr className="text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="px-6 py-4 font-semibold">Tên Vật Tư</th>
-                    <th className="px-6 py-4 font-semibold text-center">Đơn vị</th>
-                    <th className="px-6 py-4 font-semibold text-right">Tồn kho hiện tại</th>
-                    <th className="px-6 py-4 font-semibold text-right">Mức tối thiểu</th>
-                    <th className="px-6 py-4 font-semibold">Ghi chú</th>
-                    {canWrite && <th className="px-6 py-4 font-semibold text-right">Thao tác</th>}
+              <table className="e-table">
+                <thead className="sticky top-0 z-10">
+                  <tr className="text-left">
+                    <th className="text-left">Tên Vật Tư</th>
+                    <th className="text-center">Đơn vị</th>
+                    <th className="num">Tồn kho hiện tại</th>
+                    <th className="num">Mức tối thiểu</th>
+                    <th className="text-left">Ghi chú</th>
+                    {canWrite && <th className="text-right">Thao tác</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="align-middle">
                   {loading ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-[13px] text-slate-400">Đang tải...</td></tr>
                   ) : filteredItems.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Chưa có vật tư nào</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-[13px] text-slate-400">Chưa có vật tư nào</td></tr>
                   ) : filteredItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-800">{item.name}</td>
-                      <td className="px-6 py-4 text-center text-slate-600 font-medium">{item.unit}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-lg font-bold ${
-                          item.current_stock <= item.min_stock ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'
+                    <tr key={item.id} className="transition-colors">
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <span className="e-avatar w-9 h-9 rounded-xl"><PackageOpen className="w-4 h-4" /></span>
+                          <span className="font-semibold text-slate-900">{item.name}</span>
+                        </div>
+                      </td>
+                      <td className="text-center text-slate-600">{item.unit}</td>
+                      <td className="text-right">
+                        <span className={`e-badge tabular-nums ${
+                          item.current_stock <= item.min_stock ? 'e-tone-danger' : 'e-tone-success'
                         }`}>
                           {item.current_stock}{item.current_stock <= item.min_stock ? ' ⚠️' : ''}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-slate-500">{item.min_stock}</td>
-                      <td className="px-6 py-4 text-slate-500">{item.notes}</td>
+                      <td className="text-right tabular-nums text-slate-500">{item.min_stock}</td>
+                      <td className="text-slate-500">{item.notes}</td>
                       {canWrite && (
-                        <td className="px-6 py-4 text-right">
+                        <td className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Cập nhật</button>
-                            <button onClick={() => openStock(item)} title="Sửa số lượng tồn kho" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-teal-600 border border-teal-200 hover:bg-teal-50">Sửa</button>
-                            <button onClick={() => deleteItem(item)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => openEditItem(item)} title="Cập nhật mức tối thiểu" className="e-btn e-btn-secondary e-btn-sm">Cập nhật</button>
+                            <button onClick={() => openStock(item)} title="Sửa số lượng tồn kho" className="e-btn e-btn-outline e-btn-sm">Sửa</button>
+                            <button onClick={() => deleteItem(item)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-slate-400 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50" title="Xoá"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       )}
@@ -285,38 +300,48 @@ export default function InventoryManagementPage({ isNested = false }) {
         {/* Tab: History */}
         {activeTab === 'history' && (
           <div className="flex flex-col h-[600px] overflow-auto">
-             <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 sticky top-0 z-10">
-                  <tr className="text-slate-500 text-xs uppercase tracking-wider border-b">
-                    <th className="px-6 py-4 font-semibold">Ngày</th>
-                    <th className="px-6 py-4 font-semibold">Vật tư</th>
-                    <th className="px-6 py-4 font-semibold">Loại</th>
-                    <th className="px-6 py-4 font-semibold text-right">Số lượng</th>
-                    <th className="px-6 py-4 font-semibold">Người thực hiện</th>
-                    <th className="px-6 py-4 font-semibold">Ghi chú / Ca mổ</th>
+             <table className="e-table">
+                <thead className="sticky top-0 z-10">
+                  <tr className="text-left">
+                    <th className="text-left">Ngày</th>
+                    <th className="text-left">Vật tư</th>
+                    <th className="text-left">Loại</th>
+                    <th className="num">Số lượng</th>
+                    <th className="text-left">Người thực hiện</th>
+                    <th className="text-left">Ghi chú / Ca mổ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="align-middle">
                   {loading ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-[13px] text-slate-400">Đang tải...</td></tr>
                   ) : transactions.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-slate-400">Chưa có giao dịch nào</td></tr>
+                    <tr><td colSpan="6" className="text-center py-10 text-[13px] text-slate-400">Chưa có giao dịch nào</td></tr>
                   ) : transactions.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-slate-600">{new Date(t.date).toLocaleDateString('vi-VN')}</td>
-                      <td className="px-6 py-4 font-bold text-slate-800">{t.inventory_items?.name}</td>
-                      <td className="px-6 py-4">
+                    <tr key={t.id} className="transition-colors">
+                      <td className="text-slate-600 tabular-nums whitespace-nowrap">{new Date(t.date).toLocaleDateString('vi-VN')}</td>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <span className="e-avatar w-9 h-9 rounded-xl"><PackageOpen className="w-4 h-4" /></span>
+                          <span className="font-semibold text-slate-900">{t.inventory_items?.name}</span>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap">
                         {t.type === 'import' ? (
-                          <span className="inline-flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowDownLeft className="w-3 h-3"/> Nhập kho</span>
+                          <span className="e-badge e-badge-sm e-tone-success"><ArrowDownLeft className="w-3 h-3"/> Nhập kho</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-lg text-xs font-bold"><ArrowUpRight className="w-3 h-3"/> Xuất tiêu hao</span>
+                          <span className="e-badge e-badge-sm e-tone-warning"><ArrowUpRight className="w-3 h-3"/> Xuất tiêu hao</span>
                         )}
                       </td>
-                      <td className={`px-6 py-4 font-bold text-right text-base ${t.type === 'import' ? 'text-teal-600' : 'text-red-600'}`}>
-                        {t.type === 'import' ? '+' : '-'}{t.quantity} <span className="text-xs font-normal ml-1">{t.inventory_items?.unit}</span>
+                      <td className={`font-bold text-right tabular-nums whitespace-nowrap ${t.type === 'import' ? 'text-success-600' : 'text-danger-600'}`}>
+                        {t.type === 'import' ? '+' : '-'}{t.quantity} <span className="text-[12px] font-normal text-slate-400 ml-1">{t.inventory_items?.unit}</span>
                       </td>
-                      <td className="px-6 py-4 font-medium text-slate-700">{t.profiles?.full_name || 'Hệ thống'}</td>
-                      <td className="px-6 py-4 text-slate-500">{t.notes}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <span className="e-avatar w-8 h-8"><UserRound className="w-4 h-4" /></span>
+                          <span className="text-slate-700">{t.profiles?.full_name || 'Hệ thống'}</span>
+                        </div>
+                      </td>
+                      <td className="text-slate-500">{t.notes}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -337,11 +362,11 @@ export default function InventoryManagementPage({ isNested = false }) {
             return db.localeCompare(da);
           });
           return (
-            <div className="p-4 space-y-3 max-h-[600px] overflow-auto">
+            <div className="p-4 lg:p-5 space-y-3 max-h-[600px] overflow-auto bg-slate-50/60">
               {loading ? (
-                <div className="text-center py-10 text-slate-400">Đang tải...</div>
+                <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
               ) : entries.length === 0 ? (
-                <div className="text-center py-10 text-slate-400">Chưa có khách nào dùng vật tư.</div>
+                <div className="e-empty text-[13px] text-slate-400">Chưa có khách nào dùng vật tư.</div>
               ) : entries.map(([ref, list]) => {
                 const cust = customerMap[ref];
                 // Gộp cùng 1 loại vật tư (cộng dồn qua các lần báo cáo)
@@ -352,20 +377,23 @@ export default function InventoryManagementPage({ isNested = false }) {
                   return acc;
                 }, {}));
                 return (
-                  <div key={ref} className="border border-slate-200 rounded-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
-                      <div>
-                        <div className="font-bold text-slate-800">{cust?.name || 'Khách (đã xóa)'}</div>
-                        <div className="text-xs text-slate-400">{cust?.date ? 'Ngày mổ: ' + new Date(cust.date).toLocaleDateString('vi-VN') : ''}</div>
+                  <div key={ref} className="e-card-flat overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="e-avatar w-10 h-10"><UserRound className="w-5 h-5" /></span>
+                        <div className="min-w-0">
+                        <div className="font-semibold text-[15px] text-slate-900 truncate">{cust?.name || 'Khách (đã xóa)'}</div>
+                        <div className="text-[12px] text-slate-500">{cust?.date ? 'Ngày mổ: ' + new Date(cust.date).toLocaleDateString('vi-VN') : ''}</div>
+                        </div>
                       </div>
-                      <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full">{merged.length} loại vật tư</span>
+                      <span className="e-badge e-badge-sm e-tone-lavender shrink-0">{merged.length} loại vật tư</span>
                     </div>
                     <table className="w-full text-sm">
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {merged.map((m, i) => (
-                          <tr key={i} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-2.5 font-medium text-slate-700">{m.name}</td>
-                            <td className="px-4 py-2.5 text-right font-bold text-red-600">-{m.qty} <span className="text-xs font-normal text-slate-400 ml-1">{m.unit}</span></td>
+                          <tr key={i} className="hover:bg-teal-50/30">
+                            <td className="px-4 py-3 font-medium text-slate-700">{m.name}</td>
+                            <td className="px-4 py-3 text-right font-bold text-danger-600 tabular-nums">-{m.qty} <span className="text-[12px] font-normal text-slate-400 ml-1">{m.unit}</span></td>
                           </tr>
                         ))}
                       </tbody>
@@ -380,35 +408,35 @@ export default function InventoryManagementPage({ isNested = false }) {
 
       {/* Modal: Add Item */}
       {showItemModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleItemSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50">
-              <h3 className="font-bold text-indigo-800 text-lg">{itemForm.id ? 'Sửa Danh mục Vật tư' : 'Thêm Danh mục Vật tư'}</h3>
-              <button type="button" onClick={() => setShowItemModal(false)}><X className="w-5 h-5 text-indigo-400 hover:text-indigo-600" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleItemSubmit} className="e-modal max-w-md overflow-hidden flex flex-col">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">{itemForm.id ? 'Sửa Danh mục Vật tư' : 'Thêm Danh mục Vật tư'}</h3>
+              <button type="button" onClick={() => setShowItemModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="e-modal-body space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Tên vật tư *</label>
-                <input required type="text" value={itemForm.name} onChange={e => setItemForm({...itemForm, name: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: Bơm tiêm 5ml" />
+                <label className="e-label">Tên vật tư *</label>
+                <input required type="text" value={itemForm.name} onChange={e => setItemForm({...itemForm, name: e.target.value})} className="e-input" placeholder="VD: Bơm tiêm 5ml" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Đơn vị *</label>
-                  <input required type="text" value={itemForm.unit} onChange={e => setItemForm({...itemForm, unit: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Cái, Hộp, Vỉ..." />
+                  <label className="e-label">Đơn vị *</label>
+                  <input required type="text" value={itemForm.unit} onChange={e => setItemForm({...itemForm, unit: e.target.value})} className="e-input" placeholder="Cái, Hộp, Vỉ..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Tồn tối thiểu</label>
-                  <input type="number" min="0" value={itemForm.min_stock} onChange={e => setItemForm({...itemForm, min_stock: Number(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: 10" />
+                  <label className="e-label">Tồn tối thiểu</label>
+                  <input type="number" min="0" value={itemForm.min_stock} onChange={e => setItemForm({...itemForm, min_stock: Number(e.target.value)})} className="e-input" placeholder="VD: 10" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Ghi chú</label>
-                <textarea value={itemForm.notes} onChange={e => setItemForm({...itemForm, notes: e.target.value})} className="w-full border p-3 rounded-xl outline-none focus:border-indigo-500 h-20 resize-none" />
+                <label className="e-label">Ghi chú</label>
+                <textarea value={itemForm.notes} onChange={e => setItemForm({...itemForm, notes: e.target.value})} className="e-textarea h-20 resize-none" />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setShowItemModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Lưu danh mục</button>
+            <div className="e-modal-footer">
+              <button type="button" onClick={() => setShowItemModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">Lưu danh mục</button>
             </div>
           </form>
         </div>
@@ -416,60 +444,60 @@ export default function InventoryManagementPage({ isNested = false }) {
 
       {/* Modal: Import Stock */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleImportSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
-              <h3 className="font-bold text-teal-800 text-lg">Phiếu Nhập Kho</h3>
-              <button type="button" onClick={() => setShowImportModal(false)}><X className="w-5 h-5 text-teal-400 hover:text-teal-600" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleImportSubmit} className="e-modal max-w-md overflow-hidden flex flex-col">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Phiếu Nhập Kho</h3>
+              <button type="button" onClick={() => setShowImportModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="e-modal-body space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Chọn vật tư *</label>
-                <select required value={importForm.item_id} onChange={e => setImportForm({...importForm, item_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-semibold text-slate-700">
+                <label className="e-label">Chọn vật tư *</label>
+                <select required value={importForm.item_id} onChange={e => setImportForm({...importForm, item_id: e.target.value})} className="e-input font-medium">
                   <option value="">-- Chọn vật tư cần nhập --</option>
                   {items.map(i => <option key={i.id} value={i.id}>{i.name} (Tồn: {i.current_stock})</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Số lượng nhập *</label>
-                  <input required type="number" min="1" value={importForm.quantity} onChange={e => setImportForm({...importForm, quantity: Number(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-lg text-teal-600" placeholder="0" />
+                  <label className="e-label">Số lượng nhập *</label>
+                  <input required type="number" min="1" value={importForm.quantity} onChange={e => setImportForm({...importForm, quantity: Number(e.target.value)})} className="e-input font-bold text-[16px] text-slate-900 tabular-nums" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Ngày nhập</label>
-                  <input required type="date" value={importForm.date} onChange={e => setImportForm({...importForm, date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Ngày nhập</label>
+                  <input required type="date" value={importForm.date} onChange={e => setImportForm({...importForm, date: e.target.value})} className="e-input" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Ghi chú / Nguồn nhập</label>
-                <textarea value={importForm.notes} onChange={e => setImportForm({...importForm, notes: e.target.value})} className="w-full border p-3 rounded-xl outline-none focus:border-teal-500 h-20 resize-none" placeholder="Nhập từ nhà cung cấp nào..." />
+                <label className="e-label">Ghi chú / Nguồn nhập</label>
+                <textarea value={importForm.notes} onChange={e => setImportForm({...importForm, notes: e.target.value})} className="e-textarea h-20 resize-none" placeholder="Nhập từ nhà cung cấp nào..." />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setShowImportModal(false)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Hoàn tất Nhập</button>
+            <div className="e-modal-footer">
+              <button type="button" onClick={() => setShowImportModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">Hoàn tất Nhập</button>
             </div>
           </form>
         </div>
       )}
 
       {stockModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setStockModal(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
-              <h3 className="font-bold text-teal-800 text-lg">Sửa tồn kho</h3>
-              <button type="button" onClick={() => setStockModal(null)}><X className="w-5 h-5 text-teal-400 hover:text-teal-600" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={() => setStockModal(null)}>
+          <div className="e-modal max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Sửa tồn kho</h3>
+              <button type="button" onClick={() => setStockModal(null)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6">
-              <p className="text-sm text-slate-500 mb-3"><b className="text-slate-800">{stockModal.name}</b> · đơn vị {stockModal.unit}</p>
-              <label className="block text-sm font-semibold mb-2 text-slate-700">Số lượng tồn kho hiện tại</label>
+            <div className="e-modal-body">
+              <p className="text-[13px] text-slate-500 mb-3"><b className="text-slate-900">{stockModal.name}</b> · đơn vị {stockModal.unit}</p>
+              <label className="e-label">Số lượng tồn kho hiện tại</label>
               <input type="number" autoFocus value={stockValue} onChange={e => setStockValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveStock(); }}
-                className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-lg text-teal-600 text-center" placeholder="0" />
-              <p className="text-[11px] text-slate-400 mt-2">Chỉnh số tồn thực tế (kiểm kê). Nhập/xuất sau đó vẫn cộng/trừ bình thường.</p>
+                className="e-input h-12 font-bold text-[18px] text-slate-900 text-center tabular-nums" placeholder="0" />
+              <p className="text-[12px] text-slate-400 mt-2">Chỉnh số tồn thực tế (kiểm kê). Nhập/xuất sau đó vẫn cộng/trừ bình thường.</p>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setStockModal(null)} className="px-6 py-2.5 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
-              <button type="button" onClick={saveStock} disabled={saving} className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md disabled:opacity-50">Lưu</button>
+            <div className="e-modal-footer">
+              <button type="button" onClick={() => setStockModal(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button type="button" onClick={saveStock} disabled={saving} className="e-btn e-btn-primary min-w-[96px]">Lưu</button>
             </div>
           </div>
         </div>

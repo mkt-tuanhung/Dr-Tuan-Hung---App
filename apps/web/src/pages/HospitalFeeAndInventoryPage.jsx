@@ -12,20 +12,17 @@ export default function HospitalFeeAndInventoryPage() {
   const [activeTab, setActiveTab] = useState(showVienPhi ? 'vien_phi' : 'inventory');
 
   return (
-    <div className="space-y-6">
-      {/* Header Wrapper */}
-      <div>
-        <p className="text-[13px] text-slate-500">Quản lý thu viện phí và xuất nhập tồn vật tư y tế</p>
-      </div>
+    <div className="space-y-4">
+      <p className="e-page-desc">Quản lý thu viện phí và xuất nhập tồn vật tư y tế</p>
 
-      {/* Main Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-        <div className="flex bg-slate-50 border-b overflow-x-auto">
+      {/* Tab phân hệ (gạch chân teal kiểu Ethics) */}
+      <div className="space-y-4">
+        <div className="e-tabs">
           {showVienPhi && (
           <button
             onClick={() => setActiveTab('vien_phi')}
-            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'vien_phi' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+            className={`e-tab shrink-0 ${
+              activeTab === 'vien_phi' ? 'e-tab-active' : 'text-slate-500'
             }`}
           >
             <Activity className="w-4 h-4" /> Viện phí
@@ -33,16 +30,16 @@ export default function HospitalFeeAndInventoryPage() {
           )}
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'inventory' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+            className={`e-tab shrink-0 ${
+              activeTab === 'inventory' ? 'e-tab-active' : 'text-slate-500'
             }`}
           >
             <PackageOpen className="w-4 h-4" /> Vật tư
           </button>
           <button
             onClick={() => setActiveTab('nhap_moi')}
-            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'nhap_moi' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+            className={`e-tab shrink-0 ${
+              activeTab === 'nhap_moi' ? 'e-tab-active' : 'text-slate-500'
             }`}
           >
             <PackagePlus className="w-4 h-4" /> Vật tư nhập mới
@@ -50,7 +47,7 @@ export default function HospitalFeeAndInventoryPage() {
         </div>
 
         {/* Content Area */}
-        <div className="p-6 bg-slate-50/50 min-h-[60vh]">
+        <div className="min-h-[60vh]">
           {activeTab === 'vien_phi' && showVienPhi && <VienPhiPage isNested={true} />}
           {activeTab === 'inventory' && <InventoryManagementPage isNested={true} />}
           {activeTab === 'nhap_moi' && <NhapVatTuMoiPage />}
