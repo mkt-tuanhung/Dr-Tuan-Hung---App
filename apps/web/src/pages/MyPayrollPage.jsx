@@ -150,8 +150,8 @@ const MyPayrollPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Wallet className="w-6 h-6 text-teal-600" /> {isManager ? 'Bảng lương nhân sự' : 'Bảng lương của tôi'}</h2>
-          <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-1.5">
+          {isManager && <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Wallet className="w-6 h-6 text-teal-600" /> Bảng lương nhân sự</h2>}
+          <p className={`text-[13px] text-slate-500 flex items-center gap-1.5 ${isManager ? 'mt-0.5' : ''}`}>
             <ShieldCheck className="w-3.5 h-3.5 text-teal-500" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này · cập nhật tự động'}
           </p>
         </div>

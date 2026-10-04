@@ -248,13 +248,7 @@ export default function ServiceQualityPage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-2xl bg-teal-100 text-teal-600 grid place-items-center shrink-0"><Smile className="w-6 h-6" /></span>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Đánh giá dịch vụ</h2>
-            <p className="text-slate-400 text-sm">Giám sát chất lượng nhân sự &amp; dịch vụ từ phản hồi khách hàng</p>
-          </div>
-        </div>
+        <p className="text-[13px] text-slate-500">Giám sát chất lượng nhân sự &amp; dịch vụ từ phản hồi khách hàng</p>
         <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}

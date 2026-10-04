@@ -378,8 +378,7 @@ const FinanceManagementPage = () => {
       {/* Header & Tabs */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Doanh thu / Tài chính</h2>
-          <p className="text-slate-500 text-sm mt-1">Báo cáo dòng tiền, nguồn khách và biểu đồ lợi nhuận</p>
+          <p className="text-[13px] text-slate-500">Báo cáo dòng tiền, nguồn khách và biểu đồ lợi nhuận</p>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl">
           <button onClick={() => setActiveTab('revenue')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'revenue' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>

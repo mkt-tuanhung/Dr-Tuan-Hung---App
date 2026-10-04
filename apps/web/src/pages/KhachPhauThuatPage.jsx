@@ -313,8 +313,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       {moduleTab === 'noi_bo' && (<>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Khách Phẫu Thuật</h2>
-          <p className="text-slate-500 text-sm mt-1">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
+          <p className="text-[13px] text-slate-500">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
         </div>
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="relative w-full sm:w-72 shrink-0">

@@ -253,8 +253,7 @@ export default function CashFlowPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Kế toán dòng tiền (Vốn lưu động)</h2>
-          <p className="text-slate-500 text-sm mt-1">Quản lý nhận/chi tiền mặt và chuyển khoản theo ngày</p>
+          <p className="text-[13px] text-slate-500">Quản lý nhận/chi tiền mặt và chuyển khoản theo ngày</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">

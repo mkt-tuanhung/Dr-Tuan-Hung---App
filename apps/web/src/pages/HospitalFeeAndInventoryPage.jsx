@@ -15,8 +15,7 @@ export default function HospitalFeeAndInventoryPage() {
     <div className="space-y-6">
       {/* Header Wrapper */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-800">Quản lý Viện phí / Vật tư</h2>
-        <p className="text-slate-400 text-sm mt-0.5">Quản lý thu viện phí và xuất nhập tồn vật tư y tế</p>
+        <p className="text-[13px] text-slate-500">Quản lý thu viện phí và xuất nhập tồn vật tư y tế</p>
       </div>
 
       {/* Main Tabs */}

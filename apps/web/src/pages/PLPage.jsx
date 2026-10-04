@@ -119,13 +119,7 @@ export default function PLPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20"><PieChart className="w-6 h-6 text-white" /></div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 leading-tight">Lãi / Lỗ (P&amp;L)</h2>
-            <p className="text-slate-400 text-sm">Lợi nhuận thực theo tháng · doanh thu trừ mọi chi phí &amp; quỹ rủi ro</p>
-          </div>
-        </div>
+        <p className="text-[13px] text-slate-500">Lợi nhuận thực theo tháng · doanh thu trừ mọi chi phí &amp; quỹ rủi ro</p>
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={() => shiftMonth(-1)} title="Tháng trước" className="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 flex items-center justify-center text-slate-600 shadow-sm transition"><ChevronLeft className="w-5 h-5" /></button>
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">

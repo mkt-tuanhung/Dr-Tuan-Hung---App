@@ -305,8 +305,7 @@ const KhachBongPage = ({ isNested = false }) => {
           {!isNested && (
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Khách Bong (Mini-CRM)</h2>
-                <p className="text-slate-500 text-sm mt-1">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
+                <p className="text-[13px] text-slate-500">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
               </div>
               <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold">{customers.length} Khách</div>
             </div>

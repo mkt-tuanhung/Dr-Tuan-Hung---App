@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
-import { Sprout, DollarSign, Banknote, Percent, Search, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DollarSign, Banknote, Percent, Search, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const RATE = 0.2; // 20%
@@ -63,13 +63,7 @@ export default function SeedingRevenuePage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-600 grid place-items-center shrink-0"><Sprout className="w-6 h-6" /></span>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Doanh thu &amp; Hoa hồng Seeding</h2>
-            <p className="text-slate-400 text-sm">Khách nguồn Seeding đã phẫu thuật · hoa hồng chung cả team</p>
-          </div>
-        </div>
+        <p className="text-[13px] text-slate-500">Khách nguồn Seeding đã phẫu thuật · hoa hồng chung cả team</p>
         <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1.5 py-1 shadow-sm">
           <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
           <span className="text-sm font-bold text-slate-700 min-w-[72px] text-center">Th{month}/{year}</span>
