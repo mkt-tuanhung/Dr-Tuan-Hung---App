@@ -132,7 +132,7 @@ export const CheckinStrip = ({ profile, onOpen, onScan }) => {
       </span>
       <div className="min-w-0 flex-1">
         <div className={`text-[15px] font-bold leading-snug ${dark ? 'text-white' : 'text-slate-900'}`}>{meta.title}</div>
-        <div className={`text-[12.5px] mt-0.5 tabular-nums ${dark ? 'text-white/85' : 'text-slate-500'}`}>
+        <div className={`text-[12.5px] mt-0.5 tabular-nums whitespace-nowrap truncate ${dark ? 'text-white/85' : 'text-slate-500'}`}>
           {state === 'none' ? `Bây giờ ${pad2(clock.getHours())}:${pad2(clock.getMinutes())}` : `Vào ${t5(rec?.check_in)} · Ra ${t5(rec?.check_out)}`}
         </div>
       </div>

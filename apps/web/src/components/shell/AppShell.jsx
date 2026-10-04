@@ -98,7 +98,7 @@ export default function AppShell({
   const todayLabel = `${now.getDay() === 0 ? 'Chủ nhật' : `Thứ ${now.getDay() + 1}`}, ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const allTiles = allQ.trim()
     ? [{ title: 'Kết quả tìm kiếm', tiles: flatTiles(groups.flatMap(g => g.items)).filter(m => deAccent(m.label).includes(deAccent(allQ))) }]
-    : groups.map(g => ({ title: sentence(g.title), tiles: flatTiles(g.items) }));
+    : groups.map(g => ({ title: sentence(g.title), tiles: flatTiles(g.items).filter(m => m.id !== homeId) })); // Trang chủ đã có ở thanh dưới
   const focusSearch = () => { setSidebarOpen(true); setTimeout(() => searchRef.current?.focus(), 60); };
 
   const renderItem = (item) => {
@@ -252,7 +252,7 @@ export default function AppShell({
 
         {/* Header mobile (Ethics): Trang chủ = lời chào; màn khác = quay lại + tiêu đề giữa */}
         {isHome ? (
-          <header className="lg:hidden flex items-center gap-3.5 px-4 pt-4 pb-3 sticky top-0 z-20 bg-[#F7FBFB]/95 backdrop-blur">
+          <header className="lg:hidden flex items-center gap-3.5 px-4 pt-4 pb-3 sticky top-0 z-20 bg-background/95 backdrop-blur">
             <ProfileMenu mobile={true}>
               <div className="cursor-pointer rounded-full ring-[3px] ring-white shadow-soft"><Avatar profile={profile} size="w-14 h-14" text="text-lg" /></div>
             </ProfileMenu>
