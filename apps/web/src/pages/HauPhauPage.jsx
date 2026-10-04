@@ -8,6 +8,7 @@ import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import MediaCustomerButton from '@/components/MediaCustomerButton.jsx';
+import { vnToday } from '@/lib/vnTime';
 
 const IMPORT_HEADERS = ['ngay_mo', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'ma_dieu_duong', 'ghi_chu'];
 const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
@@ -143,7 +144,7 @@ const HauPhauPage = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewImage, setViewImage] = useState(null);
-  const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: new Date().toISOString().split('T')[0], recheck_time: '09:00', warning_signs: [], next_recheck: '' });
+  const [form, setForm] = useState({ post_op_status: 'Đang theo dõi', post_op_notes: '', recheck_date: vnToday(), recheck_time: '09:00', warning_signs: [], next_recheck: '' });
   const [milestoneEdit, setMilestoneEdit] = useState(null); // { key, label, ... } đang sửa
   const [savingMilestone, setSavingMilestone] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -428,7 +429,7 @@ const HauPhauPage = () => {
     setForm({
       post_op_status: app.post_op_status || 'Đang theo dõi',
       post_op_notes: '',
-      recheck_date: new Date().toISOString().split('T')[0],
+      recheck_date: vnToday(),
       recheck_time: '09:00',
       warning_signs: Array.isArray(app.warning_signs) ? app.warning_signs : [],
       next_recheck: app.next_recheck_at ? new Date(app.next_recheck_at).toISOString().slice(0, 16) : '',

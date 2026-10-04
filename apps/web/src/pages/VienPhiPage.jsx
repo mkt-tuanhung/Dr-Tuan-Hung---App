@@ -5,6 +5,7 @@ import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X, ChevronLeft, ChevronRight, Pencil, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { vnToday } from '@/lib/vnTime';
 
 const VienPhiPage = ({ isNested = false }) => {
   const { profile } = useAuth();
@@ -69,7 +70,7 @@ const VienPhiPage = ({ isNested = false }) => {
     setEditForm({
       amount: fmtInput(app.hospital_fee),
       method: app.hospital_fee_method || 'cash',
-      date: app.hospital_fee_date ? new Date(app.hospital_fee_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      date: app.hospital_fee_date ? new Date(app.hospital_fee_date).toISOString().split('T')[0] : vnToday(),
       proof: app.hospital_fee_proof || '',
     });
   };

@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScanFace, LogIn, LogOut, CheckCircle2, ChevronRight, CalendarDays } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { vnToday } from '@/lib/vnTime';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -109,7 +110,7 @@ export const CheckinStrip = ({ profile, onOpen }) => {
   useEffect(() => {
     if (!profile?.id) return;
     // Cùng quy ước ngày với trang Chấm công
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = vnToday();
     supabase.from('attendance').select('check_in, check_out, status').eq('staff_id', profile.id).eq('date', todayStr).maybeSingle()
       .then(({ data }) => setRec(data || null));
   }, [profile?.id]);

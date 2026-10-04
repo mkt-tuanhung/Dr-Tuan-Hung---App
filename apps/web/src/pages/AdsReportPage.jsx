@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Plus, X, BarChart2, Edit, Save, Trash2, Search, DollarSign, Target, TrendingUp, AlertCircle, Phone, Loader2 } from 'lucide-react';
 import MoneyInput from '@/components/MoneyInput.jsx';
+import { vnToday } from '@/lib/vnTime';
 
 const AdsReportPage = () => {
   const { profile } = useAuth();
@@ -24,7 +25,7 @@ const AdsReportPage = () => {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [entryForm, setEntryForm] = useState({
     id: null,
-    date: new Date().toISOString().split('T')[0],
+    date: vnToday(),
     amount_spent: '',
   });
 
@@ -182,7 +183,7 @@ const AdsReportPage = () => {
   const openEntry = (row = null) => {
     setEntryForm(row && row.id
       ? { id: row.id, date: row.date, amount_spent: row.amount_spent }
-      : { id: null, date: row?.date || new Date().toISOString().split('T')[0], amount_spent: '' });
+      : { id: null, date: row?.date || vnToday(), amount_spent: '' });
     setShowEntryModal(true);
   };
 

@@ -9,6 +9,7 @@ import { OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS, calcDistance, getL
 import FaceCameraScreen from '@/features/faceid/FaceCameraScreen.jsx';
 import FaceEnrollScreen from '@/features/faceid/FaceEnrollScreen.jsx';
 import { fetchMyFaceStatus } from '@/features/faceid/faceApi';
+import { vnToday, vnTimeHMS } from '@/lib/vnTime';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'bg-teal-100 text-teal-700', dot: 'bg-teal-500' },
@@ -51,7 +52,7 @@ const AttendancePage = () => {
   const { profile } = useAuth();
   const today = new Date();
   const [anomalyAlert, setAnomalyAlert] = useState(null);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = vnToday();
 
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
@@ -117,7 +118,7 @@ const AttendancePage = () => {
   const handleCheckIn = async () => {
     setSaving(true);
     try {
-      const checkInTime = now.toTimeString().slice(0, 8);
+      const checkInTime = vnTimeHMS(now);
       const status = checkInTime >= '09:01:00' ? 'late' : 'present';
 
       // Lấy GPS và IP đồng thời
@@ -195,7 +196,7 @@ const AttendancePage = () => {
       } catch {}
 
       const updatePayload = {
-        check_out: now.toTimeString().slice(0, 8),
+        check_out: vnTimeHMS(now),
         updated_at: new Date().toISOString(),
       };
 

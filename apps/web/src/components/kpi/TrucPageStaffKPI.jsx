@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, AlertCircle, Phone, MessageCircle, Percent, Target, Plus, Trash2, Upload, Download, X, Pencil } from 'lucide-react';
 import { computeTrucPage, PHONE_COMMISSION } from '@/lib/kpiCalc';
 import { parseCSV, downloadCsv } from '@/lib/csv';
+import { vnToday } from '@/lib/vnTime';
 
 const IMPORT_HEADERS = ['ngay', 'so_dien_thoai', 'so_sdt_quan_tam', 'so_tin_nhan', 'so_tin_spam'];
 const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
@@ -13,7 +14,7 @@ const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => vnToday();
 
 const ACCENTS = {
   emerald: 'bg-teal-50 text-teal-600', blue: 'bg-blue-50 text-blue-600',

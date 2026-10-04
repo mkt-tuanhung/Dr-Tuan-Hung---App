@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -750,7 +751,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const scoreLabel = score >= 75 ? 'Rất tiềm năng' : score >= 50 ? 'Tiềm năng' : score >= 25 ? 'Cần nuôi dưỡng' : 'Lạnh';
 
   // Gợi ý việc cần làm tiếp (thông minh)
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = vnToday();
   const suggestions = (() => {
     const out = [];
     if (isDue(row.next_call_at)) out.push({ tone: 'rose', icon: PhoneCall, text: `Đã tới hạn gọi lại (${fmtDT(row.next_call_at)})`, cta: 'Ghi cuộc gọi', run: () => setTab('call') });
@@ -1671,7 +1672,7 @@ const GetflyModal = ({ onClose, onDone }) => {
 
 // ================= Tạo lịch hẹn từ 1 khách (đẩy sang Module lịch hẹn) =================
 const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = vnToday();
   const [f, setF] = useState({
     appointment_date: today, appointment_time: '09:00',
     customer_name: row.customer_name || '', phone: row.phone || '',

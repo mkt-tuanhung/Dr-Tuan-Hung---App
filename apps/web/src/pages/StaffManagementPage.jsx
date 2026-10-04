@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, Clock, BadgeCheck } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const AV_TONES = ['bg-teal-100 text-teal-700', 'bg-violet-100 text-violet-700', 'bg-orange-100 text-orange-600', 'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-rose-100 text-rose-600'];
 const avTone = (n) => AV_TONES[[...(n || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_TONES.length];
@@ -197,7 +198,7 @@ const StaffManagementPage = ({ isNested = false }) => {
               phone: form.phone,
               employment_status: form.employment_status,
               probation_started_at: form.employment_status === 'probation'
-                ? (form.probation_started_at || new Date().toISOString().split('T')[0])
+                ? (form.probation_started_at || vnToday())
                 : null,
               fixed_salary: form.fixed_salary,
               avatar_url,
@@ -224,7 +225,7 @@ const StaffManagementPage = ({ isNested = false }) => {
   const handleEndProbation = async (s) => {
     const { error } = await supabase.from('profiles').update({
       employment_status: 'official',
-      official_started_at: new Date().toISOString().split('T')[0],
+      official_started_at: vnToday(),
     }).eq('id', s.id);
     if (error) { toast.error(error.message); return; }
     toast.success(`${s.full_name} đã trở thành nhân sự chính thức`);
