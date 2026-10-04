@@ -15,6 +15,8 @@ import AppointmentDrawer from '@/features/appointments/AppointmentDrawer.jsx';
 import { toYMD, addDays } from '@/features/appointments/calendarUtils';
 import { AuthContext } from '@/contexts/AuthContext.jsx';
 import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
+import AdminDashboard from '@/pages/AdminDashboard.jsx';
+import StaffDashboard from '@/pages/StaffDashboard.jsx';
 
 export const DEMO_PROFILE = { id: 'demo', full_name: 'Nguyễn Văn Dũng', role: 'admin', avatar_url: null };
 
@@ -137,6 +139,17 @@ export default function DesignPreview() {
   }
   if (screen === 'calendar') {
     return <CalendarDemo tab={tab} setTab={setTab} />;
+  }
+  if (screen === 'admin' || screen === 'staff') {
+    // Toàn bộ dashboard thật; Supabase giả lập ở tầng mạng
+    const prof = screen === 'admin' ? DEMO_PROFILE
+      : { id: 'demo-staff', full_name: 'Trần Mai Anh', role: 'telesale', position: 'Telesale', base_salary: 8000000, employment_status: 'official', is_active: true };
+    try { localStorage.setItem('staff_active_tab', 'overview'); localStorage.setItem('admin_active_tab', 'overview'); } catch { /* ignore */ }
+    return (
+      <AuthContext.Provider value={{ user: { id: prof.id }, profile: prof, loading: false, isLoggedIn: true, isAdmin: screen === 'admin', logout: () => {} }}>
+        {screen === 'admin' ? <AdminDashboard /> : <StaffDashboard />}
+      </AuthContext.Provider>
+    );
   }
   if (screen === 'customers') {
     // Supabase được giả lập ở tầng mạng (script chụp ảnh) — ở đây chỉ giả phiên đăng nhập

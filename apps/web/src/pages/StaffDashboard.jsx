@@ -10,6 +10,9 @@ import {
   FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search, ScanFace
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
+import { HeroCard, CheckinStrip, QuickActions, StatCard, Panel } from '@/components/overview/OverviewKit.jsx';
+import { APPT_TONE } from '@/features/appointments/calendarUtils';
+
 import KPIPage from '@/pages/KPIPage.jsx';
 import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
 import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
@@ -130,30 +133,28 @@ const EditorOverview = ({ profile, setActiveTab }) => {
     })();
   }, [profile?.id]);
 
-  const Card = ({ icon: Icon, color, label, value, unit, onClick }) => (
-    <div onClick={onClick} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all group">
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform ${color}`}><Icon className="w-6 h-6" /></div>
-      <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">{label}</p>
-      <p className="text-xl font-bold text-slate-800 mt-1">{value === null ? '—' : value}{unit && <span className="text-xs text-slate-400 font-medium normal-case"> {unit}</span>}</p>
-    </div>
+  const Card = ({ icon, color, label, value, unit, onClick }) => (
+    <StatCard icon={icon} color={color} label={label} value={value === null ? '—' : `${value}${unit ? ' ' + unit : ''}`} onClick={onClick} />
   );
   const fmtM = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n || 0)));
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <Card icon={Trophy} color="bg-amber-50 text-amber-600" label="Clip Win (tháng)" value={s.win} unit="clip" onClick={() => setActiveTab('content_video')} />
-      <Card icon={Scissors} color="bg-blue-50 text-blue-600" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content_video')} />
-      <Card icon={CheckCircle2} color="bg-violet-50 text-violet-600" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content_video')} />
-      <Card icon={Target} color="bg-rose-50 text-rose-600" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content_video')} />
-      <Card icon={Wallet} color="bg-teal-50 text-teal-600" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <Card icon={Trophy} color="#E5A13C" label="Clip Win (tháng)" value={s.win} unit="clip" onClick={() => setActiveTab('content_video')} />
+      <Card icon={Scissors} color="#5B8DD6" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content_video')} />
+      <Card icon={CheckCircle2} color="#8B7BD8" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content_video')} />
+      <Card icon={Target} color="#D9635C" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content_video')} />
+      <Card icon={Wallet} color="#468A86" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
     </div>
   );
 };
 
-const Overview = ({ profile, setActiveTab }) => {
+const Overview = ({ profile, setActiveTab, available = [] }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
   const [showSalary, setShowSalary] = useState(false); // mặc định ẩn lương, bấm mắt mới hiện
 
   const [stats, setStats] = useState({ workingDays: null, kpiPct: null, advance: null, todayAppts: null });
+  const [todayList, setTodayList] = useState([]);   // lịch hẹn hôm nay của tôi
+  const [dueCalls, setDueCalls] = useState({ n: 0, list: [] }); // khách tới hạn gọi lại
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -183,10 +184,12 @@ const Overview = ({ profile, setActiveTab }) => {
           .eq('staff_id', profile.id).eq('is_advance', true).eq('status', 'approved'),
         // Lịch hẹn hôm nay liên quan tới mình
         supabase.from('customer_appointments')
-          .select('id', { count: 'exact', head: true })
+          .select('id, customer_name, service, status, appointment_time')
           .eq('appointment_date', todayStr)
-          .or(`telesale_id.eq.${profile.id},sale_offline_id.eq.${profile.id},created_by.eq.${profile.id}`),
+          .or(`telesale_id.eq.${profile.id},sale_id.eq.${profile.id},created_by.eq.${profile.id}`)
+          .order('appointment_time', { ascending: true, nullsFirst: false }),
       ]);
+      setTodayList(apptRes.data || []);
 
       const kpi = kpiRes.data;
       const kpiPct = kpi
@@ -202,115 +205,120 @@ const Overview = ({ profile, setActiveTab }) => {
         workingDays: attRes.count ?? 0,
         kpiPct,
         advance,
-        todayAppts: apptRes.count ?? 0,
+        todayAppts: (apptRes.data || []).length,
       });
     })();
   }, [profile?.id]);
 
+  // Khách tới hạn gọi lại (telesale phụ trách) — chỉ khi có quyền Data khách hàng
+  const canData = available.includes('data_kh');
+  useEffect(() => {
+    if (!profile?.id || !canData) return;
+    const end = new Date(); end.setHours(23, 59, 59, 999);
+    supabase.from('marketing_data')
+      .select('id, customer_name, status, next_call_at', { count: 'exact' })
+      .eq('telesale_id', profile.id).lte('next_call_at', end.toISOString())
+      .order('next_call_at', { ascending: true }).limit(6)
+      .then(({ data, count }) => setDueCalls({ n: count ?? (data || []).length, list: data || [] }));
+  }, [profile?.id, canData]);
+
   const show = (v, dash = '—') => v === null ? dash : v;
+  const can = (id) => available.includes(id);
+  const roles = [profile?.role, profile?.role_2];
+  const isEditor = roles.includes('editor');
+  const isAccountant = profile?.role === 'accountant';
+  const roleLabel = profile?.position || ROLE_LABELS[profile?.role] || profile?.role;
+
+  // Thao tác nhanh — chỉ hiện chức năng nhân sự này được dùng
+  const QUICK = [
+    { id: 'attendance', label: 'Chấm công', icon: ScanFace, color: '#468A86' },
+    { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#5B8DD6' },
+    { id: 'data_kh', label: 'Khách hàng', icon: Database, color: '#3FA7A2' },
+    { id: 'kpi', label: 'KPI của tôi', icon: Target, color: '#D9635C' },
+    { id: 'my_payroll', label: 'Phiếu lương', icon: Wallet, color: '#E5A13C' },
+    { id: 'advances', label: 'Tạm ứng', icon: ClipboardList, color: '#8B7BD8' },
+    { id: 'finance', label: 'Doanh thu', icon: Banknote, color: '#5BAE7B' },
+    { id: 'cashflow', label: 'Dòng tiền', icon: BarChart2, color: '#6C7FD8' },
+    { id: 'payroll', label: 'Bảng lương', icon: Wallet, color: '#D98A4E' },
+    { id: 'content_video', label: 'Video Ads', icon: PlayCircle, color: '#C46FB0' },
+    { id: 'hau_phau', label: 'Hậu phẫu', icon: Activity, color: '#3FA7A2' },
+    { id: 'meetings', label: 'Phòng họp', icon: Video, color: '#8A9A5B' },
+    { id: 'community', label: 'Cộng đồng', icon: MessagesSquare, color: '#5B8DD6' },
+    { id: 'minigame', label: 'Minigame', icon: Gamepad2, color: '#E5A13C' },
+  ].filter(q => can(q.id)).slice(0, 8);
+
+  const salaryLine = (
+    <div className="inline-flex items-center gap-2 text-[12.5px] text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1">
+      <span>Lương CB:</span>
+      <span className="font-semibold text-slate-700 tabular-nums">{showSalary ? fmt(profile?.base_salary) : '••••••••'}</span>
+      <button onClick={() => setShowSalary(v => !v)} title={showSalary ? 'Ẩn lương' : 'Hiện lương'} className="text-slate-400 hover:text-slate-700">
+        {showSalary ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+      </button>
+      <span className="text-slate-300">·</span>
+      <span>{profile?.employment_status === 'probation' ? 'Thử việc (85%)' : 'Chính thức'}</span>
+    </div>
+  );
+
+  const kpi = stats.kpiPct ?? 0;
+  const ring = isEditor || isAccountant ? null : {
+    value: kpi, label: 'Tiến độ KPI tháng',
+    sub: stats.kpiPct === null ? 'Đang tải…' : kpi >= 100 ? 'Đã đạt mục tiêu 🎉' : kpi >= 70 ? 'Sắp về đích, cố lên!' : kpi > 0 ? 'Còn nhiều dư địa bứt phá' : 'Chưa có số liệu KPI',
+    onClick: can('kpi') ? () => setActiveTab('kpi') : undefined,
+  };
+  const heroStats = isEditor || isAccountant ? [] : [
+    { label: 'Ngày công', value: `${show(stats.workingDays)}`, sub: 'ngày', onClick: can('attendance') ? () => setActiveTab('attendance') : undefined },
+    { label: 'Lịch hẹn nay', value: `${show(stats.todayAppts)}`, sub: 'khách của tôi', onClick: can('appointments') ? () => setActiveTab('appointments') : undefined },
+    { label: 'Tạm ứng', value: stats.advance === null ? '—' : new Intl.NumberFormat('vi-VN').format(stats.advance) + 'đ', sub: stats.advance ? 'trừ vào lương' : 'không có', onClick: can('advances') ? () => setActiveTab('advances') : undefined },
+  ];
 
   return (
-    <div className="space-y-5">
-      {/* Greeting banner */}
-      <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-7 h-7 text-white" />
-            )}
-          </div>
-          <div>
-            <p className="text-teal-100 text-sm">Xin chào 👋</p>
-            <h2 className="text-xl font-bold">{profile?.full_name}</h2>
-            <p className="text-teal-200 text-xs mt-0.5">
-              {ROLE_LABELS[profile?.role] || profile?.role}
-              {profile?.position ? ` · ${profile.position}` : ''}
-            </p>
-          </div>
+    <div className="space-y-4 lg:space-y-5">
+      <HeroCard profile={profile} roleLabel={roleLabel} ring={ring} stats={heroStats} extra={salaryLine} />
+      {can('attendance') && <CheckinStrip profile={profile} onOpen={() => setActiveTab('attendance')} />}
+      {isEditor && <EditorOverview profile={profile} setActiveTab={setActiveTab} />}
+      {(can('appointments') || canData) && !isEditor && !isAccountant && (
+        <div className={`grid grid-cols-1 gap-4 ${can('appointments') && canData ? 'lg:grid-cols-2' : ''}`}>
+          {can('appointments') && (
+            <Panel title="Lịch hẹn hôm nay của tôi" action={<button onClick={() => setActiveTab('appointments')} className="text-[12.5px] text-teal-700 font-semibold inline-flex items-center gap-0.5 hover:underline">Mở lịch <ChevronRight className="w-3.5 h-3.5" /></button>}>
+              {todayList.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Hôm nay bạn chưa có lịch hẹn</div> : (
+                <div className="divide-y divide-slate-100">
+                  {todayList.slice(0, 6).map(a => {
+                    const tone = APPT_TONE[a.status] || APPT_TONE.scheduled;
+                    return (
+                      <button key={a.id} onClick={() => setActiveTab('appointments')} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-slate-50/60 rounded-lg">
+                        <span className="w-14 text-[13px] font-bold text-slate-700 tabular-nums shrink-0">{a.appointment_time ? String(a.appointment_time).slice(0, 5) : '--:--'}</span>
+                        <span className="w-1 self-stretch rounded-full shrink-0" style={{ background: tone.bar }} />
+                        <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold text-slate-800 truncate">{a.customer_name}</div><div className="text-[11.5px] text-slate-400 truncate">{(a.service || '—').replace('[Tái khám] ', 'Tái khám · ')}</div></div>
+                        <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: tone.bg, color: tone.text }}>{tone.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Panel>
+          )}
+          {canData && (
+            <Panel title={<span className="inline-flex items-center gap-2">Khách cần gọi hôm nay {dueCalls.n > 0 && <span className="text-[11px] font-bold text-white bg-rose-500 rounded-full px-2 py-0.5">{dueCalls.n}</span>}</span>}
+              action={<button onClick={() => setActiveTab('data_kh')} className="text-[12.5px] text-teal-700 font-semibold inline-flex items-center gap-0.5 hover:underline">Bắt đầu gọi <ChevronRight className="w-3.5 h-3.5" /></button>}>
+              {dueCalls.list.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Không có khách tới hạn gọi lại 🎉</div> : (
+                <div className="divide-y divide-slate-100">
+                  {dueCalls.list.map(c => {
+                    const late = new Date(c.next_call_at) < new Date(new Date().setHours(0, 0, 0, 0));
+                    return (
+                      <button key={c.id} onClick={() => setActiveTab('data_kh')} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-slate-50/60 rounded-lg">
+                        <span className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 grid place-items-center text-[11px] font-bold shrink-0">{(c.customer_name || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase()}</span>
+                        <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold text-slate-800 truncate">{c.customer_name || '(Chưa có tên)'}</div><div className="text-[11.5px] text-slate-400 truncate">Hẹn gọi {new Date(c.next_call_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</div></div>
+                        <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${late ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'}`}>{late ? 'Quá hạn' : 'Hôm nay'}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Panel>
+          )}
         </div>
-        <div className="mt-4 pt-4 border-t border-teal-400/40 grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-teal-200 text-xs">Lương cơ bản</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-white font-semibold tabular-nums">{showSalary ? fmt(profile?.base_salary) : '••••••••'}</p>
-              <button onClick={() => setShowSalary(v => !v)} title={showSalary ? 'Ẩn lương' : 'Hiện lương'}
-                className="text-teal-100 hover:text-white p-0.5">
-                {showSalary ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <p className="text-teal-200 text-xs">Trạng thái</p>
-            <p className="text-white font-semibold mt-0.5">
-              {profile?.employment_status === 'probation' ? 'Thử việc (85%)' : 'Chính thức'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Metrics */}
-      {[profile?.role, profile?.role_2].includes('editor') ? (
-        <EditorOverview profile={profile} setActiveTab={setActiveTab} />
-      ) : profile?.role === 'accountant' ? (
-        <div className="grid grid-cols-2 gap-4">
-          <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-teal-300 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Banknote className="w-6 h-6" /></div>
-            <p className="text-sm font-semibold text-slate-700 text-center">Doanh thu</p>
-          </div>
-          <div onClick={() => setActiveTab('cashflow')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><BarChart2 className="w-6 h-6" /></div>
-            <p className="text-sm font-semibold text-slate-700 text-center">Kế toán dòng tiền</p>
-          </div>
-          <div onClick={() => setActiveTab('payroll')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Wallet className="w-6 h-6" /></div>
-            <p className="text-sm font-semibold text-slate-700 text-center">Bảng lương</p>
-          </div>
-          <div onClick={() => setActiveTab('advances')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><ClipboardList className="w-6 h-6" /></div>
-            <p className="text-sm font-semibold text-slate-700 text-center">Tạm ứng chi</p>
-          </div>
-        </div>
-      ) : (
-      <div className="grid grid-cols-2 gap-4">
-        <div onClick={() => setActiveTab('attendance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-teal-300 hover:shadow-md transition-all group">
-          <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <CalendarCheck className="w-6 h-6" />
-          </div>
-          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Ngày công</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.workingDays)} <span className="text-xs text-slate-400 font-medium normal-case">ngày</span></p>
-        </div>
-
-        <div onClick={() => setActiveTab('kpi')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group">
-          <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <Target className="w-6 h-6" />
-          </div>
-          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Tiến độ KPI</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.kpiPct)}<span className="text-xs text-slate-400 font-medium normal-case">%</span></p>
-        </div>
-
-        <div onClick={() => setActiveTab('finance')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group">
-          <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <Wallet className="w-6 h-6" />
-          </div>
-          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Tạm ứng</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">{stats.advance === null ? '—' : new Intl.NumberFormat('vi-VN').format(stats.advance)}<span className="text-xs text-slate-400 font-medium normal-case">đ</span></p>
-        </div>
-
-        <div onClick={() => setActiveTab('appointments')} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group">
-          <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <CalendarDays className="w-6 h-6" />
-          </div>
-          <p className="text-xs text-slate-400 font-medium text-center uppercase tracking-wider">Lịch hẹn nay</p>
-          <p className="text-xl font-bold text-slate-800 mt-1">{show(stats.todayAppts)} <span className="text-xs text-slate-400 font-medium normal-case">khách</span></p>
-        </div>
-      </div>
       )}
-
-      <p className="text-center text-xs text-slate-300">
-        {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-      </p>
+      <QuickActions items={QUICK} onSelect={setActiveTab} />
     </div>
   );
 };
@@ -378,7 +386,7 @@ const StaffDashboard = () => {
   }, [profile]);
 
   const renderContent = () => {
-    if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} />;
+    if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} available={flatMenu.map(m => m.id)} />;
     if (activeTab === 'attendance') return <AttendancePage />;
     if (activeTab === 'kpi') {
       const KPI_VIEWS = {
