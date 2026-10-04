@@ -7,6 +7,8 @@ module.exports = {
     "./app/**/*.{js,jsx}",
     "./src/**/*.{js,jsx}",
   ],
+  // Lớp Ethics ghép tên động (e-shift-${tone}, e-tone-${tone}) phải giữ lại khi build
+  safelist: [{ pattern: /^e-(shift|tone)-(peach|success|rose|lavender|sky|neutral|brand|warning|danger|info)$/ }],
   theme: {
     container: {
       center: true,

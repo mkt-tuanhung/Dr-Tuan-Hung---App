@@ -8,7 +8,7 @@
 import {
   LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
-  Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake,
+  Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -25,6 +25,7 @@ export const OUTSOURCE_HIDE = ['appointments', 'attendance', 'advances'];
 export const FULL_MENU = [
   { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'], exclude: ['designer'] },
   { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant', 'designer'] },
+  { id: 'my_schedule', label: 'Lịch làm việc',   icon: CalendarRange, roles: ['all'], exclude: ['designer'] },
   { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant', 'designer'] },
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'], exclude: ['designer'] },
   { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
@@ -64,7 +65,7 @@ export const FULL_MENU = [
 // Nhóm menu hiển thị trên sidebar (Ethics BOS). Mục nào chưa có nhóm -> nhóm "KHÁC".
 export const STAFF_GROUPS = [
   { title: null, ids: ['overview'] },
-  { title: 'CÁ NHÂN', ids: ['attendance', 'kpi', 'my_payroll', 'advances'] },
+  { title: 'CÁ NHÂN', ids: ['attendance', 'my_schedule', 'kpi', 'my_payroll', 'advances'] },
   // Mục cha (grp_*) chỉ để gom nhóm hiển thị kiểu Ethics BOS — quyền vẫn xét theo từng mục con.
   { title: 'KHÁCH HÀNG', ids: [
     { id: 'grp_crm', label: 'Khách hàng', icon: Database, ids: ['data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'service_quality'] },

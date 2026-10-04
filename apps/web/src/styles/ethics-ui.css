@@ -122,3 +122,20 @@
   /* ---------- Avatar chữ ---------- */
   .e-avatar { @apply inline-grid place-items-center rounded-full bg-teal-50 text-teal-700 font-bold shrink-0; }
 }
+
+/* ---------- Lịch làm việc / Phân ca (Ethics hr.css: sch-*) ---------- */
+@layer components {
+  .e-shift { @apply relative w-full max-w-[132px] h-[46px] mx-auto rounded-xl text-[13.5px] font-semibold grid place-items-center border border-transparent transition; }
+  .e-shift:hover { @apply shadow-soft -translate-y-px; }
+  .e-shift-peach { @apply bg-peach-50 text-peach-600; }
+  .e-shift-success { @apply bg-success-50 text-success-600; }
+  .e-shift-rose { @apply bg-rose-50 text-rose-600; }
+  .e-shift-lavender { @apply bg-lavender-50 text-lavender-600; }
+  .e-shift-sky { @apply bg-sky-50 text-sky-600; }
+  .e-shift-neutral { @apply bg-slate-100 text-slate-500; }
+  .e-shift-empty { @apply bg-transparent border-[1.5px] border-dashed border-slate-200 text-slate-400 font-medium; }
+  .e-shift-leave { @apply text-slate-500; background: repeating-linear-gradient(45deg, #EEF2F4, #EEF2F4 6px, #fff 6px, #fff 12px); }
+  .e-shift-draft::after { content: ''; @apply absolute top-1.5 right-1.5 w-[7px] h-[7px] rounded-full bg-warning-500; }
+  .e-shift-warn { box-shadow: 0 0 0 2px #E95757 inset; }
+  .e-shift-drop { @apply border-teal-500 border-dashed; }
+}

@@ -39,9 +39,10 @@ import {
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
-  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
+import SchedulePage from '@/features/hr/SchedulePage.jsx';
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
 
@@ -73,6 +74,7 @@ const MENU_GROUPS = [
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
     { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
+    { id: 'schedule', label: 'Lịch làm việc / Phân ca', shortLabel: 'Phân ca', icon: CalendarRange },
     { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
     { id: 'payroll', label: 'Bảng lương', icon: Wallet },
   ]},
@@ -617,6 +619,7 @@ const AdminDashboard = () => {
       case 'seeding_rev': return <SeedingRevenuePage />;
       case 'service_quality': return <ServiceQualityPage />;
       case 'permissions': return <PermissionsPage />;
+      case 'schedule': return <SchedulePage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
