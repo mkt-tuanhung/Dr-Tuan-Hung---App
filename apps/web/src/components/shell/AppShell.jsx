@@ -17,7 +17,7 @@ import NotificationBell from '@/components/NotificationBell.jsx';
 const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
 
 const itemCls = (active) =>
-  `w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-[15px] font-medium transition-all ${
+  `w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-[14.5px] font-medium transition-all ${
     active
       ? 'bg-gradient-to-br from-[#067B7F] via-[#12A4A5] to-[#3CA7A9] text-white shadow-nav'
       : 'text-slate-600 hover:bg-teal-50 hover:text-teal-800'
@@ -68,25 +68,25 @@ export default function AppShell({
         <div key={item.id}>
           <button
             onClick={() => setOpenGroups(g => ({ ...g, [item.id]: !(g[item.id] ?? childActive) }))}
-            className={`w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-[15px] font-medium transition-all ${
-              childActive ? 'text-teal-700 bg-teal-50' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            className={`w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-[14.5px] font-medium transition-all ${
+              childActive ? 'text-teal-800' : 'text-slate-600 hover:bg-teal-50 hover:text-teal-800'
             }`}
           >
-            <Icon className="w-[18px] h-[18px] shrink-0" />
-            <span className="flex-1 text-left">{item.label}</span>
+            <Icon className={`w-[18px] h-[18px] shrink-0 ${childActive ? 'text-teal-700' : ''}`} />
+            <span className="flex-1 text-left truncate">{item.label}</span>
             <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
           {open && (
-            <div className="mt-1 ml-[22px] pl-3 border-l border-slate-200 space-y-0.5">
+            <div className="mt-0.5 mb-1.5 ml-[22px] pl-3 border-l-[1.5px] border-slate-200 space-y-0.5">
               {item.children.map(c => {
-                const CIcon = c.icon;
                 const active = activeTab === c.id;
                 return (
                   <button key={c.id} onClick={() => go(c.id)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
-                      active ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                    className={`w-full flex items-center h-9 px-3 rounded-[10px] text-[13.5px] text-left transition-all ${
+                      active ? 'bg-teal-50 text-teal-800 font-semibold' : 'text-slate-600 font-medium hover:bg-teal-50 hover:text-teal-800'
                     }`}>
-                    <CIcon className="w-4 h-4 shrink-0" />{c.label}
+                    <span className="truncate">{c.label}</span>
+                    <Badge n={c.badge} active={false} />
                   </button>
                 );
               })}
@@ -115,7 +115,7 @@ export default function AppShell({
 
       {/* ===== SIDEBAR ===== */}
       <aside className={`
-        fixed top-0 left-0 h-[100dvh] w-[232px] z-40 flex flex-col bg-white border-r border-slate-200
+        fixed top-0 left-0 h-[100dvh] w-[244px] z-40 flex flex-col bg-white border-r border-slate-200
         transform transition-transform duration-300 ease-out
         ${sidebarOpen ? 'translate-x-0 shadow-float' : '-translate-x-full'}
         lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none lg:shrink-0

@@ -10,7 +10,7 @@ import { Lock, Search, ShieldCheck, Info, RotateCcw, X, History, Users, Grid3x3,
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { ROLE_LABELS, FULL_MENU, STAFF_GROUPS, MATRIX_ROLES, SENSITIVE, flatModules, defaultGrant, effectiveGrant, overrideKey, userCanModule } from './menuConfig';
+import { ROLE_LABELS, FULL_MENU, STAFF_GROUPS, groupIds, MATRIX_ROLES, SENSITIVE, flatModules, defaultGrant, effectiveGrant, overrideKey, userCanModule } from './menuConfig';
 import { usePermissionOverrides } from './usePermissionOverrides';
 
 const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
@@ -25,7 +25,7 @@ const groupedModules = () => {
   const all = flatModules();
   const used = new Set();
   const groups = STAFF_GROUPS.map(g => {
-    const items = g.ids.flatMap(id => {
+    const items = groupIds(g).flatMap(id => {
       const m = FULL_MENU.find(x => x.id === id);
       if (!m) return [];
       return m.children ? m.children.map(c => ({ ...c, parent: m.label })) : [m];

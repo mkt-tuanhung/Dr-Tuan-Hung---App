@@ -44,7 +44,7 @@ import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
-import { ROLE_LABELS, FULL_MENU, STAFF_GROUPS, userCanModule } from '@/features/permissions/menuConfig';
+import { ROLE_LABELS, FULL_MENU, userCanModule, buildMenuGroups } from '@/features/permissions/menuConfig';
 import { usePermissionOverrides } from '@/features/permissions/usePermissionOverrides';
 import { parseNav, setPendingFocus } from '@/lib/notif';
 import { vnToday } from '@/lib/vnTime';
@@ -385,11 +385,7 @@ const StaffDashboard = () => {
   };
 
   // ===== Khung app dùng chung (Ethics BOS) =====
-  const grouped = new Set(STAFF_GROUPS.flatMap(g => g.ids));
-  const groups = [
-    ...STAFF_GROUPS.map(g => ({ title: g.title, items: g.ids.map(id => allowedMenu.find(m => m.id === id)).filter(Boolean) })),
-    { title: 'KHÁC', items: allowedMenu.filter(m => !grouped.has(m.id)) },
-  ].filter(g => g.items.length);
+  const groups = buildMenuGroups(allowedMenu);
 
   const canCheckIn = flatMenu.some(m => m.id === 'attendance');
   const centerAction = canCheckIn ? { id: 'attendance', label: 'Chấm công', icon: ScanFace } : null;

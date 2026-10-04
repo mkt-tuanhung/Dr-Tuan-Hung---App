@@ -33,7 +33,7 @@ export const FULL_MENU = [
   { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
 
   // MKT / Finance / Sales
-  { id: 'data_kh',    label: 'Khách hàng (CRM)',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
+  { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
   { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
     { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },
@@ -65,11 +65,39 @@ export const FULL_MENU = [
 export const STAFF_GROUPS = [
   { title: null, ids: ['overview'] },
   { title: 'CÁ NHÂN', ids: ['attendance', 'kpi', 'my_payroll', 'advances'] },
-  { title: 'KHÁCH HÀNG', ids: ['appointments', 'data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'khach_phau_thuat', 'mo_doi_tac', 'hau_phau', 'service_quality'] },
+  // Mục cha (grp_*) chỉ để gom nhóm hiển thị kiểu Ethics BOS — quyền vẫn xét theo từng mục con.
+  { title: 'KHÁCH HÀNG', ids: [
+    { id: 'grp_crm', label: 'Khách hàng', icon: Database, ids: ['data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'service_quality'] },
+    'appointments',
+    { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, ids: ['khach_phau_thuat', 'mo_doi_tac', 'hau_phau'] },
+    'marketing',
+  ] },
   { title: 'TÀI CHÍNH', ids: ['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev'] },
-  { title: 'MARKETING', ids: ['marketing'] },
-  { title: 'KẾT NỐI', ids: ['community', 'meetings', 'minigame'] },
+  { title: 'VẬN HÀNH', ids: ['community', 'meetings', 'minigame'] },
 ];
+
+// Mọi id chức năng nằm trong 1 nhóm (kể cả bên trong mục cha grp_*)
+export const groupIds = (g) => g.ids.flatMap(x => (typeof x === 'string' ? [x] : x.ids));
+
+// Dựng menu hiển thị theo nhóm từ danh sách chức năng ĐƯỢC PHÉP.
+// Mục cha chỉ có 1 con được phép -> hiện thẳng mục con (không bắt bấm mở).
+export const buildMenuGroups = (allowedMenu) => {
+  const find = (id) => allowedMenu.find(m => m.id === id);
+  const grouped = new Set(STAFF_GROUPS.flatMap(groupIds));
+  return [
+    ...STAFF_GROUPS.map(g => ({
+      title: g.title,
+      items: g.ids.map(x => {
+        if (typeof x === 'string') return find(x);
+        const kids = x.ids.map(find).filter(Boolean);
+        if (!kids.length) return null;
+        if (kids.length === 1) return kids[0];
+        return { id: x.id, label: x.label, icon: x.icon, children: kids };
+      }).filter(Boolean),
+    })),
+    { title: 'KHÁC', items: allowedMenu.filter(m => !grouped.has(m.id)) },
+  ].filter(g => g.items.length);
+};
 
 // Vai trò hiển thị trong ma trận phân quyền (admin luôn toàn quyền qua giao diện Admin)
 export const MATRIX_ROLES = ['telesale', 'sale_offline', 'cskh', 'truc_page', 'marketing', 'media', 'editor', 'designer', 'seeding', 'dieu_duong', 'bac_si', 'accountant', 'shareholder'];

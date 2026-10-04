@@ -45,31 +45,24 @@ import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import { HeroCard, QuickActions, StatCard, Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
+// Bố cục menu theo Ethics BOS: mục cha (grp_*) chỉ để gom nhóm, bấm để mở/đóng;
+// id các mục con GIỮ NGUYÊN như cũ nên không ảnh hưởng điều hướng / thông báo.
 const MENU_GROUPS = [
   { title: null, items: [
     { id: 'overview', label: 'Tổng quan', shortLabel: 'Tổng quan', icon: LayoutDashboard },
   ]},
   { title: 'KHÁCH HÀNG', color: 'blue', items: [
-    { id: 'data_kh', label: 'Khách hàng (CRM)', icon: Database },
-    { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
+    { id: 'grp_crm', label: 'Khách hàng', icon: Database, children: [
+      { id: 'data_kh', label: 'Data khách hàng', icon: Database },
+      { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
+      { id: 'deposit_management', label: 'Quản lý đặt cọc', icon: ClipboardList },
+      { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
+    ] },
     { id: 'appointments', label: 'Lịch hẹn', shortLabel: 'Lịch hẹn', icon: CalendarDays },
-    { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
-    { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
-    { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
-    { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
-  ]},
-  { title: 'NHÂN SỰ', color: 'violet', items: [
-    { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
-    { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
-    { id: 'payroll', label: 'Bảng lương', icon: Wallet },
-  ]},
-  { title: 'TÀI CHÍNH', color: 'amber', items: [
-    { id: 'finance', label: 'Doanh thu / Tài chính', icon: Banknote },
-    { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
-    { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout },
-    { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
-    { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
-    { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
+    { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, children: [
+      { id: 'khach_phau_thuat', label: 'Khách phẫu thuật', icon: Activity },
+      { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
+    ] },
     { id: 'marketing', label: 'Marketing', icon: Clapperboard, children: [
       { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard },
       { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2 },
@@ -78,11 +71,26 @@ const MENU_GROUPS = [
       { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
     ] },
   ]},
+  { title: 'NHÂN SỰ', color: 'violet', items: [
+    { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
+    { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
+    { id: 'payroll', label: 'Bảng lương', icon: Wallet },
+  ]},
+  { title: 'TÀI CHÍNH', color: 'amber', items: [
+    { id: 'finance', label: 'Doanh thu', icon: Banknote },
+    { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
+    { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout },
+    { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
+    { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
+    { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
+  ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
     { id: 'minigame', label: 'Minigame', icon: Gamepad2 },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
+  ]},
+  { title: 'HỆ THỐNG', color: 'slate', items: [
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
   ]},
 ];

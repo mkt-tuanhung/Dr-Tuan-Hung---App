@@ -225,7 +225,7 @@ const MarketingDataPage = () => {
   const DueBadge = ({ r }) => {
     if (!r.next_call_at) return null;
     const due = isDue(r.next_call_at);
-    return <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${due ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{due ? 'Cần gọi' : 'Gọi lại'} {fmtDT(r.next_call_at)}</span>;
+    return <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${due ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{due ? 'Cần gọi' : 'Gọi lại'} {fmtDT(r.next_call_at)}</span>;
   };
 
   const statCards = [
@@ -413,8 +413,8 @@ const MarketingDataPage = () => {
                         </td>
                         <td className="px-4 py-3 max-w-[240px]">
                           <div className="text-[12.5px] text-slate-600 truncate" title={r.last_exchange}>{r.last_exchange || <span className="text-slate-300">Chưa liên hệ</span>}</div>
-                          <div className="mt-0.5 flex items-center gap-1.5">
-                            {r.last_contact_at && <span className="text-[11px] text-slate-400">{fmtDT(r.last_contact_at)}</span>}
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                            {r.last_contact_at && <span className="text-[11px] text-slate-400 whitespace-nowrap">{fmtDT(r.last_contact_at)}</span>}
                             <DueBadge r={r} />
                           </div>
                         </td>

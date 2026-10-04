@@ -23,7 +23,7 @@ export const DEMO_PROFILE = { id: 'demo', full_name: 'Nguyễn Văn Dũng', role
 const ADMIN_GROUPS = [
   { title: null, items: [{ id: 'overview', label: 'Tổng quan', icon: LayoutDashboard }] },
   { title: 'KHÁCH HÀNG', items: [
-    { id: 'data_kh', label: 'Khách hàng (CRM)', icon: Database },
+    { id: 'grp_crm', label: 'Khách hàng', icon: Database, children: [{ id: 'data_kh', label: 'Data khách hàng', icon: Database }, { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck }] },
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
     { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
