@@ -103,7 +103,7 @@ export const HeroCard = ({ profile, roleLabel, ring, stats = [], extra, actions 
 };
 
 // Dải chấm công nhanh — đọc bản ghi chấm công hôm nay của chính mình
-export const CheckinStrip = ({ profile, onOpen }) => {
+export const CheckinStrip = ({ profile, onOpen, onScan }) => {
   const [rec, setRec] = useState(undefined);
   const [clock, setClock] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 30000); return () => clearInterval(t); }, []);
@@ -124,19 +124,20 @@ export const CheckinStrip = ({ profile, onOpen }) => {
     done: { title: 'Đã hoàn thành ca hôm nay', cta: null, tone: 'bg-white' },
   }[state];
   const dark = state === 'none';
+  // Ethics M03: dải check-in đặc teal khi chưa chấm, thẻ trắng khi đã chấm
   return (
-    <div className={`rounded-2xl shadow-soft border ${dark ? 'border-transparent' : 'border-slate-200/70'} ${meta.tone} p-4 flex items-center gap-3`}>
-      <span className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${dark ? 'bg-white/15' : state === 'done' ? 'bg-emerald-50 text-emerald-600' : 'bg-teal-50 text-teal-700'}`}>
-        {state === 'done' ? <CheckCircle2 className="w-5 h-5" /> : <ScanFace className="w-5 h-5" />}
+    <div className={`rounded-2xl px-4 py-3.5 flex items-center gap-3 ${dark ? 'bg-gradient-to-br from-[#067B7F] to-[#12A4A5] text-white shadow-[0_10px_24px_rgba(6,123,127,0.25)]' : 'bg-white border border-slate-200/80 shadow-soft'}`}>
+      <span className={`w-11 h-11 rounded-[14px] grid place-items-center shrink-0 ${dark ? 'bg-white/20' : state === 'done' ? 'bg-success-50 text-success-600' : 'bg-teal-50 text-teal-700'}`}>
+        {state === 'done' ? <CheckCircle2 className="w-6 h-6" /> : <ScanFace className="w-6 h-6" />}
       </span>
       <div className="min-w-0 flex-1">
-        <div className={`text-[13.5px] sm:text-[14px] font-bold leading-snug ${dark ? 'text-white' : 'text-slate-800'}`}>{meta.title}</div>
-        <div className={`text-[12px] mt-0.5 tabular-nums ${dark ? 'text-white/80' : 'text-slate-500'}`}>
+        <div className={`text-[15px] font-bold leading-snug ${dark ? 'text-white' : 'text-slate-900'}`}>{meta.title}</div>
+        <div className={`text-[12.5px] mt-0.5 tabular-nums ${dark ? 'text-white/85' : 'text-slate-500'}`}>
           {state === 'none' ? `Bây giờ ${pad2(clock.getHours())}:${pad2(clock.getMinutes())}` : `Vào ${t5(rec?.check_in)} · Ra ${t5(rec?.check_out)}`}
         </div>
       </div>
       {meta.cta ? (
-        <button onClick={onOpen} className={`shrink-0 inline-flex items-center gap-1.5 h-10 px-3 sm:px-4 rounded-xl text-[13px] font-bold transition ${dark ? 'bg-white text-teal-700 hover:bg-teal-50' : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
+        <button onClick={onScan || onOpen} className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap transition active:scale-95 ${dark ? 'bg-white text-teal-700' : 'text-white bg-gradient-to-br from-[#067B7F] to-[#12A4A5] shadow-nav'}`}>
           <meta.icon className="w-4 h-4" />{meta.cta}
         </button>
       ) : state === 'done' ? (
@@ -145,6 +146,36 @@ export const CheckinStrip = ({ profile, onOpen }) => {
     </div>
   );
 };
+
+// Ô chức năng lớn 3 cột (Ethics M03 "m-tiles") — chỉ dùng trên điện thoại
+export const MobileTiles = ({ items = [], onSelect }) => {
+  if (!items.length) return null;
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {items.map(q => (
+        <button key={q.id + q.label} onClick={() => onSelect(q.id)}
+          className="flex flex-col items-center justify-center gap-2.5 min-h-[100px] px-2 py-3 rounded-2xl bg-white border border-slate-200/80 shadow-soft text-center active:scale-[0.98] active:bg-teal-50 transition">
+          <q.icon className="w-[30px] h-[30px] text-teal-600" strokeWidth={1.7} />
+          <span className="text-[13px] font-medium text-slate-700 leading-tight line-clamp-2">{q.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Ô số nhanh nền mint (Ethics M03 "m-quick")
+export const MobileQuick = ({ items = [] }) => (
+  <div className={`grid gap-2.5 ${items.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+    {items.map(q => (
+      <button key={q.label} onClick={q.onClick} disabled={!q.onClick}
+        className="flex flex-col items-start gap-0.5 p-3 rounded-2xl bg-teal-50 text-left min-w-0 disabled:cursor-default">
+        {q.icon && <q.icon className="w-[18px] h-[18px] text-teal-700 mb-1" />}
+        <b className="text-[22px] leading-tight text-slate-900 tabular-nums truncate max-w-full">{q.value}</b>
+        <span className="text-[11.5px] text-slate-600 leading-tight">{q.label}</span>
+      </button>
+    ))}
+  </div>
+);
 
 // Lưới thao tác nhanh
 // items: [{ id, label, icon, color }]

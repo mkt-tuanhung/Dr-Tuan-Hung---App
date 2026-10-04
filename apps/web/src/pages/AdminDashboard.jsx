@@ -39,7 +39,8 @@ import {
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
-  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
+  AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import SchedulePage from '@/features/hr/SchedulePage.jsx';
@@ -139,6 +140,8 @@ const Overview = ({ profile, setActiveTab }) => {
     newStaffMonth: 0, apptTrend: null, revTrend: null, revMonthTrend: null, closeTrend: null, newCustTrend: null, rev6mTrend: null,
     revenue6m: [], services: [], todayList: [], todayAll: [], weekly: [], newCust6w: [], topConsultants: [],
     ranges: { '7d': [], '30d': [], '6m': [], '12m': [] },
+    // Trang chủ điện thoại (Ethics M04)
+    attIn: 0, attLate: 0, targetMonth: 0, weekRev: [],
   });
 
   useEffect(() => {
@@ -154,7 +157,7 @@ const Overview = ({ profile, setActiveTab }) => {
       const dow = (now.getDay() + 6) % 7;                 // 0 = Thứ 2
       const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow);
 
-      const [pf, at, ex, lv, ap] = await Promise.all([
+      const [pf, at, ex, lv, ap, atAll, kt] = await Promise.all([
         supabase.from('profiles').select('id, full_name, created_at').eq('is_active', true),
         supabase.from('attendance').select('id', { count: 'exact', head: true }).eq('date', todayStr).eq('status', 'present'),
         supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -163,6 +166,9 @@ const Overview = ({ profile, setActiveTab }) => {
           .select('id, customer_name, service, status, appointment_date, appointment_time, surgery_date, revenue, telesale_id, created_at')
           .or(`appointment_date.gte.${twelveStart},surgery_date.gte.${twelveStart},created_at.gte.${twelveStart}`)
           .limit(8000),
+        // Trang chủ điện thoại: ai đã chấm công hôm nay + chỉ tiêu doanh thu tháng
+        supabase.from('attendance').select('staff_id, status').eq('date', todayStr),
+        supabase.from('kpi_targets').select('target_revenue').eq('month', mo + 1).eq('year', y),
       ]);
 
       const staff = pf.data || [];
@@ -230,7 +236,17 @@ const Overview = ({ profile, setActiveTab }) => {
       });
       const topConsultants = Object.entries(tcMap).map(([id, count]) => ({ name: nameOf[id] || 'Nhân viên', count, closed: tcClosed[id] || 0, rate: count ? Math.round((tcClosed[id] || 0) / count * 100) : 0 })).sort((a, b) => b.count - a.count).slice(0, 3);
 
+      const attRows = atAll.data || [];
+      const weekRev = DOWL.map((lbl, i) => {
+        const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i);
+        return { label: lbl, value: appts.filter(a => a.status === 'phau_thuat' && a.surgery_date === iso(dt)).reduce((t, a) => t + Number(a.revenue || 0), 0) };
+      });
+
       setD({
+        attIn: new Set(attRows.map(r => r.staff_id)).size,
+        attLate: attRows.filter(r => r.status === 'late').length,
+        targetMonth: (kt.data || []).reduce((t, r) => t + Number(r.target_revenue || 0), 0),
+        weekRev,
         totalStaff: staff.length, presentToday: at.count || 0, appointmentsToday: todayAppts.length,
         pendingExpenses: ex.count || 0, pendingLeaves: lv.count || 0,
         monthRevenue, todayRevenue, closeRate, newCustomers: leadsM.length, scTotal,
@@ -263,13 +279,93 @@ const Overview = ({ profile, setActiveTab }) => {
   return (
     <div className="space-y-4 lg:space-y-5">
       {/* Sub-tabs trong Tổng quan */}
-      <div className="e-tabs">
+      <div className={`e-tabs ${sub === 'tong_quan' ? 'hidden lg:flex' : ''}`}>
         {SUBTABS.map(t => (
           <button key={t.id} onClick={() => setSub(t.id)} className={`e-tab flex-1 lg:flex-none justify-center ${sub === t.id ? 'e-tab-active' : ''}`}>{t.label}</button>
         ))}
       </div>
 
-      {sub === 'tong_quan' && <>
+      {sub === 'tong_quan' && (() => {
+        // ===== Trang chủ quản lý trên điện thoại (Ethics M04) =====
+        const kpiPct = d.targetMonth > 0 ? Math.round(d.monthRevenue / d.targetMonth * 100) : null;
+        const weekTotal = d.weekRev.reduce((t, x) => t + x.value, 0);
+        const pending = d.pendingExpenses + d.pendingLeaves;
+        return (
+          <div className="lg:hidden space-y-3">
+            <button onClick={() => setActiveTab('finance')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3.5 text-left">
+              <span className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Coins className="w-6 h-6" /></span>
+              <span className="min-w-0">
+                <span className="block text-[13.5px] text-slate-500">Doanh thu hôm nay</span>
+                <b className="block text-[26px] font-bold text-slate-900 tabular-nums leading-tight truncate">{new Intl.NumberFormat('vi-VN').format(Math.round(d.todayRevenue))}đ</b>
+              </span>
+            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setActiveTab('hr')} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 flex flex-col gap-3.5 text-left min-w-0">
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Users className="w-5 h-5" /></span>
+                  <span className="min-w-0 leading-tight">
+                    <small className="block text-[11.5px] text-slate-500">Đã chấm công</small>
+                    <b className="text-[22px] text-slate-900 tabular-nums">{d.attIn}</b><small className="text-[11.5px] text-slate-500"> /{d.totalStaff} nhân sự</small>
+                  </span>
+                </span>
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-10 h-10 rounded-full bg-peach-50 text-peach-600 grid place-items-center shrink-0"><AlarmClock className="w-5 h-5" /></span>
+                  <span className="min-w-0 leading-tight">
+                    <small className="block text-[11.5px] text-slate-500">Đi muộn · chưa đến</small>
+                    <b className="text-[22px] text-slate-900 tabular-nums">{d.attLate} · {Math.max(0, d.totalStaff - d.attIn)}</b>
+                  </span>
+                </span>
+              </button>
+              <button onClick={() => setActiveTab(kpiPct === null ? 'khach_tu_van' : 'kpi')} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 flex flex-col items-center justify-center text-center gap-1 min-w-0">
+                <small className="text-[12.5px] text-slate-500">{kpiPct === null ? 'Tỷ lệ chốt tháng' : 'Hiệu suất KPI'}</small>
+                <b className="text-[38px] font-bold text-slate-900 leading-tight tabular-nums">{kpiPct === null ? d.closeRate : kpiPct}%</b>
+                <small className="text-[11.5px] text-slate-500 truncate max-w-full">{kpiPct === null ? `${d.newCustomers} khách trong tháng` : `${fmtVND(d.monthRevenue)} / ${fmtVND(d.targetMonth)}`}</small>
+              </button>
+            </div>
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <b className="text-[16px] font-bold text-slate-900">Doanh thu tuần này</b>
+                <small className="text-[12.5px] text-slate-500 tabular-nums">{fmtVND(weekTotal)}</small>
+              </div>
+              <div className="h-[170px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={d.weekRev} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                    <defs><linearGradient id="mWeek" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#06686C" /><stop offset="100%" stopColor="#76C2C3" /></linearGradient></defs>
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#A3ABAA' }} />
+                    <YAxis hide domain={[0, 'auto']} />
+                    <Tooltip cursor={{ fill: 'rgba(18,164,165,0.06)' }} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 12px 40px rgba(7,95,99,0.14)', fontSize: 12 }} formatter={(v) => [new Intl.NumberFormat('vi-VN').format(v) + 'đ', 'Doanh thu']} />
+                    <Bar dataKey="value" fill="url(#mWeek)" radius={[6, 6, 2, 2]} maxBarSize={22} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <button onClick={() => setActiveTab(d.pendingExpenses ? 'advances' : 'hr')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3 text-left">
+              <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><ClipboardCheck className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0">
+                <b className="block text-[14.5px] text-slate-900">Yêu cầu chờ duyệt</b>
+                <small className="block text-[12px] text-slate-500 truncate">{d.pendingExpenses} phiếu chi · {d.pendingLeaves} đơn nghỉ phép</small>
+              </span>
+              {pending > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-danger-500 text-white text-[11px] font-bold grid place-items-center">{pending}</span>}
+              <ChevronRight className="w-[18px] h-[18px] text-slate-400 shrink-0" />
+            </button>
+            <button onClick={() => setActiveTab('appointments')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3 text-left">
+              <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><ReceiptText className="w-5 h-5" /></span>
+              <b className="flex-1 min-w-0 text-[14.5px] text-slate-900">{d.appointmentsToday} lịch hẹn hôm nay</b>
+              <ChevronRight className="w-[18px] h-[18px] text-slate-400 shrink-0" />
+            </button>
+            <button onClick={() => setSub('phan_tich')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3 text-left">
+              <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><LineChart className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0">
+                <b className="block text-[14.5px] text-slate-900">Phân tích & vận hành</b>
+                <small className="block text-[12px] text-slate-500 truncate">Doanh thu theo kỳ, cơ cấu dịch vụ, hiệu suất tư vấn</small>
+              </span>
+              <ChevronRight className="w-[18px] h-[18px] text-slate-400 shrink-0" />
+            </button>
+          </div>
+        );
+      })()}
+
+      {sub === 'tong_quan' && <div className="hidden lg:contents">
       {/* Thanh lọc (Ethics D01) */}
       <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-2.5 flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-2 h-10 px-3.5 rounded-xl border border-slate-200 text-[13.5px] font-semibold text-slate-700">
@@ -427,7 +523,7 @@ const Overview = ({ profile, setActiveTab }) => {
           })()}
         </Panel>
       </div>
-      </>}
+      </div>}
 
       {sub === 'phan_tich' && (
         <div className="space-y-4">
