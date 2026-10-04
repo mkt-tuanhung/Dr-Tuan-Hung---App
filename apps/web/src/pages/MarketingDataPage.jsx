@@ -7,7 +7,7 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 const STATUS = {
@@ -537,7 +537,7 @@ const MarketingDataPage = () => {
 };
 
 // Menu "⋯" gom các thao tác phụ (Báo cáo ngày, Chia đều, Kéo GetFly, Import)
-const MoreMenu = ({ actions }) => {
+const MoreMenu = ({ actions, always = false, small = false }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -547,12 +547,12 @@ const MoreMenu = ({ actions }) => {
     return () => document.removeEventListener('mousedown', h);
   }, [open]);
   return (
-    <div ref={ref} className="relative hidden lg:block">
-      <button onClick={() => setOpen(o => !o)} className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-600 grid place-items-center hover:bg-slate-50" aria-label="Thao tác khác">
+    <div ref={ref} className={`relative ${always ? '' : 'hidden lg:block'}`}>
+      <button onClick={() => setOpen(o => !o)} className={`${small ? 'h-9 w-9' : 'h-10 w-10'} rounded-xl border border-slate-200 bg-white text-slate-600 grid place-items-center hover:bg-slate-50`} aria-label="Thao tác khác">
         <MoreHorizontal className="w-5 h-5" />
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-30 w-56 rounded-2xl bg-white border border-slate-200 shadow-float p-1.5">
+        <div className={`absolute right-0 ${small ? 'top-11' : 'top-12'} z-30 w-56 rounded-2xl bg-white border border-slate-200 shadow-float p-1.5`}>
           {actions.map(a => (
             <button key={a.label} onClick={() => { setOpen(false); a.run(); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13.5px] font-medium text-slate-700 hover:bg-slate-50 text-left">
               <a.icon className="w-4 h-4 text-teal-600" />{a.label}
@@ -612,6 +612,32 @@ const InfoLine = ({ icon: Icon, label, value }) => (
       <div className="text-[13.5px] text-slate-800 font-medium break-words">{value || '—'}</div>
     </div>
   </div>
+);
+
+// Khung nội dung dùng trong hồ sơ khách (khai báo ngoài component để ô nhập không bị dựng lại)
+const PCard = ({ title, sub, action, children, className = '' }) => (
+  <div className={`rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 lg:p-5 min-w-0 ${className}`}>
+    {(title || action) && (
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div><div className="text-[14.5px] font-bold text-slate-900">{title}</div>{sub && <div className="text-[11.5px] text-slate-400 mt-0.5">{sub}</div>}</div>
+        {action}
+      </div>
+    )}
+    {children}
+  </div>
+);
+const PEmpty = ({ icon: Icon = FileText, title, sub }) => (
+  <div className="flex flex-col items-center text-center py-7">
+    <span className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 grid place-items-center"><Icon className="w-5 h-5" /></span>
+    <div className="text-[13.5px] font-semibold text-slate-700 mt-3">{title}</div>
+    {sub && <div className="text-[12px] text-slate-400 mt-1 max-w-[260px]">{sub}</div>}
+  </div>
+);
+const Meta = ({ icon: Icon, children }) => (
+  <div className="flex items-center gap-2 min-w-0 text-[13px] text-slate-600"><Icon className="w-4 h-4 text-slate-400 shrink-0" /><span className="truncate">{children}</span></div>
+);
+const PField = ({ label, value }) => (
+  <div className="py-2"><div className="text-[11.5px] text-slate-400">{label}</div><div className="text-[13.5px] font-semibold text-slate-800 mt-0.5 break-words">{value || '—'}</div></div>
 );
 
 const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, queuePos, onNext, onClose, onChanged, onDelete }) => {
@@ -804,211 +830,282 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
 
   const initialsOf = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
   const st = APPT_STAGE(appts[0]);
+  const services = appts.filter(a => a.status === 'phau_thuat');
+  const payments = appts.filter(a => Number(a.deposit_amount) > 0 || Number(a.revenue) > 0 || Number(a.upsale_revenue) > 0);
+  const relTime = (iso) => {
+    if (!iso) return '';
+    const diff = new Date(iso).getTime() - Date.now(); const abs = Math.abs(diff);
+    const unit = abs >= 86400000 ? `${Math.round(abs / 86400000)} ngày` : abs >= 3600000 ? `${Math.round(abs / 3600000)} giờ` : `${Math.max(1, Math.round(abs / 60000))} phút`;
+    return diff < 0 ? `${unit} trước` : `còn ${unit}`;
+  };
+  // Đặt lịch chăm sóc tiếp theo (follow-up) nhanh
+  const [fuOpen, setFuOpen] = useState(false);
+  const setFollowUp = async (d) => {
+    const iso = d ? d.toISOString() : null;
+    const { error } = await supabase.from('marketing_data').update({ next_call_at: iso }).eq('id', row.id);
+    if (error) return toast.error('Lỗi: ' + error.message);
+    toast.success(iso ? `Đã hẹn chăm sóc ${fmtDT(iso)}` : 'Đã xoá lịch hẹn gọi'); setFuOpen(false); onChanged?.();
+  };
+  const fuPreset = (days, hour) => { const t = new Date(); t.setDate(t.getDate() + days); t.setHours(hour, 0, 0, 0); return t; };
+
   const TABS = [
-    { k: 'activity', label: 'Hoạt động', icon: Activity, n: events.length },
-    { k: 'call', label: 'Gọi điện', icon: PhoneCall, n: calls.length },
-    { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length },
-    { k: 'appts', label: 'Lịch hẹn', icon: CalendarDays, n: appts.length },
-    { k: 'info', label: 'Thông tin', icon: Pencil },
+    { k: 'activity', label: 'Lịch sử' },
+    { k: 'appts', label: 'Lịch hẹn', n: appts.length },
+    { k: 'payment', label: 'Thanh toán', n: payments.length },
+    { k: 'call', label: 'Cuộc gọi', n: calls.length },
+    { k: 'care', label: 'Ghi chú', n: cares.length },
+    { k: 'info', label: 'Thông tin' },
   ];
+  const btn = 'inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition whitespace-nowrap';
+  const moreActions = [
+    { label: 'Gọi điện', icon: PhoneCall, run: () => { window.location.href = `tel:${row.phone}`; } },
+    { label: 'Nhắn Zalo', icon: MessageSquare, run: () => window.open(zaloLink(row.phone), '_blank', 'noopener') },
+    { label: 'Copy số điện thoại', icon: Copy, run: () => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); } },
+    ...(canWrite ? [{ label: 'Xoá khách hàng', icon: Trash2, run: onDelete }] : []),
+  ];
+  const genderTxt = row.gender ? String(row.gender) : null;
+  const evStyle = (color) => ({ background: color + '1a', color });
 
   return (
     <div className="space-y-4">
       {/* Điều hướng */}
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onClose} className="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-[14px] font-semibold text-slate-600 hover:bg-white hover:shadow-soft transition">
+        <button onClick={onClose} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[13.5px] font-semibold text-slate-600 hover:bg-white hover:shadow-soft transition">
           <ArrowLeft className="w-4 h-4" /> Danh sách khách hàng
         </button>
         {queuePos && (
           <div className="flex items-center gap-2">
             <span className="text-[12.5px] font-semibold text-slate-500 tabular-nums">Đang gọi {queuePos.i}/{queuePos.n}</span>
-            {onNext && <button onClick={onNext} className="inline-flex items-center gap-1 px-4 h-10 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800">Khách tiếp <ChevronRight className="w-4 h-4" /></button>}
+            {onNext && <button onClick={onNext} className="inline-flex items-center gap-1 px-4 h-9 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800">Khách tiếp <ChevronRight className="w-4 h-4" /></button>}
           </div>
         )}
       </div>
 
-      {/* ===== Thẻ đầu hồ sơ ===== */}
-      <div className="rounded-2xl bg-white shadow-card border border-slate-200 p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-5">
-          <div className="flex items-start gap-4 flex-1 min-w-0">
-            <span className="w-16 h-16 rounded-2xl bg-teal-600 text-white grid place-items-center text-[20px] font-bold shrink-0 shadow-soft">{initialsOf(row.customer_name)}</span>
+      {/* ===== Thẻ thông tin khách ===== */}
+      <div className="rounded-2xl bg-white border border-slate-200/80 shadow-card p-5 lg:p-6">
+        <div className="flex flex-col lg:flex-row gap-5">
+          <div className="flex items-start gap-4 lg:gap-6 flex-1 min-w-0">
+            <span className="w-[72px] h-[72px] lg:w-[92px] lg:h-[92px] rounded-full bg-teal-50 text-teal-700 ring-[6px] ring-teal-100/70 grid place-items-center text-[26px] lg:text-[32px] font-bold shrink-0">{initialsOf(row.customer_name)}</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-[22px] font-bold text-slate-900 leading-tight truncate">{row.customer_name || '(Chưa có tên)'}</h2>
-                {row.getfly_code && <span className="text-[11.5px] font-semibold text-slate-400 bg-slate-100 rounded-md px-1.5 py-0.5">{row.getfly_code}</span>}
-              </div>
-              <div className="flex items-center gap-2 mt-1 text-[14px] text-slate-600">
-                <span className="tabular-nums font-semibold">{phoneView(row.phone, me)}</span>
-                <button onClick={() => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); }} className="text-slate-400 hover:text-slate-600" title="Copy SĐT"><Copy className="w-3.5 h-3.5" /></button>
-                {row.source && <><span className="text-slate-300">·</span><span className="truncate">{row.source}</span></>}
-              </div>
-              <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                <select value={row.status || 'tiep_can'} onChange={e => changeStatus(e.target.value)} disabled={!canWrite}
-                  className={`text-[12px] font-bold rounded-full px-3 py-1.5 outline-none border-0 cursor-pointer disabled:cursor-default ${STATUS[row.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
+                <h2 className="text-[20px] lg:text-[22px] font-bold text-slate-900 leading-tight">{row.customer_name || '(Chưa có tên)'}</h2>
+                <select value={row.status || 'tiep_can'} onChange={e => changeStatus(e.target.value)} disabled={!canWrite} title="Giai đoạn khách hàng"
+                  className={`text-[11.5px] font-bold rounded-full px-2.5 py-1 outline-none border-0 cursor-pointer disabled:cursor-default ${STATUS[row.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
                   {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
-                {st && <span className={`text-[11.5px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span>}
-                {row.next_call_at && <span className={`text-[11.5px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${isDue(row.next_call_at) ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3.5 h-3.5" />Gọi lại {fmtDT(row.next_call_at)}</span>}
+                {st && <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span>}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-3">
+                <div className="flex items-center gap-2 min-w-0 text-[13px] text-slate-600">
+                  <Phone className="w-4 h-4 text-slate-400 shrink-0" /><span className="tabular-nums">{phoneView(row.phone, me)}</span>
+                  <button onClick={() => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); }} className="text-slate-300 hover:text-slate-600" title="Copy SĐT"><Copy className="w-3.5 h-3.5" /></button>
+                </div>
+                <Meta icon={Hash}>{row.getfly_code || `KH${String(row.id).padStart(6, '0')}`}</Meta>
+                <Meta icon={Mail}>{row.email || 'Chưa có email'}</Meta>
+                <Meta icon={Sparkles}>Nguồn: {[row.source, row.customer_group].filter(Boolean).join(' · ') || '—'}</Meta>
+                <Meta icon={UserCheck}>Nhân viên phụ trách: {row.telesale?.full_name || 'Chưa phân công'}</Meta>
+                <Meta icon={Headphones}>Trực page: {row.truc_page?.full_name || '—'}</Meta>
               </div>
             </div>
           </div>
-          {/* Điểm tiềm năng */}
-          <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 lg:w-[250px]">
-            <ScoreRing value={score} />
-            <div>
-              <div className="text-[11.5px] text-slate-500 flex items-center gap-1"><Gauge className="w-3.5 h-3.5" />Điểm tiềm năng</div>
-              <div className="text-[15px] font-bold text-slate-900">{scoreLabel}</div>
-              <div className="text-[11.5px] text-slate-400 mt-0.5">{contactDays == null ? 'Chưa liên hệ' : contactDays === 0 ? 'Liên hệ hôm nay' : `Liên hệ ${contactDays} ngày trước`}</div>
-            </div>
+          <div className="flex flex-wrap xl:flex-nowrap gap-2 lg:justify-end lg:items-start lg:max-w-[560px] shrink-0">
+            {canWrite && <button onClick={() => setTab('call')} className={btn}><PhoneCall className="w-4 h-4 text-teal-600" />Ghi nhận cuộc gọi</button>}
+            {canWrite && <button onClick={() => setApptOpen(true)} className={btn}><CalendarDays className="w-4 h-4 text-teal-600" />Tạo lịch hẹn</button>}
+            <button onClick={() => setTab('info')} className={btn}>Thông tin thêm</button>
+            <MoreMenu actions={moreActions} always small />
           </div>
         </div>
-        {/* Thao tác nhanh — mobile: lưới icon, desktop: hàng nút */}
-        <div className="grid grid-cols-5 gap-2 sm:flex sm:flex-wrap mt-4 pt-4 border-t border-slate-100">
-          {[
-            { show: true, href: `tel:${row.phone}`, icon: PhoneCall, label: 'Gọi', cls: 'bg-emerald-600 text-white hover:bg-emerald-700' },
-            { show: true, href: zaloLink(row.phone), ext: true, icon: MessageSquare, label: 'Zalo', cls: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
-            { show: canWrite, run: () => setTab('call'), icon: Save, label: 'Ghi cuộc gọi', short: 'Ghi gọi', cls: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50', ic: 'text-teal-600' },
-            { show: canWrite, run: () => setTab('care'), icon: HeartHandshake, label: 'Ghi chăm sóc', short: 'Chăm sóc', cls: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50', ic: 'text-violet-500' },
-            { show: canWrite, run: () => setApptOpen(true), icon: CalendarDays, label: 'Tạo lịch hẹn', short: 'Lịch hẹn', cls: 'bg-teal-600 text-white hover:bg-teal-700' },
-          ].filter(a => a.show).map(a => {
-            const inner = <><a.icon className={`w-5 h-5 sm:w-4 sm:h-4 ${a.ic || ''}`} /><span className="sm:hidden">{a.short || a.label}</span><span className="hidden sm:inline">{a.label}</span></>;
-            const cls = `inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-4 py-2.5 sm:py-0 sm:h-10 rounded-xl text-[11.5px] sm:text-sm font-semibold whitespace-nowrap ${a.cls}`;
-            return a.href
-              ? <a key={a.label} href={a.href} {...(a.ext ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={cls}>{inner}</a>
-              : <button key={a.label} onClick={a.run} className={cls}>{inner}</button>;
-          })}
-        </div>
       </div>
 
-      {/* ===== Hành trình khách hàng ===== */}
-      <div className="rounded-2xl bg-white shadow-soft border border-slate-200 px-5 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-[14px] font-bold text-slate-800">Hành trình khách hàng</div>
-          {lost && <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-600">{row.status === 'mat' ? 'Khách đã mất' : row.status === 'chot_fail' ? 'Chốt fail' : 'Khách bong'}</span>}
-        </div>
-        <div className="flex items-center">
-          {JOURNEY_STEPS.map((label, i) => {
-            const done = i < jIdx; const cur = i === jIdx;
-            return (
-              <React.Fragment key={label}>
-                <div className="flex flex-col items-center gap-1.5 min-w-0 shrink-0 w-[54px] sm:w-[72px]">
-                  <span className={`w-8 h-8 rounded-full grid place-items-center text-[12px] font-bold transition ${
-                    done ? 'bg-teal-600 text-white' : cur ? (lost ? 'bg-rose-500 text-white ring-4 ring-rose-100' : 'bg-teal-600 text-white ring-4 ring-teal-100') : 'bg-slate-100 text-slate-400'
-                  }`}>{done ? <CheckCircle2 className="w-4 h-4" /> : i + 1}</span>
-                  <span className={`text-[10.5px] sm:text-[11.5px] text-center leading-tight ${done || cur ? 'text-slate-800 font-semibold' : 'text-slate-400'}`}>{label}</span>
-                </div>
-                {i < JOURNEY_STEPS.length - 1 && <div className={`flex-1 h-[3px] rounded-full -mt-5 ${i < jIdx ? 'bg-teal-500' : 'bg-slate-100'}`} />}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ===== Chỉ số ===== */}
-      <div className="flex lg:grid lg:grid-cols-5 gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
+      {/* ===== 4 chỉ số ===== */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { icon: Receipt, label: 'Tổng chi tiêu', value: fmtMoney(revenue || row.total_revenue), sub: revenue ? `${surgeries} ca phẫu thuật` : (Number(row.total_revenue) > 0 ? 'Theo GetFly' : 'Chưa phát sinh'), tone: 'bg-teal-50 text-teal-700' },
-          { icon: CalendarDays, label: 'Lịch hẹn', value: mainAppts.length, sub: `${appts.length - mainAppts.length} tái khám`, tone: 'bg-blue-50 text-blue-600' },
-          { icon: Activity, label: 'Ca phẫu thuật', value: surgeries, sub: surgeries ? `Gần nhất ${fmtDay(appts.find(a => a.status === 'phau_thuat')?.surgery_date)}` : '—', tone: 'bg-emerald-50 text-emerald-600' },
-          { icon: Wallet, label: 'Đã cọc', value: fmtMoney(deposit), sub: appts.some(a => a.status === 'coc') ? 'Đang giữ cọc' : '—', tone: 'bg-violet-50 text-violet-600' },
-          { icon: PhoneCall, label: 'Lần liên hệ', value: acts.length, sub: `${calls.length} gọi · ${cares.length} chăm sóc`, tone: 'bg-amber-50 text-amber-600' },
-        ].map((k, i) => (
-          <div key={i} className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4 shrink-0 min-w-[150px] lg:min-w-0">
-            <div className="flex items-center justify-between">
-              <span className="text-[12.5px] text-slate-500 font-medium">{k.label}</span>
-              <span className={`w-8 h-8 rounded-lg grid place-items-center ${k.tone}`}><k.icon className="w-4 h-4" /></span>
+          { icon: Receipt, label: 'Tổng chi tiêu', value: fmtMoney(revenue || row.total_revenue), tone: 'bg-teal-50 text-teal-600' },
+          { icon: Stethoscope, label: 'Số lần dịch vụ', value: services.length, tone: 'bg-teal-50 text-teal-600' },
+          { icon: HeartHandshake, label: 'Ngày khách hàng', value: fmtDay(arrivedAt(row)), tone: 'bg-teal-50 text-teal-600' },
+          { icon: Gem, label: 'Điểm tiềm năng', value: `${score} điểm`, tone: 'bg-orange-50 text-orange-500', valueCls: score >= 75 ? 'text-orange-500' : 'text-slate-900', sub: scoreLabel },
+        ].map(k => (
+          <div key={k.label} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3 min-w-0">
+            <span className={`w-11 h-11 rounded-full grid place-items-center shrink-0 ${k.tone}`}><k.icon className="w-5 h-5" /></span>
+            <div className="min-w-0">
+              <div className="text-[11.5px] text-slate-500 truncate">{k.label}</div>
+              <div className={`text-[17px] lg:text-[18px] font-bold tabular-nums truncate ${k.valueCls || 'text-slate-900'}`}>{typeof k.value === 'number' ? k.value.toLocaleString('vi-VN') : k.value}</div>
+              {k.sub && <div className="text-[11px] text-slate-400 truncate">{k.sub}</div>}
             </div>
-            <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums truncate">{typeof k.value === 'number' ? k.value.toLocaleString('vi-VN') : k.value}</div>
-            <div className="text-[11.5px] text-slate-400 mt-0.5 truncate">{k.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* ===== Nội dung 2 cột ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 items-start">
-        <div className="space-y-4">
-          {/* Gợi ý thông minh */}
-          <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4">
-            <div className="text-[14px] font-bold text-slate-800 flex items-center gap-1.5 mb-3"><Lightbulb className="w-4 h-4 text-amber-500" />Gợi ý việc cần làm</div>
-            {suggestions.length === 0
-              ? <div className="text-[13px] text-slate-400">Mọi thứ đều ổn — chưa có việc cần làm ngay.</div>
-              : <div className="space-y-2">
-                  {suggestions.map((sg, i) => (
-                    <div key={i} className={`rounded-xl border px-3 py-2.5 ${TONE[sg.tone]}`}>
-                      <div className="flex items-start gap-2 text-[13px] leading-snug"><sg.icon className="w-4 h-4 mt-0.5 shrink-0" /><span>{sg.text}</span></div>
-                      {sg.cta && (sg.href
-                        ? <a href={sg.href} className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold underline-offset-2 hover:underline">{sg.cta} <ChevronRight className="w-3.5 h-3.5" /></a>
-                        : <button onClick={sg.run} className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold underline-offset-2 hover:underline">{sg.cta} <ChevronRight className="w-3.5 h-3.5" /></button>)}
+      {/* ===== Thanh tab ===== */}
+      <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-2 flex gap-1 overflow-x-auto scrollbar-hide">
+        {TABS.map(t => (
+          <button key={t.k} onClick={() => setTab(t.k)}
+            className={`relative shrink-0 px-3.5 h-12 text-[13.5px] font-semibold transition ${tab === t.k ? 'text-teal-700' : 'text-slate-500 hover:text-slate-800'}`}>
+            {t.label}{t.n != null && <span className="ml-1 text-slate-400 font-medium">({t.n})</span>}
+            {tab === t.k && <span className="absolute left-2 right-2 bottom-0 h-[2px] rounded-full bg-teal-600" />}
+          </button>
+        ))}
+      </div>
+
+      {/* ===== LỊCH SỬ: 3 cột ===== */}
+      {tab === 'activity' && (
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,1fr)_300px] gap-4 items-start">
+          {/* Cột trái — thông tin cá nhân */}
+          <PCard title="Thông tin cá nhân">
+            <div className="-mt-1 divide-y divide-slate-100">
+              <PField label="Giới tính" value={genderTxt} />
+              <PField label="SĐT" value={phoneView(row.phone, me)} />
+              <PField label="Email" value={row.email} />
+              <PField label="Ngày sinh" value={row.birthday ? fmtDay(row.birthday) : null} />
+              <PField label="Địa chỉ" value={row.address} />
+              <PField label="Nhu cầu / mô tả" value={row.description} />
+              <div className="py-2">
+                <div className="text-[11.5px] text-slate-400">Tags</div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[row.customer_group, row.source, STATUS[row.status]?.label].filter(Boolean).map(t => <span key={t} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700">{t}</span>)}
+                </div>
+              </div>
+            </div>
+          </PCard>
+
+          {/* Cột giữa — dịch vụ + dòng thời gian */}
+          <div className="space-y-4 min-w-0">
+            <PCard title="Lịch sử dịch vụ" action={services.length > 0 && <span className="text-[12px] font-semibold text-slate-500">{services.length} dịch vụ</span>}>
+              {services.length === 0 ? <PEmpty icon={Stethoscope} title="Chưa sử dụng dịch vụ" sub="Ca phẫu thuật và doanh thu sẽ hiển thị tại đây." /> : (
+                <div className="divide-y divide-slate-100">
+                  {services.map(a => (
+                    <div key={a.id} className="flex items-center gap-3 py-2.5">
+                      <span className="w-9 h-9 rounded-full bg-teal-50 text-teal-600 grid place-items-center shrink-0"><Activity className="w-4 h-4" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13.5px] font-semibold text-slate-900 truncate">{a.service || 'Dịch vụ'}</div>
+                        <div className="text-[12px] text-slate-500 truncate">{fmtDay(a.surgery_date || a.appointment_date)}{a.sale?.full_name ? ` · ${a.sale.full_name}` : ''}{a.post_op_status ? ` · Hậu phẫu: ${a.post_op_status}` : ''}</div>
+                      </div>
+                      <span className="text-[13px] font-bold text-slate-900 tabular-nums shrink-0">{fmtMoney(Number(a.revenue || 0) + Number(a.upsale_revenue || 0))}</span>
                     </div>
                   ))}
-                </div>}
-          </div>
-          {/* Thông tin khách */}
-          <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4">
-            <div className="flex items-center justify-between mb-1">
-              <div className="text-[14px] font-bold text-slate-800">Thông tin khách hàng</div>
-              {canWrite && <button onClick={() => setTab('info')} className="text-[12px] font-semibold text-teal-700 hover:underline">Sửa</button>}
-            </div>
-            <div className="divide-y divide-slate-100">
-              <InfoLine icon={Phone} label="Số điện thoại" value={phoneView(row.phone, me)} />
-              {row.email && <InfoLine icon={Mail} label="Email" value={row.email} />}
-              {(row.gender || row.birthday) && <InfoLine icon={Cake} label="Giới tính · Sinh nhật" value={[row.gender, row.birthday].filter(Boolean).join(' · ')} />}
-              {row.address && <InfoLine icon={MapPin} label="Địa chỉ" value={row.address} />}
-              <InfoLine icon={Tag} label="Nguồn · Nhóm khách" value={[row.source, row.customer_group].filter(Boolean).join(' · ')} />
-              {row.relation_name && <InfoLine icon={Link2} label="Mối quan hệ (GetFly)" value={row.relation_name} />}
-              <InfoLine icon={Sparkles} label="Ngày về hệ thống" value={arrivedAt(row) ? new Date(arrivedAt(row)).toLocaleDateString('vi-VN') : null} />
-              {row.description && <InfoLine icon={FileText} label="Mô tả / nhu cầu" value={row.description} />}
-              {row.reached_info && <InfoLine icon={MessageSquare} label="Đã tiếp cận" value={row.reached_info} />}
-            </div>
-          </div>
-          {/* Phụ trách */}
-          <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4">
-            <div className="text-[14px] font-bold text-slate-800 mb-2">Người phụ trách</div>
-            {[['Telesale', row.telesale?.full_name], ['Trực page', row.truc_page?.full_name], ['Quản lý (GetFly)', row.manager_name], ['Sale tư vấn gần nhất', appts.find(a => a.sale?.full_name)?.sale?.full_name]].map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between py-1.5 text-[13px]">
-                <span className="text-slate-500">{k}</span><span className="font-semibold text-slate-800 truncate ml-3">{v || '—'}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tabs nội dung */}
-        <div className="rounded-2xl bg-white shadow-card border border-slate-200 overflow-hidden">
-          <div className="flex gap-1 px-3 pt-2 border-b border-slate-100 overflow-x-auto scrollbar-hide">
-            {TABS.map(t => (
-              <button key={t.k} onClick={() => setTab(t.k)} className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 text-[13.5px] font-semibold border-b-2 -mb-px transition ${tab === t.k ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                <t.icon className="w-4 h-4" />{t.label}{t.n != null && <span className={`text-[11px] px-1.5 rounded-full ${tab === t.k ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>{t.n}</span>}
-              </button>
-            ))}
-          </div>
-          <div className="p-4 sm:p-5">
-            {/* ---- HOẠT ĐỘNG (dòng thời gian hợp nhất) ---- */}
-            {tab === 'activity' && (
-              loadingActs ? <div className="text-center py-10 text-slate-300 text-sm">Đang tải…</div> :
-              events.length === 0 ? <div className="text-center py-10 text-slate-400 text-sm">Chưa có hoạt động nào</div> : (
+                </div>
+              )}
+            </PCard>
+            <PCard title="Dòng thời gian hợp nhất" sub="Cuộc gọi · ghi chú · lịch hẹn · đặt cọc · phẫu thuật · hậu phẫu">
+              {loadingActs ? <div className="py-8 grid place-items-center"><div className="w-6 h-6 border-[3px] border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div> : events.length === 0 ? <PEmpty icon={Activity} title="Chưa có hoạt động" sub="Mọi cuộc gọi, ghi chú và lịch hẹn sẽ hiện ở đây." /> : (
                 <ol className="relative">
                   {events.map((e, i) => (
-                    <li key={i} className="relative pl-11 pb-5 last:pb-0">
-                      {i < events.length - 1 && <span className="absolute left-[15px] top-8 bottom-0 w-px bg-slate-200" />}
-                      <span className="absolute left-0 top-0 w-8 h-8 rounded-full grid place-items-center text-white shadow-soft" style={{ background: e.color }}><e.icon className="w-4 h-4" /></span>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[13.5px] font-semibold text-slate-900">{e.title}</span>
-                        {e.pill && <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${e.pill.cls}`}>{e.pill.label}</span>}
-                        <span className="text-[11.5px] text-slate-400">{new Date(e.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                      </div>
-                      {e.desc && <div className="text-[13px] text-slate-600 mt-0.5 whitespace-pre-wrap break-words">{e.desc}</div>}
-                      {(e.by || e.next) && (
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {e.by && <span className="text-[11.5px] text-slate-400">{e.by}</span>}
-                          {e.next && <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(e.next)}</span>}
+                    <li key={i} className="relative flex gap-3 pb-4 last:pb-0">
+                      {i < events.length - 1 && <span className="absolute left-[13px] top-7 bottom-0 w-px bg-slate-100" />}
+                      <span className="w-7 h-7 rounded-full grid place-items-center shrink-0 relative" style={evStyle(e.color)}><e.icon className="w-3.5 h-3.5" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="text-[13px] font-semibold text-slate-900">{e.title}</span>
+                            {e.pill && <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full align-middle ${e.pill.cls}`}>{e.pill.label}</span>}
+                          </div>
+                          <span className="text-[11px] text-slate-400 tabular-nums shrink-0">{new Date(e.at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                      )}
+                        {(e.desc || e.by) && <div className="text-[12px] text-slate-500 mt-0.5 break-words line-clamp-3">{[e.desc, e.by].filter(Boolean).join(' · ')}</div>}
+                        {e.next && <span className="mt-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(e.next)}</span>}
+                      </div>
                     </li>
                   ))}
                 </ol>
-              )
-            )}
+              )}
+            </PCard>
+          </div>
 
+          {/* Cột phải — ghi chú, gợi ý, chăm sóc tiếp theo */}
+          <div className="space-y-4 min-w-0 lg:col-span-2 xl:col-span-1 grid lg:grid-cols-2 xl:grid-cols-1 gap-4 lg:space-y-0">
+            <PCard title="Ghi chú">
+              {cares.length === 0 ? <div className="text-[12px] text-slate-400 -mt-1 mb-2">Chưa có ghi chú.</div> : (
+                <div className="space-y-2 mb-3 -mt-1">
+                  {cares.slice(0, 3).map(c => (
+                    <div key={c.id} className="rounded-xl bg-slate-50 px-3 py-2">
+                      <div className="text-[12.5px] text-slate-700 whitespace-pre-wrap break-words line-clamp-3">{c.content}</div>
+                      <div className="text-[10.5px] text-slate-400 mt-1">{c.author?.full_name || ''}{c.created_at ? ` · ${fmtDT(c.created_at)}` : ''}</div>
+                    </div>
+                  ))}
+                  {cares.length > 3 && <button onClick={() => setTab('care')} className="text-[12px] font-semibold text-teal-700 hover:underline">Xem tất cả {cares.length} ghi chú</button>}
+                </div>
+              )}
+              {canWrite && (
+                <>
+                  <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Thêm ghi chú về khách hàng…"
+                    className="w-full px-3 py-2 text-[13px] rounded-xl border border-slate-200 focus:border-teal-400 outline-none resize-y" />
+                  <div className="flex justify-end mt-2">
+                    <button onClick={addCare} disabled={savingCare || !care.content.trim()} className="h-8 px-4 rounded-lg bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 disabled:opacity-40">{savingCare ? 'Đang lưu…' : 'Lưu ghi chú'}</button>
+                  </div>
+                </>
+              )}
+            </PCard>
+
+            <PCard title={<span className="inline-flex items-center gap-1.5"><Lightbulb className="w-4 h-4 text-amber-500" />Gợi ý việc cần làm</span>}>
+              {suggestions.length === 0 ? <div className="text-[12.5px] text-slate-400 -mt-1">Mọi thứ đều ổn — chưa có việc cần làm ngay.</div> : (
+                <div className="space-y-2 -mt-1">
+                  {suggestions.map((sg, i) => (
+                    <div key={i} className={`rounded-xl border px-3 py-2 ${TONE[sg.tone]}`}>
+                      <div className="flex items-start gap-2 text-[12.5px] leading-snug"><sg.icon className="w-4 h-4 mt-0.5 shrink-0" /><span>{sg.text}</span></div>
+                      {sg.cta && (sg.href
+                        ? <a href={sg.href} className="mt-1 ml-6 inline-flex items-center gap-0.5 text-[12px] font-bold underline-offset-2 hover:underline">{sg.cta} <ChevronRight className="w-3.5 h-3.5" /></a>
+                        : <button onClick={sg.run} className="mt-1 ml-6 inline-flex items-center gap-0.5 text-[12px] font-bold underline-offset-2 hover:underline">{sg.cta} <ChevronRight className="w-3.5 h-3.5" /></button>)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </PCard>
+
+            <PCard title="Chăm sóc tiếp theo">
+              <div className="-mt-1 text-[13px] text-slate-600">
+                {row.next_call_at
+                  ? <>Hẹn gọi lại <b className="text-slate-900">{fmtDT(row.next_call_at)}</b> <span className={isDue(row.next_call_at) ? 'text-rose-500 font-semibold' : 'text-slate-400'}>({relTime(row.next_call_at)})</span></>
+                  : <span className="text-slate-400">Chưa có lịch chăm sóc tiếp theo.</span>}
+              </div>
+              {canWrite && (fuOpen ? (
+                <div className="mt-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[['Chiều nay', 0, 15], ['Sáng mai', 1, 9], ['3 ngày nữa', 3, 9], ['1 tuần nữa', 7, 9]].map(([lb, d, h]) => (
+                      <button key={lb} onClick={() => setFollowUp(fuPreset(d, h))} className="h-8 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600 hover:border-teal-400 hover:text-teal-700">{lb}</button>
+                    ))}
+                  </div>
+                  <input type="datetime-local" onChange={e => e.target.value && setFollowUp(new Date(e.target.value))} className="w-full h-9 px-3 text-[13px] rounded-lg border border-slate-200 outline-none focus:border-teal-400" />
+                  <div className="flex justify-between">
+                    {row.next_call_at ? <button onClick={() => setFollowUp(null)} className="text-[12px] font-semibold text-rose-500 hover:underline">Xoá lịch hẹn gọi</button> : <span />}
+                    <button onClick={() => setFuOpen(false)} className="text-[12px] font-semibold text-slate-500 hover:underline">Đóng</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setFuOpen(true)} className="mt-3 w-full h-9 rounded-xl border border-teal-500 text-teal-700 text-[13px] font-semibold hover:bg-teal-50">Tạo việc follow-up</button>
+              ))}
+            </PCard>
+          </div>
+        </div>
+      )}
+
+      {/* ===== THANH TOÁN ===== */}
+      {tab === 'payment' && (
+        <PCard title="Thanh toán" sub="Tiền cọc, doanh thu và upsale theo từng lịch hẹn">
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[['Đã cọc', deposit], ['Doanh thu', revenue], ['Bill dự kiến', appts.reduce((t, a) => t + Number(a.expected_bill || 0), 0)]].map(([k, v]) => (
+              <div key={k} className="rounded-xl bg-slate-50 px-3 py-2.5"><div className="text-[11.5px] text-slate-400">{k}</div><div className="text-[15px] font-bold text-slate-900 tabular-nums">{fmtMoney(v)}</div></div>
+            ))}
+          </div>
+          {payments.length === 0 ? <PEmpty icon={Wallet} title="Chưa có giao dịch" sub="Khoản cọc và doanh thu phẫu thuật sẽ hiển thị tại đây." /> : (
+            <div className="divide-y divide-slate-100">
+              {payments.map(a => (
+                <div key={a.id} className="py-3 flex items-start gap-3">
+                  <span className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 grid place-items-center shrink-0"><Wallet className="w-4 h-4" /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-slate-900 truncate">{String(a.service || 'Dịch vụ').replace('[Tái khám] ', '')}</div>
+                    <div className="text-[12px] text-slate-500">{Number(a.deposit_amount) > 0 && `Cọc ${fmtMoney(a.deposit_amount)}${a.deposit_date ? ' ngày ' + fmtDay(a.deposit_date) : ''}`}{Number(a.revenue) > 0 && ` · Doanh thu ${fmtMoney(a.revenue)}`}{Number(a.upsale_revenue) > 0 && ` · Upsale ${fmtMoney(a.upsale_revenue)}`}</div>
+                  </div>
+                  <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${(APPT_PILL[a.status] || APPT_PILL.scheduled).cls}`}>{(APPT_PILL[a.status] || APPT_PILL.scheduled).label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </PCard>
+      )}
+
+      {/* ===== Các tab nhập liệu ===== */}
+      {['call', 'care', 'appts', 'info'].includes(tab) && (
+        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 lg:p-5">
             {/* ---- GỌI ĐIỆN ---- */}
             {tab === 'call' && (
               <div className="space-y-4">
@@ -1108,9 +1205,8 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 )}
               </div>
             )}
-          </div>
         </div>
-      </div>
+      )}
 
       {apptOpen && <CreateApptModal row={row} me={me} teleStaff={teleStaff} defaultNotes={consultSummary} onClose={() => { setApptOpen(false); loadAppts(); }} />}
     </div>
