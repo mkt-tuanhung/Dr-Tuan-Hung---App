@@ -41,34 +41,28 @@ import {
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2
 } from 'lucide-react';
+import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import { HeroCard, QuickActions, StatCard, Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
+// Bố cục menu theo Ethics BOS: mục cha (grp_*) chỉ để gom nhóm, bấm để mở/đóng;
+// id các mục con GIỮ NGUYÊN như cũ nên không ảnh hưởng điều hướng / thông báo.
 const MENU_GROUPS = [
   { title: null, items: [
     { id: 'overview', label: 'Tổng quan', shortLabel: 'Tổng quan', icon: LayoutDashboard },
   ]},
   { title: 'KHÁCH HÀNG', color: 'blue', items: [
-    { id: 'data_kh', label: 'Khách hàng (CRM)', icon: Database },
-    { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
+    { id: 'grp_crm', label: 'Khách hàng', icon: Database, children: [
+      { id: 'data_kh', label: 'Data khách hàng', icon: Database },
+      { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
+      { id: 'deposit_management', label: 'Quản lý đặt cọc', icon: ClipboardList },
+      { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
+    ] },
     { id: 'appointments', label: 'Lịch hẹn', shortLabel: 'Lịch hẹn', icon: CalendarDays },
-    { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
-    { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity },
-    { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
-    { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
-  ]},
-  { title: 'NHÂN SỰ', color: 'violet', items: [
-    { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
-    { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
-    { id: 'payroll', label: 'Bảng lương', icon: Wallet },
-  ]},
-  { title: 'TÀI CHÍNH', color: 'amber', items: [
-    { id: 'finance', label: 'Doanh thu / Tài chính', icon: Banknote },
-    { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
-    { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout },
-    { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
-    { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
-    { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
+    { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, children: [
+      { id: 'khach_phau_thuat', label: 'Khách phẫu thuật', icon: Activity },
+      { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
+    ] },
     { id: 'marketing', label: 'Marketing', icon: Clapperboard, children: [
       { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard },
       { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2 },
@@ -77,18 +71,33 @@ const MENU_GROUPS = [
       { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
     ] },
   ]},
+  { title: 'NHÂN SỰ', color: 'violet', items: [
+    { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
+    { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
+    { id: 'payroll', label: 'Bảng lương', icon: Wallet },
+  ]},
+  { title: 'TÀI CHÍNH', color: 'amber', items: [
+    { id: 'finance', label: 'Doanh thu', icon: Banknote },
+    { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
+    { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout },
+    { id: 'cashflow', label: 'Kế toán dòng tiền', icon: BarChart2 },
+    { id: 'advances', label: 'Tạm ứng chi', icon: Wallet },
+    { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
+  ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
     { id: 'minigame', label: 'Minigame', icon: Gamepad2 },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
+  ]},
+  { title: 'HỆ THỐNG', color: 'slate', items: [
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
   ]},
 ];
 const MENU = MENU_GROUPS.flatMap(g => g.items).flatMap(m => m.children ? [m, ...m.children] : [m]);
 
 // Bảng màu cho donut cơ cấu dịch vụ (xanh → xanh dương → tím, giống mockup)
-const PIE_COLORS = ['#468A86', '#6BB0AA', '#5B8DD6', '#8B7BD8', '#E5A13C', '#CAD3D3'];
+const PIE_COLORS = ['#067B7F', '#3CA7A9', '#5B8DD6', '#8B7BD8', '#E5A13C', '#CAD3D3'];
 const SUBTABS = [
   { id: 'tong_quan', label: 'Tổng quan' },
   { id: 'phan_tich', label: 'Phân tích' },
@@ -233,7 +242,7 @@ const Overview = ({ profile, setActiveTab }) => {
   const presentPct = d.totalStaff ? Math.round(d.presentToday / d.totalStaff * 100) : 0;
   const weekTotal = d.weekly.reduce((t, x) => t + x.v, 0);
   const statsDesktop = [
-    { label: 'Tổng nhân sự', value: d.totalStaff, icon: Users, color: '#468A86', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `+${d.newStaffMonth}` } : null, sub: d.newStaffMonth > 0 ? 'mới trong tháng' : 'đang hoạt động' },
+    { label: 'Tổng nhân sự', value: d.totalStaff, icon: Users, color: '#067B7F', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `+${d.newStaffMonth}` } : null, sub: d.newStaffMonth > 0 ? 'mới trong tháng' : 'đang hoạt động' },
     { label: 'Khách mới tháng', value: d.newCustomers, icon: UserCheck, color: '#8B7BD8', tab: 'khach_tu_van', trend: trendPct(d.newCustTrend), sub: 'so với tháng trước' },
     { label: 'Tỷ lệ chốt', value: d.closeRate + '%', icon: Target, color: '#5B8DD6', tab: 'khach_tu_van', trend: d.closeTrend != null ? { up: d.closeTrend >= 0, txt: `${d.closeTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.closeTrend)}%` } : null, sub: 'cọc + phẫu thuật' },
     { label: 'Lịch hẹn tuần này', value: weekTotal, icon: CalendarDays, color: '#E5A13C', tab: 'appointments', sub: 'từ Thứ 2 tới CN' },
@@ -269,7 +278,7 @@ const Overview = ({ profile, setActiveTab }) => {
 
       {/* Thao tác nhanh */}
       <QuickActions onSelect={setActiveTab} items={[
-        { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#468A86' },
+        { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#067B7F' },
         { id: 'data_kh', label: 'Khách hàng', icon: Database, color: '#5B8DD6' },
         { id: 'deposit_management', label: 'Đặt cọc', icon: ClipboardList, color: '#8B7BD8' },
         { id: 'khach_phau_thuat', label: 'Phẫu thuật', icon: Activity, color: '#3FA7A2' },
@@ -296,12 +305,12 @@ const Overview = ({ profile, setActiveTab }) => {
           <div className="text-[11.5px] text-slate-400">tháng này so với 6 tháng trước</div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={d.revenue6m} margin={{ top: 12, right: 6, left: -18, bottom: 0 }}>
-              <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#529c96" stopOpacity={0.3} /><stop offset="100%" stopColor="#529c96" stopOpacity={0} /></linearGradient></defs>
+              <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#12A4A5" stopOpacity={0.3} /><stop offset="100%" stopColor="#12A4A5" stopOpacity={0} /></linearGradient></defs>
               <CartesianGrid vertical={false} stroke="#EEF2F2" />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#97A4A5' }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#97A4A5' }} width={40} />
               <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} formatter={(v) => [`${v} Tr`, 'Doanh thu']} />
-              <Area type="monotone" dataKey="revenue" stroke="#468a86" strokeWidth={2.5} fill="url(#revA)" />
+              <Area type="monotone" dataKey="revenue" stroke="#067B7F" strokeWidth={2.5} fill="url(#revA)" />
             </AreaChart>
           </ResponsiveContainer>
         </Panel>
@@ -342,7 +351,7 @@ const Overview = ({ profile, setActiveTab }) => {
             <BarChart data={d.weekly} margin={{ top: 8, right: 0, left: -28, bottom: 0 }}>
               <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#97A4A5' }} />
               <YAxis hide /><Tooltip cursor={{ fill: '#EEF2F2' }} contentStyle={{ borderRadius: 10, border: 'none', fontSize: 12 }} formatter={(v) => [v, 'Lịch hẹn']} />
-              <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#529c96" barSize={16} />
+              <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#12A4A5" barSize={16} />
             </BarChart>
           </ResponsiveContainer>
         </Panel>
@@ -418,7 +427,7 @@ const Overview = ({ profile, setActiveTab }) => {
               <BarChart data={d.weekly} margin={{ top: 12, right: 0, left: -28, bottom: 0 }}>
                 <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                 <YAxis hide /><Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: 10, border: 'none', fontSize: 12 }} formatter={(v) => [v, 'Lịch hẹn']} />
-                <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#529c96" barSize={22} />
+                <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#12A4A5" barSize={22} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -561,6 +570,7 @@ const AdminDashboard = () => {
       case 'cashflow': return <CashFlowPage />;
       case 'seeding_rev': return <SeedingRevenuePage />;
       case 'service_quality': return <ServiceQualityPage />;
+      case 'permissions': return <PermissionsPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };

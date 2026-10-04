@@ -225,11 +225,11 @@ const MarketingDataPage = () => {
   const DueBadge = ({ r }) => {
     if (!r.next_call_at) return null;
     const due = isDue(r.next_call_at);
-    return <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${due ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{due ? 'Cần gọi' : 'Gọi lại'} {fmtDT(r.next_call_at)}</span>;
+    return <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${due ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{due ? 'Cần gọi' : 'Gọi lại'} {fmtDT(r.next_call_at)}</span>;
   };
 
   const statCards = [
-    { icon: Users, color: '#529c96', label: 'Tổng khách', value: stat.total },
+    { icon: Users, color: '#12A4A5', label: 'Tổng khách', value: stat.total },
     { icon: CalendarClock, color: '#ef4444', label: 'Cần gọi hôm nay', value: stat.due },
     { icon: Flame, color: '#f43f5e', label: 'Khách nóng', value: stat.nong },
     { icon: CheckCircle2, color: '#3b82f6', label: 'Đã làm dịch vụ', value: stat.daDV },
@@ -413,8 +413,8 @@ const MarketingDataPage = () => {
                         </td>
                         <td className="px-4 py-3 max-w-[240px]">
                           <div className="text-[12.5px] text-slate-600 truncate" title={r.last_exchange}>{r.last_exchange || <span className="text-slate-300">Chưa liên hệ</span>}</div>
-                          <div className="mt-0.5 flex items-center gap-1.5">
-                            {r.last_contact_at && <span className="text-[11px] text-slate-400">{fmtDT(r.last_contact_at)}</span>}
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                            {r.last_contact_at && <span className="text-[11px] text-slate-400 whitespace-nowrap">{fmtDT(r.last_contact_at)}</span>}
                             <DueBadge r={r} />
                           </div>
                         </td>
@@ -591,7 +591,7 @@ const APPT_PILL = {
 
 const ScoreRing = ({ value, size = 76 }) => {
   const r = (size - 9) / 2; const c = 2 * Math.PI * r;
-  const color = value >= 75 ? '#468A86' : value >= 50 ? '#E5A13C' : value >= 25 ? '#5B8DD6' : '#97A4A5';
+  const color = value >= 75 ? '#067B7F' : value >= 50 ? '#E5A13C' : value >= 25 ? '#5B8DD6' : '#97A4A5';
   return (
     <div className="relative grid place-items-center shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
@@ -821,7 +821,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
       ev.push({ at: `${a.appointment_date}T${String(a.appointment_time || '09:00').slice(0, 5)}:00`, icon: re ? Stethoscope : CalendarDays, color: re ? '#8B7BD8' : '#5B8DD6',
         title: re ? 'Lịch tái khám' : 'Lịch hẹn tư vấn', desc: [String(a.service || '').replace('[Tái khám] ', ''), a.sale?.full_name && `Sale: ${a.sale.full_name}`].filter(Boolean).join(' · '), pill: APPT_PILL[a.status] });
       if (a.deposit_date && Number(a.deposit_amount) > 0) ev.push({ at: `${a.deposit_date}T12:00:00`, icon: Wallet, color: '#5B8DD6', title: `Đặt cọc ${fmtMoney(a.deposit_amount)}`, desc: a.service });
-      if (a.status === 'phau_thuat' && a.surgery_date) ev.push({ at: `${a.surgery_date}T12:00:00`, icon: Activity, color: '#468A86', title: 'Phẫu thuật', desc: [a.service, Number(a.revenue) > 0 && `Doanh thu ${fmtMoney(Number(a.revenue) + Number(a.upsale_revenue || 0))}`].filter(Boolean).join(' · ') });
+      if (a.status === 'phau_thuat' && a.surgery_date) ev.push({ at: `${a.surgery_date}T12:00:00`, icon: Activity, color: '#067B7F', title: 'Phẫu thuật', desc: [a.service, Number(a.revenue) > 0 && `Doanh thu ${fmtMoney(Number(a.revenue) + Number(a.upsale_revenue || 0))}`].filter(Boolean).join(' · ') });
       if (a.post_op_status) ev.push({ at: `${a.surgery_date || a.appointment_date}T13:00:00`, icon: HeartHandshake, color: '#3FA7A2', title: 'Hậu phẫu / CSKH', desc: a.post_op_status });
       if (a.bong_date) ev.push({ at: `${a.bong_date}T12:00:00`, icon: UserX, color: '#D9635C', title: 'Khách bong lịch', desc: a.service });
     });
@@ -1294,7 +1294,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const byOutcome = {}; inAppCalls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
   const byOutcomeData = Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOMES[k]?.label || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' }));
   const srcMap = {}; newRows.forEach(r => { const raw = String(r.source || '').trim(); const s = !raw ? 'Khác' : (/^\d+$/.test(raw) ? 'Nguồn #' + raw : raw); srcMap[s] = (srcMap[s] || 0) + 1; });
-  const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#529c96', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
+  const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#12A4A5', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
 
   const buildPayload = () => ({
     day, whoName: whoName || 'Tất cả telesale', generated_at: new Date().toISOString(),
@@ -1402,7 +1402,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
     };
     const tiles = [
       ['Cuộc gọi', p.stats.calls, '#059669'], ['Số mới', p.stats.new_count, '#2563eb'],
-      ['Mới đã gọi', p.stats.new_called, '#468a86'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
+      ['Mới đã gọi', p.stats.new_called, '#067B7F'], ['Mới chưa gọi', p.stats.new_not_called, '#e11d48'],
     ].map(([l, v, c]) => `<div style="background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:14px"><div style="font-size:26px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px">${l}</div></div>`).join('');
     const callItem = (c) => `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(c.name)}</b> · <span style="color:#64748b">${esc(c.phone)}</span> · ${new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${c.status_label ? ` <span style="background:${c.status_color || '#94a3b8'};color:#fff;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:99px">${esc(c.status_label)}</span>` : ''}${c.author ? ' · ' + esc(c.author) : ''}<div style="color:#64748b;margin-top:2px">${esc(c.content)}</div></div>`;
     const newList = p.news.map(r => `<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f8fafc;font-size:12.5px"><b>${esc(r.name || '—')}</b><span style="color:#64748b">${esc(r.phone)}</span>${r.source ? `<span style="color:#94a3b8">· ${esc(r.source)}</span>` : ''}<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${r.called ? '#d1fae5' : '#ffe4e6'};color:${r.called ? '#047857' : '#be123c'}">${r.called ? 'Đã gọi' : 'Chưa gọi'}</span></div>`).join('');

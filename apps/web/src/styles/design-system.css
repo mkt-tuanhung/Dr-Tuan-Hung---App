@@ -20,7 +20,7 @@
   --fx-shadow:    0 2px 4px rgba(15, 23, 42, .04), 0 12px 28px -8px rgba(15, 23, 42, .14);
   --fx-shadow-lg: 0 4px 8px rgba(15, 23, 42, .05), 0 30px 55px -14px rgba(15, 23, 42, .22);
   --fx-shadow-ink: 0 24px 50px -18px rgba(11, 18, 32, .60);
-  --fx-shadow-teal: 0 14px 34px -12px rgba(70, 138, 134, .30); /* ám teal khi hover */
+  --fx-shadow-teal: 0 14px 34px -12px rgba(6, 123, 127, .30); /* ám teal khi hover */
 
   /* Đường cong spring — mọi chuyển động premium dùng chung */
   --fx-ease: cubic-bezier(.32, .72, 0, 1);
@@ -74,7 +74,7 @@
 .fx-card:hover {
   box-shadow: var(--fx-shadow), var(--fx-shadow-teal);
   transform: translateY(-3px);
-  border-color: rgba(70, 138, 134, .28);
+  border-color: rgba(6, 123, 127, .28);
 }
 .fx-card:active { transform: translateY(-1px) scale(.995); }
 
@@ -92,8 +92,8 @@
 
 /* -------- Nút nhấn chính có khối -------- */
 .fx-btn-primary {
-  background: linear-gradient(180deg, #56A39D 0%, #468A86 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 22px -10px rgba(70, 138, 134, .60);
+  background: linear-gradient(180deg, #56A39D 0%, #067B7F 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 22px -10px rgba(6, 123, 127, .60);
   transition: filter .25s var(--fx-ease), transform .12s var(--fx-ease);
 }
 .fx-btn-primary:hover { filter: brightness(1.05); }
@@ -150,8 +150,8 @@
 /* Trạng thái đang chọn — trắng đậm hơn + viền teal */
 .fx-glass-active {
   background: rgba(255, 255, 255, .96);
-  border: 1px solid rgba(70, 138, 134, .5);
-  box-shadow: 0 12px 30px -16px rgba(70, 138, 134, .28), inset 0 0 0 1px rgba(70, 138, 134, .18);
+  border: 1px solid rgba(6, 123, 127, .5);
+  box-shadow: 0 12px 30px -16px rgba(6, 123, 127, .28), inset 0 0 0 1px rgba(6, 123, 127, .18);
 }
 
 /* -------- Số liệu canh cột đều -------- */

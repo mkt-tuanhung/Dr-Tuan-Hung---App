@@ -58,7 +58,7 @@ const VienPhiPage = ({ isNested = false }) => {
   const totalTransfer = monthData.filter(d => d.hospital_fee_method === 'transfer').reduce((acc, curr) => acc + (curr.hospital_fee || 0), 0);
 
   const pieData = [
-    { name: 'Tiền mặt', value: totalCash, color: '#529c96' },
+    { name: 'Tiền mặt', value: totalCash, color: '#12A4A5' },
     { name: 'Chuyển khoản', value: totalTransfer, color: '#3b82f6' }
   ];
 

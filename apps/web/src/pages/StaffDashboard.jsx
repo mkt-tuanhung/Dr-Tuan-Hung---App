@@ -44,68 +44,11 @@ import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
+import { ROLE_LABELS, FULL_MENU, userCanModule, buildMenuGroups } from '@/features/permissions/menuConfig';
+import { usePermissionOverrides } from '@/features/permissions/usePermissionOverrides';
 import { parseNav, setPendingFocus } from '@/lib/notif';
 import { vnToday } from '@/lib/vnTime';
 
-const ROLE_LABELS = {
-  telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
-  truc_page: 'Trực Page', media: 'Media', marketing: 'Marketing', editor: 'Editor',
-  seeding: 'Seeding',
-  dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin',
-  bac_si: 'Bác sĩ', designer: 'Designer',
-};
-
-// Chức vụ Outsource (field position) bị ẩn các module này
-const OUTSOURCE_HIDE = ['appointments', 'attendance', 'advances'];
-
-const FULL_MENU = [
-  { id: 'overview',   label: 'Tổng quan',      icon: LayoutDashboard, roles: ['all'], exclude: ['designer'] },
-  { id: 'attendance', label: 'Chấm công',       icon: CalendarCheck, roles: ['all'], exclude: ['accountant', 'designer'] },
-  { id: 'kpi',        label: 'KPI của tôi',     icon: Target, roles: ['all'], exclude: ['accountant', 'designer'] },
-  { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'], exclude: ['designer'] },
-  { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
-  { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
-  { id: 'minigame',   label: 'Minigame',        icon: Gamepad2, roles: ['all'] },
-  { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
-
-  // MKT / Finance / Sales
-  { id: 'data_kh',    label: 'Khách hàng (CRM)',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
-  { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
-    { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
-    { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },
-    { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder'] },
-    { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle, roles: ['editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
-    { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon,  roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
-  ] },
-  { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout, roles: ['seeding', 'admin', 'accountant', 'shareholder'] },
-  { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
-  { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
-  { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin', 'shareholder'] },
-  { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin', 'shareholder'] },
-  { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong', 'shareholder'] },
-
-  // CRM
-  { id: 'appointments', label: 'Lịch hẹn',       icon: CalendarDays, roles: ['all'], exclude: ['designer'] },
-  { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile, roles: ['admin', 'accountant', 'shareholder', 'cskh', 'dieu_duong'] },
-  { id: 'khach_tu_van', label: 'Khách tư vấn',    icon: UserCheck, roles: ['sale_offline', 'admin'] },
-  { id: 'khach_coc',    label: 'Khách Cọc',      icon: ClipboardList, roles: ['telesale', 'sale_offline', 'accountant', 'shareholder', 'marketing'] },
-  { id: 'khach_bong',   label: 'Khách Bong',     icon: UserX, roles: ['telesale', 'sale_offline', 'cskh'] },
-
-  // Phẫu thuật
-  { id: 'khach_phau_thuat', label: 'Khách Phẫu thuật', icon: Activity, roles: ['dieu_duong', 'cskh', 'bac_si', 'accountant'] },
-  { id: 'mo_doi_tac',    label: 'Mổ Đối Tác',       icon: Handshake, roles: ['accountant', 'admin'] },
-  { id: 'hau_phau',      label: 'Hậu phẫu / CSKH', icon: ClipboardList, roles: ['dieu_duong', 'cskh', 'bac_si'] },
-];
-
-// Nhóm menu hiển thị trên sidebar (Ethics BOS). Mục nào chưa có nhóm -> nhóm "KHÁC".
-const STAFF_GROUPS = [
-  { title: null, ids: ['overview'] },
-  { title: 'CÁ NHÂN', ids: ['attendance', 'kpi', 'my_payroll', 'advances'] },
-  { title: 'KHÁCH HÀNG', ids: ['appointments', 'data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'khach_phau_thuat', 'mo_doi_tac', 'hau_phau', 'service_quality'] },
-  { title: 'TÀI CHÍNH', ids: ['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev'] },
-  { title: 'MARKETING', ids: ['marketing'] },
-  { title: 'KẾT NỐI', ids: ['community', 'meetings', 'minigame'] },
-];
 // Ưu tiên các mục trên thanh dưới (mobile) — nút giữa là Chấm công
 const BOTTOM_PREF = ['overview', 'appointments', 'kpi', 'my_payroll'];
 
@@ -144,7 +87,7 @@ const EditorOverview = ({ profile, setActiveTab }) => {
       <Card icon={Scissors} color="#5B8DD6" label="Đang xử lý" value={s.pending} unit="clip" onClick={() => setActiveTab('content_video')} />
       <Card icon={CheckCircle2} color="#8B7BD8" label="Clip đã duyệt" value={s.approved} unit="clip" onClick={() => setActiveTab('content_video')} />
       <Card icon={Target} color="#D9635C" label="Điểm Ads TB (tháng)" value={s.avg === null ? null : s.avg.toFixed(1)} unit="/10" onClick={() => setActiveTab('content_video')} />
-      <Card icon={Wallet} color="#468A86" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
+      <Card icon={Wallet} color="#067B7F" label="Tổng lương (tháng)" value={s.net === null ? null : fmtM(s.net)} unit="đ" onClick={() => setActiveTab('my_payroll')} />
     </div>
   );
 };
@@ -232,7 +175,7 @@ const Overview = ({ profile, setActiveTab, available = [] }) => {
 
   // Thao tác nhanh — chỉ hiện chức năng nhân sự này được dùng
   const QUICK = [
-    { id: 'attendance', label: 'Chấm công', icon: ScanFace, color: '#468A86' },
+    { id: 'attendance', label: 'Chấm công', icon: ScanFace, color: '#067B7F' },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#5B8DD6' },
     { id: 'data_kh', label: 'Khách hàng', icon: Database, color: '#3FA7A2' },
     { id: 'kpi', label: 'KPI của tôi', icon: Target, color: '#D9635C' },
@@ -362,11 +305,9 @@ const StaffDashboard = () => {
     return () => window.removeEventListener('NAVIGATE', handleNav);
   }, []);
 
-  const isOutsource = profile?.position === 'Outsource';
-  const roleOk = (m) =>
-    (m.roles?.includes('all') || m.roles?.includes(profile?.role) || m.roles?.includes(profile?.role_2))
-    && !(m.exclude && (m.exclude.includes(profile?.role) || m.exclude.includes(profile?.role_2)))
-    && !(isOutsource && OUTSOURCE_HIDE.includes(m.id));
+  // Quyền = mặc định theo vai trò + ô Admin ghi đè trong trang Phân quyền
+  const overrides = usePermissionOverrides();
+  const roleOk = (m) => userCanModule(profile, m, overrides);
   // Menu có nhóm con (dropdown): giữ nhóm nếu có ít nhất 1 mục con được phép
   const allowedMenu = FULL_MENU.map(m => {
     if (m.children) {
@@ -444,11 +385,7 @@ const StaffDashboard = () => {
   };
 
   // ===== Khung app dùng chung (Ethics BOS) =====
-  const grouped = new Set(STAFF_GROUPS.flatMap(g => g.ids));
-  const groups = [
-    ...STAFF_GROUPS.map(g => ({ title: g.title, items: g.ids.map(id => allowedMenu.find(m => m.id === id)).filter(Boolean) })),
-    { title: 'KHÁC', items: allowedMenu.filter(m => !grouped.has(m.id)) },
-  ].filter(g => g.items.length);
+  const groups = buildMenuGroups(allowedMenu);
 
   const canCheckIn = flatMenu.some(m => m.id === 'attendance');
   const centerAction = canCheckIn ? { id: 'attendance', label: 'Chấm công', icon: ScanFace } : null;

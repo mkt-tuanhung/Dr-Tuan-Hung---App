@@ -83,7 +83,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   // ---------- Xuất BẢNG CÔNG cá nhân (cửa sổ in đẹp — lưu PDF được) ----------
   const openTimesheet = (s) => {
     const STL = {
-      present: ['Có mặt', '#468a86', '#ccfbf1'], late: ['Đi trễ', '#b45309', '#fef3c7'],
+      present: ['Có mặt', '#067B7F', '#ccfbf1'], late: ['Đi trễ', '#b45309', '#fef3c7'],
       early_leave: ['Về sớm', '#c2410c', '#ffedd5'], half_day: ['Nửa ngày', '#1d4ed8', '#dbeafe'],
       leave: ['Nghỉ phép', '#7c3aed', '#ede9fe'], absent: ['Vắng mặt', '#dc2626', '#fee2e2'],
     };
@@ -117,7 +117,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         <td style="text-align:center">${badge}</td>
         <td style="text-align:center;font-variant-numeric:tabular-nums">${ci}</td>
         <td style="text-align:center;font-variant-numeric:tabular-nums">${co}</td>
-        <td style="text-align:center;color:#468a86;font-weight:700">${ot}</td>
+        <td style="text-align:center;color:#067B7F;font-weight:700">${ot}</td>
         <td style="text-align:center;color:#b45309;font-weight:700">${le}</td>
         <td style="color:#475569;font-size:11px">${note}</td>
       </tr>`;
@@ -126,10 +126,10 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Bảng công ${s.full_name} - ${MONTHS[month - 1]} ${year}</title>
       <style>
         *{box-sizing:border-box} body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;margin:0;padding:28px;color:#0f172a;background:#fff}
-        .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:3px solid #468a86;padding-bottom:14px;margin-bottom:16px}
+        .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:3px solid #067B7F;padding-bottom:14px;margin-bottom:16px}
         h1{font-size:20px;margin:0} .sub{color:#64748b;font-size:13px;margin-top:2px}
         table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #e2e8f0;padding:6px 8px}
-        thead th{background:#468a86;color:#fff;font-weight:700;font-size:11px}
+        thead th{background:#067B7F;color:#fff;font-weight:700;font-size:11px}
         .sum{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
         .foot{margin-top:22px;display:flex;justify-content:space-between;color:#64748b;font-size:12px}
         @media print{ .noprint{display:none} body{padding:12px} }
@@ -145,14 +145,14 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         </div>
       </div>
       <div class="sum">
-        ${chip('Tổng công', cnt.cong, '#468a86')}
+        ${chip('Tổng công', cnt.cong, '#067B7F')}
         ${chip('Đi trễ', cnt.late, '#b45309')}
         ${chip('Về sớm', cnt.early_leave, '#c2410c')}
         ${chip('Nửa ngày', cnt.half_day, '#1d4ed8')}
         ${chip('Nghỉ phép', cnt.leave, '#7c3aed')}
         ${chip('Vắng', cnt.absent, '#dc2626')}
         ${chip('Đi muộn/về sớm', cnt.le + 'h', '#b45309')}
-        ${chip('Tăng ca thực (đã trừ)', Math.max(0, cnt.ot - cnt.le) + 'h', '#468a86')}
+        ${chip('Tăng ca thực (đã trừ)', Math.max(0, cnt.ot - cnt.le) + 'h', '#067B7F')}
       </div>
       <table>
         <thead><tr><th>Ngày</th><th>Thứ</th><th>Trạng thái</th><th>Giờ vào</th><th>Giờ ra</th><th>Tăng ca</th><th>Muộn/sớm</th><th>Ghi chú</th></tr></thead>

@@ -24,7 +24,7 @@ export const fmtToday = (d = new Date()) => {
 };
 
 // Vòng điểm (0–100)
-export const ScoreRing = ({ value = 0, size = 112, stroke = 10, color = '#468A86', track = '#E4EFEE', children }) => {
+export const ScoreRing = ({ value = 0, size = 112, stroke = 10, color = '#067B7F', track = '#E4EFEE', children }) => {
   const v = Math.max(0, Math.min(100, Number(value) || 0));
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
@@ -40,7 +40,7 @@ export const ScoreRing = ({ value = 0, size = 112, stroke = 10, color = '#468A86
   );
 };
 
-const ringColor = (v) => (v >= 80 ? '#468A86' : v >= 50 ? '#E5A13C' : '#D9635C');
+const ringColor = (v) => (v >= 80 ? '#067B7F' : v >= 50 ? '#E5A13C' : '#D9635C');
 
 // Thẻ chào + điểm
 // ring: { value, label, sub, unit } ; stats: [{ label, value, sub, onClick, icon }]
@@ -168,7 +168,7 @@ export const QuickActions = ({ items = [], onSelect, title = 'Thao tác nhanh' }
 };
 
 // Thẻ chỉ số kiểu Ethics: nhãn trái, icon phải, số lớn, xu hướng
-export const StatCard = ({ icon: Icon, label, value, sub, trend, color = '#468A86', onClick, bar }) => (
+export const StatCard = ({ icon: Icon, label, value, sub, trend, color = '#067B7F', onClick, bar }) => (
   <button onClick={onClick} disabled={!onClick}
     className="text-left rounded-2xl bg-white p-4 shadow-card border border-transparent hover:border-slate-200 transition disabled:cursor-default min-w-0">
     <div className="flex items-start justify-between gap-2">
