@@ -65,15 +65,15 @@ const KPIPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="e-toolbar justify-between pl-4">
-        <p className="e-page-desc">KPI cá nhân · {MONTHS[month-1]} {year}</p>
-        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
-            <ChevronLeft className="w-4 h-4" />
+      <div className="e-toolbar justify-between pl-2.5 lg:pl-4">
+        <p className="e-page-desc hidden lg:block">KPI cá nhân · {MONTHS[month-1]} {year}</p>
+        <div className="flex lg:inline-flex items-center justify-between gap-1 w-full lg:w-auto p-0 lg:p-1 rounded-xl border-0 lg:border border-slate-200 bg-white">
+          <button onClick={prevMonth} className="w-11 h-11 lg:w-8 lg:h-8 rounded-xl lg:rounded-lg border border-slate-200 lg:border-0 grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
+            <ChevronLeft className="w-5 h-5 lg:w-4 lg:h-4" />
           </button>
-          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[110px] text-center tabular-nums">{MONTHS[month-1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
-            <ChevronRight className="w-4 h-4" />
+          <span className="text-[15px] lg:text-[13.5px] font-semibold text-slate-800 min-w-[110px] text-center tabular-nums">{MONTHS[month-1]} {year}</span>
+          <button onClick={nextMonth} className="w-11 h-11 lg:w-8 lg:h-8 rounded-xl lg:rounded-lg border border-slate-200 lg:border-0 grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
+            <ChevronRight className="w-5 h-5 lg:w-4 lg:h-4" />
           </button>
         </div>
       </div>
@@ -93,7 +93,17 @@ const KPIPage = () => {
           {/* Overall progress (vòng KPI kiểu Ethics M15) */}
           <div className="e-card e-card-pad">
             <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
-              <div className="relative shrink-0">
+              {/* Điện thoại: vòng KPI to (kiểu Ethics M15) */}
+              <div className="lg:hidden relative w-[200px] h-[200px] rounded-full shrink-0"
+                style={{ background: `conic-gradient(#3CA7A9 0%, #067B7F ${Math.min(overallPct, 100)}%, #EAF4F4 ${Math.min(overallPct, 100)}% 100%)` }}>
+                <div className="absolute inset-[22px] rounded-full bg-white grid place-items-center text-center">
+                  <div>
+                    <div className="text-[44px] font-bold text-slate-900 leading-none tabular-nums">{overallPct}%</div>
+                    <div className="text-[13px] text-slate-500 mt-1.5">Đạt được</div>
+                  </div>
+                </div>
+              </div>
+              <div className="relative shrink-0 hidden lg:block">
                 <ProgressRing value={overallPct} size={132} />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
@@ -104,7 +114,7 @@ const KPIPage = () => {
               </div>
               <div className="flex-1 min-w-0 text-center sm:text-left">
                 <div className="e-caption">Hoàn thành KPI tổng</div>
-                <div className="text-[22px] font-bold text-slate-900 mt-1.5">{MONTHS[month-1]} {year}</div>
+                <div className="text-[20px] lg:text-[22px] font-bold text-slate-900 mt-1.5">{MONTHS[month-1]} {year}</div>
                 <div className={`mt-2 e-badge ${overallPct >= 100 ? 'e-tone-success' : overallPct >= 70 ? 'e-tone-brand' : 'e-tone-warning'}`}>
                   <Award />
                   {overallPct >= 100 ? 'Xuất sắc — Đạt KPI' : overallPct >= 70 ? 'Đang tiến đến mục tiêu' : 'Cần cố gắng thêm'}
