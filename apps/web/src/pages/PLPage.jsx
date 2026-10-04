@@ -4,6 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown, DollarSign, Megaphone, Banknote, Package, Users, PieChart, Wallet, Shield, Plus, Trash2, ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0)) + 'đ';
 const lastDay = (y, m) => `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
@@ -95,7 +96,7 @@ export default function PLPage() {
   const pct = (v) => totalCost > 0 ? Math.round(Math.max(0, v) / totalCost * 100) : 0;
 
   // ----- Form Quỹ rủi ro -----
-  const [rf, setRf] = useState({ date: new Date().toISOString().split('T')[0], amount: '', kind: 'deposit', note: '' });
+  const [rf, setRf] = useState({ date: vnToday(), amount: '', kind: 'deposit', note: '' });
   const [savingRf, setSavingRf] = useState(false);
   const addRisk = async (e) => {
     e.preventDefault();

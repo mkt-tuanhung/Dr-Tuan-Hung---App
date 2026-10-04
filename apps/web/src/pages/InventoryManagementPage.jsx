@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { PackageOpen, Plus, Search, Archive, ArrowDownLeft, ArrowUpRight, History, X, Trash2 } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 export default function InventoryManagementPage({ isNested = false }) {
   const { profile } = useAuth();
@@ -24,7 +25,7 @@ export default function InventoryManagementPage({ isNested = false }) {
 
   // Forms
   const [itemForm, setItemForm] = useState({ id: null, name: '', unit: '', min_stock: 10, notes: '' });
-  const [importForm, setImportForm] = useState({ item_id: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [importForm, setImportForm] = useState({ item_id: '', quantity: '', date: vnToday(), notes: '' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -129,7 +130,7 @@ export default function InventoryManagementPage({ isNested = false }) {
     else {
       toast.success('Nhập kho thành công!');
       setShowImportModal(false);
-      setImportForm({ item_id: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setImportForm({ item_id: '', quantity: '', date: vnToday(), notes: '' });
       loadData();
     }
     setSaving(false);

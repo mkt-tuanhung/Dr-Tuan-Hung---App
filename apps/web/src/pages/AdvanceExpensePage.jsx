@@ -9,6 +9,7 @@ import {
   Calendar, Filter, Search, CheckCircle, XCircle, Clock, Image as ImageIcon,
   MoreVertical, X, UploadCloud, Loader2, Wallet, ChevronDown
 } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const CATEGORIES = {
   'Vat_tu': 'Mua vật tư/Trang thiết bị',
@@ -59,13 +60,13 @@ export default function AdvanceExpensePage() {
   const isAdmin = profile?.role === 'admin';
 
   const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: vnToday(),
     staff_id: '', category: 'Vat_tu', amount: '', description: '',
     provider: '', method: 'transfer', proofs: []
   });
 
   const [repayForm, setRepayForm] = useState({
-    date: new Date().toISOString().split('T')[0], amount: '', method: 'transfer', note: '', proof: ''
+    date: vnToday(), amount: '', method: 'transfer', note: '', proof: ''
   });
 
   const [rejectReason, setRejectReason] = useState('');
@@ -274,7 +275,7 @@ export default function AdvanceExpensePage() {
     // Mở modal hoàn ứng nhưng cho chọn phiếu
     setSelectedExpense(approvedList[0]);
     setRepayForm({
-      date: new Date().toISOString().split('T')[0], 
+      date: vnToday(), 
       amount: new Intl.NumberFormat('vi-VN').format(approvedList[0].amount), 
       method: 'transfer', note: '', proof: ''
     });

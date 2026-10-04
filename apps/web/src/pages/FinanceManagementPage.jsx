@@ -9,6 +9,7 @@ import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
 import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const COLORS = ['#529c96', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#529c96'];
 
@@ -65,7 +66,7 @@ const FinanceManagementPage = () => {
   const [importPreview, setImportPreview] = useState(null); // { valid: [], errors: [] }
   const [importing, setImporting] = useState(false);
   const [createForm, setCreateForm] = useState({
-    surgery_date: new Date().toISOString().split('T')[0],
+    surgery_date: vnToday(),
     customer_name: '', phone: '', service: '',
     service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
     revenue: '', upsale_revenue: '', sale_id: '', telesale_id: '', telesale_id_2: '', notes: ''
@@ -270,7 +271,7 @@ const FinanceManagementPage = () => {
 
   const openCreateRevenue = () => {
     setCreateForm({
-      surgery_date: new Date().toISOString().split('T')[0],
+      surgery_date: vnToday(),
       customer_name: '', phone: '', service: '',
       service_group: 'Hàm mặt', customer_source: 'Ads', customer_type: 'Mới',
       revenue: '', upsale_revenue: '', sale_id: '', telesale_id: '', telesale_id_2: '', notes: '',
@@ -281,7 +282,7 @@ const FinanceManagementPage = () => {
   const openEditRevenue = (r) => {
     setCreateForm({
       id: r.id,
-      surgery_date: r.surgery_date || new Date().toISOString().split('T')[0],
+      surgery_date: r.surgery_date || vnToday(),
       customer_name: r.customer_name || '', phone: r.phone || '', service: r.service || '',
       service_group: r.service_group || 'Hàm mặt', customer_source: r.customer_source || 'Ads', customer_type: r.customer_type || 'Mới',
       revenue: r.revenue || '', upsale_revenue: r.upsale_revenue || '',

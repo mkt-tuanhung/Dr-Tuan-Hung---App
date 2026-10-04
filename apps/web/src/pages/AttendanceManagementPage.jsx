@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download, ScanFace, ImageDown } from 'lucide-react';
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 import FaceIdAdminPanel from '@/features/faceid/FaceIdAdminPanel.jsx';
+import { vnToday } from '@/lib/vnTime';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'bg-teal-100 text-teal-700' },
@@ -308,7 +309,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     present: attendance.filter(a => {
       const d = new Date(a.date);
       return a.status === 'present' && d.getMonth()+1 === month && d.getFullYear() === year &&
-        a.date === today.toISOString().split('T')[0];
+        a.date === vnToday();
     }).length,
   };
 
@@ -664,7 +665,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
           {/* Mobile card list */}
           <div className="lg:hidden space-y-3">
             {filtered.map(s => {
-              const todayStr = today.toISOString().split('T')[0];
+              const todayStr = vnToday();
               const todayRecord = attendance.find(a => a.staff_id === s.id && a.date === todayStr);
               const monthCount = attendance.filter(a => a.staff_id === s.id && a.status === 'present').length;
               return (

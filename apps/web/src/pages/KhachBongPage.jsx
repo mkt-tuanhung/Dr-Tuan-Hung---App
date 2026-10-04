@@ -7,6 +7,7 @@ import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLef
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { phoneFor } from '@/lib/phoneMask';
+import { vnToday } from '@/lib/vnTime';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -171,16 +172,16 @@ const KhachBongPage = ({ isNested = false }) => {
   const openDeposit = (app) => {
     setSelectedApp(app);
     setDepositForm({
-      deposit_amount: '', deposit_date: new Date().toISOString().split('T')[0],
+      deposit_amount: '', deposit_date: vnToday(),
       expected_surgery_date: app.expected_surgery_date || '', surgery_time: app.surgery_time || '', service: app.service || '', notes: '',
     });
     setShowDepositModal(true);
   };
-  const openRevert = (app) => { setSelectedApp(app); setRevertForm({ appointment_date: new Date().toISOString().split('T')[0], appointment_time: '09:00', notes: '' }); setShowRevertModal(true); };
+  const openRevert = (app) => { setSelectedApp(app); setRevertForm({ appointment_date: vnToday(), appointment_time: '09:00', notes: '' }); setShowRevertModal(true); };
   const openSurgery = (app) => {
     setSelectedApp(app);
     setSurgeryForm({
-      expected_surgery_date: app.expected_surgery_date || new Date().toISOString().split('T')[0],
+      expected_surgery_date: app.expected_surgery_date || vnToday(),
       revenue: app.expected_bill || '', upsale_revenue: '', service: app.service || '',
       service_group: app.service_group || 'Tiểu phẫu',
       surgery_type: app.surgery_type || 'Tiểu phẫu',

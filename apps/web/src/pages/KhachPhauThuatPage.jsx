@@ -11,6 +11,7 @@ import ConsultButton from '@/components/ConsultButton.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import MoDoiTacPage from '@/pages/MoDoiTacPage.jsx';
 import { Handshake } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
   const { profile } = useAuth();
@@ -232,7 +233,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     if (validRows.length === 0) return toast.error('Vui lòng nhập vật tư hợp lệ');
     setSaving(true);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = vnToday();
     const inserts = validRows.map(r => ({
       item_id: r.item_id,
       type: 'export',

@@ -8,6 +8,7 @@ import { UserCheck, CalendarDays, Search, X, Mic, FileText, ClipboardCheck, Phon
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
+import { vnToday } from '@/lib/vnTime';
 
 // Lưới ảnh bấm được -> mở popup xem/zoom
 const Thumbs = ({ urls = [], size = 'h-20 w-20', wrapClass = 'mt-3 flex flex-wrap gap-2' }) => {
@@ -431,7 +432,7 @@ const KhachTuVanPage = () => {
 
 // ---------- Đánh giá (ra Cọc/Bong/Phẫu thuật) ----------
 const EvalModal = ({ app, onClose, onSaved }) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = vnToday();
   const [f, setF] = useState({
     status: app.status === 'scheduled' ? 'phau_thuat' : app.status,
     surgery_type: app.surgery_type || 'Tiểu phẫu',

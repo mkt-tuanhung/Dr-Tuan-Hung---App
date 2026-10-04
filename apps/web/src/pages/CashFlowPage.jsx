@@ -11,6 +11,7 @@ import {
   Plus, RefreshCw, Calendar, Filter, CheckCircle, XCircle, X, Trash2, Pencil, 
   ArrowDownLeft, ArrowUpRight, Coins, LineChart as LineChartIcon, Banknote, Users, PackageOpen, TrendingUp, Activity, Wallet, Shield
 } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 export default function CashFlowPage() {
   const { profile } = useAuth();
@@ -39,7 +40,7 @@ export default function CashFlowPage() {
   const [editId, setEditId] = useState(null); // id giao dịch đang SỬA (null = tạo mới)
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: vnToday(),
     flow_type: 'in', // 'in' or 'out'
     amount: '',
     method: 'transfer', // 'cash' or 'transfer'
@@ -270,7 +271,7 @@ export default function CashFlowPage() {
             <RefreshCw className="w-4 h-4" /> Làm mới
           </button>
           {canWrite && (
-            <button onClick={() => { setEditId(null); setForm({ date: new Date().toISOString().split('T')[0], flow_type: 'in', amount: '', method: 'transfer', handover_person: '', notes: '' }); setShowCreateModal(true); }} className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 font-bold rounded-xl text-sm shadow-md flex items-center gap-2 transition-colors">
+            <button onClick={() => { setEditId(null); setForm({ date: vnToday(), flow_type: 'in', amount: '', method: 'transfer', handover_person: '', notes: '' }); setShowCreateModal(true); }} className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 font-bold rounded-xl text-sm shadow-md flex items-center gap-2 transition-colors">
               <Plus className="w-4 h-4" /> Tạo giao dịch
             </button>
           )}

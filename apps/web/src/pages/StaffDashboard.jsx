@@ -45,6 +45,7 @@ import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
 import { parseNav, setPendingFocus } from '@/lib/notif';
+import { vnToday } from '@/lib/vnTime';
 
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH',
@@ -163,7 +164,7 @@ const Overview = ({ profile, setActiveTab, available = [] }) => {
     const month = now.getMonth() + 1;
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = vnToday();
 
     (async () => {
       const [attRes, kpiRes, advRes, apptRes] = await Promise.all([

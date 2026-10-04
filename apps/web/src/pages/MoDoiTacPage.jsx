@@ -5,10 +5,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Handshake, Plus, Edit, Trash2, X, Calendar as CalendarIcon, Stethoscope, Search, CheckCircle } from 'lucide-react';
 import { PARTNER_BACSI_RATE } from '@/lib/kpiCalc';
+import { vnToday } from '@/lib/vnTime';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0));
 const fmtM = (n) => fmt(n) + 'đ';
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => vnToday();
 
 const EMPTY = {
   customer_name: '', partner_name: '', service: '', surgery_type: 'Tiểu phẫu',

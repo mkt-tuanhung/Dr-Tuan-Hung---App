@@ -5,13 +5,14 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { PackagePlus, Plus, X, ChevronLeft, ChevronRight, Coins, Boxes, ReceiptText, Loader2, ImageIcon } from 'lucide-react';
+import { vnToday } from '@/lib/vnTime';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0));
 const fmtM = (n) => fmt(n) + 'đ';
 const num = (v) => Number(String(v).replace(/\D/g, '')) || 0;
 const MONTHS = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
 
-const EMPTY = { name: '', unit: '', quantity: '', amount: '', date: new Date().toISOString().split('T')[0], supplier: '', notes: '', proof_urls: [] };
+const EMPTY = { name: '', unit: '', quantity: '', amount: '', date: vnToday(), supplier: '', notes: '', proof_urls: [] };
 const proofsOf = (r) => (r.proof_urls?.length ? r.proof_urls : (r.proof_url ? [r.proof_url] : []));
 
 export default function NhapVatTuMoiPage() {

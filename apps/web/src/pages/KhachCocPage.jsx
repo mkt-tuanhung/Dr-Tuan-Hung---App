@@ -8,10 +8,11 @@ import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, 
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
+import { vnToday } from '@/lib/vnTime';
 
 const CAN_ADD_ROLES = ['sale_offline', 'telesale', 'admin', 'accountant'];
 const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => vnToday();
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 const fmtTy = (n) => n >= 1e9 ? (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + ' Tỷ' : n >= 1e6 ? Math.round(n / 1e6) + ' Tr' : new Intl.NumberFormat('vi-VN').format(n || 0) + 'đ';
 const EMPTY_COC = {
@@ -188,7 +189,7 @@ const KhachCocPage = ({ isNested = false }) => {
     const { error } = await supabase.from('customer_appointments')
       .update({
         status: 'bong',
-        bong_date: new Date().toISOString().split('T')[0],
+        bong_date: vnToday(),
         notes: (selectedApp.notes || '') + `\n[Hủy cọc] ${bongForm.notes}`
       }).eq('id', selectedApp.id);
 
@@ -243,13 +244,13 @@ const KhachCocPage = ({ isNested = false }) => {
   const openBong = (app) => { setSelectedApp(app); setBongForm({ notes: '' }); setShowBongModal(true); };
   const openRefund = (app) => {
     setSelectedApp(app);
-    setRefundForm({ refund_amount: String(app.deposit_amount || ''), refund_date: new Date().toISOString().split('T')[0], notes: '' });
+    setRefundForm({ refund_amount: String(app.deposit_amount || ''), refund_date: vnToday(), notes: '' });
     setShowRefundModal(true);
   };
   const openSurgery = (app) => {
     setSelectedApp(app);
     setSurgeryForm({
-      expected_surgery_date: app.expected_surgery_date || new Date().toISOString().split('T')[0],
+      expected_surgery_date: app.expected_surgery_date || vnToday(),
       surgery_time: app.surgery_time || '',
       revenue: app.deposit_amount || '', upsale_revenue: '', service: app.service || '',
       service_group: app.service_group || 'Tiểu phẫu',
