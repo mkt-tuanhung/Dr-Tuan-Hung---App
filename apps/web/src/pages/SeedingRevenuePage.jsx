@@ -62,87 +62,96 @@ export default function SeedingRevenuePage() {
 
   return (
     <div className="space-y-4">
+      {/* Thanh công cụ: mô tả + chọn tháng */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-[13px] text-slate-500">Khách nguồn Seeding đã phẫu thuật · hoa hồng chung cả team</p>
-        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1.5 py-1 shadow-sm">
-          <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
-          <span className="text-sm font-bold text-slate-700 min-w-[72px] text-center">Th{month}/{year}</span>
-          <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"><ChevronRight className="w-4 h-4" /></button>
+        <p className="e-page-desc">Khách nguồn Seeding đã phẫu thuật · hoa hồng chung cả team</p>
+        <div className="e-seg gap-0.5">
+          <button onClick={prevMonth} title="Tháng trước" className="e-seg-item px-2"><ChevronLeft /></button>
+          <span className="e-seg-item e-seg-active min-w-[84px] tabular-nums cursor-default">Th{month}/{year}</span>
+          <button onClick={nextMonth} title="Tháng sau" className="e-seg-item px-2"><ChevronRight /></button>
         </div>
       </div>
 
-      {/* Thẻ số liệu — số ĐẦY ĐỦ */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Thẻ số liệu (MetricCard Ethics) — số ĐẦY ĐỦ */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map((c, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
-            <div className="text-[22px] font-bold text-slate-800 tabular-nums leading-tight">{c.value}</div>
-            <div className="text-xs text-slate-500 mt-1">{c.label}</div>
+          <div key={i} className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5">
+            <span className="e-metric-icon row-span-2"><c.icon /></span>
+            <div className="e-metric-value col-start-2 row-start-2">{c.value}</div>
+            <div className="e-metric-label col-start-2 row-start-1 self-end">{c.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Thẻ TỔNG hoa hồng nổi bật */}
-      <div className="rounded-2xl p-5 text-white shadow-lg shadow-emerald-600/20 flex items-end justify-between gap-4" style={{ background: 'linear-gradient(120deg,#06686C 0%,#067B7F 55%,#10b981 100%)' }}>
-        <div>
-          <div className="text-white/80 text-sm">Tổng hoa hồng Seeding Th{month}/{year}</div>
-          <div className="text-3xl font-bold mt-1 tabular-nums">{fmt(totalComm)}</div>
-          <div className="text-white/70 text-xs mt-1">{visible.length} ca · Doanh thu {fmt(totalRev)} − Viện phí {fmt(totalFee)}</div>
+      {/* TỔNG hoa hồng — thẻ tổng kết kiểu Ethics (nền trắng, nhấn teal) */}
+      <div className="e-card e-card-pad flex items-center gap-4">
+        <span className="e-metric-icon e-tone-brand"><Percent /></span>
+        <div className="min-w-0 flex-1">
+          <div className="e-metric-label">Tổng hoa hồng Seeding Th{month}/{year}</div>
+          <div className="text-[26px] lg:text-[30px] font-bold text-teal-700 leading-tight tabular-nums truncate">{fmt(totalComm)}</div>
+          <div className="text-[12px] text-slate-500 mt-0.5 tabular-nums">{visible.length} ca · Doanh thu {fmt(totalRev)} − Viện phí {fmt(totalFee)}</div>
         </div>
-        <Percent className="w-10 h-10 text-white/30 shrink-0" />
       </div>
 
       {/* Biểu đồ hoa hồng theo tháng */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-bold text-slate-800 mb-1">Hoa hồng Seeding theo tháng</h3>
-        <p className="text-xs text-slate-400 mb-2">6 tháng gần nhất</p>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={chart} margin={{ top: 10, right: 8, left: 4, bottom: 0 }}>
-            <CartesianGrid vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={44} tickFormatter={axisFmt} />
-            <Tooltip
-              cursor={{ fill: '#f1f5f9' }}
-              contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }}
-              formatter={(v, name) => [fmt(v), name === 'hoahong' ? 'Hoa hồng' : 'Doanh thu']}
-              labelFormatter={(l, p) => `${l} · ${p?.[0]?.payload?.ca || 0} ca`}
-            />
-            <Bar dataKey="hoahong" radius={[6, 6, 0, 0]} barSize={30}>
-              {chart.map((c, i) => <Cell key={i} fill={c.key === monthKey ? '#10b981' : '#a7f3d0'} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="e-card e-card-pad">
+        <div className="e-card-header">
+          <div>
+            <h3 className="e-card-title">Hoa hồng Seeding theo tháng</h3>
+            <p className="e-card-sub">6 tháng gần nhất</p>
+          </div>
+        </div>
+        <div className="[&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9]">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={chart} margin={{ top: 10, right: 8, left: 4, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="#EAF4F4" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={44} tickFormatter={axisFmt} />
+              <Tooltip
+                cursor={{ fill: '#f1f5f9' }}
+                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }}
+                formatter={(v, name) => [fmt(v), name === 'hoahong' ? 'Hoa hồng' : 'Doanh thu']}
+                labelFormatter={(l, p) => `${l} · ${p?.[0]?.payload?.ca || 0} ca`}
+              />
+              <Bar dataKey="hoahong" radius={[6, 6, 0, 0]} barSize={30}>
+                {chart.map((c, i) => <Cell key={i} fill={c.key === monthKey ? '#067B7F' : '#CAE8E9'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Công thức */}
-      <div className="text-xs text-slate-500 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-        <b>Cách tính hoa hồng:</b> Hoa hồng = 20% × (Doanh thu − Viện phí) cho mỗi ca mổ nguồn Seeding.
-        VD: mổ 100.000.000đ, viện phí 21.000.000đ → hoa hồng = (100.000.000 − 21.000.000) × 20% = <b>15.800.000đ</b>.
+      <div className="e-subtle p-3.5 text-[12.5px] leading-relaxed text-slate-500">
+        <b className="text-slate-700">Cách tính hoa hồng:</b> Hoa hồng = 20% × (Doanh thu − Viện phí) cho mỗi ca mổ nguồn Seeding.
+        VD: mổ 100.000.000đ, viện phí 21.000.000đ → hoa hồng = (100.000.000 − 21.000.000) × 20% = <b className="text-teal-700">15.800.000đ</b>.
       </div>
 
       {/* Tìm kiếm */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên khách / SĐT…" className="w-full pl-10 pr-3 h-11 rounded-2xl bg-white border border-slate-200 text-sm outline-none focus:border-emerald-400" />
+      <div className="e-toolbar">
+        <div className="e-search flex-1 min-w-[220px]">
+          <Search />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên khách / SĐT…" />
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center h-40 items-center"><div className="w-7 h-7 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>
+        <div className="e-card flex justify-center h-40 items-center"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : visible.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-400">Chưa có khách nguồn Seeding mổ trong tháng này.</div>
+        <div className="e-card e-empty text-[13px] text-slate-400">Chưa có khách nguồn Seeding mổ trong tháng này.</div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="e-card divide-y divide-slate-100 overflow-hidden">
           {visible.map(r => (
-            <div key={r.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
-              <span className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(r.customer_name)}</span>
+            <div key={r.id} className="px-4 lg:px-5 py-3 min-h-[68px] flex items-center gap-3 hover:bg-teal-50/30 transition">
+              <span className="e-avatar w-11 h-11 text-[13px]">{initials(r.customer_name)}</span>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-slate-800 truncate">{r.customer_name}</div>
-                <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {r.phone || '—'} · {r.service || '—'}</div>
-                <div className="text-[11px] text-slate-500 mt-1 tabular-nums">DT {fmt(r.revenue)} · Viện phí {fmt(r.hospital_fee)}</div>
+                <div className="text-[14.5px] font-semibold text-slate-900 truncate">{r.customer_name}</div>
+                <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 min-w-0 truncate"><Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" /> {r.phone || '—'} · {r.service || '—'}</div>
+                <div className="text-[12px] text-slate-400 mt-0.5 tabular-nums truncate">DT {fmt(r.revenue)} · Viện phí {fmt(r.hospital_fee)}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-[11px] text-slate-400">Hoa hồng</div>
-                <div className="font-bold text-emerald-600 tabular-nums">{fmt(commOf(r))}</div>
+                <div className="e-kv-label">Hoa hồng</div>
+                <div className="text-[15px] font-bold text-teal-700 tabular-nums">{fmt(commOf(r))}</div>
               </div>
             </div>
           ))}

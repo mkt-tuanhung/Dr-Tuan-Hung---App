@@ -375,123 +375,121 @@ const FinanceManagementPage = () => {
   const totalCashIn = netSurgery + (stats.totalCocRev || 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header & Tabs */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[13px] text-slate-500">Báo cáo dòng tiền, nguồn khách và biểu đồ lợi nhuận</p>
-        </div>
-        <div className="flex bg-slate-100 p-1 rounded-xl">
-          <button onClick={() => setActiveTab('revenue')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'revenue' ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
-            <Banknote className="w-4 h-4 inline-block mr-2" /> Doanh Thu
+    <div className="space-y-4">
+      {/* Mô tả + tab khu vực (gạch chân teal kiểu Ethics) */}
+      <div className="space-y-3">
+        <p className="e-page-desc">Báo cáo dòng tiền, nguồn khách và biểu đồ lợi nhuận</p>
+        <div className="e-tabs">
+          <button onClick={() => setActiveTab('revenue')} className={`e-tab ${activeTab === 'revenue' ? 'e-tab-active' : ''}`}>
+            <Banknote /> Doanh Thu
           </button>
           {canViewAds && (
-            <button onClick={() => setActiveTab('expenses')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>
-              <Wallet className="w-4 h-4 inline-block mr-2" /> Tài chính
+            <button onClick={() => setActiveTab('expenses')} className={`e-tab ${activeTab === 'expenses' ? 'e-tab-active' : ''}`}>
+              <Wallet /> Tài chính
             </button>
           )}
         </div>
       </div>
 
       {activeTab === 'revenue' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Controls */}
-          <div className="flex items-center justify-between gap-3 bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <button type="button" onClick={() => shiftMonth(-1)} title="Tháng trước" className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-600 transition"><ChevronLeft className="w-5 h-5" /></button>
-              <CalendarIcon className="w-5 h-5 text-slate-400 hidden sm:block" />
-              <select value={month} onChange={e => setMonth(Number(e.target.value))} className="font-semibold text-slate-700 bg-slate-50 border-none rounded-lg p-2 outline-none">
+          <div className="e-toolbar justify-between">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <button type="button" onClick={() => shiftMonth(-1)} title="Tháng trước" className="e-icon-btn w-9 h-9 shrink-0"><ChevronLeft className="w-5 h-5" /></button>
+              <CalendarIcon className="w-[18px] h-[18px] text-teal-600 hidden sm:block mx-1" />
+              <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 px-2.5 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-800 outline-none cursor-pointer focus:border-teal-400">
                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>Tháng {m}</option>)}
               </select>
-              <select value={year} onChange={e => setYear(Number(e.target.value))} className="font-semibold text-slate-700 bg-slate-50 border-none rounded-lg p-2 outline-none">
+              <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 px-2.5 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-800 outline-none cursor-pointer focus:border-teal-400">
                 {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>Năm {y}</option>)}
               </select>
-              <button type="button" onClick={() => shiftMonth(1)} title="Tháng sau" className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-600 transition"><ChevronRight className="w-5 h-5" /></button>
+              <button type="button" onClick={() => shiftMonth(1)} title="Tháng sau" className="e-icon-btn w-9 h-9 shrink-0"><ChevronRight className="w-5 h-5" /></button>
             </div>
-            <button type="button" onClick={goThisMonth} className="px-3 py-2 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold hover:bg-teal-100 transition shrink-0">Tháng này</button>
+            <button type="button" onClick={goThisMonth} className="e-btn e-btn-outline e-btn-sm shrink-0">Tháng này</button>
           </div>
 
           {/* ===== DÒNG TIỀN THÁNG: phép tính trực quan 4 bước → tổng thực về ===== */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="font-black text-slate-800 flex items-center gap-2"><Wallet className="w-5 h-5 text-teal-600" /> Dòng tiền tháng {month}/{year}</div>
-              <button type="button" onClick={() => setShowCocModal(true)} className="px-3 py-1.5 rounded-xl bg-violet-600 text-white text-xs font-bold hover:bg-violet-700 active:scale-95 transition flex items-center gap-1.5 shrink-0">
-                <Search className="w-3.5 h-3.5" /> Chi tiết khách cọc
+          <div className="e-card e-card-pad">
+            <div className="e-card-header flex-wrap">
+              <div className="e-card-title flex items-center gap-2.5"><Wallet className="w-5 h-5 text-teal-600 shrink-0" /> Dòng tiền tháng {month}/{year}</div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="e-btn e-btn-outline e-btn-sm shrink-0">
+                <Search className="w-4 h-4" /> Chi tiết khách cọc
               </button>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
-              <div className="rounded-xl bg-teal-50 border border-teal-100 p-3">
-                <div className="text-[11px] font-bold text-teal-600 uppercase">Doanh thu ca mổ</div>
-                <div className="text-base md:text-xl font-black text-teal-800 mt-1 truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
-                <div className="text-[11px] text-teal-500 mt-0.5">{stats.totalCustomers} ca mổ trong tháng</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3.5 min-w-0">
+                <div className="text-[12.5px] font-medium text-slate-500 truncate">Doanh thu ca mổ</div>
+                <div className="text-[17px] md:text-[20px] font-bold text-slate-900 mt-1 truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+                <div className="text-[12px] text-slate-400 mt-0.5 truncate">{stats.totalCustomers} ca mổ trong tháng</div>
               </div>
-              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl bg-amber-50 border border-amber-100 p-3 hover:border-amber-300 transition cursor-pointer">
-                <div className="text-[11px] font-bold text-amber-600 uppercase">− Cọc đã thu trước</div>
-                <div className="text-base md:text-xl font-black text-amber-700 mt-1 truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
-                <div className="text-[11px] text-amber-500 mt-0.5">{stats.depositOffsetCount || 0} ca đã cọc từ trước ▸</div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl border border-slate-200 bg-white p-3.5 min-w-0 transition hover:border-teal-300 hover:shadow-soft cursor-pointer">
+                <div className="text-[12.5px] font-medium text-slate-500 truncate">− Cọc đã thu trước</div>
+                <div className="text-[17px] md:text-[20px] font-bold text-warning-600 mt-1 truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
+                <div className="text-[12px] text-teal-700 font-medium mt-0.5 truncate">{stats.depositOffsetCount || 0} ca đã cọc từ trước ▸</div>
               </button>
-              <div className="rounded-xl bg-emerald-50 border-2 border-emerald-200 p-3">
-                <div className="text-[11px] font-bold text-emerald-600 uppercase">= Thực thu ca mổ</div>
-                <div className="text-base md:text-xl font-black text-emerald-700 mt-1 truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
-                <div className="text-[11px] text-emerald-500 mt-0.5">tiền ca mổ thực về tháng này</div>
+              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 min-w-0">
+                <div className="text-[12.5px] font-semibold text-teal-800 truncate">= Thực thu ca mổ</div>
+                <div className="text-[17px] md:text-[20px] font-bold text-teal-800 mt-1 truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
+                <div className="text-[12px] text-teal-700/80 mt-0.5 truncate">tiền ca mổ thực về tháng này</div>
               </div>
-              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl bg-violet-50 border border-violet-100 p-3 hover:border-violet-300 transition cursor-pointer">
-                <div className="text-[11px] font-bold text-violet-600 uppercase">+ Cọc thu trong tháng</div>
-                <div className="text-base md:text-xl font-black text-violet-700 mt-1 truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
-                <div className="text-[11px] text-violet-500 mt-0.5">{stats.totalCocCustomers || 0} khách cọc ▸</div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl border border-slate-200 bg-white p-3.5 min-w-0 transition hover:border-teal-300 hover:shadow-soft cursor-pointer">
+                <div className="text-[12.5px] font-medium text-slate-500 truncate">+ Cọc thu trong tháng</div>
+                <div className="text-[17px] md:text-[20px] font-bold text-info-600 mt-1 truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
+                <div className="text-[12px] text-teal-700 font-medium mt-0.5 truncate">{stats.totalCocCustomers || 0} khách cọc ▸</div>
               </button>
             </div>
 
-            <div className="mt-3 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-4 py-3 flex items-center justify-between gap-3">
-              <div className="text-[11px] md:text-sm font-bold uppercase tracking-wide flex items-center gap-2 min-w-0"><Banknote className="w-4 h-4 shrink-0" /> <span className="truncate">Tổng tiền thực về trong tháng</span></div>
-              <div className="text-xl md:text-2xl font-black tabular-nums shrink-0" title={fmt(totalCashIn)}>{fmt(totalCashIn)}</div>
+            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5 flex items-center justify-between gap-3">
+              <div className="text-[13px] md:text-[14px] font-bold text-teal-900 flex items-center gap-2 min-w-0"><Banknote className="w-[18px] h-[18px] text-teal-600 shrink-0" /> <span className="truncate">Tổng tiền thực về trong tháng</span></div>
+              <div className="text-[19px] md:text-[24px] font-bold text-teal-900 tabular-nums shrink-0" title={fmt(totalCashIn)}>{fmt(totalCashIn)}</div>
             </div>
           </div>
 
           {/* Chỉ số phụ */}
-          <div className="grid grid-cols-3 gap-3 md:gap-4">
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-3 md:p-5 rounded-2xl border border-purple-100">
-              <div className="text-purple-600 text-[11px] md:text-sm font-bold flex items-center gap-1.5"><TrendingUp className="w-4 h-4 shrink-0" /> <span className="truncate">DT UPSALE</span></div>
-              <div className="text-base md:text-2xl font-black text-purple-800 mt-2 truncate tabular-nums" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="e-metric flex-col items-start gap-1">
+              <div className="e-metric-label flex items-center gap-2 w-full"><TrendingUp className="w-4 h-4 shrink-0 text-teal-600" /> <span className="truncate">DT UPSALE</span></div>
+              <div className="e-metric-value w-full" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-3 md:p-5 rounded-2xl border border-blue-100">
-              <div className="text-blue-600 text-[11px] md:text-sm font-bold flex items-center gap-1.5"><Users className="w-4 h-4 shrink-0" /> <span className="truncate">TỔNG KHÁCH</span></div>
-              <div className="text-base md:text-2xl font-black text-blue-800 mt-2 truncate">{stats.totalCustomers} <span className="text-xs md:text-sm font-medium text-blue-600">khách</span></div>
+            <div className="e-metric flex-col items-start gap-1">
+              <div className="e-metric-label flex items-center gap-2 w-full"><Users className="w-4 h-4 shrink-0 text-teal-600" /> <span className="truncate">TỔNG KHÁCH</span></div>
+              <div className="e-metric-value w-full">{stats.totalCustomers} <span className="text-[13px] font-medium text-slate-500">khách</span></div>
             </div>
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 p-3 md:p-5 rounded-2xl border border-amber-100">
-              <div className="text-amber-600 text-[11px] md:text-sm font-bold flex items-center gap-1.5"><Filter className="w-4 h-4 shrink-0" /> <span className="truncate">KHÁCH TỪ ADS</span></div>
-              <div className="text-base md:text-2xl font-black text-amber-800 mt-2 truncate">{stats.adsCustomers} <span className="text-xs md:text-sm font-medium text-amber-600">khách</span></div>
+            <div className="e-metric flex-col items-start gap-1">
+              <div className="e-metric-label flex items-center gap-2 w-full"><Filter className="w-4 h-4 shrink-0 text-teal-600" /> <span className="truncate">KHÁCH TỪ ADS</span></div>
+              <div className="e-metric-value w-full">{stats.adsCustomers} <span className="text-[13px] font-medium text-slate-500">khách</span></div>
             </div>
           </div>
 
           {/* ===== Modal chi tiết tiền cọc ===== */}
           {showCocModal && (
-            <div className="fixed inset-0 z-[80] bg-black/50 flex items-end md:items-center justify-center p-0 md:p-6" onClick={() => setShowCocModal(false)}>
-              <div className="bg-white w-full md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-t-3xl md:rounded-3xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0 gap-2">
+            <div className="e-modal-backdrop z-[80] flex items-end md:items-center justify-center p-0 md:p-6" onClick={() => setShowCocModal(false)}>
+              <div className="e-modal md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-b-none md:rounded-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="e-modal-header items-center shrink-0">
                   <div className="min-w-0">
-                    <div className="font-black text-slate-800 truncate">Chi tiết tiền cọc — Tháng {month}/{year}</div>
-                    <div className="text-xs text-slate-400 mt-0.5 truncate">Ai cọc, cọc ngày nào, và đối trừ vào ca mổ tháng nào</div>
+                    <div className="e-modal-title truncate">Chi tiết tiền cọc — Tháng {month}/{year}</div>
+                    <div className="e-card-sub truncate">Ai cọc, cọc ngày nào, và đối trừ vào ca mổ tháng nào</div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={() => shiftMonth(-1)} title="Tháng trước" className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
-                    <button onClick={() => shiftMonth(1)} title="Tháng sau" className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><ChevronRight className="w-5 h-5" /></button>
-                    <button onClick={() => setShowCocModal(false)} className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white"><X className="w-5 h-5" /></button>
+                    <button onClick={() => shiftMonth(-1)} title="Tháng trước" className="e-icon-btn w-9 h-9"><ChevronLeft className="w-5 h-5" /></button>
+                    <button onClick={() => shiftMonth(1)} title="Tháng sau" className="e-icon-btn w-9 h-9"><ChevronRight className="w-5 h-5" /></button>
+                    <button onClick={() => setShowCocModal(false)} title="Đóng" className="e-icon-btn w-9 h-9"><X className="w-5 h-5" /></button>
                   </div>
                 </div>
 
-                <div className="overflow-y-auto p-5 space-y-6">
+                <div className="e-modal-body overflow-y-auto space-y-5">
                   {/* DT cọc theo 12 tháng */}
                   <div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mb-2">DT cọc theo tháng — năm {year}</div>
+                    <div className="e-caption mb-2.5">DT cọc theo tháng — năm {year}</div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                       {cocByMonth.map(mm => (
                         <button key={mm.m} type="button" onClick={() => setMonth(mm.m)}
-                          className={`rounded-xl border p-2 text-left transition ${mm.m === month ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-200' : 'border-slate-100 bg-slate-50 hover:border-violet-200'}`}>
-                          <div className={`text-[10px] font-bold ${mm.m === month ? 'text-violet-600' : 'text-slate-400'}`}>Tháng {mm.m}</div>
-                          <div className={`text-xs font-black truncate ${mm.total > 0 ? 'text-violet-800' : 'text-slate-300'}`} title={fmt(mm.total)}>{mm.total > 0 ? fmt(mm.total) : '—'}</div>
-                          {mm.count > 0 && <div className="text-[10px] text-slate-400">{mm.count} khách</div>}
+                          className={`rounded-xl border p-2.5 text-left transition ${mm.m === month ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-100' : 'border-slate-200 bg-white hover:border-teal-300'}`}>
+                          <div className={`text-[11px] font-semibold ${mm.m === month ? 'text-teal-700' : 'text-slate-400'}`}>Tháng {mm.m}</div>
+                          <div className={`text-[12.5px] font-bold tabular-nums truncate ${mm.total > 0 ? 'text-slate-900' : 'text-slate-300'}`} title={fmt(mm.total)}>{mm.total > 0 ? fmt(mm.total) : '—'}</div>
+                          {mm.count > 0 && <div className="text-[11px] text-slate-400">{mm.count} khách</div>}
                         </button>
                       ))}
                     </div>
@@ -499,26 +497,26 @@ const FinanceManagementPage = () => {
 
                   {/* Khách cọc trong tháng */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-bold text-violet-600 uppercase">Khách cọc trong tháng {month} ({cocList.length})</div>
-                      <div className="text-sm font-black text-violet-700">{fmt(stats.totalCocRev || 0)}</div>
+                    <div className="flex items-center justify-between gap-3 mb-2.5">
+                      <div className="e-caption">Khách cọc trong tháng {month} ({cocList.length})</div>
+                      <div className="text-[14px] font-bold text-info-600 tabular-nums">{fmt(stats.totalCocRev || 0)}</div>
                     </div>
                     {cocList.length === 0 ? (
-                      <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-4 text-center">Không có khách cọc trong tháng này</div>
+                      <div className="e-subtle p-4 text-center text-[13px] text-slate-400">Không có khách cọc trong tháng này</div>
                     ) : (
-                      <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                         {cocList.map(c => (
                           <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
                             <div className="flex-1 min-w-0">
-                              <div className="font-bold text-slate-800 truncate">{c.customer_name} <span className="font-normal text-slate-400 text-xs">· {c.phone}</span></div>
-                              <div className="text-xs text-slate-400 truncate">Cọc ngày {String(c.deposit_date).slice(0,10).split('-').reverse().join('/')}{c.service ? ` · ${c.service}` : ''}</div>
+                              <div className="text-[14px] font-semibold text-slate-900 truncate">{c.customer_name} <span className="font-normal text-slate-400 text-[12px]">· {c.phone}</span></div>
+                              <div className="text-[12px] text-slate-500 truncate">Cọc ngày {String(c.deposit_date).slice(0,10).split('-').reverse().join('/')}{c.service ? ` · ${c.service}` : ''}</div>
                             </div>
                             {c.status === 'phau_thuat'
-                              ? <span className="shrink-0 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold">Đã mổ {c.surgery_date ? String(c.surgery_date).slice(5,10).split('-').reverse().join('/') : ''}</span>
+                              ? <span className="e-badge e-badge-sm e-tone-success shrink-0">Đã mổ {c.surgery_date ? String(c.surgery_date).slice(5,10).split('-').reverse().join('/') : ''}</span>
                               : c.status === 'bong' || c.bong_date
-                                ? <span className="shrink-0 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[10px] font-bold">Bong</span>
-                                : <span className="shrink-0 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">Đang cọc</span>}
-                            <div className="shrink-0 font-black text-violet-700 text-sm">{fmt(Number(c.deposit_amount || 0))}</div>
+                                ? <span className="e-badge e-badge-sm e-tone-danger shrink-0">Bong</span>
+                                : <span className="e-badge e-badge-sm e-tone-info shrink-0">Đang cọc</span>}
+                            <div className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">{fmt(Number(c.deposit_amount || 0))}</div>
                           </div>
                         ))}
                       </div>
@@ -527,24 +525,24 @@ const FinanceManagementPage = () => {
 
                   {/* Đối trừ cọc cho ca mổ tháng này */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-bold text-amber-600 uppercase">Đối trừ cọc — ca mổ tháng {month} đã cọc trước ({offsetList.length})</div>
-                      <div className="text-sm font-black text-amber-600">− {fmt(stats.depositOffset || 0)}</div>
+                    <div className="flex items-center justify-between gap-3 mb-2.5">
+                      <div className="e-caption">Đối trừ cọc — ca mổ tháng {month} đã cọc trước ({offsetList.length})</div>
+                      <div className="text-[14px] font-bold text-warning-600 tabular-nums shrink-0">− {fmt(stats.depositOffset || 0)}</div>
                     </div>
                     {offsetList.length === 0 ? (
-                      <div className="text-sm text-slate-400 bg-slate-50 rounded-xl p-4 text-center">Tháng này không có ca mổ nào đã cọc từ trước</div>
+                      <div className="e-subtle p-4 text-center text-[13px] text-slate-400">Tháng này không có ca mổ nào đã cọc từ trước</div>
                     ) : (
-                      <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                         {offsetList.map(r => (
                           <div key={r.id} className="px-4 py-3 bg-white">
                             <div className="flex items-center gap-3">
                               <div className="flex-1 min-w-0">
-                                <div className="font-bold text-slate-800 truncate">{r.customer_name} <span className="font-normal text-slate-400 text-xs">· {r.phone}</span></div>
-                                <div className="text-xs text-slate-400 truncate">Mổ {String(r.surgery_date || '').slice(0,10).split('-').reverse().join('/')} · Cọc {r.deposit_date ? String(r.deposit_date).slice(0,10).split('-').reverse().join('/') : '?'}{r.service ? ` · ${r.service}` : ''}</div>
+                                <div className="text-[14px] font-semibold text-slate-900 truncate">{r.customer_name} <span className="font-normal text-slate-400 text-[12px]">· {r.phone}</span></div>
+                                <div className="text-[12px] text-slate-500 truncate">Mổ {String(r.surgery_date || '').slice(0,10).split('-').reverse().join('/')} · Cọc {r.deposit_date ? String(r.deposit_date).slice(0,10).split('-').reverse().join('/') : '?'}{r.service ? ` · ${r.service}` : ''}</div>
                               </div>
                               <div className="shrink-0 text-right">
-                                <div className="text-xs text-slate-500">DT {fmt(r.revenue)} − cọc <span className="text-amber-600 font-bold">{fmt(r.deposit_amount)}</span></div>
-                                <div className="font-black text-emerald-600 text-sm">Thực thu {fmt(r.revenue - r.deposit_amount)}</div>
+                                <div className="text-[12px] text-slate-500 tabular-nums">DT {fmt(r.revenue)} − cọc <span className="text-warning-600 font-semibold">{fmt(r.deposit_amount)}</span></div>
+                                <div className="text-[14px] font-bold text-teal-700 tabular-nums">Thực thu {fmt(r.revenue - r.deposit_amount)}</div>
                               </div>
                             </div>
                           </div>
@@ -554,12 +552,12 @@ const FinanceManagementPage = () => {
                   </div>
 
                   {/* Tổng kết dòng tiền tháng */}
-                  <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-1.5 text-sm">
-                    <div className="flex justify-between"><span className="text-slate-500">Doanh thu ca mổ tháng {month}</span><span className="font-bold text-slate-800">{fmt(stats.totalRev || 0)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">− Cọc đã thu từ trước (đối trừ)</span><span className="font-bold text-amber-600">− {fmt(stats.depositOffset || 0)}</span></div>
-                    <div className="flex justify-between border-t border-slate-200 pt-1.5"><span className="font-bold text-slate-700">= Thực thu từ ca mổ</span><span className="font-black text-emerald-600">{fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">+ Tiền cọc thu trong tháng</span><span className="font-bold text-violet-600">+ {fmt(stats.totalCocRev || 0)}</span></div>
-                    <div className="flex justify-between border-t border-slate-200 pt-1.5"><span className="font-black text-slate-800">= Tổng tiền THỰC VỀ trong tháng</span><span className="font-black text-teal-700">{fmt((stats.totalRev || 0) - (stats.depositOffset || 0) + (stats.totalCocRev || 0))}</span></div>
+                  <div className="e-subtle p-4 space-y-2 text-[13.5px] tabular-nums">
+                    <div className="flex justify-between gap-3"><span className="text-slate-500">Doanh thu ca mổ tháng {month}</span><span className="font-semibold text-slate-900">{fmt(stats.totalRev || 0)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-slate-500">− Cọc đã thu từ trước (đối trừ)</span><span className="font-semibold text-warning-600">− {fmt(stats.depositOffset || 0)}</span></div>
+                    <div className="flex justify-between gap-3 border-t border-slate-200 pt-2"><span className="font-semibold text-teal-800">= Thực thu từ ca mổ</span><span className="font-bold text-teal-800">{fmt((stats.totalRev || 0) - (stats.depositOffset || 0))}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-slate-500">+ Tiền cọc thu trong tháng</span><span className="font-semibold text-info-600">+ {fmt(stats.totalCocRev || 0)}</span></div>
+                    <div className="flex justify-between gap-3 border-t border-slate-200 pt-2"><span className="font-bold text-teal-900">= Tổng tiền THỰC VỀ trong tháng</span><span className="font-bold text-[15px] text-teal-900">{fmt((stats.totalRev || 0) - (stats.depositOffset || 0) + (stats.totalCocRev || 0))}</span></div>
                   </div>
                 </div>
               </div>
@@ -569,14 +567,14 @@ const FinanceManagementPage = () => {
 
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-              <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><PieChart className="w-5 h-5 text-indigo-500" /> Tỷ trọng Nguồn Khách (VND)</h3>
-              <div className="h-64">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="e-card e-card-pad min-w-0">
+              <h3 className="e-card-title mb-4 flex items-center gap-2"><PieChart className="hidden" /> Tỷ trọng Nguồn Khách (VND)</h3>
+              <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={sourceData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                      {sourceData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                    <Pie data={sourceData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                      {sourceData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#067B7F', '#3CA7A9', '#76C2C3', '#F4B183', '#A99BE0', '#B8C4CC'][index % COLORS.length]} />)}
                     </Pie>
                     <RechartsTooltip formatter={(value) => fmt(value)} />
                     <Legend />
@@ -584,16 +582,16 @@ const FinanceManagementPage = () => {
                 </ResponsiveContainer>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-              <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><BarChart className="w-5 h-5 text-teal-500" /> Doanh thu theo Nhóm dịch vụ</h3>
-              <div className="h-64">
+            <div className="e-card e-card-pad min-w-0">
+              <h3 className="e-card-title mb-4 flex items-center gap-2"><BarChart className="hidden" /> Doanh thu theo Nhóm dịch vụ</h3>
+              <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={serviceGroupData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(val) => (val/1000000) + 'M'} axisLine={false} tickLine={false} />
                     <RechartsTooltip formatter={(value) => fmt(value)} cursor={{fill: '#f8fafc'}} />
-                    <Bar dataKey="value" fill="#12A4A5" radius={[4, 4, 0, 0]} barSize={40} />
+                    <Bar dataKey="value" fill="#067B7F" radius={[4, 4, 0, 0]} barSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -601,73 +599,73 @@ const FinanceManagementPage = () => {
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-               <h3 className="font-bold text-slate-800">Danh sách Giao dịch Doanh Thu</h3>
+          <div className="e-card overflow-hidden">
+             <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+               <h3 className="e-card-title">Danh sách Giao dịch Doanh Thu</h3>
                {(profile?.role === 'admin' || profile?.role === 'marketing') && (
                  <div className="flex items-center gap-2">
-                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="px-4 py-2 bg-white border border-teal-200 text-teal-700 font-semibold rounded-xl text-sm shadow-sm hover:bg-teal-50 transition-colors flex items-center gap-2">
+                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="e-btn e-btn-secondary e-btn-sm">
                      <Upload className="w-4 h-4" /> Import Excel/CSV
                    </button>
-                   <button onClick={openCreateRevenue} className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-xl text-sm shadow hover:bg-teal-700 transition-colors">
+                   <button onClick={openCreateRevenue} className="e-btn e-btn-primary e-btn-sm">
                      + Nhập trực tiếp
                    </button>
                  </div>
                )}
              </div>
              {loading ? (
-                <div className="p-10 text-center text-slate-400">Đang tải...</div>
+                <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
              ) : revenueData.length === 0 ? (
-                <div className="p-10 text-center text-slate-400">Không có giao dịch nào trong tháng này.</div>
+                <div className="e-empty text-[13px] text-slate-400">Không có giao dịch nào trong tháng này.</div>
              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 lg:p-5 bg-slate-50/60">
                   {revenueData.map(r => (
-                    <div key={r.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h4 className="font-bold text-slate-800">{r.customer_name}</h4>
-                          <div className="text-sm text-slate-500 mt-0.5 flex items-center gap-1">
-                             <CalendarIcon className="w-3.5 h-3.5" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
+                    <div key={r.id} className="e-card-flat p-4 flex flex-col transition hover:border-teal-100 hover:shadow-card">
+                      <div className="flex justify-between items-start gap-3 mb-3">
+                        <div className="min-w-0">
+                          <h4 className="text-[15px] font-semibold text-slate-900 truncate">{r.customer_name}</h4>
+                          <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 tabular-nums">
+                             <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
                           </div>
                         </div>
-                        <div className="text-xs font-semibold bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full">
+                        <div className="e-badge e-badge-sm e-tone-brand shrink-0">
                           {r.service_group || 'Chưa rõ'}
                         </div>
                       </div>
                       
-                      <div className="text-sm font-medium text-slate-700 mb-4 pb-4 border-b border-dashed border-slate-200">
-                        Dịch vụ: <span className="text-slate-900">{r.service || 'N/A'}</span>
+                      <div className="text-[13px] text-slate-500 mb-3 pb-3 border-b border-slate-100 truncate">
+                        Dịch vụ: <span className="font-medium text-slate-800">{r.service || 'N/A'}</span>
                       </div>
 
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
+                      <div className="space-y-1.5 mb-3">
+                        <div className="flex justify-between text-[13px]">
                           <span className="text-slate-500">Nguồn khách:</span>
-                          <span className="font-semibold text-amber-600">{r.customer_source || 'Khác'}</span>
+                          <span className="font-semibold text-slate-800">{r.customer_source || 'Khác'}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-[13px]">
                           <span className="text-slate-500">Tệp khách:</span>
-                          <span className="font-semibold text-blue-600">{r.customer_type || 'Mới'}</span>
+                          <span className="font-semibold text-slate-800">{r.customer_type || 'Mới'}</span>
                         </div>
                       </div>
                       
-                      <div className="bg-slate-50 rounded-xl p-3 space-y-1.5">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-slate-600 font-medium">Doanh thu tổng:</span>
-                          <span className="font-bold text-teal-600 text-base">{fmt(r.revenue || 0)}</span>
+                      <div className="e-subtle p-3 space-y-1.5 mt-auto">
+                        <div className="flex justify-between items-center text-[13px]">
+                          <span className="text-slate-500">Doanh thu tổng:</span>
+                          <span className="font-bold text-teal-700 text-[15px] tabular-nums">{fmt(r.revenue || 0)}</span>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-slate-600 font-medium">Upsale:</span>
-                          <span className="font-bold text-purple-600 text-base">{fmt(r.upsale_revenue || 0)}</span>
+                        <div className="flex justify-between items-center text-[13px]">
+                          <span className="text-slate-500">Upsale:</span>
+                          <span className="font-semibold text-slate-800 text-[14px] tabular-nums">{fmt(r.upsale_revenue || 0)}</span>
                         </div>
                       </div>
 
                       {(profile?.role === 'admin' || profile?.role === 'marketing') && (
                         <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                          <button onClick={() => openEditRevenue(r)} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-50 text-teal-700 text-xs font-bold rounded-xl hover:bg-teal-100 transition-colors">
-                            <Pencil className="w-3.5 h-3.5" /> Sửa
+                          <button onClick={() => openEditRevenue(r)} className="e-btn e-btn-secondary e-btn-sm flex-1">
+                            <Pencil className="w-4 h-4" /> Sửa
                           </button>
-                          <button onClick={() => handleDeleteRevenue(r)} className="w-9 flex items-center justify-center py-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <button onClick={() => handleDeleteRevenue(r)} title="Xóa" className="e-btn e-btn-danger-soft e-btn-sm w-[34px] px-0">
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       )}
@@ -680,7 +678,7 @@ const FinanceManagementPage = () => {
       )}
 
       {activeTab === 'expenses' && canViewAds && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <FinanceRevenueSummary
             stats={stats}
             month={month}
@@ -707,17 +705,17 @@ const FinanceManagementPage = () => {
 
       {/* Direct Revenue Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
-              <h3 className="font-bold text-teal-800">Import doanh thu từ Excel / CSV</h3>
-              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Import doanh thu từ Excel / CSV</h3>
+              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} title="Đóng" className="e-icon-btn w-8 h-8 shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="e-modal-body space-y-4 overflow-y-auto">
               {/* Hướng dẫn */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-600 space-y-2">
-                <div className="font-semibold text-blue-700">Các cột BẮT BUỘC đúng thứ tự (dòng đầu là tiêu đề):</div>
-                <ol className="list-decimal ml-5 space-y-0.5 text-xs">
+              <div className="e-subtle p-4 text-[13px] text-slate-600 space-y-2">
+                <div className="font-semibold text-slate-800">Các cột BẮT BUỘC đúng thứ tự (dòng đầu là tiêu đề):</div>
+                <ol className="list-decimal ml-5 space-y-0.5 text-[12px] text-slate-500">
                   <li><b>ngay_phau_thuat</b> — định dạng <code>YYYY-MM-DD</code> (vd 2026-06-19)</li>
                   <li><b>ten_khach_hang</b></li>
                   <li><b>so_dien_thoai</b></li>
@@ -732,39 +730,39 @@ const FinanceManagementPage = () => {
                   <li><b>ma_sale</b> — mã NV sale offline, để trống nếu không có</li>
                   <li><b>ghi_chu</b></li>
                 </ol>
-                <button onClick={downloadTemplate} className="mt-1 inline-flex items-center gap-1.5 text-teal-700 font-semibold hover:underline">
+                <button onClick={downloadTemplate} className="e-btn e-btn-ghost e-btn-sm -ml-3 mt-1">
                   <Download className="w-4 h-4" /> Tải file mẫu (.csv)
                 </button>
               </div>
 
-              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-teal-300 rounded-xl cursor-pointer hover:bg-teal-50 text-teal-700 font-semibold">
+              <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-teal-300 bg-teal-50/40 rounded-xl cursor-pointer transition hover:bg-teal-50 text-teal-700 text-[14px] font-semibold">
                 <Upload className="w-5 h-5" /> Chọn file CSV để tải lên
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
               </label>
 
               {importPreview && (
                 <div className="space-y-3">
-                  <div className="flex gap-3 text-sm">
-                    <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-700 font-semibold">{importPreview.valid.length} dòng hợp lệ</span>
-                    {importPreview.errors.length > 0 && <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-semibold">{importPreview.errors.length} dòng lỗi</span>}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="e-badge e-tone-success">{importPreview.valid.length} dòng hợp lệ</span>
+                    {importPreview.errors.length > 0 && <span className="e-badge e-tone-danger">{importPreview.errors.length} dòng lỗi</span>}
                   </div>
                   {importPreview.errors.length > 0 && (
-                    <div className="bg-red-50 border border-red-100 rounded-xl p-3 max-h-32 overflow-y-auto text-xs text-red-600 space-y-0.5">
+                    <div className="bg-danger-50 border border-danger-100 rounded-xl p-3 max-h-32 overflow-y-auto text-[12px] text-danger-600 space-y-0.5">
                       {importPreview.errors.map((er, i) => <div key={i}>• {er}</div>)}
                     </div>
                   )}
                   {importPreview.valid.length > 0 && (
-                    <div className="border border-slate-100 rounded-xl max-h-48 overflow-auto">
-                      <table className="w-full text-xs">
-                        <thead className="bg-slate-50 text-slate-500 sticky top-0"><tr>
-                          <th className="text-left px-3 py-2">Ngày</th><th className="text-left px-3 py-2">Khách</th>
-                          <th className="text-right px-3 py-2">Doanh thu</th><th className="text-right px-3 py-2">Upsale</th>
+                    <div className="border border-slate-200 rounded-xl max-h-48 overflow-auto">
+                      <table className="w-full text-[13px] border-separate border-spacing-0">
+                        <thead className="sticky top-0 bg-slate-50 text-[12px] text-slate-500"><tr>
+                          <th className="text-left font-semibold px-3 h-9 border-b border-slate-200">Ngày</th><th className="text-left font-semibold px-3 h-9 border-b border-slate-200">Khách</th>
+                          <th className="text-right font-semibold px-3 h-9 border-b border-slate-200">Doanh thu</th><th className="text-right font-semibold px-3 h-9 border-b border-slate-200">Upsale</th>
                         </tr></thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="text-slate-700">
                           {importPreview.valid.slice(0, 50).map((v, i) => (
-                            <tr key={i}><td className="px-3 py-1.5">{v.surgery_date}</td><td className="px-3 py-1.5">{v.customer_name}</td>
-                              <td className="px-3 py-1.5 text-right">{new Intl.NumberFormat('vi-VN').format(v.revenue)}</td>
-                              <td className="px-3 py-1.5 text-right">{new Intl.NumberFormat('vi-VN').format(v.upsale_revenue)}</td></tr>
+                            <tr key={i}><td className="px-3 h-9 border-b border-slate-100 tabular-nums">{v.surgery_date}</td><td className="px-3 h-9 border-b border-slate-100">{v.customer_name}</td>
+                              <td className="px-3 h-9 border-b border-slate-100 text-right tabular-nums">{new Intl.NumberFormat('vi-VN').format(v.revenue)}</td>
+                              <td className="px-3 h-9 border-b border-slate-100 text-right tabular-nums">{new Intl.NumberFormat('vi-VN').format(v.upsale_revenue)}</td></tr>
                           ))}
                         </tbody>
                       </table>
@@ -773,10 +771,10 @@ const FinanceManagementPage = () => {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
-              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
+            <div className="e-modal-footer shrink-0">
+              <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="e-btn e-btn-secondary">Hủy</button>
               <button onClick={handleImport} disabled={importing || !importPreview?.valid?.length}
-                className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl text-sm hover:bg-teal-700 disabled:opacity-50">
+                className="e-btn e-btn-primary">
                 {importing ? 'Đang import...' : `Import ${importPreview?.valid?.length || 0} dòng`}
               </button>
             </div>
@@ -785,47 +783,47 @@ const FinanceManagementPage = () => {
       )}
 
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex justify-center items-start pt-10 pb-10 overflow-y-auto backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-xl">{createForm.id ? 'Sửa doanh thu' : 'Nhập doanh thu trực tiếp'}</h3>
-              <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+        <div className="e-modal-backdrop z-50 flex justify-center items-start py-10 px-4 overflow-y-auto">
+          <div className="e-modal max-w-3xl overflow-hidden my-auto">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">{createForm.id ? 'Sửa doanh thu' : 'Nhập doanh thu trực tiếp'}</h3>
+              <button onClick={() => setShowCreateModal(false)} title="Đóng" className="e-icon-btn w-8 h-8 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleCreateSubmit} className="e-modal-body space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Ngày <span className="text-red-500">*</span></label>
-                  <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
+                  <label className="e-label">Ngày <span className="text-danger-500">*</span></label>
+                  <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Họ tên khách hàng <span className="text-red-500">*</span></label>
-                  <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập tên..." />
+                  <label className="e-label">Họ tên khách hàng <span className="text-danger-500">*</span></label>
+                  <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="e-input" placeholder="Nhập tên..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
-                  <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Nhập SĐT..." />
+                  <label className="e-label">Số điện thoại <span className="text-danger-500">*</span></label>
+                  <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="e-input" placeholder="Nhập SĐT..." />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Dịch vụ sử dụng <span className="text-red-500">*</span></label>
-                  <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="Ví dụ: Nâng mũi" />
+                  <label className="e-label">Dịch vụ sử dụng <span className="text-danger-500">*</span></label>
+                  <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="e-input" placeholder="Ví dụ: Nâng mũi" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nhóm dịch vụ <span className="text-red-500">*</span></label>
-                  <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                  <label className="e-label">Nhóm dịch vụ <span className="text-danger-500">*</span></label>
+                  <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="e-input cursor-pointer">
                     <option value="Hàm mặt">Hàm mặt</option>
                     <option value="Body">Body</option>
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nguồn khách <span className="text-red-500">*</span></label>
-                  <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                  <label className="e-label">Nguồn khách <span className="text-danger-500">*</span></label>
+                  <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="e-input cursor-pointer">
                     <option value="Ads">Ads</option>
                     <option value="Seeding">Seeding</option>
                     <option value="CTV">CTV</option>
@@ -834,8 +832,8 @@ const FinanceManagementPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Tệp khách <span className="text-red-500">*</span></label>
-                  <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                  <label className="e-label">Tệp khách <span className="text-danger-500">*</span></label>
+                  <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="e-input cursor-pointer">
                     <option value="Mới">Khách Mới</option>
                     <option value="Cũ">Khách Cũ</option>
                   </select>
@@ -844,19 +842,19 @@ const FinanceManagementPage = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu tổng (VNĐ) <span className="text-red-500">*</span></label>
-                  <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-700 font-bold" placeholder="0" />
+                  <label className="e-label">Doanh thu tổng (VNĐ) <span className="text-danger-500">*</span></label>
+                  <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="e-input text-teal-700 font-bold tabular-nums" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Doanh thu Upsale (VNĐ)</label>
-                  <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-purple-700 font-bold" placeholder="0" />
+                  <label className="e-label">Doanh thu Upsale (VNĐ)</label>
+                  <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="e-input font-bold tabular-nums" placeholder="0" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
-                  <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                  <label className="e-label">Sale Offline phụ trách</label>
+                  <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="e-input cursor-pointer">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline' || s.role === 'admin').map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -864,8 +862,8 @@ const FinanceManagementPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
-                  <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                  <label className="e-label">Telesale phụ trách</label>
+                  <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="e-input cursor-pointer">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin').map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -873,8 +871,8 @@ const FinanceManagementPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
-                  <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none bg-white">
+                  <label className="e-label">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
+                  <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="e-input cursor-pointer">
                     <option value="">-- Không có --</option>
                     {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
                       <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -884,12 +882,12 @@ const FinanceManagementPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ghi chú thêm</label>
-                <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none resize-none" placeholder="Nhập ghi chú..."></textarea>
+                <label className="e-label">Ghi chú thêm</label>
+                <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="e-textarea resize-none" placeholder="Nhập ghi chú..."></textarea>
               </div>
 
-              <div className="pt-4 flex justify-end">
-                <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">
+              <div className="e-modal-footer -mx-5 -mb-4 mt-2">
+                <button type="submit" disabled={saving} className="e-btn e-btn-primary">
                   {saving ? 'Đang lưu...' : (createForm.id ? 'Cập nhật' : 'Nhập Doanh Thu')}
                 </button>
               </div>
