@@ -39,11 +39,11 @@ import {
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
-  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
-import { HeroCard, QuickActions, StatCard, Panel } from '@/components/overview/OverviewKit.jsx';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
+import { Panel } from '@/components/overview/OverviewKit.jsx';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
 
 // Bố cục menu theo Ethics BOS: mục cha (grp_*) chỉ để gom nhóm, bấm để mở/đóng;
 // id các mục con GIỮ NGUYÊN như cũ nên không ảnh hưởng điều hướng / thông báo.
@@ -127,11 +127,15 @@ const Overview = ({ profile, setActiveTab }) => {
   const [loading, setLoading] = useState(true);
   const [sub, setSub] = useState('tong_quan');
   const [rangeKey, setRangeKey] = useState('30d');
+  const [reloadKey, setReloadKey] = useState(0);      // bấm "Làm mới" -> tải lại số liệu
+  const [refreshing, setRefreshing] = useState(false);
+  const [gran, setGran] = useState('day');            // biểu đồ doanh thu: 15 ngày | 12 tháng
+  const [apptQ, setApptQ] = useState('');             // tìm trong lịch hẹn hôm nay
   const [d, setD] = useState({
     totalStaff: 0, presentToday: 0, appointmentsToday: 0, pendingExpenses: 0, pendingLeaves: 0,
     monthRevenue: 0, todayRevenue: 0, closeRate: 0, newCustomers: 0, scTotal: 0,
     newStaffMonth: 0, apptTrend: null, revTrend: null, revMonthTrend: null, closeTrend: null, newCustTrend: null, rev6mTrend: null,
-    revenue6m: [], services: [], todayList: [], weekly: [], newCust6w: [], topConsultants: [],
+    revenue6m: [], services: [], todayList: [], todayAll: [], weekly: [], newCust6w: [], topConsultants: [],
     ranges: { '7d': [], '30d': [], '6m': [], '12m': [] },
   });
 
@@ -154,7 +158,7 @@ const Overview = ({ profile, setActiveTab }) => {
         supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('customer_appointments')
-          .select('id, customer_name, service, status, appointment_date, surgery_date, revenue, telesale_id, created_at')
+          .select('id, customer_name, service, status, appointment_date, appointment_time, surgery_date, revenue, telesale_id, created_at')
           .or(`appointment_date.gte.${twelveStart},surgery_date.gte.${twelveStart},created_at.gte.${twelveStart}`)
           .limit(8000),
       ]);
@@ -166,7 +170,11 @@ const Overview = ({ profile, setActiveTab }) => {
 
       const monthRevenue = appts.filter(a => a.status === 'phau_thuat' && inMonth(a.surgery_date)).reduce((s, a) => s + Number(a.revenue || 0), 0);
       const todayRevenue = appts.filter(a => a.status === 'phau_thuat' && a.surgery_date === todayStr).reduce((s, a) => s + Number(a.revenue || 0), 0);
-      const todayAppts = appts.filter(a => a.appointment_date === todayStr).sort((x, z) => (x.created_at || '').localeCompare(z.created_at || ''));
+      // Giờ hẹn -> số phút (để '9:00' đứng trước '10:00:00'); chưa có giờ xếp cuối
+      const tKey = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? String(Number(m[1]) * 60 + Number(m[2])).padStart(4, '0') : '9999'; };
+      // Lịch hẹn hôm nay: xếp theo GIỜ hẹn (chưa có giờ xuống cuối), rồi thời điểm tạo
+      const todayAppts = appts.filter(a => a.appointment_date === todayStr).sort((x, z) =>
+        tKey(x.appointment_time).localeCompare(tKey(z.appointment_time)) || (x.created_at || '').localeCompare(z.created_at || ''));
 
       const leadsM = appts.filter(a => inMonth(a.appointment_date));
       const closedM = leadsM.filter(a => a.status === 'coc' || a.status === 'phau_thuat');
@@ -212,8 +220,13 @@ const Overview = ({ profile, setActiveTab }) => {
       const ranges = { '7d': revByDay(7), '30d': revByDay(30), '6m': revByMon(6), '12m': revByMon(12) };
 
       const tcMap = {};
-      leadsM.forEach(a => { if (a.telesale_id) tcMap[a.telesale_id] = (tcMap[a.telesale_id] || 0) + 1; });
-      const topConsultants = Object.entries(tcMap).map(([id, count]) => ({ name: nameOf[id] || 'Nhân viên', count })).sort((a, b) => b.count - a.count).slice(0, 3);
+      const tcClosed = {};
+      leadsM.forEach(a => {
+        if (!a.telesale_id) return;
+        tcMap[a.telesale_id] = (tcMap[a.telesale_id] || 0) + 1;
+        if (a.status === 'coc' || a.status === 'phau_thuat') tcClosed[a.telesale_id] = (tcClosed[a.telesale_id] || 0) + 1;
+      });
+      const topConsultants = Object.entries(tcMap).map(([id, count]) => ({ name: nameOf[id] || 'Nhân viên', count, closed: tcClosed[id] || 0, rate: count ? Math.round((tcClosed[id] || 0) / count * 100) : 0 })).sort((a, b) => b.count - a.count).slice(0, 3);
 
       setD({
         totalStaff: staff.length, presentToday: at.count || 0, appointmentsToday: todayAppts.length,
@@ -227,26 +240,18 @@ const Overview = ({ profile, setActiveTab }) => {
         newCustTrend: pctT(leadsM.length, prevLeads.length),
         rev6mTrend: pctT(revenue6m[5]?.revenue || 0, revenue6m[0]?.revenue || 0),
         revenue6m, services: services.map(s => ({ ...s, pct: scTotal ? Math.round(s.value / scTotal * 100) : 0 })),
-        todayList: todayAppts.slice(0, 6), weekly, newCust6w, topConsultants, ranges,
+        todayList: todayAppts.slice(0, 6), todayAll: todayAppts, weekly, newCust6w, topConsultants, ranges,
       });
       setLoading(false);
+      setRefreshing(false);
     };
     load();
-  }, []);
+  }, [reloadKey]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-[3px] border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
   );
 
-  const trendPct = (v) => v == null ? null : { up: v >= 0, txt: `${v >= 0 ? '↑' : '↓'} ${Math.abs(v)}%` };
-  const presentPct = d.totalStaff ? Math.round(d.presentToday / d.totalStaff * 100) : 0;
-  const weekTotal = d.weekly.reduce((t, x) => t + x.v, 0);
-  const statsDesktop = [
-    { label: 'Tổng nhân sự', value: d.totalStaff, icon: Users, color: '#067B7F', tab: 'hr', trend: d.newStaffMonth > 0 ? { up: true, txt: `+${d.newStaffMonth}` } : null, sub: d.newStaffMonth > 0 ? 'mới trong tháng' : 'đang hoạt động' },
-    { label: 'Khách mới tháng', value: d.newCustomers, icon: UserCheck, color: '#8B7BD8', tab: 'khach_tu_van', trend: trendPct(d.newCustTrend), sub: 'so với tháng trước' },
-    { label: 'Tỷ lệ chốt', value: d.closeRate + '%', icon: Target, color: '#5B8DD6', tab: 'khach_tu_van', trend: d.closeTrend != null ? { up: d.closeTrend >= 0, txt: `${d.closeTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.closeTrend)}%` } : null, sub: 'cọc + phẫu thuật' },
-    { label: 'Lịch hẹn tuần này', value: weekTotal, icon: CalendarDays, color: '#E5A13C', tab: 'appointments', sub: 'từ Thứ 2 tới CN' },
-  ];
   const reminders = [
     { label: 'Phiếu chi chờ duyệt', sub: 'Cần xử lý sớm', count: d.pendingExpenses, tab: 'advances', cls: 'bg-rose-50 text-rose-600' },
     { label: 'Đơn nghỉ phép chờ', sub: 'Chờ phê duyệt', count: d.pendingLeaves, tab: 'hr', cls: 'bg-amber-50 text-amber-600' },
@@ -263,120 +268,161 @@ const Overview = ({ profile, setActiveTab }) => {
       </div>
 
       {sub === 'tong_quan' && <>
-      {/* Thẻ chào + điểm vận hành hôm nay */}
-      <HeroCard
-        profile={profile}
-        roleLabel="Quản trị viên"
-        ring={{ value: presentPct, label: 'Nhân sự có mặt hôm nay', sub: `${d.presentToday}/${d.totalStaff} người đã chấm công`, onClick: () => setActiveTab('hr') }}
-        stats={[
-          { label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, sub: d.apptTrend != null ? `${d.apptTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.apptTrend)}% so với hôm qua` : 'cuộc hẹn', subTone: d.apptTrend != null ? (d.apptTrend >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-500 font-semibold') : undefined, onClick: () => setActiveTab('appointments') },
-          { label: 'Doanh thu hôm nay', value: fmtVND(d.todayRevenue), sub: d.revTrend != null ? `${d.revTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.revTrend)}% so với hôm qua` : 'từ ca phẫu thuật', subTone: d.revTrend != null ? (d.revTrend >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-500 font-semibold') : undefined, onClick: () => setActiveTab('finance') },
-          { label: 'Doanh thu tháng', value: fmtVND(d.monthRevenue), sub: d.revMonthTrend != null ? `${d.revMonthTrend >= 0 ? '↑' : '↓'} ${Math.abs(d.revMonthTrend)}% so với tháng trước` : 'tháng này', subTone: d.revMonthTrend != null ? (d.revMonthTrend >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-500 font-semibold') : undefined, onClick: () => setActiveTab('finance') },
-          { label: 'Cần phê duyệt', value: d.pendingExpenses + d.pendingLeaves, sub: `${d.pendingExpenses} phiếu chi · ${d.pendingLeaves} nghỉ phép`, subTone: (d.pendingExpenses + d.pendingLeaves) > 0 ? 'text-amber-600 font-semibold' : undefined, onClick: () => setActiveTab(d.pendingExpenses ? 'advances' : 'hr') },
-        ]}
-      />
+      {/* Thanh lọc (Ethics D01) */}
+      <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-2.5 flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-2 h-10 px-3.5 rounded-xl border border-slate-200 text-[13.5px] font-semibold text-slate-700">
+          <CalendarDays className="w-4 h-4 text-teal-600" />Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
+        </span>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input value={apptQ} onChange={e => setApptQ(e.target.value)} placeholder="Tìm lịch hẹn hôm nay theo khách hàng, dịch vụ…"
+            className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-[13.5px] outline-none focus:bg-white focus:border-teal-400" />
+        </div>
+        <button onClick={() => { setRefreshing(true); setReloadKey(k => k + 1); }} disabled={refreshing} title="Làm mới số liệu"
+          className="w-10 h-10 rounded-xl border border-slate-200 grid place-items-center text-slate-600 hover:bg-teal-50 hover:text-teal-700 disabled:opacity-60">
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
-      {/* Thao tác nhanh */}
-      <QuickActions onSelect={setActiveTab} items={[
-        { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#067B7F' },
-        { id: 'data_kh', label: 'Khách hàng', icon: Database, color: '#5B8DD6' },
-        { id: 'deposit_management', label: 'Đặt cọc', icon: ClipboardList, color: '#8B7BD8' },
-        { id: 'khach_phau_thuat', label: 'Phẫu thuật', icon: Activity, color: '#3FA7A2' },
-        { id: 'hr', label: 'Nhân sự', icon: Users, color: '#E5A13C' },
-        { id: 'finance', label: 'Doanh thu', icon: Banknote, color: '#5BAE7B' },
-        { id: 'pl', label: 'Lãi / Lỗ', icon: PieChart, color: '#C46FB0' },
-        { id: 'notifications', label: 'Thông báo', icon: Bell, color: '#D9635C' },
-      ]} />
+      {(d.pendingExpenses + d.pendingLeaves) > 0 && (
+        <button onClick={() => setActiveTab(d.pendingExpenses ? 'advances' : 'hr')} className="w-full text-left rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 flex items-center gap-2 text-[13px] text-amber-800 hover:bg-amber-100/60">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">Đang chờ duyệt: <b>{d.pendingExpenses}</b> phiếu chi · <b>{d.pendingLeaves}</b> đơn nghỉ phép</span>
+          <span className="font-semibold inline-flex items-center gap-0.5">Xử lý <ChevronRight className="w-4 h-4" /></span>
+        </button>
+      )}
 
-      {/* Chỉ số chính */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        {statsDesktop.map(c => (
-          <StatCard key={c.label} icon={c.icon} label={c.label} value={c.value} color={c.color} trend={c.trend} sub={c.sub} bar={c.bar} onClick={() => setActiveTab(c.tab)} />
+      {/* 4 chỉ số chính */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
+        {[
+          { icon: CircleDollarSign, label: 'Doanh thu', value: d.monthRevenue >= 1e10 ? fmtVND(d.monthRevenue) : new Intl.NumberFormat('vi-VN').format(Math.round(d.monthRevenue)) + 'đ', full: new Intl.NumberFormat('vi-VN').format(Math.round(d.monthRevenue)) + 'đ', delta: d.revMonthTrend, note: 'so với tháng trước', tab: 'finance' },
+          { icon: Users, label: 'Khách hàng mới', value: d.newCustomers.toLocaleString('vi-VN'), delta: d.newCustTrend, note: 'so với tháng trước', tab: 'khach_tu_van' },
+          { icon: CalendarCheck, label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, delta: d.apptTrend, note: 'so với hôm qua', tab: 'appointments' },
+          { icon: Target, label: 'Tỷ lệ chốt', value: d.closeRate + '%', delta: d.closeTrend, unit: ' điểm', note: 'so với tháng trước', tab: 'khach_tu_van' },
+        ].map(m => (
+          <button key={m.label} onClick={() => setActiveTab(m.tab)} title={m.full || undefined} className="text-left rounded-2xl bg-white border border-slate-200/80 shadow-card p-4 lg:p-5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 hover:border-teal-200 transition min-w-0">
+            <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><m.icon className="w-5 h-5 sm:w-6 sm:h-6" /></span>
+            <div className="min-w-0">
+              <div className="text-[12.5px] sm:text-[13.5px] text-slate-500">{m.label}</div>
+              <div className="text-[18px] sm:text-[22px] font-bold text-slate-900 tabular-nums leading-tight truncate">{m.value}</div>
+              {m.delta != null
+                ? <div className={`text-[12px] sm:text-[12.5px] font-semibold mt-0.5 ${m.delta >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{m.delta >= 0 ? '▲' : '▼'} {Math.abs(m.delta)}{m.unit || '%'} <span className="hidden sm:inline font-normal text-slate-400">{m.note}</span></div>
+                : <div className="text-[12px] text-slate-400 mt-0.5">Chưa có kỳ trước</div>}
+            </div>
+          </button>
         ))}
       </div>
 
-      {/* Doanh thu + Lịch hẹn hôm nay */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <Panel className="xl:col-span-8" title="Doanh thu 6 tháng gần đây" action={<span className="text-[12px] font-semibold text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1">6 tháng</span>}>
-          <div className="flex items-center gap-2">
-            <div className="text-[24px] font-bold text-slate-900">{fmtVND(d.revenue6m.reduce((s, x) => s + x.revenue, 0) * 1000000)}</div>
-            {d.rev6mTrend != null && <span className={`text-xs font-bold ${d.rev6mTrend >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{d.rev6mTrend >= 0 ? '↑' : '↓'} {Math.abs(d.rev6mTrend)}%</span>}
-          </div>
-          <div className="text-[11.5px] text-slate-400">tháng này so với 6 tháng trước</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={d.revenue6m} margin={{ top: 12, right: 6, left: -18, bottom: 0 }}>
-              <defs><linearGradient id="revA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#12A4A5" stopOpacity={0.3} /><stop offset="100%" stopColor="#12A4A5" stopOpacity={0} /></linearGradient></defs>
-              <CartesianGrid vertical={false} stroke="#EEF2F2" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#97A4A5' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#97A4A5' }} width={40} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} formatter={(v) => [`${v} Tr`, 'Doanh thu']} />
-              <Area type="monotone" dataKey="revenue" stroke="#067B7F" strokeWidth={2.5} fill="url(#revA)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </Panel>
-        <Panel className="xl:col-span-4" title="Lịch hẹn hôm nay" action={<button onClick={() => setActiveTab('appointments')} className="text-[12.5px] text-teal-700 font-semibold inline-flex items-center gap-0.5 hover:underline">Mở lịch <ChevronRight className="w-3.5 h-3.5" /></button>}>
-          {d.todayList.length === 0 ? <div className="text-sm text-slate-400 py-10 text-center">Hôm nay chưa có lịch hẹn</div> : (
-          <div className="divide-y divide-slate-100">
-            {d.todayList.map(a => (
-              <div key={a.id} className="flex items-center gap-3 py-2.5">
-                <span className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 grid place-items-center text-[11px] font-bold shrink-0">{initials(a.customer_name)}</span>
-                <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold text-slate-800 truncate">{a.customer_name}</div><div className="text-[11.5px] text-slate-400 truncate">{a.service || '—'}</div></div>
-                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${APPT_ST[a.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{APPT_ST[a.status]?.label || a.status}</span>
-              </div>
+      {/* Biểu đồ: doanh thu theo thời gian + cơ cấu dịch vụ */}
+      <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1fr] gap-4">
+        <Panel title="Doanh thu theo thời gian" action={
+          <div className="flex p-1 rounded-xl bg-slate-100">
+            {[['day', '15 ngày'], ['month', '12 tháng']].map(([k, l]) => (
+              <button key={k} onClick={() => setGran(k)} className={`h-7 px-3 rounded-lg text-[12.5px] font-semibold whitespace-nowrap transition ${gran === k ? 'bg-white text-teal-700 shadow-soft' : 'text-slate-500'}`}>{l}</button>
             ))}
-          </div>)}
+          </div>}>
+          {(() => {
+            const base = gran === 'day' ? (d.ranges['30d'] || []).slice(-15) : (d.ranges['12m'] || []);
+            const series = base.map((x, i) => {
+              const win = base.slice(Math.max(0, i - 2), i + 1);
+              return { ...x, trend: Math.round(win.reduce((t, w) => t + w.value, 0) / win.length) };
+            });
+            const total = base.reduce((t, x) => t + x.value, 0);
+            return (
+              <>
+                <div className="text-[12.5px] text-slate-500 -mt-1">Tổng {gran === 'day' ? '15 ngày gần nhất' : '12 tháng gần nhất'}: <b className="text-slate-900">{fmtVND(total)}</b></div>
+                <div className="h-[250px] mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={series} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+                      <defs><linearGradient id="dashBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#068A8C" /><stop offset="100%" stopColor="#76C2C3" stopOpacity={0.55} /></linearGradient></defs>
+                      <CartesianGrid vertical={false} stroke="#EAF4F4" />
+                      <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#A3ABAA' }} interval="preserveStartEnd" minTickGap={8} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#A3ABAA' }} width={48} tickFormatter={(v) => (v >= 1e9 ? (v / 1e9).toFixed(1).replace(/\.0$/, '') + ' Tỷ' : v >= 1e6 ? Math.round(v / 1e6) + ' Tr' : v)} />
+                      <Tooltip cursor={{ fill: 'rgba(18,164,165,0.06)' }} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 12px 40px rgba(7,95,99,0.14)', fontSize: 12 }} formatter={(v, n) => [new Intl.NumberFormat('vi-VN').format(v) + 'đ', n === 'trend' ? 'Xu hướng' : 'Doanh thu']} />
+                      <Bar dataKey="value" name="value" fill="url(#dashBar)" radius={[6, 6, 2, 2]} maxBarSize={26} />
+                      <Line dataKey="trend" name="trend" type="monotone" stroke="#12A4A5" strokeWidth={2.5} dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            );
+          })()}
+        </Panel>
+
+        <Panel title="Cơ cấu dịch vụ" action={<span className="text-[12px] text-slate-400">theo lượt khách · 12 tháng</span>}>
+          {d.services.length === 0 ? <div className="text-sm text-slate-400 py-16 text-center">Chưa có dữ liệu</div> : (
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(170px,0.9fr)_1fr] items-center gap-6 py-2">
+              <div className="relative aspect-square w-full max-w-[230px] justify-self-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RPieChart>
+                    <Pie data={d.services} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="100%" startAngle={90} endAngle={-270} paddingAngle={1.2} stroke="none">
+                      {d.services.map((x, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', fontSize: 12 }} formatter={(v) => [`${v} lượt`, 'Khách']} />
+                  </RPieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <b className="text-[28px] font-bold text-slate-900 tracking-tight">{d.scTotal.toLocaleString('vi-VN')}</b>
+                  <span className="text-[12px] text-slate-500">Lượt khách</span>
+                </div>
+              </div>
+              <ul className="space-y-3.5">
+                {d.services.map((x, i) => (
+                  <li key={x.name} className="flex items-center gap-2.5 text-[13.5px]">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                    <span className="flex-1 min-w-0 truncate text-slate-700">{x.name}</span>
+                    <span className="font-semibold text-slate-900 tabular-nums">{x.pct}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Panel>
       </div>
 
-      {/* Hàng phân tích */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Panel title="Cơ cấu dịch vụ">
-          {d.services.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu</div> : (
-          <div className="flex items-center gap-3">
-            <div className="relative w-[110px] h-[110px] shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <RPieChart><Pie data={d.services} dataKey="value" nameKey="name" innerRadius={36} outerRadius={53} paddingAngle={2} stroke="none">{d.services.map((s, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}</Pie></RPieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center"><div className="text-lg font-bold text-slate-800">{d.scTotal}</div><div className="text-[10px] text-slate-400">Khách</div></div>
-            </div>
-            <div className="flex-1 min-w-0 space-y-1.5">
-              {d.services.map((s, i) => (
-                <div key={s.name} className="flex items-center gap-2 text-xs"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} /><span className="flex-1 min-w-0 truncate text-slate-600">{s.name}</span><span className="font-bold text-slate-700">{s.pct}%</span></div>
+      {/* Hàng dưới: hiệu suất tư vấn + lịch hẹn hôm nay */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1.19fr_1fr] gap-4">
+        <Panel title="Hiệu suất tư vấn tháng này" action={<button onClick={() => setActiveTab('kpi')} className="text-[12.5px] text-teal-700 font-semibold hover:underline">Xem KPI</button>}>
+          {d.topConsultants.length === 0 ? <div className="text-sm text-slate-400 py-10 text-center">Chưa có dữ liệu tháng này</div> : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {d.topConsultants.map((t, i) => (
+                <div key={t.name} className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-teal-50/40 p-4 flex flex-col gap-2 min-w-0">
+                  <span className="flex items-center gap-2 text-[13px] text-slate-600 font-medium min-w-0">
+                    <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-extrabold text-white shrink-0 ${i === 0 ? 'bg-amber-400' : i === 1 ? 'bg-slate-300' : 'bg-orange-300'}`}>{i + 1}</span>
+                    <span className="truncate">{t.name}</span>
+                  </span>
+                  <span className="text-[28px] font-bold text-slate-900 tabular-nums leading-tight">{t.count}<span className="text-[13px] font-medium text-slate-400"> khách</span></span>
+                  <span className="text-[13px] font-semibold text-emerald-600">Chốt {t.closed} · {t.rate}%</span>
+                </div>
               ))}
             </div>
-          </div>)}
+          )}
         </Panel>
-        <Panel title="Lịch hẹn tuần này" action={<span className="text-[18px] font-bold text-slate-900 tabular-nums">{d.weekly.reduce((s, x) => s + x.v, 0)}</span>}>
-          <ResponsiveContainer width="100%" height={130}>
-            <BarChart data={d.weekly} margin={{ top: 8, right: 0, left: -28, bottom: 0 }}>
-              <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#97A4A5' }} />
-              <YAxis hide /><Tooltip cursor={{ fill: '#EEF2F2' }} contentStyle={{ borderRadius: 10, border: 'none', fontSize: 12 }} formatter={(v) => [v, 'Lịch hẹn']} />
-              <Bar dataKey="v" radius={[6, 6, 0, 0]} fill="#12A4A5" barSize={16} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Panel>
-        <Panel title="Top tư vấn tháng" action={<button onClick={() => setActiveTab('khach_tu_van')} className="text-[12.5px] text-teal-700 font-semibold hover:underline">Xem</button>}>
-          {d.topConsultants.length === 0 ? <div className="text-sm text-slate-400 py-4 text-center">Chưa có dữ liệu</div> : (
-          <div className="space-y-2.5">
-            {d.topConsultants.map((t, i) => (
-              <div key={t.name} className="flex items-center gap-2.5">
-                <span className={`w-7 h-7 rounded-full grid place-items-center text-xs font-extrabold shrink-0 text-white ${i === 0 ? 'bg-amber-400' : i === 1 ? 'bg-slate-300' : 'bg-orange-300'}`}>{i + 1}</span>
-                <span className="flex-1 min-w-0 truncate text-sm font-semibold text-slate-700">{t.name}</span>
-                <span className="text-xs font-bold text-teal-700 shrink-0">{t.count} khách</span>
-              </div>
-            ))}
-          </div>)}
-        </Panel>
-        <Panel title="Nhắc việc / Phê duyệt">
-          <div className="space-y-1">
-            {reminders.map(r => (
-              <button key={r.label} onClick={() => setActiveTab(r.tab)} className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 transition text-left">
-                <span className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${r.cls}`}><AlertCircle className="w-4 h-4" /></span>
-                <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-slate-700 truncate">{r.label}</div><div className="text-[11px] text-slate-400 truncate">{r.sub}</div></div>
-                <span className="text-sm font-bold text-slate-700 shrink-0">{r.count}</span>
-              </button>
-            ))}
-          </div>
+
+        <Panel title="Lịch hẹn hôm nay" action={<button onClick={() => setActiveTab('appointments')} className="text-[12.5px] text-teal-700 font-semibold inline-flex items-center gap-0.5 hover:underline">Xem tất cả <ChevronRight className="w-3.5 h-3.5" /></button>}>
+          {(() => {
+            const nq = apptQ.trim().toLowerCase();
+            const list = d.todayAll.filter(a => !nq || `${a.customer_name || ''} ${a.service || ''}`.toLowerCase().includes(nq));
+            if (!list.length) return <div className="text-sm text-slate-400 py-10 text-center">{nq ? `Không có lịch hẹn nào khớp “${apptQ}”` : 'Hôm nay chưa có lịch hẹn'}</div>;
+            return (
+              <ul className="-mx-1.5">
+                {list.slice(0, 6).map(a => (
+                  <li key={a.id}>
+                    <button onClick={() => setActiveTab('appointments')} title={a.service || ''} className="w-full grid grid-cols-[24px_52px_minmax(0,1fr)_auto] items-center gap-3 min-h-[50px] px-1.5 py-1 rounded-xl hover:bg-slate-50 text-left">
+                      <span className="w-6 h-6 rounded-full bg-teal-50 text-teal-600 grid place-items-center"><Clock className="w-3.5 h-3.5" /></span>
+                      <span className="text-[14px] font-medium text-slate-700 tabular-nums">{a.appointment_time ? String(a.appointment_time).slice(0, 5) : '--:--'}</span>
+                      <span className="min-w-0 flex flex-col">
+                        <span className="text-[14px] font-medium text-slate-900 truncate">{a.customer_name}</span>
+                        <small className="text-[12px] text-slate-500 truncate">{String(a.service || '—').replace('[Tái khám] ', 'Tái khám · ')}</small>
+                      </span>
+                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${APPT_ST[a.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{APPT_ST[a.status]?.label || a.status}</span>
+                    </button>
+                  </li>
+                ))}
+                {list.length > 6 && <li className="px-1.5 pt-1 text-[12.5px] text-slate-500">+{list.length - 6} lịch hẹn khác</li>}
+              </ul>
+            );
+          })()}
         </Panel>
       </div>
       </>}
