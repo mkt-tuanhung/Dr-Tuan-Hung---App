@@ -7,11 +7,11 @@ import {
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
   Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile,
-  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search, ScanFace
+  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search, ScanFace, CalendarRange, PhoneCall
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import MySchedulePage from '@/features/hr/MySchedulePage.jsx';
-import { HeroCard, CheckinStrip, QuickActions, StatCard, Panel } from '@/components/overview/OverviewKit.jsx';
+import { HeroCard, CheckinStrip, QuickActions, StatCard, Panel, MobileTiles, MobileQuick } from '@/components/overview/OverviewKit.jsx';
 import { APPT_TONE } from '@/features/appointments/calendarUtils';
 
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -93,7 +93,7 @@ const EditorOverview = ({ profile, setActiveTab }) => {
   );
 };
 
-const Overview = ({ profile, setActiveTab, available = [] }) => {
+const Overview = ({ profile, setActiveTab, available = [], onScan }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
   const [showSalary, setShowSalary] = useState(false); // mặc định ẩn lương, bấm mắt mới hiện
 
@@ -177,6 +177,7 @@ const Overview = ({ profile, setActiveTab, available = [] }) => {
   // Thao tác nhanh — chỉ hiện chức năng nhân sự này được dùng
   const QUICK = [
     { id: 'attendance', label: 'Chấm công', icon: ScanFace, color: '#067B7F' },
+    { id: 'my_schedule', label: 'Lịch làm việc', icon: CalendarRange, color: '#3CA7A9' },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays, color: '#5B8DD6' },
     { id: 'data_kh', label: 'Khách hàng', icon: Database, color: '#3FA7A2' },
     { id: 'kpi', label: 'KPI của tôi', icon: Target, color: '#D9635C' },
@@ -218,8 +219,21 @@ const Overview = ({ profile, setActiveTab, available = [] }) => {
 
   return (
     <div className="space-y-4 lg:space-y-5">
-      <HeroCard profile={profile} roleLabel={roleLabel} ring={ring} stats={heroStats} extra={salaryLine} />
-      {can('attendance') && <CheckinStrip profile={profile} onOpen={() => setActiveTab('attendance')} />}
+      <div className="hidden lg:block"><HeroCard profile={profile} roleLabel={roleLabel} ring={ring} stats={heroStats} extra={salaryLine} /></div>
+      {can('attendance') && <CheckinStrip profile={profile} onOpen={() => setActiveTab('attendance')} onScan={onScan} />}
+      {/* Điện thoại (Ethics M03): ô chức năng lớn + số nhanh nền mint */}
+      <div className="lg:hidden space-y-3.5">
+        <MobileTiles items={QUICK.slice(0, 6)} onSelect={(id) => (id === 'attendance' && onScan ? onScan() : setActiveTab(id))} />
+        {!isEditor && !isAccountant && (
+          <MobileQuick items={[
+            { icon: CalendarCheck, label: 'Ngày công tháng', value: show(stats.workingDays), onClick: can('attendance') ? () => setActiveTab('attendance') : undefined },
+            { icon: CalendarDays, label: 'Lịch hẹn hôm nay', value: show(stats.todayAppts), onClick: can('appointments') ? () => setActiveTab('appointments') : undefined },
+            canData
+              ? { icon: PhoneCall, label: 'Khách cần gọi', value: dueCalls.n, onClick: () => setActiveTab('data_kh') }
+              : { icon: Target, label: 'KPI tháng', value: `${kpi}%`, onClick: can('kpi') ? () => setActiveTab('kpi') : undefined },
+          ]} />
+        )}
+      </div>
       {isEditor && <EditorOverview profile={profile} setActiveTab={setActiveTab} />}
       {(can('appointments') || canData) && !isEditor && !isAccountant && (
         <div className={`grid grid-cols-1 gap-4 ${can('appointments') && canData ? 'lg:grid-cols-2' : ''}`}>
@@ -263,7 +277,40 @@ const Overview = ({ profile, setActiveTab, available = [] }) => {
           )}
         </div>
       )}
-      <QuickActions items={QUICK} onSelect={setActiveTab} />
+      <div className="hidden lg:block"><QuickActions items={QUICK} onSelect={setActiveTab} /></div>
+      {/* Điện thoại: "Tháng này" (Ethics M03) */}
+      {!isEditor && !isAccountant && (
+        <div className="lg:hidden">
+          <h2 className="text-[18px] font-bold text-slate-900 mt-1 mb-3">Tháng này</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={can('kpi') ? () => setActiveTab('kpi') : undefined} disabled={!can('kpi')} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 text-left flex flex-col gap-1 min-w-0 disabled:cursor-default">
+              <span className="text-[12.5px] text-slate-500">KPI tháng</span>
+              <b className="text-[22px] text-slate-900 leading-tight tabular-nums">{stats.kpiPct === null ? '—' : `${kpi}%`}</b>
+              <span className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><span className="block h-full rounded-full bg-gradient-to-r from-[#067B7F] to-[#3CA7A9]" style={{ width: `${Math.min(100, kpi)}%` }} /></span>
+              <small className="text-[11.5px] text-slate-400 truncate">{ring?.sub}</small>
+            </button>
+            <button onClick={can('attendance') ? () => setActiveTab('attendance') : undefined} disabled={!can('attendance')} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 text-left flex flex-col gap-1 min-w-0 disabled:cursor-default">
+              <span className="text-[12.5px] text-slate-500">Công tháng</span>
+              <b className="text-[22px] text-slate-900 leading-tight tabular-nums">{show(stats.workingDays)} ngày</b>
+              <small className="text-[11.5px] text-slate-400">{profile?.employment_status === 'probation' ? 'Thử việc (85%)' : 'Chính thức'}</small>
+            </button>
+            <button onClick={can('advances') ? () => setActiveTab('advances') : undefined} disabled={!can('advances')} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 text-left flex flex-col gap-1 min-w-0 disabled:cursor-default">
+              <span className="text-[12.5px] text-slate-500">Tạm ứng</span>
+              <b className="text-[18px] text-slate-900 leading-tight tabular-nums truncate">{stats.advance === null ? '—' : new Intl.NumberFormat('vi-VN').format(stats.advance) + 'đ'}</b>
+              <small className="text-[11.5px] text-slate-400">{stats.advance ? 'trừ vào lương' : 'không có'}</small>
+            </button>
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 flex flex-col gap-1 min-w-0">
+              <span className="text-[12.5px] text-slate-500 flex items-center justify-between gap-1">Lương cơ bản
+                <button onClick={() => setShowSalary(v => !v)} title={showSalary ? 'Ẩn lương' : 'Hiện lương'} className="text-slate-400 hover:text-slate-700 p-0.5">
+                  {showSalary ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </span>
+              <b className="text-[18px] text-teal-700 leading-tight tabular-nums truncate">{showSalary ? fmt(profile?.base_salary) : '••••••••'}</b>
+              <small className="text-[11.5px] text-slate-400">Bấm mắt để xem</small>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -332,7 +379,7 @@ const StaffDashboard = () => {
   }, [profile]);
 
   const renderContent = () => {
-    if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} available={flatMenu.map(m => m.id)} />;
+    if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} available={flatMenu.map(m => m.id)} onScan={canCheckIn ? () => { setActiveTab('attendance'); setScanReq(n => n + 1); } : undefined} />;
     if (activeTab === 'attendance') return <AttendancePage autoScan={scanReq} onAutoScanDone={() => setScanReq(0)} />;
     if (activeTab === 'my_schedule') return <MySchedulePage />;
     if (activeTab === 'kpi') {
@@ -411,6 +458,7 @@ const StaffDashboard = () => {
       roleLabel={profile?.position || roleLabel}
       bottomItems={bottomItems}
       centerAction={centerAction}
+      homeId={flatMenu.some(m => m.id === 'overview') ? 'overview' : flatMenu[0]?.id}
     >
       {renderContent()}
     </AppShell>

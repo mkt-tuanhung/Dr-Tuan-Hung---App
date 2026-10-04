@@ -12,11 +12,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, Clock, BadgeCheck } from 'lucide-react';
+import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, Clock, BadgeCheck, ChevronRight, UserPlus, Phone, X } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
-const AV_TONES = ['bg-teal-50 text-teal-700', 'bg-lavender-50 text-lavender-600', 'bg-peach-50 text-peach-600', 'bg-info-50 text-info-600', 'bg-success-50 text-success-600', 'bg-rose-50 text-rose-600'];
-const avTone = (n) => AV_TONES[[...(n || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_TONES.length];
 const avInit = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
 // Format số tiền VND có dấu chấm
@@ -79,6 +77,9 @@ const StaffManagementPage = ({ isNested = false }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [viewQR, setViewQR] = useState(null);
+  // Điện thoại (Ethics "Nhân sự & tài khoản"): lọc nhanh + bảng thao tác theo từng người
+  const [mFilter, setMFilter] = useState('all');
+  const [sheet, setSheet] = useState(null);
 
   const loadStaff = async () => {
     setLoading(true);
@@ -98,6 +99,17 @@ const StaffManagementPage = ({ isNested = false }) => {
     s.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
     s.phone?.includes(search)
   );
+
+  const M_FILTERS = [
+    { id: 'all', label: 'Tất cả', test: () => true },
+    { id: 'active', label: 'Đang làm', test: (s) => s.is_active },
+    { id: 'probation', label: 'Thử việc', test: (s) => s.is_active && s.employment_status === 'probation' },
+    { id: 'locked', label: 'Đã khoá', test: (s) => !s.is_active },
+  ];
+  const mTest = (M_FILTERS.find(f => f.id === mFilter) || M_FILTERS[0]).test;
+  const mList = filtered.filter(mTest);
+  const mCount = (id) => staff.filter(M_FILTERS.find(f => f.id === id).test).length;
+  const sheetAct = (fn) => () => { const s = sheet; setSheet(null); fn(s); };
 
   const openCreate = () => {
     setEditTarget(null);
@@ -275,7 +287,7 @@ const StaffManagementPage = ({ isNested = false }) => {
 
       {/* Stat cards */}
       {!loading && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div className="hidden lg:grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           {[
             { label: 'Tổng nhân sự', icon: Users, tone: 'teal', value: staff.length, sub: 'trong hệ thống' },
             { label: 'Đang làm việc', icon: UserCheck, tone: 'violet', value: staff.filter(s => s.is_active).length, sub: 'đang hoạt động' },
@@ -295,16 +307,46 @@ const StaffManagementPage = ({ isNested = false }) => {
         </div>
       )}
 
+      {/* Điện thoại: ô số đếm (bấm để lọc) */}
+      {!loading && (
+        <div className="lg:hidden grid grid-cols-4 gap-2">
+          {[
+            { id: 'all', label: 'Nhân sự', cls: 'text-teal-700' },
+            { id: 'active', label: 'Đang làm', cls: 'text-success-600' },
+            { id: 'probation', label: 'Thử việc', cls: 'text-warning-600' },
+            { id: 'locked', label: 'Đã khoá', cls: 'text-danger-600' },
+          ].map(t => (
+            <button key={t.id} onClick={() => setMFilter(t.id)}
+              className={`rounded-2xl border px-2.5 py-2.5 text-left min-w-0 transition ${mFilter === t.id ? 'border-teal-500 bg-teal-50/70' : 'border-slate-200/80 bg-white shadow-soft'}`}>
+              <b className={`block text-[22px] font-bold leading-tight tabular-nums ${t.cls}`}>{mCount(t.id)}</b>
+              <span className="block text-[11.5px] text-slate-500 leading-tight truncate">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Thanh lọc / công cụ (mockup 05: ô tìm bên trái, nút thêm bên phải) */}
       <div className="e-toolbar">
         <div className="e-search flex-1 min-w-[160px] sm:max-w-[340px]">
           <Search />
           <input placeholder="Tìm theo tên, ID, SĐT…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <button onClick={openCreate} className="e-btn e-btn-primary ml-auto shrink-0">
+        <button onClick={openCreate} className="e-btn e-btn-primary ml-auto shrink-0 hidden lg:inline-flex">
           <Plus /> Thêm nhân sự
         </button>
       </div>
+
+      {/* Điện thoại: chip lọc */}
+      {!loading && (
+        <div className="lg:hidden flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+          {M_FILTERS.map(f => (
+            <button key={f.id} onClick={() => setMFilter(f.id)}
+              className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-semibold border transition ${mFilter === f.id ? 'bg-teal-700 border-teal-700 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
+              {f.label}<span className={mFilter === f.id ? 'text-white/80' : 'text-slate-400'}>{mCount(f.id)}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
@@ -313,7 +355,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="e-card e-table-wrap overflow-x-auto">
+          <div className="e-card e-table-wrap overflow-x-auto hidden lg:block">
             <table className="e-table min-w-[860px]">
               <thead className="text-slate-500">
                 <tr>
@@ -399,55 +441,82 @@ const StaffManagementPage = ({ isNested = false }) => {
             </table>
           </div>
 
-          {/* Mobile card list */}
-          <div className="hidden">
-            {filtered.length === 0 && (
-              <div className="text-center py-10 text-slate-400">Không tìm thấy nhân sự</div>
+          {/* Điện thoại: thẻ nhân sự (Ethics) — bấm để mở bảng thao tác */}
+          <div className="lg:hidden space-y-2.5 pb-16">
+            {mList.length === 0 && (
+              <div className="e-empty"><div className="e-empty-icon"><Users /></div><div className="e-empty-title">Không tìm thấy nhân sự</div></div>
             )}
-            {filtered.map(s => (
-              <div key={s.id} className={`bg-white border border-slate-100 rounded-2xl p-4 shadow-sm ${!s.is_active ? 'opacity-50' : ''}`}>
-                <div className="flex gap-3">
-                  <div className={`relative w-14 h-14 rounded-full overflow-hidden shrink-0 grid place-items-center font-extrabold text-base ${s.avatar_url ? '' : avTone(s.full_name)}`}>
-                    {s.avatar_url ? <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" /> : avInit(s.full_name)}
-                    {s.is_active && <span className="absolute right-0.5 bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-extrabold text-slate-800 text-[17px] leading-tight truncate">{s.full_name}</div>
-                    <div className="text-[13px] text-slate-400 mt-0.5 truncate">{s.employee_id} · {s.phone || 'Chưa có SĐT'}</div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full ${ROLE_COLORS[s.role] || 'bg-slate-100 text-slate-600'}`}>{ROLE_LABELS[s.role] || s.role}</span>
-                    {s.employment_status === 'probation'
-                      ? <span className="text-[11px] font-bold text-orange-600 border border-orange-200 bg-orange-50 rounded-full px-2.5 py-0.5">Thử việc</span>
-                      : <span className="text-[11px] font-bold text-teal-700 border border-teal-200 bg-teal-50 rounded-full px-2.5 py-0.5">Chính thức</span>}
-                  </div>
-                </div>
-                <div className="flex items-end justify-between gap-2 mt-3">
-                  <div className="min-w-0">
-                    <div className="text-[12.5px] text-slate-400">Lương cơ bản</div>
-                    <div className={`text-[16px] font-extrabold mt-0.5 ${s.base_salary ? 'text-teal-700' : 'text-slate-300'}`}>{fmt(s.base_salary)}</div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => handleImpersonate(s)} title="Đăng nhập với tư cách" className="w-10 h-10 rounded-xl border border-slate-100 text-teal-600 flex items-center justify-center hover:bg-teal-50"><LogIn className="w-4 h-4" /></button>
-                    <button onClick={() => openEdit(s)} title="Sửa" className="w-10 h-10 rounded-xl border border-slate-100 text-blue-500 flex items-center justify-center hover:bg-blue-50"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="w-10 h-10 rounded-xl border border-slate-100 text-amber-500 flex items-center justify-center hover:bg-amber-50"><UserX className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(s)} title="Xóa hẳn" className="w-10 h-10 rounded-xl border border-slate-100 text-rose-500 flex items-center justify-center hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-                {(s.employment_status === 'probation' || (s.bank_name && s.bank_account)) && (
-                  <div className="flex items-center gap-2 mt-2.5">
-                    {s.employment_status === 'probation' && (
-                      <button onClick={() => handleEndProbation(s)} className="flex-1 h-9 text-xs font-semibold rounded-xl border border-teal-200 text-teal-600 hover:bg-teal-50 flex items-center justify-center gap-1"><UserCheck className="w-3.5 h-3.5" /> Kết thúc thử việc</button>
-                    )}
-                    {s.bank_name && s.bank_account && (
-                      <button onClick={() => setViewQR(s)} className="h-9 px-3 rounded-xl border border-teal-100 text-teal-600 hover:bg-teal-50 flex items-center justify-center gap-1.5 text-xs font-bold"><QrCode className="w-4 h-4" /> QR lương</button>
-                    )}
-                  </div>
-                )}
-              </div>
+            {mList.map(s => (
+              <button key={s.id} onClick={() => setSheet(s)}
+                className={`w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft px-3.5 py-3 flex items-center gap-3 text-left active:bg-teal-50/40 transition ${!s.is_active ? 'opacity-60' : ''}`}>
+                <span className={`w-12 h-12 rounded-full overflow-hidden shrink-0 grid place-items-center text-[15px] font-bold ${s.avatar_url ? '' : 'bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700'}`}>
+                  {s.avatar_url ? <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" /> : avInit(s.full_name)}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[15px] font-semibold text-slate-900 truncate">{s.full_name}</span>
+                  <span className="block text-[12.5px] text-slate-500 truncate">{[s.employee_id, s.position].filter(Boolean).join(' · ')}</span>
+                  <span className="block text-[12.5px] text-teal-700 truncate">{[s.role, s.role_2].filter(Boolean).map(r => ROLE_LABELS[r] || r).join(' · ')}</span>
+                </span>
+                {!s.is_active
+                  ? <span className="e-badge e-badge-sm e-tone-neutral shrink-0">Đã khoá</span>
+                  : s.employment_status === 'probation'
+                    ? <span className="e-badge e-badge-sm e-tone-warning shrink-0">Thử việc</span>
+                    : <span className="e-badge e-badge-sm e-tone-success shrink-0">Hoạt động</span>}
+                <ChevronRight className="w-[18px] h-[18px] text-slate-400 shrink-0" />
+              </button>
             ))}
           </div>
+
+          {/* Điện thoại: nút nổi Thêm nhân sự */}
+          <button onClick={openCreate}
+            className="lg:hidden fixed right-4 bottom-[calc(88px+env(safe-area-inset-bottom))] z-20 inline-flex items-center gap-2 h-12 pl-4 pr-5 rounded-full text-white text-[14.5px] font-semibold shadow-nav bg-gradient-to-br from-[#067B7F] to-[#3CA7A9] active:scale-95 transition">
+            <UserPlus className="w-5 h-5" /> Thêm nhân sự
+          </button>
         </>
+      )}
+
+      {/* Điện thoại: bảng thao tác cho 1 nhân sự */}
+      {sheet && (
+        <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+          <div className="e-modal-backdrop" onClick={() => setSheet(null)} />
+          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto animate-page">
+            <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />
+            <div className="flex items-center gap-3">
+              <span className={`w-14 h-14 rounded-full overflow-hidden shrink-0 grid place-items-center text-[17px] font-bold ${sheet.avatar_url ? '' : 'bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700'}`}>
+                {sheet.avatar_url ? <img src={sheet.avatar_url} alt={sheet.full_name} className="w-full h-full object-cover" /> : avInit(sheet.full_name)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[17px] font-bold text-slate-900 truncate">{sheet.full_name}</div>
+                <div className="text-[13px] text-slate-500 truncate">{[sheet.employee_id, sheet.position].filter(Boolean).join(' · ')}</div>
+              </div>
+              <button onClick={() => setSheet(null)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="e-subtle mt-3 px-3.5 py-2.5 grid grid-cols-2 gap-y-2 gap-x-3">
+              <div><div className="e-kv-label">Vị trí</div><div className="e-kv-value truncate">{[sheet.role, sheet.role_2].filter(Boolean).map(r => ROLE_LABELS[r] || r).join(' · ')}</div></div>
+              <div><div className="e-kv-label">Trạng thái</div><div className="e-kv-value">{!sheet.is_active ? 'Đã khoá' : sheet.employment_status === 'probation' ? 'Thử việc' : 'Chính thức'}</div></div>
+              <div><div className="e-kv-label">Lương cơ bản</div><div className="e-kv-value tabular-nums">{fmt(sheet.base_salary)}</div></div>
+              <div><div className="e-kv-label">Phụ cấp</div><div className="e-kv-value tabular-nums">{fmt(sheet.allowance)}</div></div>
+              <div className="col-span-2"><div className="e-kv-label">Số điện thoại</div><div className="e-kv-value tabular-nums">{sheet.phone || '—'}</div></div>
+            </div>
+            <div className="mt-3 divide-y divide-slate-100">
+              {[
+                { show: true, icon: Pencil, label: 'Sửa thông tin', fn: openEdit },
+                { show: sheet.employment_status === 'probation', icon: UserCheck, label: 'Kết thúc thử việc', fn: handleEndProbation },
+                { show: !!(sheet.bank_name && sheet.bank_account), icon: QrCode, label: 'QR nhận lương (VietQR)', fn: setViewQR },
+                { show: !!sheet.phone, icon: Phone, label: 'Gọi điện', href: `tel:${sheet.phone}` },
+                { show: true, icon: LogIn, label: 'Đăng nhập với tư cách', fn: handleImpersonate },
+                { show: true, icon: UserX, label: sheet.is_active ? 'Khoá tài khoản' : 'Mở khoá tài khoản', fn: handleToggleActive, warn: true },
+                { show: true, icon: Trash2, label: 'Xoá hẳn nhân sự', fn: handleDelete, danger: true },
+              ].filter(a => a.show).map(a => {
+                const cls = `w-full flex items-center gap-3 h-12 px-1 text-[15px] font-medium text-left ${a.danger ? 'text-danger-600' : a.warn ? 'text-warning-600' : 'text-slate-800'}`;
+                const inner = <><span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${a.danger ? 'bg-danger-50' : a.warn ? 'bg-warning-50' : 'bg-teal-50 text-teal-700'}`}><a.icon className="w-[18px] h-[18px]" /></span><span className="flex-1">{a.label}</span><ChevronRight className="w-4 h-4 text-slate-300" /></>;
+                return a.href
+                  ? <a key={a.label} href={a.href} className={cls}>{inner}</a>
+                  : <button key={a.label} onClick={sheetAct(a.fn)} className={cls}>{inner}</button>;
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* QR Code Dialog */}
