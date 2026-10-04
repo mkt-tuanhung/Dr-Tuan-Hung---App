@@ -118,18 +118,18 @@ const KHO_PHASES = [
 ];
 const SOURCE_STATUS = {
   chua_dung: { label: 'Chưa dựng', cls: 'bg-slate-100 text-slate-600' },
-  dang_dung: { label: 'Đang dựng', cls: 'bg-blue-100 text-blue-700' },
-  da_dung: { label: 'Đã dựng', cls: 'bg-teal-100 text-teal-700' },
-  loi: { label: 'Source lỗi', cls: 'bg-rose-100 text-rose-700' },
-  can_bo_sung: { label: 'Cần bổ sung', cls: 'bg-amber-100 text-amber-700' },
+  dang_dung: { label: 'Đang dựng', cls: 'bg-warning-50 text-warning-600' },
+  da_dung: { label: 'Đã dựng', cls: 'bg-success-50 text-success-600' },
+  loi: { label: 'Source lỗi', cls: 'bg-danger-50 text-danger-600' },
+  can_bo_sung: { label: 'Cần bổ sung', cls: 'bg-peach-50 text-peach-600' },
 };
 // Phân loại điểm video thành phẩm do Ads chấm (1-10)
 const scoreCat = (score, win) => {
   const n = Number(score) || 0;
-  if (win || n >= 10) return { label: 'WIN', cls: 'bg-amber-100 text-amber-700', warn: false };
-  if (n >= 8) return { label: 'Tốt', cls: 'bg-teal-100 text-teal-700', warn: false };
-  if (n >= 5) return { label: 'Trung bình', cls: 'bg-yellow-100 text-yellow-700', warn: false };
-  if (n > 0) return { label: 'Tệ', cls: 'bg-rose-100 text-rose-700', warn: true };
+  if (win || n >= 10) return { label: 'WIN', cls: 'bg-peach-50 text-peach-600', warn: false };
+  if (n >= 8) return { label: 'Tốt', cls: 'bg-success-50 text-success-600', warn: false };
+  if (n >= 5) return { label: 'Trung bình', cls: 'bg-warning-50 text-warning-600', warn: false };
+  if (n > 0) return { label: 'Tệ', cls: 'bg-danger-50 text-danger-600', warn: true };
   return { label: 'Chưa chấm', cls: 'bg-slate-100 text-slate-500', warn: false };
 };
 // Tự chấm Win/điểm theo định nghĩa Ads (CPA mục tiêu = ngân sách ÷ số điện thoại)
@@ -165,21 +165,21 @@ const matchScoreFilter = (c, f) => {
   return true;
 };
 const STAGE = {
-  submitted: { label: 'Chờ Ads duyệt', cls: 'bg-amber-100 text-amber-700' },
-  revision: { label: 'Cần sửa', cls: 'bg-rose-100 text-rose-700' },
-  approved: { label: 'Đã duyệt', cls: 'bg-violet-100 text-violet-700' },
-  done: { label: 'Hoàn tất', cls: 'bg-teal-100 text-teal-700' },
+  submitted: { label: 'Chờ Ads duyệt', cls: 'bg-warning-50 text-warning-600' },
+  revision: { label: 'Cần sửa', cls: 'bg-danger-50 text-danger-600' },
+  approved: { label: 'Đã duyệt', cls: 'bg-success-50 text-success-600' },
+  done: { label: 'Hoàn tất', cls: 'bg-success-50 text-success-600' },
 };
-const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-teal-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-amber-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
+const AD_STATUS = { dang_chay: { label: 'Đang chạy', cls: 'text-success-600', icon: PlayCircle }, tam_dung: { label: 'Tạm dừng', cls: 'text-warning-600', icon: PauseCircle }, chua_chay: { label: 'Chưa chạy', cls: 'text-slate-400', icon: Circle } };
 
 // Trạng thái campaign lấy trực tiếp từ Facebook Ads Manager (effective_status).
 // Gom về 3 nhóm hiển thị: đang chạy / đang duyệt / đã tắt.
 const FB_REVIEW = ['IN_PROCESS', 'PENDING_REVIEW', 'PREAPPROVED', 'PENDING_BILLING_INFO', 'WITH_ISSUES'];
 const fbStatusInfo = (s) => {
   if (!s) return null;
-  if (s === 'ACTIVE') return { kind: 'running', label: 'Đang chạy', cls: 'bg-emerald-100 text-emerald-700' };
-  if (FB_REVIEW.includes(s)) return { kind: 'review', label: 'Đang duyệt', cls: 'bg-amber-100 text-amber-700' };
-  return { kind: 'off', label: 'Đã tắt', cls: 'bg-slate-200 text-slate-600' };
+  if (s === 'ACTIVE') return { kind: 'running', label: 'Đang chạy', cls: 'bg-success-50 text-success-600' };
+  if (FB_REVIEW.includes(s)) return { kind: 'review', label: 'Đang duyệt', cls: 'bg-warning-50 text-warning-600' };
+  return { kind: 'off', label: 'Đã tắt', cls: 'bg-slate-100 text-slate-600' };
 };
 // Nhóm trạng thái của 1 clip: ưu tiên trạng thái thật từ Facebook; nếu chưa đồng bộ thì tạm dựa vào cờ cũ.
 const fbKind = (c) => {
@@ -196,10 +196,10 @@ const cleanName = (s) => String(s || '').replace(/^[\d.\-/\s]+/, '').trim() || S
 // Nhãn theo CHI PHÍ/SĐT khi clip còn đang chạy & chưa tiêu quá ngân sách Win.
 const cpaTier = (cpa) => {
   if (cpa == null) return { text: 'Đang chạy — chưa đủ dữ liệu', cls: 'bg-slate-100 text-slate-500' };
-  if (cpa < 800000) return { text: 'Chỉ số Tốt', cls: 'bg-emerald-100 text-emerald-700' };
-  if (cpa < 1000000) return { text: 'Tiềm năng', cls: 'bg-teal-100 text-teal-700' };
-  if (cpa <= 1200000) return { text: 'Bình thường', cls: 'bg-amber-100 text-amber-700' };
-  return { text: 'Báo động', cls: 'bg-rose-100 text-rose-700' };
+  if (cpa < 800000) return { text: 'Chỉ số Tốt', cls: 'bg-success-50 text-success-600' };
+  if (cpa < 1000000) return { text: 'Tiềm năng', cls: 'bg-teal-50 text-teal-800' };
+  if (cpa <= 1200000) return { text: 'Bình thường', cls: 'bg-warning-50 text-warning-600' };
+  return { text: 'Báo động', cls: 'bg-danger-50 text-danger-600' };
 };
 
 // Clip MỚI chạy chỉ số còn ít -> chưa vội chấm. Chỉ chấm điểm khi:
@@ -263,7 +263,7 @@ const VideoPreview = ({ url, className = 'max-w-[300px] mx-auto aspect-[9/16] ma
   const emb = embedUrl(url);
   if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className={`${VIDEO_BASE} ${className}`} />;
   if (isVideoFile(url)) return <video src={url} controls playsInline preload="metadata" className={`${VIDEO_BASE} ${className}`} />;
-  return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Mở clip</a>;
+  return <a href={url} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-teal-700 hover:underline inline-flex items-center gap-1"><ExternalLink className="w-3.5 h-3.5" /> Mở clip</a>;
 };
 const thumbSrc = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w600` : url; };
 const imgFull = (url) => { const id = driveId(url); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1600` : url; };
@@ -324,31 +324,31 @@ const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày qu
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(o => !o)} className={`px-3 py-2 text-sm rounded-xl border bg-white outline-none inline-flex items-center gap-1.5 ${from && to ? 'border-teal-400 text-teal-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+      <button onClick={() => setOpen(o => !o)} className={`e-chip h-10 rounded-xl ${from && to ? 'e-chip-active' : ''}`}>
         <CalendarDays className="w-4 h-4" /> {label}
       </button>
       {open && (
-        <div className="absolute z-40 mt-1 right-0 w-[290px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3">
-          <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wide mb-2">{headerLabel}</div>
-          <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="e-card absolute z-40 mt-1.5 right-0 w-[296px] max-w-[calc(100vw-32px)] p-3.5 shadow-float">
+          <div className="e-caption mb-2.5">{headerLabel}</div>
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {[['week', 'Tuần này'], ['lastweek', 'Tuần trước'], ['month', 'Tháng này'], ['lastmonth', 'Tháng trước']].map(([k, l]) => (
-              <button key={k} onClick={() => preset(k)} className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-700">{l}</button>
+              <button key={k} onClick={() => preset(k)} className="e-chip h-7 px-2.5 text-[12px]">{l}</button>
             ))}
           </div>
-          <div className="flex items-center justify-between mb-1">
-            <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} className="p-1 hover:bg-slate-100 rounded"><ChevronLeft className="w-4 h-4" /></button>
-            <span className="text-sm font-semibold">Tháng {view.getMonth() + 1}/{view.getFullYear()}</span>
-            <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() + 1, 1))} className="p-1 hover:bg-slate-100 rounded"><ChevronRight className="w-4 h-4" /></button>
+          <div className="flex items-center justify-between mb-1.5">
+            <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} className="e-icon-btn w-8 h-8 rounded-lg"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-[14px] font-semibold text-slate-800">Tháng {view.getMonth() + 1}/{view.getFullYear()}</span>
+            <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() + 1, 1))} className="e-icon-btn w-8 h-8 rounded-lg"><ChevronRight className="w-4 h-4" /></button>
           </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-slate-400 mb-1">{VN_DOW.map(d => <div key={d}>{d}</div>)}</div>
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] font-medium text-slate-400 mb-1">{VN_DOW.map(d => <div key={d}>{d}</div>)}</div>
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((d, i) => d === null ? <div key={i} /> : (
-              <button key={i} onClick={() => pickDay(d)} className={`h-8 text-xs rounded-lg ${isEnd(d) ? 'bg-teal-600 text-white font-bold' : inRange(d) ? 'bg-teal-100 text-teal-700' : 'hover:bg-slate-100 text-slate-600'}`}>{d.getDate()}</button>
+              <button key={i} onClick={() => pickDay(d)} className={`h-8 text-[12px] rounded-lg tabular-nums transition ${isEnd(d) ? 'bg-teal-600 text-white font-bold' : inRange(d) ? 'bg-teal-50 text-teal-800 font-semibold' : 'hover:bg-slate-100 text-slate-600'}`}>{d.getDate()}</button>
             ))}
           </div>
-          <div className="flex justify-between gap-2 mt-3">
-            <button onClick={() => { setA(null); setB(null); onApply('', ''); setOpen(false); }} className="px-3 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50">Xoá lọc</button>
-            <button onClick={() => { onApply(ymd(a), ymd(b || a)); setOpen(false); }} disabled={!a} className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50">Lọc</button>
+          <div className="flex justify-between gap-2 mt-3 pt-3 border-t border-slate-100">
+            <button onClick={() => { setA(null); setB(null); onApply('', ''); setOpen(false); }} className="e-btn e-btn-secondary e-btn-sm">Xoá lọc</button>
+            <button onClick={() => { onApply(ymd(a), ymd(b || a)); setOpen(false); }} disabled={!a} className="e-btn e-btn-primary e-btn-sm px-5">Lọc</button>
           </div>
         </div>
       )}
@@ -777,16 +777,16 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <div className="min-w-0">
+          <h2 className="sr-only">
             {tab === 'overview' ? <><LayoutDashboard className="w-6 h-6 text-teal-600" /> Tổng quan Marketing</>
               : tab === 'kho' ? <><FolderOpen className="w-6 h-6 text-teal-600" /> Kho Media</>
-              : tab === 'video' ? <><PlayCircle className="w-6 h-6 text-violet-600" /> Video Ads</>
-              : <><Image className="w-6 h-6 text-fuchsia-600" /> Thư viện ảnh</>}
+              : tab === 'video' ? <><PlayCircle className="w-6 h-6 text-teal-600" /> Video Ads</>
+              : <><Image className="w-6 h-6 text-teal-600" /> Thư viện ảnh</>}
           </h2>
-          <p className="text-slate-400 text-sm mt-0.5">
+          <p className="e-page-desc">
             {tab === 'overview' ? 'Tổng hợp hiệu suất Video Ads · chỉ số chiến dịch · bảng điểm editor'
               : tab === 'kho' ? 'Media up nguồn → Editor dựng clip cho từng khách'
               : tab === 'video' ? 'Ads duyệt clip · gán chiến dịch · theo dõi chỉ số & chấm Win'
@@ -797,25 +797,25 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           <div className="flex items-center gap-2 flex-wrap">
             {khoMode === 'library' ? (
               <>
-                <button onClick={() => setKhoMode('sources')} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><FolderOpen className="w-4 h-4" /> Quản lý nguồn</button>
-                <button onClick={scanAllFiles} disabled={scanningFiles} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">{scanningFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Kết nối Drive</button>
+                <button onClick={() => setKhoMode('sources')} className="e-btn e-btn-secondary"><FolderOpen className="w-4 h-4" /> Quản lý nguồn</button>
+                <button onClick={scanAllFiles} disabled={scanningFiles} className="e-btn e-btn-outline">{scanningFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Kết nối Drive</button>
               </>
             ) : (
               <>
-                <button onClick={() => setKhoMode('library')} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><LayoutGrid className="w-4 h-4" /> Thư viện</button>
-                {canAddMedia && <button onClick={() => setAutoImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600"><FolderOpen className="w-4 h-4" /> Tự động thêm nguồn</button>}
-                <button onClick={rescanAll} disabled={scanningAll} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 disabled:opacity-60">{scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả</button>
+                <button onClick={() => setKhoMode('library')} className="e-btn e-btn-secondary"><LayoutGrid className="w-4 h-4" /> Thư viện</button>
+                {canAddMedia && <button onClick={() => setAutoImportOpen(true)} className="e-btn e-btn-outline"><FolderOpen className="w-4 h-4" /> Tự động thêm nguồn</button>}
+                <button onClick={rescanAll} disabled={scanningAll} className="e-btn e-btn-outline">{scanningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi tất cả</button>
               </>
             )}
             {canAddMedia && (
-              <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
+              <button onClick={() => setAddOpen(true)} className="e-btn e-btn-primary">
                 <Plus className="w-4 h-4" /> Thêm media
               </button>
             )}
           </div>
         )}
         {tab === 'video' && canEdit && (
-          <button onClick={() => setAddVideoOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700">
+          <button onClick={() => setAddVideoOpen(true)} className="e-btn e-btn-primary">
             <Plus className="w-4 h-4" /> Thêm Video Ads
           </button>
         )}
@@ -832,57 +832,57 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         </div>
       )}
 
-      <div className={`gap-2 flex-wrap ${(tab === 'overview' || (tab === 'kho' && khoMode === 'library')) ? 'hidden' : 'flex'}`}>
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'video' ? 'Tìm theo tên / SĐT / ID chiến dịch…' : 'Tìm theo tên / SĐT khách…'} className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
+      <div className={`e-toolbar ${(tab === 'overview' || (tab === 'kho' && khoMode === 'library')) ? 'hidden' : 'flex'}`}>
+        <div className="e-search flex-1 min-w-[200px]">
+          <Search />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'video' ? 'Tìm theo tên / SĐT / ID chiến dịch…' : 'Tìm theo tên / SĐT khách…'} />
         </div>
         {tab === 'kho' && (
           <>
-            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={khoStatus} onChange={e => setKhoStatus(e.target.value)} className="e-input w-auto flex-1 sm:flex-none min-w-[140px]">
               <option value="">Mọi trạng thái source</option>
               {Object.entries(SOURCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
-            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={khoService} onChange={e => setKhoService(e.target.value)} className="e-input w-auto flex-1 sm:flex-none min-w-[140px]">
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <DateRangeFilter from={khoFrom} to={khoTo} onApply={(f, t) => { setKhoFrom(f); setKhoTo(t); }} />
-            <select value={khoStale} onChange={e => setKhoStale(Number(e.target.value))} className={`flex-1 sm:flex-none min-w-[150px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border outline-none ${khoStale ? 'border-amber-400 bg-amber-50 text-amber-700 font-semibold' : 'border-slate-200 bg-white'}`}>
+            <select value={khoStale} onChange={e => setKhoStale(Number(e.target.value))} className={`e-input w-auto flex-1 sm:flex-none min-w-[150px] ${khoStale ? 'border-teal-400 bg-teal-50 text-teal-800 font-semibold' : ''}`}>
               <option value={0}>Mọi nguồn (tồn đọng)</option>
               <option value={7}>Tồn đọng &gt; 7 ngày</option>
               <option value={14}>Tồn đọng &gt; 14 ngày</option>
               <option value={30}>Tồn đọng &gt; 30 ngày</option>
             </select>
             {allTags.length > 0 && (
-              <select value={khoTag} onChange={e => setKhoTag(e.target.value)} className={`flex-1 sm:flex-none min-w-[130px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border outline-none ${khoTag ? 'border-indigo-400 bg-indigo-50 text-indigo-700 font-semibold' : 'border-slate-200 bg-white'}`}>
+              <select value={khoTag} onChange={e => setKhoTag(e.target.value)} className={`e-input w-auto flex-1 sm:flex-none min-w-[130px] ${khoTag ? 'border-teal-400 bg-teal-50 text-teal-800 font-semibold' : ''}`}>
                 <option value="">Mọi nhãn</option>
                 {allTags.map(t => <option key={t} value={t}>#{t}</option>)}
               </select>
             )}
-            {khoUndone && <span className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-teal-600 text-white font-semibold">Chưa dựng<button onClick={() => setKhoUndone(false)}><X className="w-3.5 h-3.5" /></button></span>}
-            {(khoStatus || khoService || khoFrom || khoTo || khoStale || khoTag || khoUndone) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); setKhoTag(''); setKhoUndone(false); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
-            <div className="flex rounded-xl border border-slate-200 overflow-hidden">
-              <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`px-2.5 py-2 ${khoView === 'list' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
-              <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`px-2.5 py-2 ${khoView === 'card' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
+            {khoUndone && <span className="e-chip e-chip-active h-10">Chưa dựng<button onClick={() => setKhoUndone(false)} className="w-5 h-5 grid place-items-center rounded-full hover:bg-teal-100"><X className="w-3.5 h-3.5" /></button></span>}
+            {(khoStatus || khoService || khoFrom || khoTo || khoStale || khoTag || khoUndone) && <button onClick={() => { setKhoStatus(''); setKhoService(''); setKhoFrom(''); setKhoTo(''); setKhoStale(0); setKhoTag(''); setKhoUndone(false); }} className="e-btn e-btn-ghost">Xoá lọc</button>}
+            <div className="e-seg sm:ml-auto">
+              <button onClick={() => setKhoView('list')} title="Xem danh sách" className={`e-seg-item px-2.5 ${khoView === 'list' ? 'e-seg-active' : ''}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setKhoView('card')} title="Xem thẻ" className={`e-seg-item px-2.5 ${khoView === 'card' ? 'e-seg-active' : ''}`}><LayoutGrid className="w-4 h-4" /></button>
             </div>
           </>
         )}
         {tab === 'video' && (
           <>
-            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={videoScore} onChange={e => setVideoScore(e.target.value)} className="e-input w-auto flex-1 sm:flex-none min-w-[140px]">
               <option value="">Mọi mức điểm</option>
               {Object.entries(SCORE_FILTERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
-            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="flex-1 sm:flex-none min-w-[140px] px-3 py-2.5 sm:py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white">
+            <select value={videoService} onChange={e => setVideoService(e.target.value)} className="e-input w-auto flex-1 sm:flex-none min-w-[140px]">
               <option value="">Mọi dịch vụ</option>
               {SERVICE_GROUPS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
             </select>
             <DateRangeFilter from={videoFrom} to={videoTo} headerLabel="Lọc theo ngày dựng" onApply={(f, t) => { setVideoFrom(f); setVideoTo(t); }} />
-            {(videoScore || videoService || videoFrom || videoTo) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); }} className="px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50">Xoá lọc</button>}
-            <div className="flex rounded-xl border border-slate-200 overflow-hidden ml-auto">
-              <button onClick={() => setVideoView('card')} title="Xem thẻ" className={`px-3 py-2 ${videoView === 'card' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><List className="w-4 h-4" /></button>
-              <button onClick={() => setVideoView('grid')} title="Xem lưới" className={`px-3 py-2 ${videoView === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}><LayoutGrid className="w-4 h-4" /></button>
+            {(videoScore || videoService || videoFrom || videoTo) && <button onClick={() => { setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo(''); }} className="e-btn e-btn-ghost">Xoá lọc</button>}
+            <div className="e-seg ml-auto">
+              <button onClick={() => setVideoView('card')} title="Xem thẻ" className={`e-seg-item px-2.5 ${videoView === 'card' ? 'e-seg-active' : ''}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setVideoView('grid')} title="Xem lưới" className={`e-seg-item px-2.5 ${videoView === 'grid' ? 'e-seg-active' : ''}`}><LayoutGrid className="w-4 h-4" /></button>
             </div>
           </>
         )}
@@ -895,8 +895,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             const active = khoPhase === p.id;
             return (
               <button key={p.id} onClick={() => setKhoPhase(p.id)}
-                className={`shrink-0 whitespace-nowrap h-9 px-4 rounded-full text-[13.5px] font-bold transition ${active ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/25' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}>
-                {p.label} ({phaseCount(p.id)})
+                className={`e-chip shrink-0 ${active ? 'e-chip-active' : ''}`}>
+                {p.label} <span className={`tabular-nums ${active ? 'text-teal-700' : 'text-slate-400'}`}>{phaseCount(p.id)}</span>
               </button>
             );
           })}
@@ -904,7 +904,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+        <div className="e-card flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : tab === 'overview' ? (
         <AdsOverview clips={clips} stores={stores} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} />
       ) : tab === 'images' ? (
@@ -918,7 +918,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             desc={canAddMedia ? 'Bấm “Thêm media” để up link nguồn và gắn với khách hàng.' : canEdit ? 'Khi Media up nguồn, bạn vào đây bấm “Dựng video” cho từng khách.' : 'Chưa có dữ liệu media.'}
             cta={canAddMedia ? { label: 'Thêm media', onClick: () => setAddOpen(true) } : null} />
         ) : khoView === 'card' ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
               <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={null} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => openSource(s)}
@@ -926,7 +926,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
+          <div className="e-card divide-y divide-slate-100 overflow-hidden">
             {visStores.map(s => (
               <StoreRow key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => openSource(s)}
@@ -938,8 +938,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         <>
           {(canAds || isManager) && <FbSummaryStrip clips={clips} onReport={setActiveTab ? () => setActiveTab('ads_report') : null} />}
           {/* Sub-tab trạng thái — thiết kế nổi bật, "Đang chạy" có hiệu ứng live */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex gap-2 p-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-2xl border border-slate-200/70 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="e-card-flat px-2 sm:px-3 flex items-center gap-x-3 flex-wrap">
+            <div className="e-tabs border-b-0 flex-1 min-w-0">
               {[
                 { k: 'all', label: 'Tất cả', Icon: LayoutGrid, n: reviewClips.length, c: 'teal' },
                 { k: 'running', label: 'Đang chạy', Icon: PlayCircle, n: videoCounts.running, c: 'emerald', live: true },
@@ -948,57 +948,57 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
                 { k: 'pending', label: 'Chờ duyệt', Icon: Clapperboard, n: videoCounts.pending, c: 'violet' },
               ].map(({ k, label, Icon, n, c, live }) => {
                 const active = videoTab === k;
-                const grad = { teal: 'from-teal-500 to-cyan-500', emerald: 'from-emerald-500 to-green-500', amber: 'from-amber-500 to-orange-500', slate: 'from-slate-500 to-slate-600', violet: 'from-violet-500 to-purple-500' }[c];
-                const iconCol = { teal: 'text-teal-500', emerald: 'text-emerald-500', amber: 'text-amber-500', slate: 'text-slate-500', violet: 'text-violet-500' }[c];
+                const grad = { teal: 'bg-teal-500', emerald: 'bg-success-500', amber: 'bg-warning-500', slate: 'bg-slate-400', violet: 'bg-lavender-500' }[c];
+                const iconCol = { teal: 'text-slate-400', emerald: 'text-success-500', amber: 'text-warning-500', slate: 'text-slate-400', violet: 'text-lavender-500' }[c];
                 const inactive = live
-                  ? 'bg-white text-emerald-600 ring-1 ring-emerald-200 shadow-sm hover:ring-emerald-300'
-                  : 'bg-white text-slate-500 shadow-sm hover:text-slate-700 hover:shadow';
+                  ? 'text-success-600'
+                  : 'text-slate-500';
                 return (
                   <button key={k} onClick={() => setVideoTab(k)}
-                    className={`relative shrink-0 whitespace-nowrap inline-flex items-center gap-2 px-4 h-11 rounded-xl text-sm font-bold transition-all duration-200 ${active ? `bg-gradient-to-r ${grad} text-white shadow-lg ${live ? 'tab-live' : ''}` : inactive}`}>
+                    className={`e-tab shrink-0 ${active ? 'e-tab-active' : ''}`}>
                     {live && (
-                      <span className="relative flex h-2.5 w-2.5">
-                        {n > 0 && <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${active ? 'bg-white' : 'bg-emerald-400'}`} />}
-                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${active ? 'bg-white' : 'bg-emerald-500'}`} />
+                      <span className="relative flex h-2 w-2">
+                        {n > 0 && <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping bg-success-400" />}
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success-500" />
                       </span>
                     )}
-                    <Icon className={`w-4 h-4 ${active ? 'text-white' : iconCol}`} />
+                    <Icon className={`w-4 h-4 ${active ? 'text-teal-600' : iconCol}`} />
                     {label}
-                    <span className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+                    <span className={`e-tab-count tabular-nums min-w-[22px] h-5 px-1.5 rounded-full grid place-items-center ${active ? 'bg-teal-50 text-teal-700 font-semibold' : 'bg-slate-100'}`}>{n}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              {canAds && <button onClick={() => setWinModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"><Trophy className="w-4 h-4 text-amber-500" />Định nghĩa Win</button>}
-              {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
+            <div className="ml-auto flex items-center gap-2 py-2">
+              {canAds && <button onClick={() => setWinModal(true)} className="e-btn e-btn-secondary e-btn-sm"><Trophy className="w-4 h-4 text-warning-500" />Định nghĩa Win</button>}
+              {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="e-btn e-btn-outline e-btn-sm">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
             </div>
           </div>
           {reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : videoView === 'grid' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
             {reviewClips.map(c => {
               const st = storeOf(c.media_customer_id);
               const thumb = (c.thumb_links || [])[0];
               const vd = clipVerdict(c, winRule);
               const sc = vd.potential ? { label: vd.tier.text, cls: vd.tier.cls } : scoreCat(c.score, c.win);
               return (
-                <button key={c.id} onClick={() => setVideoFor(c)} className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900 text-left">
+                <button key={c.id} onClick={() => setVideoFor(c)} className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-slate-800 text-left border border-slate-200/80 shadow-card hover:shadow-float transition">
                   {thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="absolute inset-0 grid place-items-center text-white/70"><PlayCircle className="w-8 h-8" /></span>}
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
-                    <span className="block text-white text-[11px] font-semibold truncate">{cleanName(st?.customer_name) || c.title || 'Clip'}</span>
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-2.5 pt-8">
+                    <span className="block text-white text-[12px] font-semibold truncate">{cleanName(st?.customer_name) || c.title || 'Clip'}</span>
                   </span>
-                  <span className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded ${sc.cls}`}>{sc.label}</span>
-                  {c.approved_to_run && <span className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-white">RUN</span>}
-                  {(st?.no_image || st?.hide_face) && <span className="absolute bottom-1.5 right-1.5 text-white bg-rose-600 rounded-full p-1"><Ban className="w-3 h-3" /></span>}
+                  <span className={`absolute top-2 left-2 e-badge e-badge-sm max-w-[calc(100%-56px)] inline-block truncate leading-[22px] ${sc.cls}`}>{sc.label}</span>
+                  {c.approved_to_run && <span className="absolute top-2 right-2 e-badge e-badge-sm bg-success-500 text-white">RUN</span>}
+                  {(st?.no_image || st?.hide_face) && <span className="absolute bottom-2 right-2 text-white bg-danger-500 rounded-full p-1"><Ban className="w-3 h-3" /></span>}
                   <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 grid place-items-center transition"><Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 fill-current" /></span>
                 </button>
               );
             })}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {reviewClips.map(c => (
               <ClipReviewCard key={c.id} c={c} store={storeOf(c.media_customer_id)} me={me} isAdmin={isAdmin} canAds={canAds} winRule={winRule} editorAvg={editorAvg(c.editor_id)}
                 onReview={() => setReviewFor(c)} onEdit={() => setEditClip(c)} onDelete={() => delClip(c.id)} onView={() => setVideoFor(c)} onApproveRun={() => setApproveFor(c)} onSyncFb={syncFbClip} onRemoveFb={removeFbCampaign} onRemoveOneAdId={removeOneAdId} onPostNow={markPostNow} />
@@ -1026,15 +1026,15 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       <ImageLightbox />
       {clipsModal && (
         <Modal title={`Video đã dựng — ${clipsModal.store.customer_name || ''}`} onClose={() => setClipsModal(null)}>
-          {clipsModal.clips.length === 0 ? <p className="text-sm text-slate-400">Chưa có video nào.</p> : (
+          {clipsModal.clips.length === 0 ? <p className="e-empty-desc text-center py-6">Chưa có video nào.</p> : (
             <div className="space-y-2">
               {clipsModal.clips.map(c => { const cat = scoreCat(c.score, c.win); return (
-                <div key={c.id} className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                <div key={c.id} className="e-subtle p-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-700 text-sm truncate">{c.title || '(Chưa đặt tiêu đề)'}</div>
-                    <div className="text-[11px] text-slate-400">{c.editor?.full_name || '—'} · {STAGE[c.stage]?.label || c.stage}{(c.win || c.score > 0) ? ` · ${c.win ? 10 : c.score}/10 ${cat.label}` : ''}</div>
+                    <div className="font-semibold text-slate-800 text-[14px] truncate">{c.title || '(Chưa đặt tiêu đề)'}</div>
+                    <div className="text-[12px] text-slate-500 mt-0.5">{c.editor?.full_name || '—'} · {STAGE[c.stage]?.label || c.stage}{(c.win || c.score > 0) ? ` · ${c.win ? 10 : c.score}/10 ${cat.label}` : ''}</div>
                   </div>
-                  {(c.clip_links || []).length > 0 && <button onClick={() => { setVideoFor(c); setClipsModal(null); }} className="shrink-0 text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 inline-flex items-center gap-1"><PlayCircle className="w-3.5 h-3.5" /> Xem</button>}
+                  {(c.clip_links || []).length > 0 && <button onClick={() => { setVideoFor(c); setClipsModal(null); }} className="e-btn e-btn-outline e-btn-sm shrink-0"><PlayCircle className="w-3.5 h-3.5" /> Xem</button>}
                 </div>); })}
             </div>
           )}
@@ -1072,25 +1072,25 @@ const FeatureCard = ({ tone, icon: Icon, title, sub, active, onClick }) => {
 };
 
 const Empty = ({ icon: Icon, title, desc, cta }) => (
-  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
-    <Icon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-    <p className="text-slate-600 font-semibold">{title}</p>
-    <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto leading-relaxed">{desc}</p>
-    {cta && <button onClick={cta.onClick} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> {cta.label}</button>}
+  <div className="e-card e-empty py-12">
+    <div className="e-empty-icon"><Icon /></div>
+    <p className="e-empty-title">{title}</p>
+    <p className="e-empty-desc max-w-md leading-relaxed">{desc}</p>
+    {cta && <button onClick={cta.onClick} className="e-btn e-btn-primary mt-4"><Plus className="w-4 h-4" /> {cta.label}</button>}
   </div>
 );
 
 const LINK_TONE = {
-  Nguồn: 'border-sky-200 text-sky-700 hover:bg-sky-50 [&_svg]:text-sky-500',
-  Clip: 'border-violet-200 text-violet-700 hover:bg-violet-50 [&_svg]:text-violet-500',
-  Thumb: 'border-amber-200 text-amber-700 hover:bg-amber-50 [&_svg]:text-amber-500',
+  Nguồn: 'border-teal-200 text-teal-800 hover:bg-teal-50 [&_svg]:text-teal-600',
+  Clip: 'border-lavender-200 text-lavender-700 hover:bg-lavender-50 [&_svg]:text-lavender-500',
+  Thumb: 'border-warning-200 text-warning-700 hover:bg-warning-50 [&_svg]:text-warning-500',
 };
 const LinkList = ({ links, label = 'Link', icon: Icon = ExternalLink }) => (
   (links || []).length === 0 ? <span className="text-xs text-slate-300">—</span> :
     <div className="flex flex-wrap gap-1.5">
       {(links || []).map((l, i) => (
         <a key={i} href={l} target="_blank" rel="noreferrer"
-          className={`group inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-lg bg-white border text-xs font-semibold shadow-sm hover:shadow transition-all ${LINK_TONE[label] || 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+          className={`group inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[10px] bg-white border text-[12px] font-semibold transition ${LINK_TONE[label] || 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
           <Icon className="w-3.5 h-3.5" /> {label} {links.length > 1 ? i + 1 : ''}
           <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-70" />
         </a>
@@ -1101,15 +1101,15 @@ const LinkList = ({ links, label = 'Link', icon: Icon = ExternalLink }) => (
 // Thumbnail có fallback khi ảnh lỗi + nút tải (tuỳ chọn)
 const Thumb = ({ url, size = 'h-10 w-10', download = false, idx = 0 }) => {
   const [err, setErr] = useState(false);
-  if (err) return <div className={`${size} rounded-md border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300`}><Image className="w-4 h-4" /></div>;
+  if (err) return <div className={`${size} rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300`}><Image className="w-4 h-4" /></div>;
   return (
     <div className="relative group">
       <button type="button" onClick={() => viewImage(url)} title="Xem ảnh" className="block">
-        <img src={thumbSrc(url)} onError={() => setErr(true)} loading="lazy" alt="thumbnail" className={`${size} object-cover rounded-md border border-slate-200 cursor-zoom-in`} />
+        <img src={thumbSrc(url)} onError={() => setErr(true)} loading="lazy" alt="thumbnail" className={`${size} object-cover rounded-xl border border-slate-200 cursor-zoom-in`} />
       </button>
       {download && (
         <button type="button" onClick={() => downloadFile(url, `thumb-${idx + 1}.jpg`)} title="Tải ảnh về"
-          className="absolute bottom-1 right-1 bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1 shadow opacity-0 group-hover:opacity-100 transition-opacity"><Download className="w-3.5 h-3.5" /></button>
+          className="absolute bottom-1.5 right-1.5 bg-white/95 hover:bg-white text-slate-700 hover:text-teal-700 rounded-lg p-1.5 shadow-soft opacity-0 group-hover:opacity-100 transition-opacity"><Download className="w-3.5 h-3.5" /></button>
       )}
     </div>
   );
@@ -1137,15 +1137,15 @@ const ImageLightbox = () => {
 
 // ---------- Hộp thoại xác nhận (thay confirm mặc định) ----------
 const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk, onClose }) => (
-  <div className="fixed inset-0 bg-slate-900/50 z-[55] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-    <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-      <div className="p-5 flex gap-3">
-        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${danger ? 'bg-rose-50 text-rose-500' : 'bg-amber-50 text-amber-500'}`}><AlertTriangle className="w-5 h-5" /></div>
-        <p className="text-sm text-slate-700 leading-relaxed pt-1.5">{message}</p>
+  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[55] flex items-center justify-center p-4" onClick={onClose}>
+    <div className="e-modal max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="e-modal-body pt-5 flex gap-3.5">
+        <div className={`w-11 h-11 shrink-0 rounded-full grid place-items-center ${danger ? 'bg-danger-50 text-danger-600' : 'bg-warning-50 text-warning-600'}`}><AlertTriangle className="w-5 h-5" /></div>
+        <p className="text-[14px] text-slate-700 leading-relaxed pt-2">{message}</p>
       </div>
-      <div className="px-4 py-3 bg-slate-50 border-t flex justify-end gap-2">
-        <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-white text-sm">Hủy</button>
-        <button onClick={() => { onOk(); onClose(); }} className={`px-5 py-2 rounded-xl text-white font-semibold text-sm ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-teal-600 hover:bg-teal-700'}`}>{okLabel}</button>
+      <div className="e-modal-footer">
+        <button onClick={onClose} className="e-btn e-btn-secondary">Hủy</button>
+        <button onClick={() => { onOk(); onClose(); }} className={`e-btn ${danger ? 'e-btn-danger' : 'e-btn-primary'}`}>{okLabel}</button>
       </div>
     </div>
   </div>
@@ -1159,16 +1159,16 @@ const ActionMenu = ({ items, vertical = false }) => {
   const Icon = vertical ? MoreVertical : MoreHorizontal;
   return (
     <div className="relative shrink-0">
-      <button type="button" onClick={() => setOpen(o => !o)} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Thêm">
+      <button type="button" onClick={() => setOpen(o => !o)} className="w-9 h-9 grid place-items-center rounded-xl text-slate-400 hover:bg-teal-50 hover:text-teal-700 transition" title="Thêm">
         <Icon className="w-4 h-4" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-40 bg-white rounded-xl shadow-lg border border-slate-100 py-1 min-w-[160px] overflow-hidden">
+          <div className="absolute right-0 top-full mt-1 z-40 bg-white rounded-xl shadow-float border border-slate-200/80 p-1.5 min-w-[220px] overflow-hidden">
             {list.map((it, i) => (
               <button key={i} type="button" onClick={() => { setOpen(false); it.onClick(); }}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 hover:bg-slate-50 ${it.danger ? 'text-rose-600' : 'text-slate-700'}`}>
+                className={`w-full text-left px-3 h-10 rounded-lg text-[13.5px] font-medium flex items-center gap-2.5 transition ${it.danger ? 'text-danger-600 hover:bg-danger-50' : 'text-slate-700 hover:bg-teal-50/70 hover:text-teal-800'}`}>
                 {it.icon}{it.label}
               </button>
             ))}
@@ -1187,7 +1187,7 @@ const SourceTypePicker = ({ value = [], onChange }) => (
       return (
         <button type="button" key={t.key}
           onClick={() => onChange(on ? value.filter(x => x !== t.key) : [...(value || []), t.key])}
-          className={`px-3.5 py-2 rounded-xl text-sm font-semibold border inline-flex items-center gap-1.5 transition ${on ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+          className={`e-chip ${on ? 'e-chip-active' : ''}`}>
           {on ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}{t.label}
         </button>
       );
@@ -1202,12 +1202,12 @@ const SourceTypeBadges = ({ types = [], showMissing = true }) => {
   return (
     <div className="flex flex-wrap gap-1">
       {present.map(t => (
-        <span key={t.key} className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+        <span key={t.key} className="e-badge e-badge-sm e-tone-success">
           <CheckCircle2 className="w-3 h-3" />{t.label}
         </span>
       ))}
       {showMissing && missing.map(t => (
-        <span key={t.key} className="text-[11px] font-medium bg-slate-50 text-slate-400 px-2 py-0.5 rounded-md inline-flex items-center gap-1 border border-dashed border-slate-200">
+        <span key={t.key} className="e-badge e-badge-sm bg-white text-slate-400 font-medium border border-dashed border-slate-200">
           <Circle className="w-2.5 h-2.5" />{t.label}
         </span>
       ))}
@@ -1218,11 +1218,11 @@ const SourceTypeBadges = ({ types = [], showMissing = true }) => {
 // Cảnh báo quyền dùng source (Media set; Designer/Editor thấy)
 const PermissionBadges = ({ s, size = 'md' }) => {
   if (!s?.no_image && !s?.hide_face) return null;
-  const cls = size === 'sm' ? 'text-[10px] px-2 py-0.5' : 'text-[11px] px-2.5 py-1';
+  const cls = size === 'sm' ? 'h-[22px] px-2 text-[11px]' : 'h-[26px] px-2.5 text-[12px]';
   return (
     <div className="flex flex-wrap gap-1.5">
-      {s.no_image && <span className={`font-bold bg-rose-100 text-rose-700 rounded-md inline-flex items-center gap-1 ${cls}`}><Ban className="w-3 h-3" />KHÔNG DÙNG HÌNH ẢNH</span>}
-      {s.hide_face && <span className={`font-bold bg-amber-100 text-amber-800 rounded-md inline-flex items-center gap-1 ${cls}`}><EyeOff className="w-3 h-3" />CHE MẶT</span>}
+      {s.no_image && <span className={`e-badge e-tone-danger font-bold ${cls}`}><Ban className="w-3 h-3" />KHÔNG DÙNG HÌNH ẢNH</span>}
+      {s.hide_face && <span className={`e-badge e-tone-warning font-bold ${cls}`}><EyeOff className="w-3 h-3" />CHE MẶT</span>}
     </div>
   );
 };
@@ -1236,8 +1236,8 @@ const TagInput = ({ value = [], onChange }) => {
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {value.map(t => (
-            <span key={t} className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-              {t}<button type="button" onClick={() => onChange(value.filter(x => x !== t))} className="hover:text-indigo-900"><X className="w-3 h-3" /></button>
+            <span key={t} className="e-badge e-tone-lavender pr-1.5">
+              {t}<button type="button" onClick={() => onChange(value.filter(x => x !== t))} className="w-4 h-4 grid place-items-center rounded-full hover:bg-lavender-100"><X className="w-3 h-3" /></button>
             </span>
           ))}
         </div>
@@ -1250,7 +1250,7 @@ const TagInput = ({ value = [], onChange }) => {
 };
 const TagChips = ({ tags = [] }) => (tags || []).length === 0 ? null : (
   <div className="flex flex-wrap gap-1">
-    {tags.map(t => <span key={t} className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">#{t}</span>)}
+    {tags.map(t => <span key={t} className="e-badge e-badge-sm e-tone-lavender">#{t}</span>)}
   </div>
 );
 
@@ -1261,11 +1261,11 @@ const FolderChips = ({ folders = [], max = 12 }) => {
   return (
     <div className="flex flex-wrap gap-1">
       {list.slice(0, max).map((f, i) => (
-        <span key={i} className="text-[11px] font-medium bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md inline-flex items-center gap-1 max-w-[160px]">
+        <span key={i} className="e-badge e-badge-sm e-tone-brand font-medium max-w-[160px]">
           <FolderOpen className="w-3 h-3 shrink-0" /><span className="truncate">{f}</span>
         </span>
       ))}
-      {list.length > max && <span className="text-[11px] text-slate-400 px-1">+{list.length - max}</span>}
+      {list.length > max && <span className="e-badge e-badge-sm e-tone-neutral">+{list.length - max}</span>}
     </div>
   );
 };
@@ -1377,48 +1377,51 @@ const FbAdsPanel = () => {
 const StoreRow = ({ s, clipCount, me, canAddMedia, canEdit, onClips, onViewSource, onEditSource, onLink, onBuild, onScore, onRescan, onDelete }) => {
   const owner = canAddMedia || s.media_id === me?.id;
   return (
-    <div className={`p-3 flex flex-col lg:flex-row lg:items-center gap-3 ${s.no_image ? 'bg-rose-50 hover:bg-rose-100' : s.hide_face ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50/60'}`}>
-      <div className="min-w-0 lg:w-60 shrink-0">
-        <div className="font-bold text-slate-800 text-sm truncate flex items-center gap-2">
+    <div className={`px-4 lg:px-5 py-3.5 flex flex-col lg:flex-row lg:items-center gap-3 transition ${s.no_image ? 'bg-danger-50/50 hover:bg-danger-50' : s.hide_face ? 'bg-warning-50/50 hover:bg-warning-50' : 'hover:bg-teal-50/30'}`}>
+      <div className="min-w-0 lg:w-64 shrink-0 flex items-start gap-3">
+       <span className="e-avatar w-11 h-11"><FolderOpen className="w-5 h-5" /></span>
+       <div className="min-w-0 flex-1">
+        <div className="font-semibold text-slate-900 text-[14.5px] truncate flex items-center gap-2">
           <span className="truncate">{s.customer_name || 'Khách chưa đặt tên'}</span>
           {s.appointment_id
-            ? <span className="shrink-0 text-[10px] font-semibold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">LK</span>
-            : <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Chưa LK</span>}
+            ? <span className="shrink-0 e-badge e-badge-sm e-tone-brand">LK</span>
+            : <span className="shrink-0 e-badge e-badge-sm e-tone-warning">Chưa LK</span>}
         </div>
-        <div className="text-[11px] text-slate-400 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+        <div className="text-[12px] text-slate-500 truncate">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
         {(s.source_id || s.service || s.shoot_date) && (
-          <div className="text-[11px] text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
-            {s.source_id && <span className="font-mono text-violet-600">#{s.source_id}</span>}
+          <div className="text-[12px] text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
+            {s.source_id && <span className="font-mono font-semibold text-teal-700">#{s.source_id}</span>}
             {s.service && <span>{s.service}</span>}
             {s.shoot_date && <span>📅 {new Date(s.shoot_date).toLocaleDateString('vi-VN')}</span>}
           </div>
         )}
+       </div>
       </div>
 
       <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
         <LinkList links={s.source_links} label="Nguồn" icon={Film} />
-        <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
-        {s.source_type && <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-1 rounded-lg">{s.source_type}</span>}
+        <span className={`e-badge e-badge-sm ${SOURCE_STATUS[s.source_status || 'chua_dung']?.cls || 'bg-slate-100 text-slate-600'}`}>{SOURCE_STATUS[s.source_status || 'chua_dung']?.label || s.source_status}</span>
+        {s.source_type && <span className="e-badge e-badge-sm e-tone-sky">{s.source_type}</span>}
         <PermissionBadges s={s} size="sm" />
         <FolderChips folders={s.source_folders} max={6} />
         {(s.source_video_count > 0 || s.source_image_count > 0) && (
-          <span className="text-[11px] font-semibold text-slate-500 inline-flex items-center gap-2">
-            <span className="inline-flex items-center gap-0.5 text-violet-600"><Film className="w-3 h-3" />{s.source_video_count}</span>
-            <span className="inline-flex items-center gap-0.5 text-teal-600"><Image className="w-3 h-3" />{s.source_image_count}</span>
+          <span className="text-[12px] font-semibold text-slate-500 inline-flex items-center gap-2.5 tabular-nums">
+            <span className="inline-flex items-center gap-1 text-lavender-600"><Film className="w-3.5 h-3.5" />{s.source_video_count}</span>
+            <span className="inline-flex items-center gap-1 text-teal-700"><Image className="w-3.5 h-3.5" />{s.source_image_count}</span>
           </span>
         )}
-        <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
-        {clipCount === 0 && staleAgeDays(s) >= 14 && <span className="text-[11px] font-bold bg-rose-100 text-rose-700 px-2 py-1 rounded-lg inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Tồn {staleAgeDays(s)}n</span>}
-        {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">★ {s.source_score}/10</span>}
-        {s.source_feedback && <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
-        {s.updated_at && <span className="text-[11px] text-slate-300 ml-auto">{new Date(s.updated_at).toLocaleDateString('vi-VN')}</span>}
+        <button onClick={onClips} disabled={!clipCount} className="e-badge e-badge-sm e-tone-lavender hover:bg-lavender-100 disabled:opacity-60 disabled:cursor-default">{clipCount} clip{clipCount ? ' ▸' : ''}</button>
+        {clipCount === 0 && staleAgeDays(s) >= 14 && <span className="e-badge e-badge-sm e-tone-danger"><AlertTriangle className="w-3 h-3" />Tồn {staleAgeDays(s)}n</span>}
+        {s.source_score != null && <span className="e-badge e-badge-sm e-tone-warning tabular-nums">★ {s.source_score}/10</span>}
+        {s.source_feedback && <span className="text-[12px] text-slate-500 italic truncate max-w-[200px]" title={s.source_feedback}>“{s.source_feedback}”</span>}
+        {s.updated_at && <span className="text-[12px] text-slate-400 ml-auto tabular-nums">{new Date(s.updated_at).toLocaleDateString('vi-VN')}</span>}
       </div>
 
-      <div className="flex items-center gap-1.5 lg:justify-end shrink-0">
+      <div className="flex items-center gap-2 lg:justify-end shrink-0">
         {canEdit
-          ? <button onClick={onBuild} className="text-xs font-bold text-white px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 inline-flex items-center gap-1"><Scissors className="w-3.5 h-3.5" />Dựng video</button>
-          : (s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-bold text-violet-700 px-3 py-1.5 rounded-lg border border-violet-200 hover:bg-violet-50 inline-flex items-center gap-1"><PlayCircle className="w-3.5 h-3.5" />Xem source</button>}
-        {canEdit && (s.source_links || []).length > 0 && <button onClick={onViewSource} className="text-xs font-semibold text-slate-600 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center gap-1"><PlayCircle className="w-3.5 h-3.5" />Source</button>}
+          ? <button onClick={onBuild} className="e-btn e-btn-primary e-btn-sm"><Scissors className="w-3.5 h-3.5" />Dựng video</button>
+          : (s.source_links || []).length > 0 && <button onClick={onViewSource} className="e-btn e-btn-outline e-btn-sm"><PlayCircle className="w-3.5 h-3.5" />Xem source</button>}
+        {canEdit && (s.source_links || []).length > 0 && <button onClick={onViewSource} className="e-btn e-btn-secondary e-btn-sm"><PlayCircle className="w-3.5 h-3.5" />Source</button>}
         <ActionMenu items={[
           canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
           owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
@@ -1436,7 +1439,7 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
   const owner = canAddMedia || s.media_id === me?.id;
   const ss = SOURCE_STATUS[s.source_status || 'chua_dung'] || { label: s.source_status, cls: 'bg-slate-100 text-slate-600' };
   const hasSrc = (s.source_links || []).length > 0;
-  const permTone = s.no_image ? 'bg-rose-50 border-rose-300' : s.hide_face ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-100';
+  const permTone = s.no_image ? 'bg-danger-50/40 border-danger-200' : s.hide_face ? 'bg-warning-50/40 border-warning-200' : 'bg-white border-slate-200/80';
   const menuItems = [
     canEdit && { label: 'Chấm / Góp ý source', icon: <Star className="w-4 h-4" />, onClick: onScore },
     owner && { label: 'Sửa nguồn', icon: <Pencil className="w-4 h-4" />, onClick: onEditSource },
@@ -1445,61 +1448,61 @@ const StoreCard = ({ s, clipCount, thumb, progress = 0, me, canAddMedia, canEdit
     owner && { label: 'Xoá media', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
   ];
   return (
-    <div className={`rounded-2xl border shadow-sm p-3.5 ${permTone}`}>
-      <div className="flex gap-3">
+    <div className={`rounded-2xl border shadow-card p-4 flex flex-col gap-3 transition hover:shadow-float ${permTone}`}>
+      <div className="flex gap-3.5">
         {/* Thumbnail */}
-        <button onClick={hasSrc ? onViewSource : (canEdit ? onBuild : undefined)} className="relative w-[104px] h-[104px] rounded-2xl overflow-hidden shrink-0 bg-gradient-to-br from-teal-300 to-teal-600">
+        <button onClick={hasSrc ? onViewSource : (canEdit ? onBuild : undefined)} className="relative w-[76px] h-[76px] rounded-2xl overflow-hidden shrink-0 bg-teal-50 border border-teal-100 hover:border-teal-300 transition">
           {thumb && <img src={thumb} alt="" className="w-full h-full object-cover" />}
-          <span className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-white/85 grid place-items-center text-slate-800"><Play className="w-4 h-4 fill-current ml-0.5" /></span>
+          <span className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-white grid place-items-center text-teal-700 shadow-soft"><Play className="w-4 h-4 fill-current ml-0.5" /></span>
         </button>
         {/* Body */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-bold text-slate-800 text-[15px] leading-tight truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
-              <div className="text-xs text-slate-400 truncate mt-0.5">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
+              <div className="font-semibold text-slate-900 text-[15px] leading-tight truncate">{s.customer_name || 'Khách chưa đặt tên'}</div>
+              <div className="text-[12px] text-slate-500 truncate mt-0.5">{s.customer_phone}{s.media?.full_name ? ` · ${s.media.full_name}` : ''}</div>
             </div>
-            <div className="flex items-center gap-0.5 shrink-0">
+            <div className="flex items-center gap-0.5 shrink-0 -mr-1.5 -mt-1">
               {s.appointment_id
-                ? <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">LK</span>
-                : <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Chưa LK</span>}
+                ? <span className="e-badge e-badge-sm e-tone-brand">LK</span>
+                : <span className="e-badge e-badge-sm e-tone-warning">Chưa LK</span>}
               <ActionMenu vertical items={menuItems} />
             </div>
           </div>
-          {s.source_id && <div className="font-mono text-violet-600 text-xs font-bold mt-1.5">#{s.source_id}</div>}
+          {s.source_id && <div className="font-mono text-teal-700 text-[12px] font-semibold mt-1.5">#{s.source_id}</div>}
           {s.service && <div className="text-[13px] text-slate-600 mt-0.5 leading-snug line-clamp-2">{s.service}</div>}
-          {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold mt-1.5"><CalendarDays className="w-3.5 h-3.5" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
+          {s.shoot_date && <div className="flex items-center gap-1.5 text-slate-500 text-[12px] font-medium mt-1.5 tabular-nums"><CalendarDays className="w-3.5 h-3.5 text-slate-400" />{new Date(s.shoot_date).toLocaleDateString('vi-VN')}</div>}
           <div className="mt-2"><PermissionBadges s={s} /></div>
           {(s.tags || []).length > 0 && <div className="mt-2"><TagChips tags={s.tags} /></div>}
           <div className="mt-2"><FolderChips folders={s.source_folders} /></div>
           {(s.source_video_count > 0 || s.source_image_count > 0) && (
-            <div className="flex items-center gap-3 mt-2 text-xs font-semibold">
-              <span className="inline-flex items-center gap-1 text-violet-600"><Film className="w-3.5 h-3.5" />{s.source_video_count} video</span>
-              <span className="inline-flex items-center gap-1 text-teal-600"><Image className="w-3.5 h-3.5" />{s.source_image_count} ảnh</span>
+            <div className="flex items-center gap-3 mt-2 text-[12px] font-semibold tabular-nums">
+              <span className="inline-flex items-center gap-1 text-lavender-600"><Film className="w-3.5 h-3.5" />{s.source_video_count} video</span>
+              <span className="inline-flex items-center gap-1 text-teal-700"><Image className="w-3.5 h-3.5" />{s.source_image_count} ảnh</span>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            {hasSrc && <button onClick={onViewSource} className="text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full inline-flex items-center gap-1 hover:bg-blue-100">Nguồn <ExternalLink className="w-3 h-3" /></button>}
-            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${ss.cls}`}>{ss.label}</span>
-            <button onClick={onClips} disabled={!clipCount} className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-100 disabled:opacity-60">{clipCount} clip</button>
-            {s.source_score != null && <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">★ {s.source_score}/10</span>}
-            {clipCount === 0 && staleAgeDays(s) >= 14 && <span className="text-[11px] font-bold bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Tồn {staleAgeDays(s)}n</span>}
+            {hasSrc && <button onClick={onViewSource} className="e-badge e-badge-sm e-tone-sky hover:bg-sky-100">Nguồn <ExternalLink className="w-3 h-3" /></button>}
+            <span className={`e-badge e-badge-sm ${ss.cls}`}>{ss.label}</span>
+            <button onClick={onClips} disabled={!clipCount} className="e-badge e-badge-sm e-tone-lavender hover:bg-lavender-100 disabled:opacity-60">{clipCount} clip</button>
+            {s.source_score != null && <span className="e-badge e-badge-sm e-tone-warning tabular-nums">★ {s.source_score}/10</span>}
+            {clipCount === 0 && staleAgeDays(s) >= 14 && <span className="e-badge e-badge-sm e-tone-danger"><AlertTriangle className="w-3 h-3" />Tồn {staleAgeDays(s)}n</span>}
           </div>
         </div>
       </div>
-      {s.source_feedback && <div className="text-[11px] text-slate-500 italic mt-2 truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
+      {s.source_feedback && <div className="text-[12px] text-slate-500 italic truncate" title={s.source_feedback}>“{s.source_feedback}”</div>}
       {progress > 0 && progress < 100 && (
-        <div className="flex items-center gap-2.5 mt-3">
-          <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-400" style={{ width: `${progress}%` }} /></div>
-          <span className="text-xs font-bold text-slate-600 tabular-nums">{progress}%</span>
+        <div className="flex items-center gap-2.5">
+          <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-teal-500" style={{ width: `${progress}%` }} /></div>
+          <span className="text-[12px] font-semibold text-slate-600 tabular-nums">{progress}%</span>
         </div>
       )}
       {(canEdit || hasSrc) && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-auto pt-3 flex items-center gap-2 border-t border-slate-100">
           {canEdit
-            ? <button onClick={onBuild} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-teal-50 text-teal-700 font-bold text-sm hover:bg-teal-100"><Scissors className="w-4 h-4" />{clipCount > 0 ? 'Tiếp tục dựng' : 'Dựng video'}</button>
-            : hasSrc && <button onClick={onViewSource} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-violet-50 text-violet-700 font-bold text-sm hover:bg-violet-100"><PlayCircle className="w-4 h-4" />Xem source</button>}
-          {canEdit && hasSrc && <button onClick={onViewSource} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50"><PlayCircle className="w-4 h-4" />Source</button>}
+            ? <button onClick={onBuild} className="e-btn e-btn-primary e-btn-sm flex-1"><Scissors className="w-4 h-4" />{clipCount > 0 ? 'Tiếp tục dựng' : 'Dựng video'}</button>
+            : hasSrc && <button onClick={onViewSource} className="e-btn e-btn-outline e-btn-sm flex-1"><PlayCircle className="w-4 h-4" />Xem source</button>}
+          {canEdit && hasSrc && <button onClick={onViewSource} className="e-btn e-btn-secondary e-btn-sm"><PlayCircle className="w-4 h-4" />Source</button>}
         </div>
       )}
     </div>
@@ -1520,7 +1523,7 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
   };
   return (
     <Modal title="Chấm điểm / góp ý source" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-3">Khách: <b>{store.customer_name}</b></p>
+      <p className="e-subtle px-3 py-2.5 text-[13px] text-slate-600 mb-4">Khách: <b className="text-slate-900">{store.customer_name}</b></p>
       <Field label="Điểm source (1–10)"><input value={score} onChange={e => setScore(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" placeholder="VD: 8" className={inpCls} /></Field>
       <Field label="Góp ý cho Media về source"><textarea value={fb} onChange={e => setFb(e.target.value)} rows={3} placeholder="Nhận xét chất lượng nguồn quay/chụp…" className={inpCls} /></Field>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
@@ -1529,34 +1532,39 @@ const SourceScoreModal = ({ store, onClose, onSaved }) => {
 };
 
 // ---------- Panel "Việc cần xử lý" (dùng lại ở nhiều nơi) ----------
-const TODO_TONE = { teal: 'text-teal-600', rose: 'text-rose-600', violet: 'text-violet-600', amber: 'text-amber-600' };
-const TODO_DOT = { teal: 'bg-teal-500', rose: 'bg-rose-500', violet: 'bg-violet-500', amber: 'bg-amber-500' };
+const TODO_TONE = { teal: 'bg-teal-50 text-teal-700', rose: 'bg-danger-50 text-danger-600', violet: 'bg-lavender-50 text-lavender-600', amber: 'bg-warning-50 text-warning-600' };
+const TODO_DOT = { teal: 'bg-teal-500', rose: 'bg-danger-500', violet: 'bg-lavender-500', amber: 'bg-warning-500' };
 const TodoPanel = ({ tiles, compact }) => {
   if (!tiles.length) {
     return compact ? (
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-        <h3 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Việc cần xử lý</h3>
-        <p className="text-sm text-slate-400 py-4 text-center">Không có việc tồn đọng 🎉</p>
+      <div className="e-card e-card-pad">
+        <div className="e-card-header mb-2">
+          <div><h3 className="e-card-title">Việc cần xử lý</h3><div className="e-card-sub">Các đầu việc tồn đọng của nhóm</div></div>
+        </div>
+        <div className="e-empty py-6">
+          <div className="e-empty-icon"><CheckCircle2 /></div>
+          <p className="e-empty-title">Không có việc tồn đọng 🎉</p>
+        </div>
       </div>
     ) : null;
   }
   return (
-    <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 shadow-sm p-4 ring-1 ring-amber-200/50">
-      <div className="flex items-center gap-2.5 mb-3">
-        <span className="w-9 h-9 rounded-xl bg-amber-500 text-white grid place-items-center shadow-sm shrink-0"><AlertTriangle className="w-5 h-5" /></span>
+    <div className="e-card e-card-pad">
+      <div className="e-card-header mb-3">
         <div className="min-w-0">
-          <div className="text-base font-extrabold text-slate-800 leading-tight">Việc cần xử lý</div>
-          <div className="text-[11px] font-medium text-amber-700/80">Bấm vào ô để mở danh sách đã lọc sẵn</div>
+          <h3 className="e-card-title">Việc cần xử lý</h3>
+          <div className="e-card-sub">Bấm vào ô để mở danh sách đã lọc sẵn</div>
         </div>
+        <span className="e-badge e-badge-sm e-tone-warning shrink-0"><AlertTriangle className="w-3.5 h-3.5" />Cần xử lý</span>
       </div>
-      <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'}`}>
+      <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
         {tiles.map((t, i) => (
-          <button key={i} onClick={t.onClick} className="text-left rounded-xl p-3 bg-white border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition">
-            <div className="flex items-center justify-between">
-              <span className={`w-8 h-8 rounded-lg grid place-items-center bg-slate-50 ${TODO_TONE[t.tone]}`}><t.icon className="w-4 h-4" /></span>
-              <span className={`text-2xl font-extrabold tabular-nums ${TODO_TONE[t.tone]}`}>{t.n}</span>
+          <button key={i} onClick={t.onClick} className="text-left rounded-xl p-3.5 bg-slate-50 border border-slate-100 hover:bg-white hover:border-teal-200 hover:shadow-soft transition grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 items-center">
+            <div className="contents">
+              <span className={`row-span-2 col-start-1 row-start-1 w-11 h-11 rounded-full grid place-items-center ${TODO_TONE[t.tone]}`}><t.icon className="w-5 h-5" /></span>
+              <span className="col-start-2 row-start-2 text-[22px] font-bold text-slate-900 tabular-nums leading-tight">{t.n}</span>
             </div>
-            <div className="text-xs font-semibold text-slate-600 mt-1.5 flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${TODO_DOT[t.tone]}`} />{t.label}</div>
+            <div className="col-start-2 row-start-1 text-[13px] font-medium text-slate-500 flex items-center gap-1.5 min-w-0"><span className={`w-1.5 h-1.5 rounded-full shrink-0 ${TODO_DOT[t.tone]}`} /><span className="truncate">{t.label}</span></div>
           </button>
         ))}
       </div>
@@ -1578,42 +1586,42 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
   const totalImage = stores.reduce((s, x) => s + (Number(x.source_image_count) || 0), 0);
   const undoneSrc = stores.filter(s => (s.source_links || []).length > 0 && !clips.some(c => c.media_customer_id === s.id)).length;
   const segs = [
-    { key: 'pending', label: 'Chờ duyệt', n: videoCounts.pending, color: '#8b5cf6' },
-    { key: 'running', label: 'Đang chạy', n: videoCounts.running, color: '#10b981' },
-    { key: 'review', label: 'Đang duyệt', n: videoCounts.review, color: '#f59e0b' },
-    { key: 'off', label: 'Đã tắt', n: videoCounts.off, color: '#94a3b8' },
+    { key: 'pending', label: 'Chờ duyệt', n: videoCounts.pending, color: '#F4B183' },
+    { key: 'running', label: 'Đang chạy', n: videoCounts.running, color: '#067B7F' },
+    { key: 'review', label: 'Đang duyệt', n: videoCounts.review, color: '#A99BE0' },
+    { key: 'off', label: 'Đã tắt', n: videoCounts.off, color: '#B8C4CC' },
   ];
   const segTotal = segs.reduce((s, x) => s + x.n, 0);
   let acc = 0;
   const gradient = segTotal > 0
     ? 'conic-gradient(' + segs.filter(s => s.n > 0).map(s => { const a = acc; acc += s.n; return `${s.color} ${(a / segTotal * 360)}deg ${(acc / segTotal * 360)}deg`; }).join(', ') + ')'
-    : '#e2e8f0';
-  const KT = { teal: 'bg-teal-50 text-teal-600', violet: 'bg-violet-50 text-violet-600', blue: 'bg-blue-50 text-blue-600', indigo: 'bg-indigo-50 text-indigo-600', amber: 'bg-amber-50 text-amber-600' };
+    : '#EAF4F4';
+  const KT = { teal: 'bg-teal-50 text-teal-700', violet: 'bg-warning-50 text-warning-600', blue: 'bg-sky-50 text-sky-600', indigo: 'bg-lavender-50 text-lavender-600', amber: 'bg-peach-50 text-peach-600' };
   const kpis = [
-    { icon: PlayCircle, tone: 'teal', spark: '#12A4A5', value: approved.length, label: 'Video Ads', sub: 'clip đã duyệt' },
-    { icon: Clock, tone: 'violet', spark: '#8b5cf6', value: videoCounts.pending, label: 'Clip chờ duyệt', sub: 'clip' },
-    { icon: FolderOpen, tone: 'blue', spark: '#3b82f6', value: sourcesN, label: 'Nguồn media', sub: 'nguồn trong kho' },
-    { icon: Film, tone: 'indigo', spark: '#6366f1', value: totalVideo, label: 'Video gốc', sub: 'video trong kho' },
-    { icon: Image, tone: 'amber', spark: '#f59e0b', value: totalImage, label: 'Ảnh gốc', sub: 'ảnh trong kho' },
+    { icon: PlayCircle, tone: 'teal', spark: '#067B7F', value: approved.length, label: 'Video Ads', sub: 'clip đã duyệt' },
+    { icon: Clock, tone: 'violet', spark: '#F4B183', value: videoCounts.pending, label: 'Clip chờ duyệt', sub: 'clip' },
+    { icon: FolderOpen, tone: 'blue', spark: '#3CA7A9', value: sourcesN, label: 'Nguồn media', sub: 'nguồn trong kho' },
+    { icon: Film, tone: 'indigo', spark: '#A99BE0', value: totalVideo, label: 'Video gốc', sub: 'video trong kho' },
+    { icon: Image, tone: 'amber', spark: '#F4B183', value: totalImage, label: 'Ảnh gốc', sub: 'ảnh trong kho' },
   ];
   const insights = [
-    { icon: Trophy, cls: 'bg-amber-50 text-amber-600', text: winRate > 0 ? `${winRate}% clip đã duyệt đạt Win — hiệu quả đang cải thiện.` : 'Chưa có clip đạt Win tháng này — cần tối ưu nội dung.' },
-    { icon: Clock, cls: 'bg-violet-50 text-violet-600', text: videoCounts.pending === 0 ? '0 clip chờ duyệt. Quy trình đang vận hành trơn tru.' : `${videoCounts.pending} clip đang chờ Ads duyệt — nên xử lý sớm.` },
-    { icon: FolderOpen, cls: 'bg-teal-50 text-teal-600', text: undoneSrc > 0 ? `${undoneSrc} nguồn media mới chưa dựng — cần editor xử lý.` : 'Tất cả nguồn media đã được dựng clip.' },
+    { icon: Trophy, cls: 'bg-peach-50 text-peach-600', text: winRate > 0 ? `${winRate}% clip đã duyệt đạt Win — hiệu quả đang cải thiện.` : 'Chưa có clip đạt Win tháng này — cần tối ưu nội dung.' },
+    { icon: Clock, cls: 'bg-warning-50 text-warning-600', text: videoCounts.pending === 0 ? '0 clip chờ duyệt. Quy trình đang vận hành trơn tru.' : `${videoCounts.pending} clip đang chờ Ads duyệt — nên xử lý sớm.` },
+    { icon: FolderOpen, cls: 'bg-teal-50 text-teal-700', text: undoneSrc > 0 ? `${undoneSrc} nguồn media mới chưa dựng — cần editor xử lý.` : 'Tất cả nguồn media đã được dựng clip.' },
   ];
   return (
     <div className="space-y-4">
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         {kpis.map((k, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex items-center gap-2.5">
-              <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${KT[k.tone]}`}><k.icon className="w-5 h-5" /></span>
-              <span className="text-[13px] font-semibold text-slate-500 leading-tight">{k.label}</span>
+          <div key={i} className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0">
+            <div className="contents">
+              <span className={`e-metric-icon row-span-3 col-start-1 row-start-1 ${KT[k.tone]}`}><k.icon /></span>
+              <span className="e-metric-label col-start-2 row-start-1">{k.label}</span>
             </div>
-            <div className="text-[26px] font-extrabold text-slate-800 mt-2 tabular-nums leading-none">{k.value}</div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-[11px] text-slate-400">{k.sub}</span>
+            <div className="e-metric-value col-start-2 row-start-2">{k.value}</div>
+            <div className="col-start-2 row-start-3 flex items-center justify-between gap-2 min-w-0">
+              <span className="e-metric-hint">{k.sub}</span>
               <Sparkline color={k.spark} />
             </div>
           </div>
@@ -1622,28 +1630,28 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
 
       {/* Hiệu suất video gần đây (bảng) + Top clip */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2"><Film className="w-4 h-4 text-teal-500" />Hiệu suất video gần đây</h3>
-            <button onClick={onGoVideo} className="text-xs font-semibold text-teal-600 hover:underline">Xem tất cả →</button>
+        <div className="e-card e-card-pad">
+          <div className="e-card-header">
+            <div className="min-w-0"><h3 className="e-card-title">Hiệu suất video gần đây</h3><div className="e-card-sub">Clip mới cập nhật chỉ số / mới nộp</div></div>
+            <button onClick={onGoVideo} className="e-btn e-btn-ghost e-btn-sm shrink-0">Xem tất cả →</button>
           </div>
-          {recent.length === 0 ? <p className="text-sm text-slate-400 py-6 text-center">Chưa có clip nào</p> : (
-            <div className="divide-y divide-slate-50">
+          {recent.length === 0 ? <p className="e-empty-desc text-center mx-auto py-8">Chưa có clip nào</p> : (
+            <div className="divide-y divide-slate-100 -mx-1">
               {recent.map(c => {
                 const st = storeOf(c.media_customer_id); const thumb = (c.thumb_links || [])[0];
                 const eff = c.approved_to_run && c.stage === 'submitted' ? 'done' : c.stage; const fb = fbStatusInfo(c.fb_status);
                 const badge = fb || { label: STAGE[eff]?.label || eff, cls: STAGE[eff]?.cls || 'bg-slate-100 text-slate-500' };
                 const d = c.fb_synced_at || c.submitted_at || c.created_at;
                 return (
-                  <button key={c.id} onClick={() => onOpenClip(c)} className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-slate-50 rounded-lg px-1 -mx-1">
-                    <span className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 grid place-items-center shrink-0">{thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" /> : <PlayCircle className="w-4 h-4 text-white/60" />}</span>
+                  <button key={c.id} onClick={() => onOpenClip(c)} className="w-full flex items-center gap-3 py-3 px-1 text-left hover:bg-teal-50/40 rounded-xl transition">
+                    <span className="w-11 h-11 rounded-xl overflow-hidden bg-slate-800 grid place-items-center shrink-0">{thumb ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" /> : <PlayCircle className="w-4 h-4 text-white/60" />}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-slate-700 truncate">{c.title || st?.customer_name || 'Clip'}</span>
-                      <span className="block text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}</span>
+                      <span className="block text-[14px] font-semibold text-slate-800 truncate">{c.title || st?.customer_name || 'Clip'}</span>
+                      <span className="block text-[12px] text-slate-500 truncate">{st?.customer_name || '—'}</span>
                     </span>
-                    <span className="shrink-0 flex flex-col items-end gap-0.5">
-                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badge.cls}`}>{badge.label}</span>
-                      <span className="text-[11px] text-slate-400 whitespace-nowrap">{d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '—'}</span>
+                    <span className="shrink-0 flex flex-col items-end gap-1">
+                      <span className={`e-badge e-badge-sm ${badge.cls}`}>{badge.label}</span>
+                      <span className="text-[12px] text-slate-400 whitespace-nowrap tabular-nums">{d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '—'}</span>
                     </span>
                   </button>
                 );
@@ -1652,27 +1660,27 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2"><Phone className="w-4 h-4 text-blue-500" />Top clip theo số điện thoại</h3>
-            <span className="text-[11px] text-slate-400 border border-slate-200 rounded-lg px-2 py-1">2 tháng gần nhất</span>
+        <div className="e-card e-card-pad">
+          <div className="e-card-header">
+            <div className="min-w-0"><h3 className="e-card-title">Top clip theo số điện thoại</h3><div className="e-card-sub">Xếp theo SĐT thu được (Lượt mua)</div></div>
+            <span className="e-badge e-badge-sm e-tone-neutral shrink-0">2 tháng gần nhất</span>
           </div>
-          <div className="space-y-3">
-            {topPhones.length === 0 && <p className="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu SĐT</p>}
+          <div className="space-y-3.5">
+            {topPhones.length === 0 && <p className="e-empty-desc text-center mx-auto py-8">Chưa có dữ liệu SĐT</p>}
             {topPhones.map((c, idx) => {
               const st = storeOf(c.media_customer_id); const pct = Math.round(phonesOf(c) / maxP * 100);
               return (
                 <div key={c.id} className="flex items-center gap-3">
-                  <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-slate-300 text-white' : idx === 2 ? 'bg-orange-200 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>{idx + 1}</span>
+                  <span className={`w-7 h-7 rounded-full grid place-items-center text-[12px] font-bold shrink-0 tabular-nums ${idx === 0 ? 'bg-teal-600 text-white' : idx === 1 ? 'bg-teal-100 text-teal-800' : idx === 2 ? 'bg-teal-50 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>{idx + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between text-[13px] mb-1"><span className="font-medium text-slate-600 truncate pr-2">{c.title || st?.customer_name || 'Clip'}</span><span className="font-bold text-teal-600 shrink-0">{phonesOf(c)} SĐT</span></div>
-                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-600" style={{ width: `${pct}%` }} /></div>
+                    <div className="flex items-center justify-between text-[13px] mb-1.5"><span className="font-medium text-slate-700 truncate pr-2">{c.title || st?.customer_name || 'Clip'}</span><span className="font-semibold text-slate-900 shrink-0 tabular-nums">{phonesOf(c)} SĐT</span></div>
+                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-teal-500" style={{ width: `${pct}%` }} /></div>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-50 text-[11px] text-teal-600 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-500" />Số điện thoại thu được</div>
+          <div className="mt-4 pt-3 border-t border-slate-100 text-[12px] text-slate-500 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-500" />Số điện thoại thu được</div>
         </div>
       </div>
 
@@ -1680,53 +1688,53 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} compact />
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col">
-          <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm"><Trophy className="w-4 h-4 text-amber-500" />Bảng điểm Editor tháng {now.getMonth() + 1}</h3>
-          <div className="space-y-2.5 flex-1">
-            {lb.length === 0 && <p className="text-sm text-slate-400 py-4 text-center">Chưa có dữ liệu</p>}
+        <div className="e-card e-card-pad flex flex-col">
+          <div className="e-card-header mb-3"><div className="min-w-0"><h3 className="e-card-title">Bảng điểm Editor tháng {now.getMonth() + 1}</h3><div className="e-card-sub">Top editor theo điểm Ads</div></div><span className="e-metric-icon w-9 h-9 lg:w-9 lg:h-9 bg-warning-50 text-warning-600 [&_svg]:w-[18px] [&_svg]:h-[18px]"><Trophy /></span></div>
+          <div className="space-y-3 flex-1">
+            {lb.length === 0 && <p className="e-empty-desc text-center mx-auto py-6">Chưa có dữ liệu</p>}
             {lb.slice(0, 3).map((e, i) => {
               const cat = e.avg == null ? null : scoreCat(e.avg, false);
               return (
                 <div key={e.id} className="flex items-center gap-2.5">
-                  <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : 'bg-orange-200 text-orange-700'}`}>{i + 1}</span>
-                  <span className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 grid place-items-center text-xs font-bold shrink-0">{(e.name || '?').charAt(0)}</span>
+                  <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 tabular-nums ${i === 0 ? 'bg-teal-600 text-white' : i === 1 ? 'bg-teal-100 text-teal-800' : 'bg-teal-50 text-teal-700'}`}>{i + 1}</span>
+                  <span className="e-avatar w-9 h-9 text-[13px]">{(e.name || '?').charAt(0)}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-slate-700 truncate">{e.name}</div>
-                    <div className="text-[11px] text-slate-400">{e.avg == null ? 'Chưa chấm' : `TB ${e.avg.toFixed(1)}`} · {e.w} Win</div>
+                    <div className="text-[14px] font-semibold text-slate-800 truncate">{e.name}</div>
+                    <div className="text-[12px] text-slate-500">{e.avg == null ? 'Chưa chấm' : `TB ${e.avg.toFixed(1)}`} · {e.w} Win</div>
                   </div>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? '—' : e.avg.toFixed(0)}</span>
+                  <span className={`e-badge e-badge-sm shrink-0 tabular-nums ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? '—' : e.avg.toFixed(0)}</span>
                 </div>
               );
             })}
           </div>
-          <button onClick={onGoVideo} className="text-[11px] font-semibold text-teal-600 hover:underline mt-3 text-left">Xem bảng điểm chi tiết →</button>
+          <button onClick={onGoVideo} className="e-btn e-btn-ghost e-btn-sm self-start -ml-3 mt-3">Xem bảng điểm chi tiết →</button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col">
-          <h3 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2"><LayoutDashboard className="w-4 h-4 text-blue-500" />Phân bổ trạng thái clip</h3>
+        <div className="e-card e-card-pad flex flex-col">
+          <div className="e-card-header mb-3"><div className="min-w-0"><h3 className="e-card-title">Phân bổ trạng thái clip</h3><div className="e-card-sub">Theo trạng thái Facebook / duyệt</div></div></div>
           <div className="flex items-center gap-4 flex-1">
             <div className="relative w-24 h-24 shrink-0 rounded-full" style={{ background: gradient }}>
-              <div className="absolute inset-[22%] rounded-full bg-white grid place-items-center"><div className="text-center"><div className="text-lg font-extrabold text-slate-800 leading-none">{segTotal}</div><div className="text-[10px] text-slate-400">clip</div></div></div>
+              <div className="absolute inset-[20%] rounded-full bg-white grid place-items-center"><div className="text-center"><div className="text-[20px] font-bold text-slate-900 leading-none tabular-nums">{segTotal}</div><div className="text-[11px] text-slate-400 mt-0.5">clip</div></div></div>
             </div>
-            <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="space-y-2 flex-1 min-w-0">
               {segs.map(s => (
-                <div key={s.key} className="flex items-center justify-between text-[12px]">
-                  <span className="flex items-center gap-1.5 text-slate-600 min-w-0"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} /><span className="truncate">{s.label}</span></span>
-                  <span className="font-bold text-slate-700 shrink-0">{s.n}</span>
+                <div key={s.key} className="flex items-center justify-between text-[13px]">
+                  <span className="flex items-center gap-2 text-slate-600 min-w-0"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} /><span className="truncate">{s.label}</span></span>
+                  <span className="font-semibold text-slate-900 shrink-0 tabular-nums">{s.n}</span>
                 </div>
               ))}
             </div>
           </div>
-          <button onClick={onGoVideo} className="text-[11px] font-semibold text-teal-600 hover:underline mt-3 text-left">Xem chi tiết →</button>
+          <button onClick={onGoVideo} className="e-btn e-btn-ghost e-btn-sm self-start -ml-3 mt-3">Xem chi tiết →</button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col">
-          <h3 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-teal-500" />Insight nhanh</h3>
+        <div className="e-card e-card-pad flex flex-col">
+          <div className="e-card-header mb-3"><div className="min-w-0"><h3 className="e-card-title">Insight nhanh</h3><div className="e-card-sub">Tự tổng hợp từ dữ liệu hiện có</div></div><span className="e-metric-icon w-9 h-9 lg:w-9 lg:h-9 [&_svg]:w-[18px] [&_svg]:h-[18px]"><TrendingUp /></span></div>
           <div className="space-y-3 flex-1">
             {insights.map((it, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <span className={`w-7 h-7 rounded-lg grid place-items-center shrink-0 ${it.cls}`}><it.icon className="w-4 h-4" /></span>
-                <p className="text-[12px] text-slate-600 leading-snug">{it.text}</p>
+              <div key={i} className="flex items-start gap-3 e-subtle p-2.5">
+                <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${it.cls}`}><it.icon className="w-4 h-4" /></span>
+                <p className="text-[13px] text-slate-600 leading-snug pt-1">{it.text}</p>
               </div>
             ))}
           </div>
@@ -1780,11 +1788,11 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
   const reset = (fn) => { fn(); setPage(1); };
 
   const kpis = [
-    { icon: Film, tone: 'bg-violet-50 text-violet-600', value: counts.all, label: 'Tổng media', sub: 'file trong kho' },
-    { icon: PlayCircle, tone: 'bg-blue-50 text-blue-600', value: counts.video, label: 'Video', sub: counts.all ? `${Math.round(counts.video / counts.all * 100)}% tổng media` : '—' },
-    { icon: Image, tone: 'bg-teal-50 text-teal-600', value: counts.image, label: 'Hình ảnh', sub: counts.all ? `${Math.round(counts.image / counts.all * 100)}% tổng media` : '—' },
-    { icon: FolderOpen, tone: 'bg-orange-50 text-orange-600', value: fmtSize(totalSize), label: 'Dung lượng', sub: 'đã quét' },
-    { icon: Star, tone: 'bg-amber-50 text-amber-600', value: counts.unused, label: 'Chưa khai thác', sub: 'cần dựng clip' },
+    { icon: Film, tone: 'bg-teal-50 text-teal-700', value: counts.all, label: 'Tổng media', sub: 'file trong kho' },
+    { icon: PlayCircle, tone: 'bg-lavender-50 text-lavender-600', value: counts.video, label: 'Video', sub: counts.all ? `${Math.round(counts.video / counts.all * 100)}% tổng media` : '—' },
+    { icon: Image, tone: 'bg-sky-50 text-sky-600', value: counts.image, label: 'Hình ảnh', sub: counts.all ? `${Math.round(counts.image / counts.all * 100)}% tổng media` : '—' },
+    { icon: FolderOpen, tone: 'bg-peach-50 text-peach-600', value: fmtSize(totalSize), label: 'Dung lượng', sub: 'đã quét' },
+    { icon: Star, tone: 'bg-warning-50 text-warning-600', value: counts.unused, label: 'Chưa khai thác', sub: 'cần dựng clip' },
   ];
   const CATS = [
     ['all', 'Tất cả media', counts.all], ['video', 'Video', counts.video], ['image', 'Hình ảnh', counts.image],
@@ -1796,12 +1804,12 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
 
   if (assets.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
-        <span className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-500 grid place-items-center mx-auto mb-3"><FolderOpen className="w-8 h-8" /></span>
-        <h3 className="font-bold text-slate-800 text-lg">Kho tài sản còn trống</h3>
-        <p className="text-sm text-slate-400 mt-1 mb-4 max-w-md mx-auto">Bấm “Kết nối Drive” để quét toàn bộ video &amp; ảnh trong các nguồn Drive về đây (ảnh thu nhỏ, dung lượng, thư mục).</p>
-        <button onClick={onScan} disabled={scanning} className="inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 disabled:opacity-60">{scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />}Kết nối &amp; quét Drive</button>
-        <button onClick={onManageSources} className="block mx-auto mt-3 text-xs font-semibold text-slate-400 hover:text-slate-600">Quản lý nguồn theo khách hàng →</button>
+      <div className="e-card e-empty py-14">
+        <span className="e-empty-icon w-14 h-14"><FolderOpen /></span>
+        <h3 className="e-empty-title text-[16px]">Kho tài sản còn trống</h3>
+        <p className="e-empty-desc max-w-md mb-5">Bấm “Kết nối Drive” để quét toàn bộ video &amp; ảnh trong các nguồn Drive về đây (ảnh thu nhỏ, dung lượng, thư mục).</p>
+        <button onClick={onScan} disabled={scanning} className="e-btn e-btn-primary e-btn-lg">{scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />}Kết nối &amp; quét Drive</button>
+        <button onClick={onManageSources} className="e-btn e-btn-ghost e-btn-sm mt-2">Quản lý nguồn theo khách hàng →</button>
       </div>
     );
   }
@@ -1809,15 +1817,15 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
   return (
     <div className="space-y-4">
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         {kpis.map((k, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <div className="flex items-center gap-2.5">
-              <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${k.tone}`}><k.icon className="w-5 h-5" /></span>
-              <span className="text-[13px] font-semibold text-slate-500 leading-tight">{k.label}</span>
+          <div key={i} className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0">
+            <div className="contents">
+              <span className={`e-metric-icon row-span-3 col-start-1 row-start-1 ${k.tone}`}><k.icon /></span>
+              <span className="e-metric-label col-start-2 row-start-1">{k.label}</span>
             </div>
-            <div className="text-[24px] font-extrabold text-slate-800 mt-2 tabular-nums leading-none">{k.value}</div>
-            <div className="text-[11px] text-slate-400 mt-1.5">{k.sub}</div>
+            <div className="e-metric-value col-start-2 row-start-2">{k.value}</div>
+            <div className="e-metric-hint col-start-2 row-start-3">{k.sub}</div>
           </div>
         ))}
       </div>
@@ -1825,25 +1833,25 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
         {/* Cột trái */}
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide px-2 mb-1.5">Danh mục nhanh</h4>
+          <div className="e-card p-2.5">
+            <h4 className="e-caption px-2.5 pt-1.5 pb-2">Danh mục nhanh</h4>
             {CATS.map(([k, l, n]) => (
-              <button key={k} onClick={() => reset(() => setCat(k))} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-medium transition ${cat === k ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+              <button key={k} onClick={() => reset(() => setCat(k))} className={`w-full flex items-center justify-between h-10 px-3 rounded-xl text-[14px] font-medium transition ${cat === k ? 'bg-teal-50 text-teal-800 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-teal-800'}`}>
                 <span className="inline-flex items-center gap-2">{k === 'video' ? <PlayCircle className="w-4 h-4" /> : k === 'image' ? <Image className="w-4 h-4" /> : k === 'fav' ? <Star className="w-4 h-4" /> : k === 'unused' ? <Star className="w-4 h-4" /> : <Film className="w-4 h-4" />}{l}</span>
-                <span className="text-xs text-slate-400">{n}</span>
+                <span className="e-tab-count tabular-nums">{n}</span>
               </button>
             ))}
           </div>
           {chips.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1 mb-2">Bộ lọc đã chọn</h4>
+            <div className="e-card p-3">
+              <h4 className="e-caption px-1 pb-2.5">Bộ lọc đã chọn</h4>
               <div className="flex flex-col gap-1.5">
                 {chips.map((c, i) => (
-                  <button key={i} onClick={c.clear} className="flex items-center justify-between gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-2.5 py-1.5 hover:bg-slate-100">
-                    <span className="truncate">{c.label}</span><X className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                  <button key={i} onClick={c.clear} className="e-chip e-chip-active justify-between w-full rounded-xl">
+                    <span className="truncate">{c.label}</span><X className="w-3.5 h-3.5 shrink-0 text-teal-600" />
                   </button>
                 ))}
-                <button onClick={() => reset(() => { setCat('all'); setQ(''); })} className="text-xs font-semibold text-rose-500 hover:underline text-left px-1 mt-1">Xóa tất cả</button>
+                <button onClick={() => reset(() => { setCat('all'); setQ(''); })} className="e-btn e-btn-danger-soft e-btn-sm mt-1">Xóa tất cả</button>
               </div>
             </div>
           )}
@@ -1851,69 +1859,69 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
 
         {/* Cột phải */}
         <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-3">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input value={q} onChange={e => reset(() => setQ(e.target.value))} placeholder="Tìm theo tên file, khách hàng, thư mục…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
+          <div className="e-toolbar mb-4">
+            <div className="e-search flex-1 min-w-[180px]">
+              <Search />
+              <input value={q} onChange={e => reset(() => setQ(e.target.value))} placeholder="Tìm theo tên file, khách hàng, thư mục…" />
             </div>
-            <select value={sort} onChange={e => setSort(e.target.value)} className="h-9 px-3 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-teal-400">
+            <select value={sort} onChange={e => setSort(e.target.value)} className="e-input w-auto">
               <option value="new">Sắp xếp: Mới nhất</option>
               <option value="size">Dung lượng lớn</option>
               <option value="name">Tên A→Z</option>
             </select>
-            <div className="flex rounded-xl border border-slate-200 overflow-hidden">
-              <button onClick={() => setView('grid')} className={`w-9 h-9 grid place-items-center ${view === 'grid' ? 'bg-teal-600 text-white' : 'text-slate-400'}`}><LayoutGrid className="w-4 h-4" /></button>
-              <button onClick={() => setView('list')} className={`w-9 h-9 grid place-items-center ${view === 'list' ? 'bg-teal-600 text-white' : 'text-slate-400'}`}><List className="w-4 h-4" /></button>
+            <div className="e-seg">
+              <button onClick={() => setView('grid')} className={`e-seg-item px-2.5 ${view === 'grid' ? 'e-seg-active' : ''}`}><LayoutGrid className="w-4 h-4" /></button>
+              <button onClick={() => setView('list')} className={`e-seg-item px-2.5 ${view === 'list' ? 'e-seg-active' : ''}`}><List className="w-4 h-4" /></button>
             </div>
           </div>
 
           {shown.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400 text-sm">Không có file khớp bộ lọc.</div>
+            <div className="e-card e-empty text-[13px] text-slate-400">Không có file khớp bộ lọc.</div>
           ) : view === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
               {shown.map(a => {
                 const st = storeOf(a.media_customer_id); const dur = fmtDur(a.duration_ms); const thumb = assetThumb(a);
                 return (
-                  <div key={a.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
+                  <div key={a.id} className="e-card overflow-hidden group transition hover:shadow-float hover:border-teal-100">
                     <button onClick={() => setPreview(a)} className="relative block w-full aspect-video bg-slate-900">
                       {thumb ? <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
                       <span className="absolute inset-0 grid place-items-center"><span className="w-10 h-10 rounded-full bg-black/40 grid place-items-center group-hover:bg-black/60 transition">{a.kind === 'video' ? <Play className="w-4 h-4 text-white fill-white ml-0.5" /> : <ZoomIn className="w-4 h-4 text-white" />}</span></span>
-                      {dur && <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">{dur}</span>}
-                      {a.kind === 'image' && <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5"><Image className="w-2.5 h-2.5" />Ảnh</span>}
+                      {dur && <span className="absolute bottom-2 left-2 text-[11px] font-semibold text-white bg-black/60 px-1.5 py-0.5 rounded-md tabular-nums">{dur}</span>}
+                      {a.kind === 'image' && <span className="absolute bottom-2 left-2 text-[11px] font-semibold text-white bg-black/60 px-1.5 py-0.5 rounded-md inline-flex items-center gap-1"><Image className="w-3 h-3" />Ảnh</span>}
                     </button>
-                    <div className="p-2.5">
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="text-sm font-semibold text-slate-700 truncate">{a.name || 'Không tên'}</div>
-                        <button onClick={() => onToggleFav(a)} className="shrink-0 text-slate-300 hover:text-amber-400"><Star className={`w-4 h-4 ${a.favorite ? 'fill-amber-400 text-amber-400' : ''}`} /></button>
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="text-[13.5px] font-semibold text-slate-800 truncate">{a.name || 'Không tên'}</div>
+                        <button onClick={() => onToggleFav(a)} className="shrink-0 text-slate-300 hover:text-warning-500 transition"><Star className={`w-4 h-4 ${a.favorite ? 'fill-warning-400 text-warning-500' : ''}`} /></button>
                       </div>
-                      <div className="text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}</div>
-                      <div className="flex items-center gap-1 flex-wrap mt-1.5">
-                        {a.folder && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 truncate max-w-[110px]">{a.folder}</span>}
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{fmtSize(a.size_bytes)}</span>
+                      <div className="text-[12px] text-slate-500 truncate">{st?.customer_name || '—'}</div>
+                      <div className="flex items-center gap-1 flex-wrap mt-2">
+                        {a.folder && <span className="e-badge e-badge-sm e-tone-brand font-medium max-w-[120px] inline-block truncate leading-[22px]">{a.folder}</span>}
+                        <span className="e-badge e-badge-sm e-tone-neutral font-medium tabular-nums">{fmtSize(a.size_bytes)}</span>
                       </div>
-                      <div className="text-[10px] text-slate-300 mt-1">{a.created_time ? new Date(a.created_time).toLocaleDateString('vi-VN') : ''}</div>
+                      <div className="text-[11px] text-slate-400 mt-1.5 tabular-nums">{a.created_time ? new Date(a.created_time).toLocaleDateString('vi-VN') : ''}</div>
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
+            <div className="e-card divide-y divide-slate-100 overflow-hidden">
               {shown.map(a => {
                 const st = storeOf(a.media_customer_id); const dur = fmtDur(a.duration_ms); const thumb = assetThumb(a);
                 return (
-                  <div key={a.id} className="flex items-center gap-3 p-2.5 hover:bg-slate-50">
-                    <button onClick={() => setPreview(a)} className="relative w-16 h-12 rounded-lg overflow-hidden bg-slate-900 shrink-0">
+                  <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-teal-50/30 transition">
+                    <button onClick={() => setPreview(a)} className="relative w-16 h-12 rounded-xl overflow-hidden bg-slate-900 shrink-0">
                       {thumb ? <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
                       <span className="absolute inset-0 grid place-items-center text-white/70">{a.kind === 'video' ? <Play className="w-4 h-4 fill-white" /> : <Image className="w-4 h-4" />}</span>
                       {dur && <span className="absolute bottom-0.5 right-0.5 text-[9px] font-bold text-white bg-black/60 px-1 rounded">{dur}</span>}
                     </button>
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-slate-700 truncate">{a.name || 'Không tên'}</div>
-                      <div className="text-[11px] text-slate-400 truncate">{st?.customer_name || '—'}{a.folder ? ` · ${a.folder}` : ''}</div>
+                      <div className="text-[14px] font-semibold text-slate-800 truncate">{a.name || 'Không tên'}</div>
+                      <div className="text-[12px] text-slate-500 truncate">{st?.customer_name || '—'}{a.folder ? ` · ${a.folder}` : ''}</div>
                     </div>
-                    <span className="text-[11px] text-slate-400 shrink-0 hidden sm:block">{fmtSize(a.size_bytes)}</span>
-                    <button onClick={() => onToggleFav(a)} className="shrink-0 text-slate-300 hover:text-amber-400"><Star className={`w-4 h-4 ${a.favorite ? 'fill-amber-400 text-amber-400' : ''}`} /></button>
+                    <span className="e-badge e-badge-sm e-tone-neutral font-medium shrink-0 hidden sm:inline-flex tabular-nums">{fmtSize(a.size_bytes)}</span>
+                    <button onClick={() => onToggleFav(a)} className="e-icon-btn w-9 h-9 border-transparent shrink-0 hover:text-warning-500"><Star className={`w-4 h-4 ${a.favorite ? 'fill-warning-400 text-warning-500' : ''}`} /></button>
                   </div>
                 );
               })}
@@ -1923,9 +1931,9 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
           {/* Phân trang */}
           {pages > 1 && (
             <div className="flex items-center justify-center gap-1.5 mt-4">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={cur === 1} className="w-8 h-8 grid place-items-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
-              <span className="text-sm text-slate-500 px-2">Trang {cur}/{pages}</span>
-              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={cur === pages} className="w-8 h-8 grid place-items-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={cur === 1} className="e-icon-btn w-9 h-9 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" /></button>
+              <span className="text-[13px] font-medium text-slate-600 px-3 tabular-nums">Trang {cur}/{pages}</span>
+              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={cur === pages} className="e-icon-btn w-9 h-9 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronRight className="w-4 h-4" /></button>
             </div>
           )}
         </div>
@@ -1934,9 +1942,9 @@ const MediaVault = ({ assets, storeOf, builtCustomerIds, scanning, onScan, onTog
       {preview && (
         <Modal title={preview.name || 'Xem media'} onClose={() => setPreview(null)}>
           <VideoPreview url={preview.web_link || `https://drive.google.com/file/d/${preview.drive_id}/view`} className="w-full aspect-video" />
-          <div className="flex items-center justify-between mt-3 text-sm">
-            <span className="text-slate-500">{storeOf(preview.media_customer_id)?.customer_name || ''}{preview.folder ? ` · ${preview.folder}` : ''} · {fmtSize(preview.size_bytes)}</span>
-            <a href={preview.web_link || `https://drive.google.com/file/d/${preview.drive_id}/view`} target="_blank" rel="noopener noreferrer" className="text-teal-600 font-semibold inline-flex items-center gap-1 hover:underline"><ExternalLink className="w-4 h-4" />Mở Drive</a>
+          <div className="flex items-center justify-between gap-3 flex-wrap mt-4 text-[13px]">
+            <span className="text-slate-500 min-w-0">{storeOf(preview.media_customer_id)?.customer_name || ''}{preview.folder ? ` · ${preview.folder}` : ''} · {fmtSize(preview.size_bytes)}</span>
+            <a href={preview.web_link || `https://drive.google.com/file/d/${preview.drive_id}/view`} target="_blank" rel="noopener noreferrer" className="e-btn e-btn-outline e-btn-sm"><ExternalLink className="w-4 h-4" />Mở Drive</a>
           </div>
         </Modal>
       )}
@@ -1959,52 +1967,54 @@ const FbSummaryStrip = ({ clips, onReport }) => {
   const cpa = phones > 0 ? Math.round(spend / phones) : null;
   const cells = [
     { label: 'Chi phí', value: fmtM(spend) },
-    { label: 'Khách hàng tiềm năng', value: contacts, spark: '#12A4A5' },
-    { label: 'Lượt mua', value: purchases, spark: '#3b82f6' },
+    { label: 'Khách hàng tiềm năng', value: contacts, spark: '#3CA7A9' },
+    { label: 'Lượt mua', value: purchases, spark: '#76C2C3' },
     { label: 'Giá/SĐT', value: cpa != null ? fmtM(cpa) : '—' },
   ];
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-5 flex-wrap">
-      <div className="flex items-center gap-3 min-w-[210px]">
-        <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 grid place-items-center shrink-0"><BarChart2 className="w-5 h-5" /></span>
-        <div><div className="font-bold text-slate-800">Hiệu quả Facebook Ads</div><div className="text-[11px] text-slate-400">Clip nào “đẻ tiền” — chi phí, lead, CPA từ tài khoản Ads</div></div>
+    <div className="e-card e-card-pad">
+      <div className="e-card-header flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="e-metric-icon w-11 h-11 lg:w-11 lg:h-11 [&_svg]:w-5 [&_svg]:h-5"><BarChart2 /></span>
+          <div className="min-w-0"><div className="e-card-title">Hiệu quả Facebook Ads</div><div className="e-card-sub">Clip nào “đẻ tiền” — chi phí, lead, CPA từ tài khoản Ads</div></div>
+        </div>
+        {onReport && <button onClick={onReport} className="e-btn e-btn-secondary e-btn-sm shrink-0"><BarChart2 className="w-4 h-4" />Xem báo cáo chi tiết</button>}
       </div>
-      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 min-w-[260px]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {cells.map((c, i) => (
-          <div key={i}>
-            <div className="text-[11px] text-slate-400">{c.label}</div>
-            <div className="text-lg font-extrabold text-slate-800 flex items-center gap-2 leading-tight">{c.value}{c.spark && <Sparkline color={c.spark} />}</div>
+          <div key={i} className="e-subtle px-4 py-3 min-w-0">
+            <div className="e-metric-label">{c.label}</div>
+            <div className="e-metric-value flex items-center justify-between gap-2 mt-0.5">{c.value}{c.spark && <Sparkline color={c.spark} />}</div>
           </div>
         ))}
       </div>
-      {onReport && <button onClick={onReport} className="shrink-0 h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1.5"><BarChart2 className="w-4 h-4" />Xem báo cáo chi tiết</button>}
     </div>
   );
 };
 
 // ---------- Card "Bảng điểm Editor" (3 top editor) ----------
 const LeaderboardCard = ({ lb, now, onSeeAll }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-    <div className="flex items-start justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
-        <div><div className="font-bold text-slate-800 text-sm leading-tight">Bảng điểm Editor tháng {now.getMonth() + 1}</div><div className="text-[11px] text-slate-400">Top editor theo điểm Win</div></div>
+  <div className="e-card e-card-pad">
+    <div className="e-card-header mb-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="e-metric-icon w-10 h-10 lg:w-10 lg:h-10 bg-warning-50 text-warning-600 [&_svg]:w-5 [&_svg]:h-5"><Trophy /></span>
+        <div className="min-w-0"><div className="e-card-title">Bảng điểm Editor tháng {now.getMonth() + 1}</div><div className="e-card-sub">Top editor theo điểm Win</div></div>
       </div>
-      {onSeeAll && <button onClick={onSeeAll} className="text-xs font-semibold text-teal-600 hover:underline shrink-0">Xem bảng điểm →</button>}
+      {onSeeAll && <button onClick={onSeeAll} className="e-btn e-btn-ghost e-btn-sm shrink-0">Xem bảng điểm →</button>}
     </div>
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-      {lb.length === 0 && <p className="text-sm text-slate-400 py-3 text-center col-span-full">Chưa có dữ liệu</p>}
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {lb.length === 0 && <p className="e-empty-desc text-center mx-auto py-6 col-span-full">Chưa có dữ liệu</p>}
       {lb.slice(0, 3).map((e, i) => {
         const cat = e.avg == null ? null : scoreCat(e.avg, false);
-        const rankCls = i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-slate-300 text-white' : 'bg-orange-200 text-orange-700';
+        const rankCls = i === 0 ? 'bg-teal-600 text-white' : i === 1 ? 'bg-teal-100 text-teal-800' : 'bg-teal-50 text-teal-700';
         return (
-          <div key={e.id} className="rounded-xl bg-slate-50 p-3">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold ${rankCls}`}>{i + 1}</span>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? 'Chưa chấm' : `${i === 0 ? 'TB ' : ''}${e.avg.toFixed(1)}/10`}</span>
+          <div key={e.id} className="e-subtle p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <span className={`w-7 h-7 rounded-full grid place-items-center text-[12px] font-bold tabular-nums ${rankCls}`}>{i + 1}</span>
+              <span className={`e-badge e-badge-sm tabular-nums ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? 'Chưa chấm' : `${i === 0 ? 'TB ' : ''}${e.avg.toFixed(1)}/10`}</span>
             </div>
-            <div className="text-sm font-bold text-slate-700 truncate">{e.name}</div>
-            <div className="text-[11px] text-slate-400">{e.n} clip · {e.w} Win</div>
+            <div className="text-[14px] font-semibold text-slate-800 truncate">{e.name}</div>
+            <div className="text-[12px] text-slate-500 tabular-nums">{e.n} clip · {e.w} Win</div>
           </div>
         );
       })}
@@ -2043,42 +2053,49 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="p-6 pb-4 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-600 grid place-items-center mx-auto mb-3"><CheckCircle2 className="w-7 h-7" /></div>
-          <h3 className="text-lg font-extrabold text-slate-800">Duyệt cho chạy Ads?</h3>
-          <p className="text-sm text-slate-500 mt-1">Clip <b className="text-slate-700">{clip.title || store?.customer_name || 'này'}</b> sẽ được duyệt chạy. Editor chính thức +500.000đ.</p>
-
-          <div className="mt-4 rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white grid place-items-center mx-auto mb-2 shadow-md text-xl">⚡</div>
-            <div className="font-bold text-orange-700">Đăng ngay lên page luôn?</div>
-            <p className="text-[12px] text-slate-500 mt-1 leading-snug">Chọn <b>“Đăng ngay”</b> — hệ thống sẽ tự quét &amp; đăng video này lên page.<br />Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="e-modal max-w-md max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="e-modal-header">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="e-metric-icon w-11 h-11 lg:w-11 lg:h-11 bg-success-50 text-success-600 [&_svg]:w-5 [&_svg]:h-5"><CheckCircle2 /></span>
+            <div className="min-w-0">
+              <h3 className="e-modal-title">Duyệt cho chạy Ads?</h3>
+              <p className="text-[13px] text-slate-500 mt-0.5 leading-snug">Clip <b className="text-slate-800">{clip.title || store?.customer_name || 'này'}</b> sẽ được duyệt chạy. Editor chính thức +500.000đ.</p>
+            </div>
+          </div>
+        </div>
+        <div className="e-modal-body space-y-3">
+          <div className="rounded-xl border border-peach-100 bg-peach-50/60 p-3.5 flex items-start gap-3">
+            <span className="w-10 h-10 rounded-full bg-white text-peach-600 grid place-items-center shrink-0 text-lg shadow-soft">⚡</span>
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-800 text-[14px]">Đăng ngay lên page luôn?</div>
+              <p className="text-[12.5px] text-slate-500 mt-0.5 leading-snug">Chọn <b>“Đăng ngay”</b> — hệ thống sẽ tự quét &amp; đăng video này lên page.<br />Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+            </div>
           </div>
 
           {/* Tự chạy ads sau khi đăng */}
-          <div className={`mt-3 rounded-2xl border-2 p-4 text-left transition-colors ${runAds ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200'}`}>
+          <div className={`rounded-xl border p-3.5 text-left transition-colors ${runAds ? 'border-teal-300 bg-teal-50/40' : 'border-slate-200 bg-white'}`}>
             <button type="button" onClick={() => setRunAds(v => !v)} className="w-full flex items-center justify-between gap-2">
-              <span className="font-bold text-slate-700 inline-flex items-center gap-2"><span className="text-lg">🚀</span> Tự chạy ads cho video này?</span>
-              <span className={`w-11 h-6 rounded-full p-0.5 transition-colors ${runAds ? 'bg-blue-600' : 'bg-slate-200'}`}>
+              <span className="font-semibold text-[14px] text-slate-800 inline-flex items-center gap-2"><span className="text-lg">🚀</span> Tự chạy ads cho video này?</span>
+              <span className={`w-11 h-6 rounded-full p-0.5 transition-colors shrink-0 ${runAds ? 'bg-teal-500' : 'bg-slate-200'}`}>
                 <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${runAds ? 'translate-x-5' : ''}`} />
               </span>
             </button>
             {runAds && (
               <div className="mt-3 space-y-3">
                 <div>
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Chọn page chạy ads</div>
+                  <div className="e-label">Chọn page chạy ads</div>
                   {pages === null ? (
-                    <div className="text-sm text-slate-400 flex items-center gap-2 py-1"><Loader2 className="w-4 h-4 animate-spin" />Đang tải danh sách page…</div>
+                    <div className="text-[13px] text-slate-400 flex items-center gap-2 py-1"><Loader2 className="w-4 h-4 animate-spin" />Đang tải danh sách page…</div>
                   ) : pages.length === 0 ? (
-                    <div className="text-xs text-slate-400 bg-slate-50 rounded-xl p-2.5">Chưa có page nào được cấp token. Thêm page vào bảng <b>fb_pages</b> trước.</div>
+                    <div className="text-[12.5px] text-slate-500 e-subtle p-3">Chưa có page nào được cấp token. Thêm page vào bảng <b>fb_pages</b> trước.</div>
                   ) : (
                     <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                       {pages.map(p => (
                         <button type="button" key={p.page_id} onClick={() => setPageId(p.page_id)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left text-sm transition-colors ${pageId === p.page_id ? 'border-blue-400 bg-white font-bold text-blue-700 shadow-sm' : 'border-slate-200 text-slate-600 hover:bg-white'}`}>
-                          <span className={`w-4 h-4 rounded-full border-2 grid place-items-center shrink-0 ${pageId === p.page_id ? 'border-blue-600' : 'border-slate-300'}`}>
-                            {pageId === p.page_id && <span className="w-2 h-2 rounded-full bg-blue-600" />}
+                          className={`w-full flex items-center gap-2.5 px-3 h-10 rounded-xl border text-left text-[14px] transition-colors ${pageId === p.page_id ? 'border-teal-400 bg-white font-semibold text-teal-800 shadow-soft' : 'border-slate-200 bg-white text-slate-600 hover:border-teal-200'}`}>
+                          <span className={`w-4 h-4 rounded-full border-2 grid place-items-center shrink-0 ${pageId === p.page_id ? 'border-teal-600' : 'border-slate-300'}`}>
+                            {pageId === p.page_id && <span className="w-2 h-2 rounded-full bg-teal-600" />}
                           </span>
                           <span className="truncate">{p.name}</span>
                         </button>
@@ -2087,23 +2104,21 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
                   )}
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Giờ lên chiến dịch (≥ 15 phút nữa)</div>
+                  <div className="e-label">Giờ lên chiến dịch (≥ 15 phút nữa)</div>
                   <input type="datetime-local" value={runAt} min={toLocalInput(new Date(Date.now() + 15 * 60000))} onChange={e => setRunAt(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-blue-400 outline-none bg-white" />
-                  <p className="text-[11px] text-slate-400 mt-1 leading-snug">Trong thời gian chờ, hệ thống đăng bài lên page &amp; lấy ID bài đăng; đến giờ sẽ tự tạo chiến dịch với tệp target đã cấu hình sẵn.</p>
+                    className="e-input" />
+                  <p className="text-[12px] text-slate-400 mt-1.5 leading-snug">Trong thời gian chờ, hệ thống đăng bài lên page &amp; lấy ID bài đăng; đến giờ sẽ tự tạo chiến dịch với tệp target đã cấu hình sẵn.</p>
                 </div>
               </div>
             )}
           </div>
         </div>
-        <div className="px-6 pb-6 space-y-2.5">
-          <button onClick={() => go(true)} disabled={saving} className="w-full h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold hover:from-orange-600 hover:to-amber-600 disabled:opacity-60 inline-flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25">
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-lg">{runAds ? '🚀' : '⚡'}</span>} {runAds ? 'Duyệt · Đăng · Chạy ads' : 'Duyệt & Đăng ngay'}
+        <div className="e-modal-footer flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center">
+          <button onClick={onClose} disabled={saving} className="e-btn e-btn-secondary">Huỷ</button>
+          <button onClick={() => go(false)} disabled={saving} className="e-btn e-btn-outline"><CheckCircle2 className="w-4 h-4" />Chỉ duyệt</button>
+          <button onClick={() => go(true)} disabled={saving} className="e-btn e-btn-primary">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-base leading-none">{runAds ? '🚀' : '⚡'}</span>} {runAds ? 'Duyệt · Đăng · Chạy ads' : 'Duyệt & Đăng ngay'}
           </button>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button onClick={onClose} disabled={saving} className="h-11 rounded-2xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 disabled:opacity-60">Huỷ</button>
-            <button onClick={() => go(false)} disabled={saving} className="h-11 rounded-2xl bg-teal-600 text-white font-bold hover:bg-teal-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><CheckCircle2 className="w-4 h-4" />Chỉ duyệt</button>
-          </div>
         </div>
       </div>
     </div>
@@ -2151,120 +2166,120 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
   })() : null;
   const thumb = (c.thumb_links || [])[0];
   const MetaItem = ({ Icon, label, children }) => (
-    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
+    <div className="flex items-center gap-2 min-w-0">
+      <Icon className="w-4 h-4 text-slate-400 shrink-0" />
       <div className="min-w-0">
-        <div className="text-[10px] sm:text-[11px] text-slate-400 leading-none mb-0.5">{label}</div>
-        <div className="text-[12px] sm:text-[13px] font-bold text-slate-700 truncate">{children}</div>
+        <div className="e-kv-label leading-none mb-1">{label}</div>
+        <div className="text-[12.5px] sm:text-[13.5px] font-semibold text-slate-800 truncate">{children}</div>
       </div>
     </div>
   );
   const MetricCol = ({ Icon, label, value, ring, chip }) => (
-    <div className="flex flex-col items-center text-center px-1 py-2.5 sm:py-3.5 min-w-0">
-      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full grid place-items-center ${ring}`}><Icon className="w-4 h-4 sm:w-5 sm:h-5" /></div>
-      <div className="text-[9.5px] sm:text-[11px] text-slate-400 mt-1 sm:mt-1.5 leading-tight whitespace-nowrap">{label}</div>
-      <div className="font-bold text-slate-800 text-[13px] sm:text-[16px] mt-0.5 whitespace-nowrap">{value}</div>
-      {chip && <div className={`mt-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap ${chip.cls}`}>{chip.text}</div>}
+    <div className="flex flex-col items-center text-center px-1 py-3 sm:py-4 min-w-0">
+      <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full grid place-items-center ${ring}`}><Icon className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+      <div className="text-[11px] sm:text-[12px] text-slate-500 mt-1.5 leading-tight whitespace-nowrap">{label}</div>
+      <div className="font-bold text-slate-900 text-[13px] sm:text-[17px] mt-0.5 whitespace-nowrap tabular-nums">{value}</div>
+      {chip && <div className={`mt-1 e-badge e-badge-sm h-5 px-1.5 sm:px-2 text-[10px] sm:text-[11px] ${chip.cls}`}>{chip.text}</div>}
     </div>
   );
   return (
-    <div id={`clip-${c.id}`} className="bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-3.5 sm:p-5 max-w-2xl mx-auto">
+    <div id={`clip-${c.id}`} className="e-card p-4 sm:p-5 max-w-2xl mx-auto transition hover:shadow-float">
       {/* Hàng đầu: nhãn thẻ · Xem chi tiết · menu (giống mockup) */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <span className="font-bold text-slate-800 text-[15px]">Chiến dịch</span>
-        <div className="flex items-center gap-2">
-          <button onClick={onView} className="text-[13px] font-bold text-white px-4 h-9 rounded-xl bg-[#12274a] hover:bg-[#1b3866] whitespace-nowrap">Xem chi tiết</button>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="e-caption">Chiến dịch</span>
+        <div className="flex items-center gap-1">
+          <button onClick={onView} className="e-btn e-btn-secondary e-btn-sm">Xem chi tiết</button>
           <ActionMenu items={menuItems} />
         </div>
       </div>
 
       {/* Video — poster + nút play (bấm để xem), phủ kín khung, không viền đen */}
-      <button onClick={onView} className="group relative block w-full rounded-2xl overflow-hidden bg-slate-900 aspect-video ring-1 ring-slate-200/60 shadow-sm">
+      <button onClick={onView} className="group relative block w-full rounded-xl overflow-hidden bg-slate-900 aspect-video ring-1 ring-slate-200/60">
         {thumb
           ? <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover" loading="lazy" />
           : <div className="w-full h-full grid place-items-center text-white/25"><PlayCircle className="w-14 h-14" /></div>}
         <span className="absolute inset-0 grid place-items-center bg-black/5 group-hover:bg-black/15 transition-colors">
-          <span className="w-16 h-16 rounded-full bg-black/55 backdrop-blur-sm grid place-items-center group-hover:bg-black/70 group-hover:scale-105 transition"><Play className="w-7 h-7 text-white fill-current ml-1" /></span>
+          <span className="w-14 h-14 rounded-full bg-white/90 grid place-items-center text-teal-700 shadow-float group-hover:scale-105 transition"><Play className="w-6 h-6 fill-current ml-1" /></span>
         </span>
         {(c.post_status === 'posted' || c.post_now) && (
-          <span className="absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur bg-black/45 text-white">
+          <span className="absolute top-3 left-3 e-badge e-badge-sm bg-white/90 text-success-600 shadow-soft">
             {c.post_status === 'posted' ? '✅ Đã đăng page' : '⚡ Đã gửi đăng page'}
           </span>
         )}
       </button>
 
       {/* Trạng thái + tiến trình tự chạy ads */}
-      <div className="flex items-center gap-2 flex-wrap mt-2.5">
-        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${status.cls}`}>
-          {fbInfo?.kind === 'running' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+      <div className="flex items-center gap-2 flex-wrap mt-3">
+        <span className={`e-badge ${status.cls}`}>
+          {fbInfo?.kind === 'running' && <span className="w-2 h-2 rounded-full bg-success-500 animate-pulse" />}
           {status.label}
         </span>
         {c.ads_auto_status === 'queued' && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700" title={`Page: ${c.ads_page_name || c.ads_page_id || ''}`}>
+          <span className="e-badge e-tone-info" title={`Page: ${c.ads_page_name || c.ads_page_id || ''}`}>
             🚀 {c.fb_post_id ? 'Lên chiến dịch' : 'Chờ đăng bài → chiến dịch'} {c.ads_run_at ? new Date(c.ads_run_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : ''}
           </span>
         )}
         {c.ads_auto_status === 'failed' && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700" title={c.ads_error || ''}>⚠️ Lỗi tạo chiến dịch</span>
+          <span className="e-badge e-tone-danger" title={c.ads_error || ''}>⚠️ Lỗi tạo chiến dịch</span>
         )}
       </div>
 
       {/* Tiêu đề + ô khách hàng */}
-      <div className="flex items-start justify-between gap-2.5 sm:gap-3 mt-1.5">
+      <div className="flex items-start justify-between gap-3 mt-2.5">
         <div className="min-w-0">
-          <h3 className="font-bold text-slate-800 text-[16px] sm:text-[17px] leading-snug">{c.title || '(Chưa đặt tiêu đề)'}</h3>
-          <div className="w-7 h-[3px] bg-slate-200 rounded-full mt-1.5" />
+          <h3 className="font-semibold text-slate-900 text-[16px] sm:text-[17px] leading-snug">{c.title || '(Chưa đặt tiêu đề)'}</h3>
+          <div className="w-8 h-[3px] bg-teal-300 rounded-full mt-2" />
         </div>
         {store?.customer_name && (
-          <div className="shrink-0 w-32 sm:w-44 rounded-2xl bg-slate-50 border border-slate-100 p-2 sm:p-2.5">
-            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400"><CalendarDays className="w-3.5 h-3.5" />Khách hàng</div>
-            <div className="font-bold text-slate-800 text-[12px] sm:text-[13px] mt-0.5 leading-snug line-clamp-2">{cleanName(store.customer_name)}</div>
-            {store?.service && <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 line-clamp-1">{store.service}</div>}
+          <div className="shrink-0 w-32 sm:w-44 e-subtle p-2.5">
+            <div className="flex items-center gap-1.5 e-kv-label"><User className="w-3.5 h-3.5" />Khách hàng</div>
+            <div className="font-semibold text-slate-800 text-[12.5px] sm:text-[13.5px] mt-0.5 leading-snug line-clamp-2">{cleanName(store.customer_name)}</div>
+            {store?.service && <div className="text-[11px] sm:text-[12px] text-slate-500 mt-0.5 line-clamp-1">{store.service}</div>}
           </div>
         )}
       </div>
 
       {/* Meta: Cập nhật · Editor · Nguồn — gọn 1 hàng cả trên mobile */}
-      <div className="grid grid-cols-3 gap-x-2 sm:gap-x-4 mt-2.5">
+      <div className="grid grid-cols-3 gap-x-2 sm:gap-x-4 mt-3 pt-3 border-t border-slate-100">
         <MetaItem Icon={CalendarDays} label="Cập nhật">{syncedAt || '—'}</MetaItem>
         <MetaItem Icon={User} label="Editor">{c.editor?.full_name || '—'}</MetaItem>
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <FolderOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="w-4 h-4 text-slate-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[10px] sm:text-[11px] text-slate-400 leading-none mb-0.5">Nguồn</div>
+            <div className="e-kv-label leading-none mb-1">Nguồn</div>
             {(store?.source_links || []).length > 0
-              ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-[12px] sm:text-[13px] text-teal-600 font-bold inline-flex items-center gap-1 hover:underline whitespace-nowrap"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
-              : <span className="text-[12px] sm:text-[13px] text-slate-300 font-bold">—</span>}
+              ? <button onClick={() => window.open(store.source_links[0], '_blank', 'noopener')} className="text-[12.5px] sm:text-[13.5px] text-teal-700 font-semibold inline-flex items-center gap-1 hover:underline whitespace-nowrap"><ExternalLink className="w-3.5 h-3.5" />Mở Drive</button>
+              : <span className="text-[12.5px] sm:text-[13.5px] text-slate-300 font-semibold">—</span>}
           </div>
         </div>
       </div>
 
       {/* ID quảng cáo: danh sách nhiều id (chip) · Đồng bộ tổng / Gỡ tất cả · thêm id */}
       {adIds.length > 0 ? (
-        <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-2.5 sm:p-3 mt-3">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="text-[11px] sm:text-[12px] font-bold text-slate-500 inline-flex items-center gap-1.5">
-              <LinkIcon className="w-3.5 h-3.5 text-slate-400" />ID quảng cáo <span className="text-slate-400 font-semibold">({adIds.length})</span>
+        <div className="e-subtle p-3 mt-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="text-[12.5px] font-semibold text-slate-600 inline-flex items-center gap-1.5">
+              <LinkIcon className="w-3.5 h-3.5 text-slate-400" />ID quảng cáo <span className="text-slate-400 font-medium tabular-nums">({adIds.length})</span>
             </div>
             {canAds && (
               <div className="flex items-center gap-1.5">
-                <button onClick={() => onSyncFb?.(c.id, adIds)} title="Đồng bộ & cộng tổng chỉ số" className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-blue-600 border border-blue-200 rounded-full px-2.5 py-1 hover:bg-blue-50"><RotateCcw className="w-3.5 h-3.5" /><span className="hidden sm:inline">Đồng bộ</span></button>
-                <button onClick={() => onRemoveFb?.(c)} title="Gỡ tất cả ID quảng cáo" className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-rose-500 border border-rose-200 rounded-full px-2.5 py-1 hover:bg-rose-50"><X className="w-3.5 h-3.5" /><span className="hidden sm:inline">Gỡ hết</span></button>
+                <button onClick={() => onSyncFb?.(c.id, adIds)} title="Đồng bộ & cộng tổng chỉ số" className="e-btn e-btn-outline e-btn-sm h-8 px-2.5 gap-1"><RotateCcw className="w-3.5 h-3.5" /><span className="hidden sm:inline">Đồng bộ</span></button>
+                <button onClick={() => onRemoveFb?.(c)} title="Gỡ tất cả ID quảng cáo" className="e-btn e-btn-danger-soft e-btn-sm h-8 px-2.5 gap-1"><X className="w-3.5 h-3.5" /><span className="hidden sm:inline">Gỡ hết</span></button>
               </div>
             )}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {adIds.map((id) => (
-              <span key={id} className="inline-flex items-center gap-1 bg-white border border-slate-200 rounded-full pl-2.5 pr-1 py-1 text-[11px] sm:text-xs font-bold text-slate-700 max-w-full">
-                <button onClick={() => { navigator.clipboard?.writeText(String(id)); toast.success('Đã copy ID'); }} title="Copy ID" className="tracking-wide truncate max-w-[130px] sm:max-w-[180px] hover:text-blue-600">{id}</button>
-                {canAds && <button onClick={() => onRemoveOneAdId?.(c, id)} title="Gỡ id này" className="w-4 h-4 grid place-items-center rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 shrink-0"><X className="w-3 h-3" /></button>}
+              <span key={id} className="inline-flex items-center gap-1 bg-white border border-slate-200 rounded-full pl-3 pr-1 h-8 text-[12px] font-semibold text-slate-700 max-w-full">
+                <button onClick={() => { navigator.clipboard?.writeText(String(id)); toast.success('Đã copy ID'); }} title="Copy ID" className="tabular-nums truncate max-w-[130px] sm:max-w-[180px] hover:text-teal-700">{id}</button>
+                {canAds && <button onClick={() => onRemoveOneAdId?.(c, id)} title="Gỡ id này" className="w-6 h-6 grid place-items-center rounded-full text-slate-400 hover:text-danger-600 hover:bg-danger-50 shrink-0"><X className="w-3 h-3" /></button>}
               </span>
             ))}
           </div>
           {canAds && (
-            <div className="flex gap-1.5 mt-2">
-              <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="Thêm ID quảng cáo (dán nhiều id)…" className="flex-1 min-w-0 px-2.5 py-1.5 text-[13px] rounded-lg border border-slate-200 bg-white focus:border-blue-400 outline-none" />
-              <button onClick={doAssign} className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[13px] font-bold hover:bg-blue-700 inline-flex items-center gap-1"><Plus className="w-4 h-4" />Thêm</button>
+            <div className="flex gap-2 mt-2.5">
+              <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="Thêm ID quảng cáo (dán nhiều id)…" className="e-input h-[34px] flex-1 min-w-0 text-[13px] rounded-[10px]" />
+              <button onClick={doAssign} className="e-btn e-btn-primary e-btn-sm shrink-0"><Plus className="w-4 h-4" />Thêm</button>
             </div>
           )}
         </div>
@@ -2272,54 +2287,54 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
 
       {/* Chỉ số Ads (cộng tổng của tất cả ID) — 1 thẻ, 4 cột GỌN 1 HÀNG cả trên mobile */}
       {adIds.length > 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm mt-3 grid grid-cols-4 divide-x divide-slate-100">
-          <MetricCol Icon={Users} label="KH tiềm năng" value={contacts} ring="bg-teal-50 text-teal-600" />
-          <MetricCol Icon={ShoppingCart} label="Lượt mua" value={purchases} ring="bg-violet-50 text-violet-600" />
-          <MetricCol Icon={CircleDollarSign} label="Chi phí" value={fmtM(c.fb_spend)} ring="bg-amber-50 text-amber-600" />
-          <MetricCol Icon={Wallet} label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} ring="bg-blue-50 text-blue-600" chip={verdict.potential ? verdict.tier : null} />
+        <div className="rounded-xl bg-white border border-slate-200/80 mt-3 grid grid-cols-4 divide-x divide-slate-100">
+          <MetricCol Icon={Users} label="KH tiềm năng" value={contacts} ring="bg-teal-50 text-teal-700" />
+          <MetricCol Icon={ShoppingCart} label="Lượt mua" value={purchases} ring="bg-lavender-50 text-lavender-600" />
+          <MetricCol Icon={CircleDollarSign} label="Chi phí" value={fmtM(c.fb_spend)} ring="bg-peach-50 text-peach-600" />
+          <MetricCol Icon={Wallet} label="Giá/SĐT" value={cpa != null ? fmtM(cpa) : '—'} ring="bg-sky-50 text-sky-600" chip={verdict.potential ? verdict.tier : null} />
         </div>
       ) : canAds && c.approved_to_run ? (
-        <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3 mt-3">
-          <p className="text-xs text-slate-500 mb-2">Chạy Ads xong, dán <b className="text-blue-700">ID quảng cáo Facebook</b> (dán được nhiều id — mỗi campaign 1 id) để kéo &amp; cộng tổng chỉ số:</p>
+        <div className="e-subtle p-3.5 mt-3 bg-teal-50/40 border-teal-100">
+          <p className="text-[12.5px] text-slate-600 mb-2.5 leading-snug">Chạy Ads xong, dán <b className="text-teal-800">ID quảng cáo Facebook</b> (dán được nhiều id — mỗi campaign 1 id) để kéo &amp; cộng tổng chỉ số:</p>
           <div className="flex gap-2">
-            <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000, 120219999900000…" className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-400 outline-none" />
-            <button onClick={doAssign} className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 inline-flex items-center gap-1.5"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
+            <input value={cidInput} onChange={e => setCidInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && doAssign()} inputMode="numeric" placeholder="VD: 120212345678900000, 120219999900000…" className="e-input flex-1 min-w-0" />
+            <button onClick={doAssign} className="e-btn e-btn-primary shrink-0"><LinkIcon className="w-4 h-4" />Gán &amp; Kéo</button>
           </div>
         </div>
       ) : canAds ? (
-        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-slate-300" />Duyệt chạy Ads trước, rồi mới gán ID quảng cáo.</div>
+        <div className="e-subtle text-[13px] text-slate-500 p-3 mt-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-slate-300 shrink-0" />Duyệt chạy Ads trước, rồi mới gán ID quảng cáo.</div>
       ) : (
-        <div className="text-sm text-slate-400 bg-slate-50 rounded-2xl p-3 mt-3">Chưa gán ID quảng cáo Facebook.</div>
+        <div className="e-subtle text-[13px] text-slate-500 p-3 mt-3">Chưa gán ID quảng cáo Facebook.</div>
       )}
 
       {/* Dải điểm hệ thống — nền navy 1 hàng: nhãn · điểm giữa · trạng thái phải */}
-      <div className="rounded-2xl bg-[#0f2140] px-3.5 sm:px-5 py-2.5 sm:py-3 mt-3 flex items-center gap-2">
-        <span className="text-xs font-semibold text-white/85 whitespace-nowrap shrink-0">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
+      <div className="rounded-xl bg-teal-50/60 border border-teal-100 px-3.5 sm:px-4 py-2.5 mt-3 flex items-center gap-2 min-h-[52px]">
+        <span className="text-[12.5px] font-semibold text-teal-800 whitespace-nowrap shrink-0">{verdict.potential ? 'Chỉ số Ads' : 'Điểm hệ thống'}</span>
         <span className="flex-1 flex justify-center min-w-0 px-1">
           {verdict.potential
-            ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap ${verdict.tier.cls}`}>{verdict.tier.text}</span>
+            ? <span title="Ads còn đang chạy & chưa tiêu quá ngân sách Win — chưa chấm điểm, chỉ đánh giá theo Chi phí/SĐT" className={`e-badge ${verdict.tier.cls}`}>{verdict.tier.text}</span>
             : (c.win || c.score > 0)
-              ? <span className={`text-lg font-extrabold inline-flex items-center gap-1.5 whitespace-nowrap ${c.win ? 'text-amber-400' : 'text-white'}`}>{c.win && <Trophy className="w-5 h-5 text-amber-400" />}{c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
-              : <span className="text-sm font-semibold text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
+              ? <span className={`text-[18px] font-bold tabular-nums inline-flex items-center gap-1.5 whitespace-nowrap ${c.win ? 'text-peach-600' : 'text-slate-900'}`}>{c.win && <Trophy className="w-5 h-5 text-peach-500" />}{c.win ? 10 : c.score}/10{c.win ? ' · WIN' : ''}</span>
+              : <span className="text-[13px] font-medium text-slate-400 whitespace-nowrap">Chưa có điểm</span>}
         </span>
         {c.approved_to_run
-          ? <span className="text-[11px] sm:text-xs font-bold text-white bg-emerald-600 px-3 py-1.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-3.5 h-3.5" />Đã duyệt chạy</span>
-          : canAds ? <button onClick={(e) => { e.stopPropagation(); onApproveRun(); }} className="text-[11px] sm:text-xs font-bold text-white px-3 py-1.5 rounded-full bg-teal-500 hover:bg-teal-400 inline-flex items-center gap-1 whitespace-nowrap shrink-0"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>
+          ? <span className="e-badge e-tone-success shrink-0"><CheckCircle2 className="w-3.5 h-3.5" />Đã duyệt chạy</span>
+          : canAds ? <button onClick={(e) => { e.stopPropagation(); onApproveRun(); }} className="e-btn e-btn-primary e-btn-sm shrink-0"><CheckCircle2 className="w-4 h-4" />Duyệt chạy</button>
             : <span className="shrink-0 w-1" />}
       </div>
 
       {/* Điểm Editor · Ghi chú */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2.5">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
         <span className="flex items-center gap-2 whitespace-nowrap" title="Điểm trung bình tích lũy của editor (tính trên mọi clip đã được chấm, không reset theo tháng)">
           <span className="text-[13px] text-slate-500">Điểm Editor</span>
-          <span className="text-sm font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">{editorAvg != null ? `${editorAvg.toFixed(1)}/10` : '—'}</span>
+          <span className="e-badge e-tone-neutral tabular-nums">{editorAvg != null ? `${editorAvg.toFixed(1)}/10` : '—'}</span>
         </span>
         <span className="flex items-center gap-1.5 text-[13px] min-w-0">
           <span className="text-slate-500 shrink-0">Ghi chú:</span>
           {c.ads_feedback
-            ? <span className="text-slate-600 truncate max-w-[220px]">{c.ads_feedback}</span>
+            ? <span className="text-slate-700 truncate max-w-[220px]">{c.ads_feedback}</span>
             : <span className="text-slate-300">chưa có</span>}
-          {canAds && <button onClick={onReview} className="text-slate-400 hover:text-violet-600 shrink-0"><Pencil className="w-4 h-4" /></button>}
+          {canAds && <button onClick={onReview} className="w-7 h-7 grid place-items-center rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 shrink-0"><Pencil className="w-4 h-4" /></button>}
         </span>
       </div>
     </div>
@@ -2327,9 +2342,9 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
 };
 
 // ---------- Modal: Thêm media (Media up nguồn) ----------
-const inpCls = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
+const inpCls = 'w-full min-h-[40px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-400 focus:ring-[3px] focus:ring-teal-500/20';
 const Field = ({ label, children }) => (
-  <div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>
+  <div className="mb-4"><label className="e-label">{label}</label>{children}</div>
 );
 const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
   const [mode, setMode] = useState('existing'); // existing (tag khách) | new
@@ -2432,30 +2447,30 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
 
   return (
     <Modal title="Thêm media khách hàng" onClose={onClose}>
-      <div className="flex gap-2 mb-3">
-        <button onClick={() => setMode('existing')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'existing' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>Tag khách đã có</button>
-        <button onClick={() => setMode('new')} className={`flex-1 py-2 rounded-xl text-sm font-semibold ${mode === 'new' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>Khách chưa có (tạo mới)</button>
+      <div className="e-seg flex w-full mb-4">
+        <button onClick={() => setMode('existing')} className={`e-seg-item flex-1 h-9 ${mode === 'existing' ? 'e-seg-active' : ''}`}>Tag khách đã có</button>
+        <button onClick={() => setMode('new')} className={`e-seg-item flex-1 h-9 ${mode === 'new' ? 'e-seg-active' : ''}`}>Khách chưa có (tạo mới)</button>
       </div>
 
       {mode === 'existing' ? (
         picked ? (
-          <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-xl px-3 py-2 mb-3">
-            <span className="text-sm font-medium text-slate-700">{picked.customer_name} · {picked.phone}{picked.service ? ` · ${picked.service}` : ''}</span>
-            <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-teal-50/70 border border-teal-100 px-3.5 py-2.5 mb-4">
+            <span className="flex items-center gap-2.5 min-w-0"><span className="e-avatar w-8 h-8"><User className="w-4 h-4" /></span><span className="text-[14px] font-medium text-slate-800 truncate">{picked.customer_name} · {picked.phone}{picked.service ? ` · ${picked.service}` : ''}</span></span>
+            <button onClick={() => setPicked(null)} className="e-icon-btn w-8 h-8 border-transparent bg-transparent shrink-0"><X className="w-4 h-4" /></button>
           </div>
         ) : (
-          <div className="mb-3">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tag khách: tìm theo tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none" />
+          <div className="mb-4">
+            <div className="e-search">
+              <Search />
+              <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tag khách: tìm theo tên / SĐT…" />
             </div>
-            <div className="max-h-40 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
+            <div className="max-h-48 overflow-y-auto mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100">
               {results.map(r => (
-                <button key={r.appointment_id} onClick={() => setPicked(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50">
-                  <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
+                <button key={r.appointment_id} onClick={() => setPicked(r)} className="w-full text-left px-3.5 py-2.5 text-[14px] hover:bg-teal-50/60 transition">
+                  <div className="font-medium text-slate-800">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
                 </button>
               ))}
-              {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không thấy. Hãy chọn “Khách chưa có (tạo mới)”.</div>}
+              {results.length === 0 && <div className="px-3 py-5 text-center text-[12.5px] text-slate-400">Không thấy. Hãy chọn “Khách chưa có (tạo mới)”.</div>}
             </div>
           </div>
         )
@@ -2468,7 +2483,7 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
               {SERVICE_GROUPS.map(g => {
                 const on = (service || '').split(',').map(x => x.trim()).includes(g);
                 return <button type="button" key={g} onClick={() => setService(prev => { const arr = (prev || '').split(',').map(x => x.trim()).filter(Boolean); return arr.includes(g) ? arr.filter(x => x !== g).join(', ') : [...arr, g].join(', '); })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${on ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{g}</button>;
+                  className={`e-chip h-8 ${on ? 'e-chip-active' : ''}`}>{g}</button>;
               })}
             </div>
           </Field>
@@ -2480,11 +2495,11 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
           <Field label="ID source">
             <div className="flex gap-2">
               <input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} />
-              <button type="button" onClick={fillId} disabled={!canSuggest} title={canSuggest ? 'Tự tạo ID source' : 'Nhập Tên khách + Ngày quay/chụp trước'} className="shrink-0 px-3 rounded-xl bg-teal-50 text-teal-700 text-xs font-semibold border border-teal-200 hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-50">Gợi ý</button>
+              <button type="button" onClick={fillId} disabled={!canSuggest} title={canSuggest ? 'Tự tạo ID source' : 'Nhập Tên khách + Ngày quay/chụp trước'} className="e-btn e-btn-outline shrink-0">Gợi ý</button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Quy định: <b>Tên khách</b> + <b>ngày quay/chụp</b> (ddmmyyyy) + <b>_STT</b>. VD: <span className="font-mono text-slate-500">Dung27062026_01</span></p>
+            <p className="text-[12px] text-slate-400 mt-1.5">Quy định: <b>Tên khách</b> + <b>ngày quay/chụp</b> (ddmmyyyy) + <b>_STT</b>. VD: <span className="font-mono text-slate-500">Dung27062026_01</span></p>
           </Field>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
             <Field label="Ngày quay/chụp"><input type="date" value={shootDate} onChange={e => setShootDate(e.target.value)} className={inpCls} /></Field>
             <Field label="Media phụ trách">
               <select value={mediaChargeId} onChange={e => setMediaChargeId(e.target.value)} className={inpCls}>
@@ -2493,7 +2508,7 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
               </select>
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
             <Field label="Loại source">
               <select value={sourceType} onChange={e => setSourceType(e.target.value)} className={inpCls}>
                 <option value="">— Chọn loại —</option>
@@ -2509,18 +2524,18 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
           <Field label="Link Google Drive (mỗi dòng 1 link)"><textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
           <Field label="Cảnh báo quyền sử dụng (Designer/Editor sẽ thấy)">
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setNoImage(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${noImage ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><Ban className="w-4 h-4" />Không dùng hình ảnh</button>
-              <button type="button" onClick={() => setHideFace(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${hideFace ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><EyeOff className="w-4 h-4" />Che mặt</button>
+              <button type="button" onClick={() => setNoImage(v => !v)} className={`e-chip ${noImage ? 'border-danger-300 bg-danger-50 text-danger-600 font-semibold' : ''}`}><Ban className="w-4 h-4" />Không dùng hình ảnh</button>
+              <button type="button" onClick={() => setHideFace(v => !v)} className={`e-chip ${hideFace ? 'border-warning-300 bg-warning-50 text-warning-600 font-semibold' : ''}`}><EyeOff className="w-4 h-4" />Che mặt</button>
             </div>
           </Field>
           <Field label="Nhãn (tag)"><TagInput value={tags} onChange={setTags} /></Field>
           <Field label="Trong link đã có những source nào?">
             <button type="button" onClick={doScan} disabled={scanning}
-              className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
+              className="e-btn e-btn-outline e-btn-sm mb-2.5">
               {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi Drive tự động
             </button>
             <SourceTypePicker value={sourceTypes} onChange={setSourceTypes} />
-            <p className="text-[11px] text-slate-400 mt-1.5">Bấm để hệ thống tự đọc thư mục trong link. Bỏ trống cũng được — sẽ tự soi khi lưu. (Có thể chỉnh tay nếu link riêng tư.)</p>
+            <p className="text-[12px] text-slate-400 mt-2">Bấm để hệ thống tự đọc thư mục trong link. Bỏ trống cũng được — sẽ tự soi khi lưu. (Có thể chỉnh tay nếu link riêng tư.)</p>
           </Field>
           <Field label="Ghi chú"><textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className={inpCls} /></Field>
         </>
@@ -2570,8 +2585,8 @@ const SourceModal = ({ store, onClose, onSaved }) => {
   };
   return (
     <Modal title="Sửa nguồn media" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-2">Khách: <b>{store.customer_name}</b></p>
-      <div className="grid grid-cols-2 gap-2">
+      <p className="e-subtle px-3 py-2.5 text-[13px] text-slate-600 mb-4">Khách: <b className="text-slate-900">{store.customer_name}</b></p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
         <Field label="Loại source">
           <select value={sourceType} onChange={e => setSourceType(e.target.value)} className={inpCls}>
             <option value="">— Chọn loại —</option>
@@ -2587,13 +2602,13 @@ const SourceModal = ({ store, onClose, onSaved }) => {
       <Field label="Link nguồn (mỗi dòng 1 link)"><textarea autoFocus value={links} onChange={e => setLinks(e.target.value)} rows={3} className={inpCls} /></Field>
       <Field label="Cảnh báo quyền sử dụng (Designer/Editor sẽ thấy)">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setNoImage(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${noImage ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><Ban className="w-4 h-4" />Không dùng hình ảnh</button>
-          <button type="button" onClick={() => setHideFace(v => !v)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border inline-flex items-center gap-1.5 transition ${hideFace ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><EyeOff className="w-4 h-4" />Che mặt</button>
+          <button type="button" onClick={() => setNoImage(v => !v)} className={`e-chip ${noImage ? 'border-danger-300 bg-danger-50 text-danger-600 font-semibold' : ''}`}><Ban className="w-4 h-4" />Không dùng hình ảnh</button>
+          <button type="button" onClick={() => setHideFace(v => !v)} className={`e-chip ${hideFace ? 'border-warning-300 bg-warning-50 text-warning-600 font-semibold' : ''}`}><EyeOff className="w-4 h-4" />Che mặt</button>
         </div>
       </Field>
       <Field label="Trong link đã có những source nào?">
         <button type="button" onClick={doScan} disabled={scanning}
-          className="mb-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">
+          className="e-btn e-btn-outline e-btn-sm mb-2.5">
           {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Soi Drive tự động
         </button>
         <SourceTypePicker value={sourceTypes} onChange={setSourceTypes} />
@@ -2622,17 +2637,18 @@ const LinkCustomerModal = ({ store, onClose, onSaved }) => {
   };
   return (
     <Modal title="Kết nối với Thông tin khách hàng" onClose={onClose}>
-      <div className="relative mb-2">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-        <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm tên/SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none" />
+      <div className="e-search mb-3">
+        <Search />
+        <input autoFocus value={q} onChange={e => onSearch(e.target.value)} placeholder="Tìm tên/SĐT…" />
       </div>
-      <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-xl divide-y">
+      <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
         {results.map(r => (
-          <button key={r.appointment_id} onClick={() => link(r)} className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50">
-            <div className="font-medium text-slate-700">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
+          <button key={r.appointment_id} onClick={() => link(r)} className="w-full text-left px-3.5 py-3 text-[14px] hover:bg-teal-50/60 transition flex items-center gap-3">
+            <span className="e-avatar w-8 h-8"><User className="w-4 h-4" /></span>
+            <div className="font-medium text-slate-800 min-w-0 truncate">{r.customer_name} <span className="text-slate-400 font-normal">· {r.phone}</span></div>
           </button>
         ))}
-        {results.length === 0 && <div className="px-3 py-4 text-center text-xs text-slate-400">Không tìm thấy khách hàng phù hợp</div>}
+        {results.length === 0 && <div className="px-3 py-6 text-center text-[12.5px] text-slate-400">Không tìm thấy khách hàng phù hợp</div>}
       </div>
     </Modal>
   );
@@ -2677,39 +2693,39 @@ const BuildClipModal = ({ store, clip: editing, me, onClose, onSaved }) => {
   };
   return (
     <Modal title={editing ? 'Sửa video' : 'Dựng video'} onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b></p>
+      <p className="e-subtle px-3 py-2.5 text-[13px] text-slate-600 mb-4">Khách: <b className="text-slate-900">{store?.customer_name}</b></p>
       {(store?.no_image || store?.hide_face) && (
-        <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
-          <div className="text-xs font-bold text-rose-700 mb-1.5 flex items-center gap-1"><AlertTriangle className="w-4 h-4" />LƯU Ý QUYỀN SỬ DỤNG</div>
+        <div className="mb-4 rounded-xl border border-danger-100 bg-danger-50/60 p-3.5">
+          <div className="text-[12px] font-bold text-danger-600 mb-2 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />LƯU Ý QUYỀN SỬ DỤNG</div>
           <PermissionBadges s={store} />
         </div>
       )}
-      {store?.source_links?.length > 0 && <div className="mb-3"><div className="text-xs text-slate-400 mb-1">Nguồn để dựng:</div><LinkList links={store.source_links} label="Nguồn" icon={Film} /></div>}
+      {store?.source_links?.length > 0 && <div className="mb-4"><div className="e-label">Nguồn để dựng:</div><LinkList links={store.source_links} label="Nguồn" icon={Film} /></div>}
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Tiêu đề video</label>
-      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Review nâng mũi - KH Thanh Hà" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
+      <label className="e-label">Tiêu đề video</label>
+      <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Review nâng mũi - KH Thanh Hà" className="e-input mb-4" />
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><Scissors className="w-3.5 h-3.5" /> Link clip đã dựng (mỗi dòng 1 link)</label>
-      <textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-3" />
+      <label className="e-label flex items-center gap-1.5"><Scissors className="w-3.5 h-3.5 text-slate-400" /> Link clip đã dựng (mỗi dòng 1 link)</label>
+      <textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className="e-textarea mb-4" />
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1"><Image className="w-3.5 h-3.5" /> Ảnh thumbnail (tải trực tiếp)</label>
-      <div className="flex flex-wrap gap-2 mb-3">
+      <label className="e-label flex items-center gap-1.5"><Image className="w-3.5 h-3.5 text-slate-400" /> Ảnh thumbnail (tải trực tiếp)</label>
+      <div className="flex flex-wrap gap-2.5 mb-4">
         {thumbs.map((u, i) => (
           <div key={i} className="relative">
-            <img src={u} alt="thumb" className="h-20 w-20 object-cover rounded-lg border border-slate-200" />
-            <button type="button" onClick={() => setThumbs(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center"><X className="w-3 h-3" /></button>
+            <img src={u} alt="thumb" className="h-20 w-20 object-cover rounded-xl border border-slate-200" />
+            <button type="button" onClick={() => setThumbs(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-danger-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-soft ring-2 ring-white"><X className="w-3 h-3" /></button>
           </div>
         ))}
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-          className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-500 disabled:opacity-50">
+          className="h-20 w-20 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50/40 transition disabled:opacity-50">
           {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-          <span className="text-[10px] mt-0.5">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
+          <span className="text-[11px] font-medium mt-1">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
         </button>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPickFiles} />
       </div>
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Ghi chú</label>
-      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-4" />
+      <label className="e-label">Ghi chú</label>
+      <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} className="e-textarea" />
       <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel={editing ? 'Cập nhật & nộp lại' : 'Đẩy clip'} />
     </Modal>
   );
@@ -2725,10 +2741,10 @@ const WinRuleModal = ({ rule, onClose, onSave }) => {
   const cpa = b && p ? Math.round(b / p) : null;
   return (
     <Modal title="Định nghĩa Ads Win" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-3">Win không cố định theo con số cứng — bạn đặt theo thị trường. Hệ thống sẽ <b>tự chấm</b> mỗi clip dựa trên chỉ số Facebook đã kéo về (Ads khỏi chấm tay).</p>
+      <p className="text-[13px] text-slate-500 leading-relaxed mb-4">Win không cố định theo con số cứng — bạn đặt theo thị trường. Hệ thống sẽ <b>tự chấm</b> mỗi clip dựa trên chỉ số Facebook đã kéo về (Ads khỏi chấm tay).</p>
       <Field label="Ngân sách đã chi tiêu (đồng)"><MoneyInput value={budget} onChange={setBudget} placeholder="VD: 1.000.000" className={inpCls} /></Field>
       <Field label="Số điện thoại (SĐT xin được) tương ứng"><input value={phones} onChange={e => setPhones(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="VD: 10" className={inpCls} /></Field>
-      {cpa && <div className="text-sm bg-amber-50 border border-amber-100 rounded-xl p-3 text-amber-700 mb-3">→ Chuẩn Win: <b>CPA ≤ {fmtM(cpa)}/SĐT</b>. Clip có chi phí mỗi SĐT thấp hơn mức này sẽ tự chấm <b>Win</b>; cao hơn thì Tốt / TB / Tệ.</div>}
+      {cpa && <div className="text-[13px] leading-relaxed bg-teal-50/70 border border-teal-100 rounded-xl p-3.5 text-teal-900">→ Chuẩn Win: <b>CPA ≤ {fmtM(cpa)}/SĐT</b>. Clip có chi phí mỗi SĐT thấp hơn mức này sẽ tự chấm <b>Win</b>; cao hơn thì Tốt / TB / Tệ.</div>}
       <ModalActions onClose={onClose} onSave={async () => { setSaving(true); await onSave(budget, phones); setSaving(false); }} saving={saving} saveLabel="Lưu & tự chấm lại" />
     </Modal>
   );
@@ -2758,28 +2774,28 @@ const ReviewClipModal = ({ clip, store, me, onClose, onSaved }) => {
   };
   return (
     <Modal title="Duyệt clip" onClose={onClose}>
-      <p className="text-sm text-slate-500 mb-2">Khách: <b>{store?.customer_name}</b> · Editor: <b>{clip.editor?.full_name || '—'}</b></p>
-      <div className="mb-3 flex flex-col gap-2">
+      <p className="e-subtle px-3 py-2.5 text-[13px] text-slate-600 mb-4">Khách: <b className="text-slate-900">{store?.customer_name}</b> · Editor: <b className="text-slate-900">{clip.editor?.full_name || '—'}</b></p>
+      <div className="mb-4 flex flex-col gap-3">
         {(clip.clip_links || []).map((l, i) => <VideoPreview key={i} url={l} />)}
         {(clip.thumb_links || []).length > 0 && <div className="flex flex-wrap gap-2">{(clip.thumb_links || []).map((l, i) => <Thumb key={i} url={l} idx={i} size="h-24 w-24" download />)}</div>}
-        {(clip.clip_links || []).length === 0 && <span className="text-xs text-slate-300">Chưa có clip</span>}
+        {(clip.clip_links || []).length === 0 && <span className="e-subtle p-3 text-[13px] text-slate-400 text-center">Chưa có clip</span>}
       </div>
 
-      <label className="block text-sm font-semibold text-slate-700 mb-1">Phản hồi / góp ý cho editor</label>
-      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={3} placeholder="VD: đổi hook 3 giây đầu, chỉnh lại nhạc…" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-2" />
-      <p className="text-[11px] text-slate-400 mb-3 flex items-start gap-1"><BarChart2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />Điểm &amp; Win sẽ do hệ thống tự chấm theo chỉ số Ads sau khi clip chạy (không cần chấm tay).</p>
+      <label className="e-label">Phản hồi / góp ý cho editor</label>
+      <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={3} placeholder="VD: đổi hook 3 giây đầu, chỉnh lại nhạc…" className="e-textarea mb-2" />
+      <p className="text-[12px] text-slate-400 mb-4 flex items-start gap-1.5"><BarChart2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />Điểm &amp; Win sẽ do hệ thống tự chấm theo chỉ số Ads sau khi clip chạy (không cần chấm tay).</p>
 
-      <label className="flex items-start gap-2.5 p-3 rounded-xl border-2 border-orange-200 bg-orange-50/50 cursor-pointer mb-4">
-        <input type="checkbox" checked={postNow} onChange={e => setPostNow(e.target.checked)} className="mt-0.5" />
-        <span className="text-sm">
-          <span className="font-bold text-orange-700">⚡ Đăng ngay lên page</span>
-          <span className="block text-[11px] text-slate-500">Gắn nhãn để hệ thống tự quét video này và đăng lên page ngay sau khi duyệt.</span>
+      <label className="flex items-start gap-3 p-3.5 rounded-xl border border-peach-100 bg-peach-50/50 cursor-pointer hover:border-peach-200 transition">
+        <input type="checkbox" checked={postNow} onChange={e => setPostNow(e.target.checked)} className="mt-1 w-4 h-4 accent-teal-600" />
+        <span className="text-[14px]">
+          <span className="font-semibold text-slate-800">⚡ Đăng ngay lên page</span>
+          <span className="block text-[12px] text-slate-500 mt-0.5">Gắn nhãn để hệ thống tự quét video này và đăng lên page ngay sau khi duyệt.</span>
         </span>
       </label>
 
-      <div className="flex justify-end gap-2">
-        <button onClick={() => submit('revision')} disabled={saving} className="px-4 py-2 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 disabled:opacity-50 flex items-center gap-1"><RotateCcw className="w-4 h-4" /> Cần sửa — gửi lại editor</button>
-        <button onClick={() => submit('approve')} disabled={saving} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Duyệt &amp; chạy Ads</button>
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-4 mt-5 px-5 py-3.5 bg-slate-50/95 backdrop-blur border-t border-slate-100 rounded-b-2xl flex flex-wrap justify-end gap-2">
+        <button onClick={() => submit('revision')} disabled={saving} className="e-btn e-btn-danger-soft"><RotateCcw className="w-4 h-4" /> Cần sửa — gửi lại editor</button>
+        <button onClick={() => submit('approve')} disabled={saving} className="e-btn e-btn-primary"><CheckCircle2 className="w-4 h-4" /> Duyệt &amp; chạy Ads</button>
       </div>
     </Modal>
   );
@@ -2821,7 +2837,7 @@ const TikTokPlayer = ({ url, onLike }) => {
 
   if (!direct) {
     if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className="block w-full h-full bg-black" />;
-    return <div className="w-full h-full flex items-center justify-center"><a href={url} target="_blank" rel="noreferrer" className="text-violet-300 underline text-sm">Mở clip</a></div>;
+    return <div className="w-full h-full flex items-center justify-center"><a href={url} target="_blank" rel="noreferrer" className="text-teal-200 underline text-sm">Mở clip</a></div>;
   }
 
   return (
@@ -2961,25 +2977,25 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
             <div className="absolute inset-0 z-30 flex flex-col justify-end" onClick={() => setShowComments(false)}>
               <div className="bg-white rounded-t-3xl max-h-[70%] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="pt-2 flex justify-center"><span className="w-10 h-1 rounded-full bg-slate-300" /></div>
-                <div className="px-4 py-2.5 border-b flex items-center justify-between">
-                  <span className="font-bold text-slate-800 text-sm">{comments.length} bình luận</span>
-                  <button onClick={() => setShowComments(false)}><X className="w-5 h-5 text-slate-400" /></button>
+                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <span className="font-semibold text-slate-900 text-[14px] tabular-nums">{comments.length} bình luận</span>
+                  <button onClick={() => setShowComments(false)} className="e-icon-btn w-8 h-8 border-transparent"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                  {comments.length === 0 ? <div className="text-center text-slate-400 text-sm py-8">Chưa có bình luận — hãy là người đầu tiên!</div>
+                  {comments.length === 0 ? <div className="text-center text-slate-400 text-[13px] py-8">Chưa có bình luận — hãy là người đầu tiên!</div>
                     : comments.map(c => (
                       <div key={c.id} className="flex gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">{(c.user?.full_name || '?').charAt(0)}</div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-700">{c.user?.full_name || 'Ẩn danh'}</div>
+                        <div className="e-avatar w-8 h-8 text-[12px]">{(c.user?.full_name || '?').charAt(0)}</div>
+                        <div className="min-w-0 e-subtle px-3 py-2">
+                          <div className="text-[12px] font-semibold text-slate-800">{c.user?.full_name || 'Ẩn danh'}</div>
                           <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">{c.content}</div>
                         </div>
                       </div>
                     ))}
                 </div>
-                <div className="p-3 border-t flex items-center gap-2">
-                  <input value={cmt} onChange={e => setCmt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendComment(); }} placeholder="Thêm bình luận..." className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm outline-none" />
-                  <button onClick={sendComment} disabled={sending || !cmt.trim()} className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 shrink-0"><Send className="w-4 h-4" /></button>
+                <div className="p-3 border-t border-slate-100 flex items-center gap-2">
+                  <input value={cmt} onChange={e => setCmt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendComment(); }} placeholder="Thêm bình luận..." className="e-input flex-1 rounded-full bg-slate-50 px-4" />
+                  <button onClick={sendComment} disabled={sending || !cmt.trim()} className="e-btn e-btn-primary w-10 h-10 px-0 rounded-full shrink-0"><Send className="w-4 h-4" /></button>
                 </div>
               </div>
             </div>
@@ -3101,54 +3117,54 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
 
       <Field label="Kết nối Thông tin khách hàng (@ tên / SĐT)">
         {picked ? (
-          <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-xl px-3 py-2">
-            <span className="text-sm font-medium text-slate-700">@ {picked.customer_name} · {picked.phone}</span>
-            <button onClick={() => setPicked(null)}><X className="w-4 h-4 text-slate-400" /></button>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-teal-50/70 border border-teal-100 px-3.5 py-2.5">
+            <span className="flex items-center gap-2.5 min-w-0"><span className="e-avatar w-8 h-8"><User className="w-4 h-4" /></span><span className="text-[14px] font-medium text-slate-800 truncate">@ {picked.customer_name} · {picked.phone}</span></span>
+            <button onClick={() => setPicked(null)} className="e-icon-btn w-8 h-8 border-transparent bg-transparent shrink-0"><X className="w-4 h-4" /></button>
           </div>
         ) : (
           <>
             <input value={q} onChange={e => onSearch(e.target.value)} placeholder="Gõ tên hoặc SĐT để tag hồ sơ khách…" className={inpCls} />
             {results.length > 0 && (
-              <div className="max-h-36 overflow-y-auto mt-1 border border-slate-100 rounded-xl divide-y">
+              <div className="max-h-40 overflow-y-auto mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100">
                 {results.map(r => (
-                  <button key={r.appointment_id} onClick={() => { setPicked(r); setName(r.customer_name || ''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50">
-                    <span className="font-medium text-slate-700">{r.customer_name}</span> <span className="text-slate-400">· {r.phone}</span>
+                  <button key={r.appointment_id} onClick={() => { setPicked(r); setName(r.customer_name || ''); }} className="w-full text-left px-3.5 py-2.5 text-[14px] hover:bg-teal-50/60 transition">
+                    <span className="font-medium text-slate-800">{r.customer_name}</span> <span className="text-slate-400">· {r.phone}</span>
                   </button>
                 ))}
               </div>
             )}
-            <p className="text-[11px] text-slate-400 mt-1">Tag để tự kết nối hồ sơ khách + gán kho media với khách. Không tag thì tạo mới.</p>
+            <p className="text-[12px] text-slate-400 mt-1.5">Tag để tự kết nối hồ sơ khách + gán kho media với khách. Không tag thì tạo mới.</p>
           </>
         )}
       </Field>
 
       <Field label="Tên khách hàng *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Tên khách" className={inpCls} /></Field>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
         <Field label="Nguồn Source (link)"><input value={sourceLink} onChange={e => setSourceLink(e.target.value)} placeholder="https://drive.google.com/..." className={inpCls} /></Field>
         <Field label="ID Source"><input value={sourceId} onChange={e => setSourceId(e.target.value)} placeholder="VD: Dung27062026_01" className={inpCls} /></Field>
       </div>
 
       <Field label="Link clip đã dựng * (link riêng clip)">
         <textarea value={clip} onChange={e => setClip(e.target.value)} rows={2} placeholder="https://drive.google.com/..." className={inpCls} />
-        <button type="button" onClick={() => videoRef.current?.click()} disabled={uploadingVideo} className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5 hover:bg-violet-100 disabled:opacity-50">
+        <button type="button" onClick={() => videoRef.current?.click()} disabled={uploadingVideo} className="e-btn e-btn-outline e-btn-sm mt-2">
           {uploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} {uploadingVideo ? 'Đang tải video…' : 'Tải video trực tiếp (bật player TikTok)'}
         </button>
         <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={onPickVideo} />
-        <p className="text-[11px] text-slate-400 mt-1">Dán link Google Drive để phát cơ bản, hoặc tải file video trực tiếp để dùng trình phát kiểu TikTok (double-tap thả tim, tua mượt).</p>
+        <p className="text-[12px] text-slate-400 mt-1.5 leading-snug">Dán link Google Drive để phát cơ bản, hoặc tải file video trực tiếp để dùng trình phát kiểu TikTok (double-tap thả tim, tua mượt).</p>
       </Field>
 
-      <label className="block text-xs font-semibold text-slate-600 mb-1">Ảnh thumbnail * (tải trực tiếp)</label>
-      <div className="flex flex-wrap gap-2 mb-3">
+      <label className="e-label">Ảnh thumbnail * (tải trực tiếp)</label>
+      <div className="flex flex-wrap gap-2.5 mb-4">
         {thumbs.map((u, i) => (
           <div key={i} className="relative">
-            <img src={u} alt="thumb" className="h-20 w-20 object-cover rounded-lg border border-slate-200" />
-            <button type="button" onClick={() => setThumbs(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center"><X className="w-3 h-3" /></button>
+            <img src={u} alt="thumb" className="h-20 w-20 object-cover rounded-xl border border-slate-200" />
+            <button type="button" onClick={() => setThumbs(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-danger-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-soft ring-2 ring-white"><X className="w-3 h-3" /></button>
           </div>
         ))}
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-500 disabled:opacity-50">
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-20 w-20 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50/40 transition disabled:opacity-50">
           {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-          <span className="text-[10px] mt-0.5">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
+          <span className="text-[11px] font-medium mt-1">{uploading ? 'Đang tải' : 'Tải ảnh'}</span>
         </button>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPickFiles} />
       </div>
@@ -3231,14 +3247,14 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
   };
 
   const Row = ({ p, warn }) => (
-    <label className="flex items-start gap-2.5 p-2.5 text-sm hover:bg-slate-50 cursor-pointer">
-      <input type="checkbox" checked={!!sel[p.driveId]} onChange={e => setSel(s => ({ ...s, [p.driveId]: e.target.checked }))} className="mt-1" />
+    <label className="flex items-start gap-3 px-3.5 py-3 text-[14px] hover:bg-teal-50/40 cursor-pointer transition">
+      <input type="checkbox" checked={!!sel[p.driveId]} onChange={e => setSel(s => ({ ...s, [p.driveId]: e.target.checked }))} className="mt-1 w-4 h-4 accent-teal-600" />
       <div className="min-w-0 flex-1">
-        <div className="font-semibold text-slate-700 truncate">{p.name || '(không rõ tên)'}</div>
-        <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-2">
+        <div className="font-semibold text-slate-800 truncate">{p.name || '(không rõ tên)'}</div>
+        <div className="text-[12px] text-slate-500 flex flex-wrap gap-x-2 mt-0.5">
           <span>ID: {p.source_id || '—'}</span><span>· Ngày: {p.date || '—'}</span><span>· DV: {p.service || '—'}</span>
         </div>
-        {warn && p.store && <div className="text-[11px] text-amber-600 mt-0.5">⚠️ Giống nguồn đã có: <b>{p.store.customer_name}</b> · {p.store.shoot_date || '—'}</div>}
+        {warn && p.store && <div className="text-[12px] text-warning-600 mt-1">⚠️ Giống nguồn đã có: <b>{p.store.customer_name}</b> · {p.store.shoot_date || '—'}</div>}
       </div>
     </label>
   );
@@ -3246,49 +3262,49 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
 
   return (
     <Modal title="Tự động thêm nguồn từ Drive" onClose={onClose} wide>
-      <p className="text-sm text-slate-500 mb-2">Dán link <b>thư mục gốc</b> (thư mục dịch vụ như “Xương hàm mặt”, hoặc thư mục tổng). Hệ thống quét sâu tìm các thư mục nguồn dạng <b>“DD.MM Tên khách…”</b> rồi tự điền tên · dịch vụ · ngày · ID · link.</p>
-      <textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/drive/folders/... (mỗi dòng 1 link)" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none mb-2" />
-      <div className="flex items-end gap-2 flex-wrap mb-3">
-        <div><label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Từ ngày</label><input type="date" value={from} onChange={e => setFrom(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none focus:border-teal-400" /></div>
-        <div><label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Đến ngày</label><input type="date" value={to} onChange={e => setTo(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none focus:border-teal-400" /></div>
-        <button onClick={doScan} disabled={scanning} className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60">{scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Quét thư mục</button>
-        {rows && <span className="text-[11px] text-slate-400 pb-2.5">Media mặc định: <b>{defMediaName}</b></span>}
+      <p className="text-[13px] text-slate-500 leading-relaxed mb-3">Dán link <b>thư mục gốc</b> (thư mục dịch vụ như “Xương hàm mặt”, hoặc thư mục tổng). Hệ thống quét sâu tìm các thư mục nguồn dạng <b>“DD.MM Tên khách…”</b> rồi tự điền tên · dịch vụ · ngày · ID · link.</p>
+      <textarea value={links} onChange={e => setLinks(e.target.value)} rows={2} placeholder="https://drive.google.com/drive/folders/... (mỗi dòng 1 link)" className="e-textarea mb-3" />
+      <div className="flex items-end gap-3 flex-wrap mb-4">
+        <div><label className="e-label">Từ ngày</label><input type="date" value={from} onChange={e => setFrom(e.target.value)} className="e-input w-auto" /></div>
+        <div><label className="e-label">Đến ngày</label><input type="date" value={to} onChange={e => setTo(e.target.value)} className="e-input w-auto" /></div>
+        <button onClick={doScan} disabled={scanning} className="e-btn e-btn-primary">{scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Quét thư mục</button>
+        {rows && <span className="text-[12px] text-slate-500 pb-2.5">Media mặc định: <b className="text-slate-800">{defMediaName}</b></span>}
       </div>
 
       {rows && (
         <>
-          {rows.length > 0 && (from || to) && <p className="text-[11px] text-slate-400 mb-2">Đang lọc theo khoảng ngày — hiện {all.length}/{rows.length} nguồn.</p>}
+          {rows.length > 0 && (from || to) && <p className="text-[12px] text-slate-400 mb-3">Đang lọc theo khoảng ngày — hiện {all.length}/{rows.length} nguồn.</p>}
 
           {news.length > 0 && (
-            <div className="mb-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <h4 className="text-sm font-bold text-teal-700 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" />Nguồn mới ({news.length})</h4>
-                <div className="flex gap-2 text-[11px] font-semibold"><button onClick={() => toggleGroup(news, true)} className="text-teal-600">Chọn hết</button><button onClick={() => toggleGroup(news, false)} className="text-slate-400">Bỏ chọn</button></div>
+            <div className="mb-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h4 className="text-[14px] font-semibold text-slate-800 flex items-center gap-2"><span className="w-7 h-7 rounded-full grid place-items-center bg-success-50 text-success-600 shrink-0"><CheckCircle2 className="w-4 h-4" /></span>Nguồn mới ({news.length})</h4>
+                <div className="flex gap-1"><button onClick={() => toggleGroup(news, true)} className="e-btn e-btn-ghost e-btn-sm h-8">Chọn hết</button><button onClick={() => toggleGroup(news, false)} className="e-btn e-btn-ghost e-btn-sm h-8 text-slate-500">Bỏ chọn</button></div>
               </div>
-              <div className="border border-slate-100 rounded-xl divide-y divide-slate-50 max-h-[32vh] overflow-y-auto">
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-[32vh] overflow-y-auto">
                 {news.map(p => <Row key={p.driveId} p={p} />)}
               </div>
             </div>
           )}
 
           {dups.length > 0 && (
-            <div className="mb-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <h4 className="text-sm font-bold text-amber-600 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />Nghi trùng ({dups.length}) — trùng tên &amp; gần ngày với nguồn đã có</h4>
-                <button onClick={() => toggleGroup(dups, true)} className="text-[11px] font-semibold text-amber-600">Vẫn thêm tất cả</button>
+            <div className="mb-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h4 className="text-[14px] font-semibold text-slate-800 flex items-center gap-2 min-w-0"><span className="w-7 h-7 rounded-full grid place-items-center bg-warning-50 text-warning-600 shrink-0"><AlertTriangle className="w-4 h-4" /></span><span className="min-w-0">Nghi trùng ({dups.length}) — trùng tên &amp; gần ngày với nguồn đã có</span></h4>
+                <button onClick={() => toggleGroup(dups, true)} className="e-btn e-btn-ghost e-btn-sm h-8 shrink-0">Vẫn thêm tất cả</button>
               </div>
-              <div className="border-2 border-amber-200 bg-amber-50/40 rounded-xl divide-y divide-amber-100 max-h-[28vh] overflow-y-auto">
+              <div className="border border-warning-200 bg-warning-50/40 rounded-xl divide-y divide-warning-100 max-h-[28vh] overflow-y-auto">
                 {dups.map(p => <Row key={p.driveId} p={p} warn />)}
               </div>
             </div>
           )}
 
-          {news.length === 0 && dups.length === 0 && <p className="text-sm text-slate-400 py-4 text-center">Không có nguồn mới trong khoảng đã chọn.{existsN > 0 ? ` (${existsN} nguồn đã có sẵn)` : ''}</p>}
-          {existsN > 0 && <p className="text-[11px] text-slate-400 mb-2">{existsN} nguồn đã có sẵn trong kho — đã bỏ qua.</p>}
+          {news.length === 0 && dups.length === 0 && <p className="e-subtle text-[13px] text-slate-500 py-6 text-center">Không có nguồn mới trong khoảng đã chọn.{existsN > 0 ? ` (${existsN} nguồn đã có sẵn)` : ''}</p>}
+          {existsN > 0 && <p className="text-[12px] text-slate-400 mt-2">{existsN} nguồn đã có sẵn trong kho — đã bỏ qua.</p>}
 
-          <div className="flex justify-end gap-2 mt-2">
-            <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-            <button onClick={doImport} disabled={saving || !chosen.length} className="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 disabled:opacity-50 inline-flex items-center gap-1.5">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}Thêm {chosen.length} nguồn</button>
+          <div className="sticky bottom-0 z-10 -mx-5 -mb-4 mt-5 px-5 py-3.5 bg-slate-50/95 backdrop-blur border-t border-slate-100 rounded-b-2xl flex justify-end gap-2">
+            <button onClick={onClose} className="e-btn e-btn-secondary">Hủy</button>
+            <button onClick={doImport} disabled={saving || !chosen.length} className="e-btn e-btn-primary">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}Thêm {chosen.length} nguồn</button>
           </div>
         </>
       )}
@@ -3297,20 +3313,20 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
 };
 
 const Modal = ({ title, onClose, children, wide }) => (
-  <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-    <div className={`bg-white rounded-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-md'} shadow-xl max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
-      <div className="px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
-        <h3 className="font-bold text-slate-800">{title}</h3>
-        <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className={`e-modal ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+      <div className="e-modal-header items-center sticky top-0 z-10 bg-white rounded-t-2xl">
+        <h3 className="e-modal-title min-w-0 truncate">{title}</h3>
+        <button onClick={onClose} className="e-icon-btn w-9 h-9 border-transparent shrink-0"><X className="w-5 h-5" /></button>
       </div>
-      <div className="p-5">{children}</div>
+      <div className="e-modal-body">{children}</div>
     </div>
   </div>
 );
 const ModalActions = ({ onClose, onSave, saving, saveLabel = 'Lưu' }) => (
-  <div className="flex justify-end gap-2">
-    <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-    <button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : saveLabel}</button>
+  <div className="sticky bottom-0 z-10 -mx-5 -mb-4 mt-5 px-5 py-3.5 bg-slate-50/95 backdrop-blur border-t border-slate-100 rounded-b-2xl flex justify-end gap-2">
+    <button onClick={onClose} className="e-btn e-btn-secondary">Hủy</button>
+    <button onClick={onSave} disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu…' : saveLabel}</button>
   </div>
 );
 
