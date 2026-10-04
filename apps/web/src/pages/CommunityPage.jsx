@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight, Phone, Clock } from 'lucide-react';
+import { Image as ImageIcon, Send, X, Trash2, MessageCircle, Loader2, Smile, Plus, Users, Bold, Italic, ChevronLeft, ChevronRight, Phone, Clock, Heart } from 'lucide-react';
 import MentionInput, { MENTION_RE } from '@/components/MentionInput.jsx';
 
 const REACTIONS = [
@@ -24,7 +24,7 @@ const TIME_SRC = '\\d{1,2}\\s*giờ(?:\\s*\\d{1,2})?(?:\\s*phút)?|\\d{1,2}h\\d{
 // Nối thêm 1 đoạn vào nội dung đang soạn (giữ phần đã gõ, thêm space)
 const joinText = (prev, add) => ((prev && prev.trim()) ? prev.replace(/\s*$/, '') + ' ' : '') + add + ' ';
 
-// Nút chọn giờ -> popover giờ/phút (theo tông emerald), gọi onPick(label) để chèn vào ô soạn
+// Nút chọn giờ -> popover giờ/phút (tông teal Ethics), gọi onPick(label) để chèn vào ô soạn
 function TimeButton({ onPick, size = 'p-2' }) {
   const [open, setOpen] = useState(false);
   const [h, setH] = useState(() => new Date().getHours());
@@ -46,19 +46,19 @@ function TimeButton({ onPick, size = 'p-2' }) {
   const confirm = () => { onPick(mi === 0 ? `${h}h` : `${h}h${pad(mi)}`); setOpen(false); };
   const setNow = () => { const d = new Date(); setH(d.getHours()); setMi(d.getMinutes()); };
   const colCls = 'relative h-44 w-16 overflow-y-auto py-1 rounded-xl bg-slate-50 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
-  const itemCls = (sel) => `block w-full text-center py-1.5 my-0.5 text-sm rounded-lg transition-colors ${sel ? 'tb-sel bg-teal-500 text-white font-semibold shadow-sm' : 'text-slate-600 hover:bg-teal-100'}`;
+  const itemCls = (sel) => `block w-full text-center py-1.5 my-0.5 text-sm rounded-lg transition-colors ${sel ? 'tb-sel bg-teal-600 text-white font-semibold shadow-sm' : 'text-slate-600 hover:bg-teal-50'}`;
 
   return (
     <span ref={wrapRef} className="relative inline-flex shrink-0">
       <button type="button" title="Thêm mốc thời gian" onClick={() => setOpen(o => !o)}
-        className={`${size} rounded-full ${open ? 'bg-rose-100 text-rose-600' : 'text-rose-500 hover:bg-rose-50'}`}>
+        className={`${size} rounded-full ${open ? 'bg-teal-50 text-teal-700' : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'}`}>
         <Clock className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute bottom-full right-0 mb-2 z-40 w-60 bg-white rounded-2xl shadow-xl border border-slate-100 p-3">
+        <div className="absolute bottom-full right-0 mb-2 z-40 w-60 bg-white rounded-2xl shadow-float border border-slate-200 p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500">Chọn mốc thời gian</span>
-            <span className="text-base font-bold text-teal-600 tabular-nums">{mi === 0 ? `${h}h` : `${h}h${pad(mi)}`}</span>
+            <span className="text-[12px] font-semibold text-slate-500">Chọn mốc thời gian</span>
+            <span className="text-[16px] font-bold text-teal-700 tabular-nums">{mi === 0 ? `${h}h` : `${h}h${pad(mi)}`}</span>
           </div>
           <div className="flex gap-2 justify-center">
             <div className="flex flex-col items-center gap-1">
@@ -79,8 +79,8 @@ function TimeButton({ onPick, size = 'p-2' }) {
             </div>
           </div>
           <div className="flex items-center gap-2 mt-3">
-            <button type="button" onClick={setNow} className="flex-1 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200">Bây giờ</button>
-            <button type="button" onClick={confirm} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white bg-teal-500 hover:bg-teal-600">Chèn</button>
+            <button type="button" onClick={setNow} className="e-btn e-btn-secondary e-btn-sm flex-1">Bây giờ</button>
+            <button type="button" onClick={confirm} className="e-btn e-btn-primary e-btn-sm flex-1">Chèn</button>
           </div>
         </div>
       )}
@@ -119,14 +119,14 @@ const timeAgo = (d) => {
 };
 
 const Avatar = ({ url, name, size = 'w-10 h-10' }) => (
-  <div className={`${size} rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white font-bold shrink-0`}>
+  <div className={`${size} e-avatar overflow-hidden`}>
     {url ? <img src={url} alt={name} className="w-full h-full object-cover" /> : (name?.charAt(0) || 'U')}
   </div>
 );
 
 // Thanh chọn cảm xúc (popover)
 const ReactionBar = ({ onPick }) => (
-  <div className="absolute bottom-9 left-0 bg-white border border-slate-200 rounded-full shadow-lg px-2 py-1.5 flex gap-1 z-20">
+  <div className="absolute bottom-9 left-0 bg-white border border-slate-200 rounded-full shadow-float px-2 py-1.5 flex gap-1 z-20">
     {REACTIONS.map(r => (
       <button key={r.key} onClick={() => onPick(r.key)} title={r.label} className="text-2xl hover:scale-125 transition-transform">{r.emoji}</button>
     ))}
@@ -191,9 +191,9 @@ const CommunityPage = () => {
       if (m.index > last) pushTimes(out, text.slice(last, m.index), `m${m.index}`);
       const [full, name, type, id] = m;
       if (type === 'cust') {
-        out.push(<button key={m.index} type="button" onClick={() => openCustomer(id)} className="inline-flex items-center gap-1 align-middle mx-0.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[13px] font-semibold hover:bg-blue-200 transition-colors">👤 {name}</button>);
+        out.push(<button key={m.index} type="button" onClick={() => openCustomer(id)} className="inline-flex items-center gap-1 align-middle mx-0.5 px-2 py-0.5 rounded-full bg-info-50 text-info-600 text-[13px] font-semibold hover:bg-info-100 transition-colors">👤 {name}</button>);
       } else {
-        out.push(<span key={m.index} className="inline-flex items-center align-middle mx-0.5 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[13px] font-semibold">@{name}</span>);
+        out.push(<span key={m.index} className="inline-flex items-center align-middle mx-0.5 px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[13px] font-semibold">@{name}</span>);
       }
       last = m.index + full.length;
     }
@@ -438,22 +438,22 @@ const CommunityPage = () => {
       <div key={c.id} className={`flex gap-2 group ${isReply ? 'ml-10' : ''}`}>
         <Avatar url={c.author?.avatar_url} name={c.author?.full_name} size="w-8 h-8" />
         <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-2xl px-3 py-2 inline-block max-w-full relative">
-            <div className="text-xs font-semibold text-slate-700">{c.author?.full_name || 'Nhân sự'}</div>
-            <div className="text-sm text-slate-700 whitespace-pre-wrap break-words">{renderMentions(c.content)}</div>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl px-3.5 py-2 inline-block max-w-full relative">
+            <div className="text-[12.5px] font-semibold text-slate-800">{c.author?.full_name || 'Nhân sự'}</div>
+            <div className="text-[14px] text-slate-700 whitespace-pre-wrap break-words">{renderMentions(c.content)}</div>
             {cl.length > 0 && (
-              <div className="absolute -bottom-2 right-1 bg-white border border-slate-100 rounded-full px-1.5 py-0.5 text-[11px] shadow-sm flex items-center gap-0.5">
+              <div className="absolute -bottom-2 right-1 bg-white border border-slate-200 rounded-full px-1.5 py-0.5 text-[11px] shadow-soft flex items-center gap-0.5">
                 {[...new Set(cl.map(l => l.reaction))].slice(0, 3).map(r => <span key={r}>{EMOJI_OF[r]}</span>)} {cl.length}
               </div>
             )}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1 ml-2 flex items-center gap-3 relative">
+          <div className="text-[12px] text-slate-400 mt-1 ml-2 flex items-center gap-3 relative">
             <span>{timeAgo(c.created_at)}</span>
-            <button onClick={() => setCPickerFor(cPickerFor === c.id ? null : c.id)} className={`font-semibold ${mine ? 'text-teal-600' : 'hover:text-slate-600'}`}>
+            <button onClick={() => setCPickerFor(cPickerFor === c.id ? null : c.id)} className={`font-semibold ${mine ? 'text-teal-700' : 'hover:text-teal-700'}`}>
               {mine ? `${EMOJI_OF[mine]} ${LABEL_OF[mine]}` : 'Thích'}
             </button>
-            {!isReply && <button onClick={() => { setReplyFor(c.id); setReplyText(''); }} className="font-semibold hover:text-slate-600">Trả lời</button>}
-            {(c.author_id === profile?.id || isAdmin) && <button onClick={() => deleteComment(c.id)} className="text-red-400 hover:text-red-600 font-semibold">Xóa</button>}
+            {!isReply && <button onClick={() => { setReplyFor(c.id); setReplyText(''); }} className="font-semibold hover:text-teal-700">Trả lời</button>}
+            {(c.author_id === profile?.id || isAdmin) && <button onClick={() => deleteComment(c.id)} className="text-danger-500 hover:text-danger-600 font-semibold">Xóa</button>}
             {cPickerFor === c.id && <ReactionBar onPick={(k) => reactComment(c.id, k)} />}
           </div>
 
@@ -464,9 +464,9 @@ const CommunityPage = () => {
               <MentionInput value={replyText} onChange={setReplyText} staff={mentionStaff}
                 onEnter={() => addComment(c.post_id, c.id, replyText)}
                 placeholder={`Trả lời ${c.author?.full_name || ''}... (@ tag nhân sự · # SĐT tag khách)`}
-                className="w-full bg-white rounded-full px-3 py-1.5 text-sm border border-slate-200 focus:outline-none focus:border-teal-400" />
+                className="w-full h-9 bg-white rounded-full px-3.5 text-[14px] border border-slate-200 focus:outline-none focus:border-teal-400" />
               <TimeButton size="p-1.5" onPick={(label) => setReplyText(t => joinText(t, label))} />
-              <button onClick={() => addComment(c.post_id, c.id, replyText)} className="p-1.5 rounded-full text-teal-600 hover:bg-teal-50"><Send className="w-4 h-4" /></button>
+              <button onClick={() => addComment(c.post_id, c.id, replyText)} className="p-1.5 rounded-full text-teal-700 hover:bg-teal-50"><Send className="w-4 h-4" /></button>
             </div>
           )}
         </div>
@@ -475,35 +475,37 @@ const CommunityPage = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      {isAdmin && (
-        <div className="flex items-center justify-end">
-          <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
-            <Plus className="w-4 h-4" /> Tạo group
-          </button>
-        </div>
-      )}
-
+    <div className="max-w-2xl mx-auto space-y-4">
+      {/* Tab group (kiểu e-tabs Ethics) + nút tạo group */}
+      <div className="flex items-end gap-3">
       {groups.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="e-tabs flex-1 min-w-0">
           {groups.map(g => (
             <button key={g.id} onClick={() => setGroupId(g.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${groupId === g.id ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200' : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-800'}`}>
+              className={`e-tab ${groupId === g.id ? 'e-tab-active' : ''}`}>
               <Users className="w-3.5 h-3.5" /> {g.name}
             </button>
           ))}
         </div>
       )}
+      {isAdmin && (
+        <div className="shrink-0 pb-1.5">
+          <button onClick={() => setShowGroupModal(true)} className="e-btn e-btn-outline e-btn-sm">
+            <Plus className="w-4 h-4" /> Tạo group
+          </button>
+        </div>
+      )}
+      </div>
 
       {/* Thanh thông tin group + quản lý thành viên */}
       {selectedGroup && (
-        <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm">
-          <div className="min-w-0 text-sm">
-            <span className="font-semibold text-slate-700">{selectedGroup.name}</span>
-            {selectedGroup.description && <span className="ml-2 text-slate-400">{selectedGroup.description}</span>}
+        <div className="e-card-flat flex items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 text-[14px]">
+            <span className="font-semibold text-slate-900">{selectedGroup.name}</span>
+            {selectedGroup.description && <span className="ml-2 text-slate-500">{selectedGroup.description}</span>}
           </div>
           {canManageGroup && (
-            <button onClick={openMembers} className="shrink-0 flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:text-teal-800">
+            <button onClick={openMembers} className="e-btn e-btn-ghost e-btn-sm shrink-0">
               <Users className="w-4 h-4" /> Thành viên
             </button>
           )}
@@ -511,18 +513,18 @@ const CommunityPage = () => {
       )}
 
       {groups.length === 0 ? (
-        <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center text-slate-400 shadow-sm">
+        <div className="e-card e-empty py-12 text-[14px] text-slate-500">
           Chưa có group nào.{isAdmin ? ' Bấm "Tạo group" để bắt đầu.' : ' Liên hệ admin để tạo group.'}
         </div>
       ) : (
       <>
       {/* Composer với trình soạn thảo */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+      <div className="e-card e-card-pad">
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Tiêu đề bài viết *"
-          className="w-full mb-2 px-1 text-[15px] font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none" />
-        <div className="flex items-center gap-1 mb-2 border-b border-slate-50 pb-2">
-          <button onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600"><Bold className="w-4 h-4" /></button>
-          <button onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600"><Italic className="w-4 h-4" /></button>
+          className="w-full mb-2 px-1 text-[16px] font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none" />
+        <div className="flex items-center gap-1 mb-2 border-b border-slate-100 pb-2">
+          <button onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }} className="w-8 h-8 rounded-lg hover:bg-teal-50 hover:text-teal-700 flex items-center justify-center text-slate-600"><Bold className="w-4 h-4" /></button>
+          <button onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }} className="w-8 h-8 rounded-lg hover:bg-teal-50 hover:text-teal-700 flex items-center justify-center text-slate-600"><Italic className="w-4 h-4" /></button>
           <div className="w-px h-5 bg-slate-200 mx-1" />
           {TEXT_COLORS.map(col => (
             <button key={col} onMouseDown={e => { e.preventDefault(); document.execCommand('foreColor', false, col); }}
@@ -534,13 +536,13 @@ const CommunityPage = () => {
           data-ph="Chia sẻ gì đó với cả nhà... (@ tag nhân sự · # SĐT tag khách)"
           className="community-editor min-h-[60px] text-[15px] text-slate-700 focus:outline-none px-1" />
         {editorMention && editorMention.items.length > 0 && (
-          <div className="fixed w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-[60] overflow-hidden"
+          <div className="fixed w-72 bg-white border border-slate-200 rounded-xl shadow-float z-[60] overflow-hidden"
             style={{ top: editorMention.rect.bottom + 4, left: editorMention.rect.left }}>
             {editorMention.items.map((it, i) => (
               <button key={it.type + it.id} type="button" onMouseDown={(e) => { e.preventDefault(); pickEditorMention(it); }}
                 className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between ${i === emActive ? 'bg-teal-50' : ''} hover:bg-teal-50`}>
                 <span className="font-medium text-slate-700">{it.type === 'cust' ? '👤 ' : '@'}{it.name}</span>
-                <span className="text-xs text-slate-400">{it.type === 'cust' ? '📞 ' + it.sub : it.sub}</span>
+                <span className="text-[12px] text-slate-400">{it.type === 'cust' ? '📞 ' + it.sub : it.sub}</span>
               </button>
             ))}
           </div>
@@ -555,44 +557,44 @@ const CommunityPage = () => {
             ))}
           </div>
         )}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
-          <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer hover:text-teal-600">
-            <ImageIcon className="w-5 h-5 text-teal-500" /> Ảnh
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+          <label className="e-btn e-btn-ghost e-btn-sm cursor-pointer">
+            <ImageIcon className="w-5 h-5" /> Ảnh
             <input type="file" accept="image/*" multiple className="hidden" onChange={e => setFiles(fs => [...fs, ...Array.from(e.target.files || [])])} />
           </label>
-          <button onClick={handlePost} disabled={posting} className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
+          <button onClick={handlePost} disabled={posting} className="e-btn e-btn-primary">
             {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Đăng
           </button>
         </div>
       </div>
 
       {/* Toggle Bảng tin / Danh sách */}
-      <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="e-seg">
         {[['feed', 'Bảng tin'], ['list', 'Danh sách bài viết']].map(([id, label]) => (
-          <button key={id} onClick={() => setViewMode(id)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${viewMode === id ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+          <button key={id} onClick={() => setViewMode(id)} className={`e-seg-item ${viewMode === id ? 'e-seg-active' : ''}`}>{label}</button>
         ))}
       </div>
 
       {/* Danh sách bài viết */}
       {viewMode === 'list' && !loading && (
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="e-card overflow-hidden">
           {posts.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 text-sm">Chưa có bài viết nào.</div>
+            <div className="e-empty text-[14px] text-slate-400">Chưa có bài viết nào.</div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100">
               {posts.map(p => {
                 const cmt = comments.filter(c => c.post_id === p.id).length;
                 const rea = likes.filter(l => l.post_id === p.id).length;
                 const excerpt = (p.content || '').replace(MENTION_RE, '@$1').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
                 return (
                   <button key={p.id} onClick={() => { setViewMode('feed'); setTimeout(() => document.getElementById(`post-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start justify-between gap-3">
+                    className="w-full text-left px-4 lg:px-5 py-3.5 hover:bg-teal-50/30 flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-slate-800 truncate">{p.title || '(Không tiêu đề)'}</div>
-                      {excerpt && <div className="text-sm text-slate-400 mt-0.5 line-clamp-1">{excerpt}</div>}
-                      <div className="text-xs text-slate-400 mt-1">{p.author?.full_name} · {new Date(p.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                      <div className="font-semibold text-slate-900 truncate">{p.title || '(Không tiêu đề)'}</div>
+                      {excerpt && <div className="text-[13px] text-slate-500 mt-0.5 line-clamp-1">{excerpt}</div>}
+                      <div className="text-[12px] text-slate-400 mt-1">{p.author?.full_name} · {new Date(p.created_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
-                    <div className="text-xs text-slate-400 shrink-0 pt-0.5">❤️ {rea} · 💬 {cmt}</div>
+                    <div className="text-[12px] text-slate-500 shrink-0 pt-0.5 flex items-center gap-2.5 tabular-nums"><span className="inline-flex items-center gap-1"><Heart className="w-3.5 h-3.5 text-rose-500" /> {rea}</span><span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 text-teal-600" /> {cmt}</span></div>
                   </button>
                 );
               })}
@@ -603,9 +605,9 @@ const CommunityPage = () => {
 
       {/* Feed */}
       {viewMode === 'feed' && (loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div>
+        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>
       ) : posts.length === 0 ? (
-        <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center text-slate-400 shadow-sm">Chưa có bài viết nào trong group này.</div>
+        <div className="e-card e-empty py-12 text-[14px] text-slate-500">Chưa có bài viết nào trong group này.</div>
       ) : posts.map(post => {
         const postLikes = likes.filter(l => l.post_id === post.id);
         const topComments = comments.filter(c => c.post_id === post.id && !c.parent_id);
@@ -614,22 +616,22 @@ const CommunityPage = () => {
         const myReaction = myPostReaction(post.id);
         const reactionSet = [...new Set(postLikes.map(l => l.reaction))];
         return (
-          <div key={post.id} id={`post-${post.id}`} className="bg-white border border-slate-100 rounded-2xl shadow-sm scroll-mt-20">
-            <div className="flex items-start justify-between p-4 pb-2">
+          <div key={post.id} id={`post-${post.id}`} className="e-card overflow-hidden scroll-mt-20">
+            <div className="flex items-start justify-between px-4 lg:px-5 pt-4 lg:pt-5 pb-2">
               <div className="flex items-center gap-3">
-                <Avatar url={post.author?.avatar_url} name={post.author?.full_name} />
+                <Avatar url={post.author?.avatar_url} name={post.author?.full_name} size="w-11 h-11" />
                 <div>
-                  <div className="font-semibold text-slate-800">{post.author?.full_name || 'Nhân sự'}</div>
-                  <div className="text-xs text-slate-400">{timeAgo(post.created_at)}</div>
+                  <div className="text-[15px] font-semibold text-slate-900">{post.author?.full_name || 'Nhân sự'}</div>
+                  <div className="text-[12px] text-slate-400">{timeAgo(post.created_at)}</div>
                 </div>
               </div>
               {(post.author_id === profile?.id || isAdmin) && (
-                <button onClick={() => deletePost(post.id)} className="p-1.5 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={() => deletePost(post.id)} className="e-icon-btn w-8 h-8 rounded-[10px] border-transparent text-slate-400 hover:!text-danger-600 hover:bg-danger-50 hover:!border-transparent"><Trash2 className="w-4 h-4" /></button>
               )}
             </div>
 
-            {post.title && <div className="px-4 pb-1 font-bold text-slate-800 text-[16px]">{post.title}</div>}
-            {post.content && <div className="px-4 pb-3 text-slate-700 text-[15px] break-words" onClick={handlePostContentClick} dangerouslySetInnerHTML={{ __html: renderPostHtml(post.content) }} />}
+            {post.title && <div className="px-4 lg:px-5 pb-1 font-bold text-slate-900 text-[16px]">{post.title}</div>}
+            {post.content && <div className="px-4 lg:px-5 pb-3 text-slate-700 text-[15px] leading-relaxed break-words" onClick={handlePostContentClick} dangerouslySetInnerHTML={{ __html: renderPostHtml(post.content) }} />}
             {post.image_urls?.length > 0 && (
               <div className={`grid gap-0.5 ${post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {post.image_urls.map((u, i) => (
@@ -641,7 +643,7 @@ const CommunityPage = () => {
             )}
 
             {(postLikes.length > 0 || totalComments > 0) && (
-              <div className="flex items-center justify-between px-4 py-2 text-sm text-slate-500">
+              <div className="flex items-center justify-between px-4 lg:px-5 py-2 text-[13px] text-slate-500">
                 <button onClick={() => postLikes.length && setReactWho({ post, list: postLikes })} className="flex items-center gap-1 hover:underline" disabled={!postLikes.length}>
                   {reactionSet.slice(0, 3).map(r => <span key={r}>{EMOJI_OF[r] || '👍'}</span>)}
                   {postLikes.length > 0 && <span className="ml-1">{postLikes.length}</span>}
@@ -650,21 +652,21 @@ const CommunityPage = () => {
               </div>
             )}
 
-            <div className="flex border-t border-slate-50 relative">
+            <div className="flex border-t border-slate-100 relative px-2 py-1">
               <button onClick={() => setPickerFor(pickerFor === post.id ? null : post.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold hover:bg-slate-50 ${myReaction ? 'text-teal-600' : 'text-slate-500'}`}>
+                className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[14px] font-semibold hover:bg-teal-50/60 ${myReaction ? 'text-teal-700' : 'text-slate-500'}`}>
                 {myReaction ? <span>{EMOJI_OF[myReaction]}</span> : <Smile className="w-4 h-4" />}
                 {myReaction ? LABEL_OF[myReaction] : 'Cảm xúc'}
               </button>
               <button onClick={() => setOpenComments(o => ({ ...o, [post.id]: !o[post.id] }))}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-50">
+                className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[14px] font-semibold text-slate-500 hover:bg-teal-50/60">
                 <MessageCircle className="w-4 h-4" /> Bình luận
               </button>
               {pickerFor === post.id && <ReactionBar onPick={(k) => reactPost(post.id, k)} />}
             </div>
 
             {openComments[post.id] && (
-              <div className="border-t border-slate-50 p-4 space-y-3 bg-slate-50/30">
+              <div className="border-t border-slate-100 px-4 lg:px-5 py-4 space-y-3">
                 {topComments.map(c => (
                   <div key={c.id} className="space-y-3">
                     {renderComment(c)}
@@ -674,7 +676,7 @@ const CommunityPage = () => {
                 <div className="flex flex-wrap gap-2">
                   {QUICK_COMMENTS.map(q => (
                     <button key={q} onClick={() => setCommentText(c => ({ ...c, [post.id]: joinText(c[post.id], q) }))}
-                      className="px-3 py-1.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium hover:bg-teal-100 border border-teal-100">
+                      className="e-chip h-8 px-3 text-[12px]">
                       + {q}
                     </button>
                   ))}
@@ -684,9 +686,9 @@ const CommunityPage = () => {
                   <MentionInput value={commentText[post.id] || ''} onChange={(v) => setCommentText(c => ({ ...c, [post.id]: v }))} staff={mentionStaff}
                     onEnter={() => addComment(post.id, null, commentText[post.id])}
                     placeholder="Viết bình luận... (@ tag nhân sự · # SĐT tag khách)"
-                    className="w-full bg-white rounded-full px-4 py-2 text-sm border border-slate-200 focus:outline-none focus:border-teal-400" />
+                    className="w-full h-10 bg-slate-50 rounded-full px-4 text-[14px] border border-slate-200 focus:outline-none focus:bg-white focus:border-teal-400" />
                   <TimeButton onPick={(label) => setCommentText(c => ({ ...c, [post.id]: joinText(c[post.id], label) }))} />
-                  <button onClick={() => addComment(post.id, null, commentText[post.id])} className="p-2 rounded-full text-teal-600 hover:bg-teal-50"><Send className="w-4 h-4" /></button>
+                  <button onClick={() => addComment(post.id, null, commentText[post.id])} className="e-icon-btn w-10 h-10 rounded-full text-teal-700 shrink-0"><Send className="w-4 h-4" /></button>
                 </div>
               </div>
             )}
@@ -698,43 +700,43 @@ const CommunityPage = () => {
 
       {/* Modal quản lý thành viên */}
       {showMembers && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowMembers(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b bg-teal-50">
-              <h3 className="font-bold text-teal-800">Thành viên · {selectedGroup?.name}</h3>
-              <button onClick={() => setShowMembers(false)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={() => setShowMembers(false)}>
+          <div className="e-modal max-w-md overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Thành viên · {selectedGroup?.name}</h3>
+              <button onClick={() => setShowMembers(false)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
             <div className="overflow-y-auto p-4 space-y-4">
               <div>
-                <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Đang trong group ({members.length})</div>
+                <div className="e-caption mb-2">Đang trong group ({members.length})</div>
                 <div className="space-y-1">
                   {members.map(m => (
-                    <div key={m.user_id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50">
+                    <div key={m.user_id} className="flex items-center justify-between gap-2 px-2 py-2 rounded-xl hover:bg-teal-50/40">
                       <div className="flex items-center gap-2 min-w-0">
                         <Avatar url={m.user?.avatar_url} name={m.user?.full_name} size="w-8 h-8" />
-                        <span className="text-sm font-medium text-slate-700 truncate">{m.user?.full_name}</span>
+                        <span className="text-[14px] font-medium text-slate-800 truncate">{m.user?.full_name}</span>
                       </div>
                       {m.user_id !== selectedGroup?.created_by && (
-                        <button onClick={() => removeMember(m.user_id)} className="text-xs text-red-400 hover:text-red-600 font-semibold shrink-0">Xóa</button>
+                        <button onClick={() => removeMember(m.user_id)} className="e-btn e-btn-danger-soft e-btn-sm shrink-0">Xóa</button>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Thêm thành viên</div>
+                <div className="e-caption mb-2">Thêm thành viên</div>
                 <div className="space-y-1">
                   {allStaff.filter(s => !members.some(m => m.user_id === s.id)).map(s => (
-                    <div key={s.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50">
+                    <div key={s.id} className="flex items-center justify-between gap-2 px-2 py-2 rounded-xl hover:bg-teal-50/40">
                       <div className="flex items-center gap-2 min-w-0">
                         <Avatar url={s.avatar_url} name={s.full_name} size="w-8 h-8" />
-                        <span className="text-sm text-slate-700 truncate">{s.full_name}</span>
+                        <span className="text-[14px] text-slate-700 truncate">{s.full_name}</span>
                       </div>
-                      <button onClick={() => addMember(s.id)} className="text-xs font-semibold text-teal-600 hover:text-teal-700 shrink-0 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Thêm</button>
+                      <button onClick={() => addMember(s.id)} className="e-btn e-btn-outline e-btn-sm shrink-0"><Plus className="w-3.5 h-3.5" /> Thêm</button>
                     </div>
                   ))}
                   {allStaff.filter(s => !members.some(m => m.user_id === s.id)).length === 0 && (
-                    <div className="text-sm text-slate-400 text-center py-3">Tất cả nhân sự đã trong group.</div>
+                    <div className="text-[13px] text-slate-400 text-center py-3">Tất cả nhân sự đã trong group.</div>
                   )}
                 </div>
               </div>
@@ -745,25 +747,25 @@ const CommunityPage = () => {
 
       {/* Thông tin khách hàng (khi bấm tag khách) */}
       {customerView && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setCustomerView(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b bg-blue-50">
-              <h3 className="font-bold text-blue-800">Thông tin khách hàng</h3>
-              <button onClick={() => setCustomerView(null)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={() => setCustomerView(null)}>
+          <div className="e-modal max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Thông tin khách hàng</h3>
+              <button onClick={() => setCustomerView(null)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-5 space-y-3">
+            <div className="e-modal-body space-y-3">
               <div>
-                <div className="text-lg font-bold text-slate-800">{customerView.customer_name}</div>
-                <a href={`tel:${customerView.phone}`} className="text-sm text-blue-600 flex items-center gap-1.5 mt-1"><Phone className="w-3.5 h-3.5" /> {customerView.phone}</a>
+                <div className="text-[18px] font-bold text-slate-900">{customerView.customer_name}</div>
+                <a href={`tel:${customerView.phone}`} className="text-[14px] font-medium text-teal-700 flex items-center gap-1.5 mt-1"><Phone className="w-3.5 h-3.5" /> {customerView.phone}</a>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm bg-slate-50 rounded-xl p-3">
-                <div className="text-slate-500 text-xs">Dịch vụ</div><div className="text-right font-medium text-slate-700">{customerView.service || '—'}</div>
-                <div className="text-slate-500 text-xs">Trạng thái</div><div className="text-right text-slate-700">{customerView.status}</div>
-                <div className="text-slate-500 text-xs">Telesale</div><div className="text-right text-slate-700">{customerView.telesale || '—'}</div>
-                <div className="text-slate-500 text-xs">Sale</div><div className="text-right text-slate-700">{customerView.sale || '—'}</div>
-                {customerView.surgery_date && (<><div className="text-slate-500 text-xs">Ngày mổ</div><div className="text-right text-slate-700">{new Date(customerView.surgery_date).toLocaleDateString('vi-VN')}</div></>)}
+              <div className="e-subtle grid grid-cols-2 gap-x-4 gap-y-2.5 text-[14px] p-3.5">
+                <div className="e-kv-label">Dịch vụ</div><div className="text-right font-medium text-slate-700">{customerView.service || '—'}</div>
+                <div className="e-kv-label">Trạng thái</div><div className="text-right text-slate-700">{customerView.status}</div>
+                <div className="e-kv-label">Telesale</div><div className="text-right text-slate-700">{customerView.telesale || '—'}</div>
+                <div className="e-kv-label">Sale</div><div className="text-right text-slate-700">{customerView.sale || '—'}</div>
+                {customerView.surgery_date && (<><div className="e-kv-label">Ngày mổ</div><div className="text-right text-slate-700">{new Date(customerView.surgery_date).toLocaleDateString('vi-VN')}</div></>)}
               </div>
-              {customerView.notes && <div className="text-xs text-slate-500 bg-yellow-50/50 border border-yellow-100 rounded-lg p-2 whitespace-pre-wrap">{customerView.notes}</div>}
+              {customerView.notes && <div className="text-[13px] text-slate-600 bg-warning-50/60 border border-warning-100 rounded-xl px-3 py-2.5 whitespace-pre-wrap">{customerView.notes}</div>}
             </div>
           </div>
         </div>
@@ -793,20 +795,20 @@ const CommunityPage = () => {
 
       {/* Modal: ai đã thả cảm xúc */}
       {reactWho && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setReactWho(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h3 className="font-bold text-slate-800">Cảm xúc ({reactWho.list.length})</h3>
-              <button onClick={() => setReactWho(null)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200"><X className="w-4 h-4" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={() => setReactWho(null)}>
+          <div className="e-modal max-w-sm overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Cảm xúc ({reactWho.list.length})</h3>
+              <button onClick={() => setReactWho(null)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
             <div className="overflow-y-auto p-2">
               {reactWho.list.map((l, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50">
+                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-teal-50/40">
                   <div className="relative">
                     <Avatar url={l.user?.avatar_url} name={l.user?.full_name} size="w-9 h-9" />
                     <span className="absolute -bottom-1 -right-1 text-sm">{EMOJI_OF[l.reaction]}</span>
                   </div>
-                  <span className="text-sm font-medium text-slate-700">{l.user?.full_name || 'Nhân sự'}</span>
+                  <span className="text-[14px] font-medium text-slate-800">{l.user?.full_name || 'Nhân sự'}</span>
                 </div>
               ))}
             </div>
@@ -816,27 +818,27 @@ const CommunityPage = () => {
 
       {/* Modal tạo group */}
       {showGroupModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b bg-teal-50">
-              <h3 className="font-bold text-teal-800">Tạo group mới</h3>
-              <button onClick={() => setShowGroupModal(false)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Tạo group mới</h3>
+              <button onClick={() => setShowGroupModal(false)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-5 space-y-3">
+            <div className="e-modal-body space-y-3">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Tên group *</label>
+                <label className="e-label">Tên group *</label>
                 <input value={groupForm.name} onChange={e => setGroupForm(f => ({ ...f, name: e.target.value }))} placeholder="VD: Hành trình khách hàng"
-                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
+                  className="e-input" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Mô tả</label>
+                <label className="e-label">Mô tả</label>
                 <textarea rows={2} value={groupForm.description} onChange={e => setGroupForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400 resize-none" />
+                  className="e-textarea resize-none" />
               </div>
             </div>
-            <div className="px-5 pb-5 flex justify-end gap-2">
-              <button onClick={() => setShowGroupModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
-              <button onClick={createGroup} className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md">Tạo group</button>
+            <div className="e-modal-footer">
+              <button onClick={() => setShowGroupModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={createGroup} className="e-btn e-btn-primary">Tạo group</button>
             </div>
           </div>
         </div>

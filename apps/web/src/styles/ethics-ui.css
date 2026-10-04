@@ -41,16 +41,6 @@
   .e-badge svg { @apply w-3.5 h-3.5; }
   .e-badge-sm { @apply h-[22px] px-2 text-[11px]; }
   .e-badge-dot::before { content: ''; @apply w-1.5 h-1.5 rounded-full bg-current; }
-  .e-tone-brand { @apply bg-teal-50 text-teal-800; }
-  .e-tone-success { @apply bg-success-50 text-success-600; }
-  .e-tone-warning { @apply bg-warning-50 text-warning-600; }
-  .e-tone-danger { @apply bg-danger-50 text-danger-600; }
-  .e-tone-info { @apply bg-info-50 text-info-600; }
-  .e-tone-neutral { @apply bg-slate-100 text-slate-600; }
-  .e-tone-peach { @apply bg-peach-50 text-peach-600; }
-  .e-tone-lavender { @apply bg-lavender-50 text-lavender-600; }
-  .e-tone-rose { @apply bg-rose-50 text-rose-600; }
-  .e-tone-sky { @apply bg-sky-50 text-sky-600; }
 
   /* ---------- Thẻ chỉ số (MetricCard) ---------- */
   .e-metric { @apply rounded-2xl bg-white border border-slate-200/80 shadow-card p-4 lg:p-5 flex items-center gap-4 min-w-0 text-left; }
@@ -61,6 +51,17 @@
   .e-metric-hint { @apply text-[12px] text-slate-400 truncate; }
   .e-delta-up { @apply text-[12px] font-semibold text-success-600; }
   .e-delta-down { @apply text-[12px] font-semibold text-danger-600; }
+  /* Tông màu đặt SAU e-metric-icon để "e-metric-icon e-tone-*" đổi được màu */
+  .e-tone-brand { @apply bg-teal-50 text-teal-800; }
+  .e-tone-success { @apply bg-success-50 text-success-600; }
+  .e-tone-warning { @apply bg-warning-50 text-warning-600; }
+  .e-tone-danger { @apply bg-danger-50 text-danger-600; }
+  .e-tone-info { @apply bg-info-50 text-info-600; }
+  .e-tone-neutral { @apply bg-slate-100 text-slate-600; }
+  .e-tone-peach { @apply bg-peach-50 text-peach-600; }
+  .e-tone-lavender { @apply bg-lavender-50 text-lavender-600; }
+  .e-tone-rose { @apply bg-rose-50 text-rose-600; }
+  .e-tone-sky { @apply bg-sky-50 text-sky-600; }
 
   /* ---------- Tab ---------- */
   .e-tabs { @apply flex items-stretch gap-1 border-b border-slate-200 overflow-x-auto; scrollbar-width: none; }

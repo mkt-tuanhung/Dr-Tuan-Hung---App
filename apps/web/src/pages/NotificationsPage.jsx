@@ -40,48 +40,49 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] text-slate-500">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
+    <div className="max-w-3xl mx-auto space-y-4">
+      <div className="e-toolbar justify-between pl-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="e-metric-icon w-9 h-9 lg:w-9 lg:h-9"><Bell className="!w-[18px] !h-[18px]" /></span>
+          <p className="text-[14px] font-semibold text-slate-700">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
         </div>
         {unread > 0 && (
-          <button onClick={markAllRead} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-teal-200 text-teal-700 text-sm font-semibold hover:bg-teal-50">
+          <button onClick={markAllRead} className="e-btn e-btn-outline e-btn-sm">
             <Check className="w-4 h-4" /> Đánh dấu đã đọc hết
           </button>
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+      <div className="e-card overflow-hidden">
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>
         ) : items.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
-            <Bell className="w-10 h-10 mx-auto mb-3 text-slate-200" />
+          <div className="e-empty py-16 text-[14px] font-semibold text-slate-700">
+            <Bell className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-600 mb-3" />
             Chưa có thông báo nào
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-100 p-1.5 sm:p-2">
             {items.map(n => {
               const conf = NOTIF_ICON[n.type] || NOTIF_FALLBACK;
               const { Icon } = conf;
               return (
                 <button key={n.id} onClick={() => openItem(n)}
-                  className={`w-full text-left flex gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors ${n.is_read ? '' : 'bg-teal-50/40'}`}>
+                  className={`w-full text-left flex items-start gap-3.5 px-3 sm:px-4 py-3.5 rounded-xl hover:bg-teal-50/40 transition-colors ${n.is_read ? '' : 'bg-teal-50/50'}`}>
                   {n.actor?.avatar_url ? (
                     <div className="relative shrink-0">
-                      <img src={n.actor.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover" />
-                      <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${conf.cls}`}><Icon className="w-3 h-3" /></span>
+                      <img src={n.actor.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-soft" />
+                      <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white ${conf.cls}`}><Icon className="w-3 h-3" /></span>
                     </div>
                   ) : (
                     <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${conf.cls}`}><Icon className="w-5 h-5" /></div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm text-slate-800 leading-snug">{n.title}</div>
-                    {n.body && <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}
-                    <div className="text-[11px] text-slate-400 mt-1">{fullTime(n.created_at)}</div>
+                    <div className={`text-[14px] leading-snug ${n.is_read ? 'font-medium text-slate-700' : 'font-semibold text-slate-900'}`}>{n.title}</div>
+                    {n.body && <div className="text-[13px] text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}
+                    <div className="text-[12px] text-slate-400 mt-1 tabular-nums">{fullTime(n.created_at)}</div>
                   </div>
-                  {!n.is_read && <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0 mt-1.5" />}
+                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0 mt-2" />}
                 </button>
               );
             })}
