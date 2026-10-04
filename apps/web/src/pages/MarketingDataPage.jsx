@@ -7,7 +7,8 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck } from 'lucide-react';
+import PipelineBoard from '@/features/crm/PipelineBoard.jsx';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3 } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 const STATUS = {
@@ -88,6 +89,9 @@ const MarketingDataPage = () => {
   const [fDay, setFDay] = useState('');                 // lọc theo NGÀY data về (YYYY-MM-DD)
   const [reportOpen, setReportOpen] = useState(false);  // Báo cáo ngày
   const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
+  // Chế độ xem: 'list' (bảng) | 'pipeline' (cột thẻ theo giai đoạn, kiểu Ethics BOS)
+  const [view, setView] = useState(() => { try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
+  const changeView = (v) => { setView(v); try { localStorage.setItem('crm_view', v); } catch { /* bỏ qua */ } };
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
@@ -164,6 +168,11 @@ const MarketingDataPage = () => {
     setRows(list => list.map(x => x.id === r.id ? { ...x, status } : x));
     const { error } = await supabase.from('marketing_data').update({ status }).eq('id', r.id);
     if (error) { toast.error('Lỗi: ' + error.message); loadData(); }
+    return !error;
+  };
+  // Pipeline: chuyển giai đoạn bằng kéo thả / nút ⇄ (dùng lại quickStatus)
+  const moveStage = async (r, status) => {
+    if (await quickStatus(r, status)) toast.success(`Đã chuyển ${r.customer_name || 'khách'} sang “${STATUS[status]?.label || status}”`);
   };
   // Gán telesale cho 1 khách
   const assignTele = async (r, telesale_id) => {
@@ -277,7 +286,7 @@ const MarketingDataPage = () => {
       </div>
 
       {/* ===== Giai đoạn khách hàng (kiểu Getfly) ===== */}
-      <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-1.5 flex gap-1 overflow-x-auto scrollbar-hide">
+      {view === 'list' && <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-1.5 flex gap-1 overflow-x-auto scrollbar-hide">
         {[{ k: '', label: 'Tất cả', n: baseVisible.length }, ...Object.entries(STATUS).map(([k, v]) => ({ k, label: v.label, n: stageCount[k] || 0 }))].map(t => (
           <button key={t.k || 'all'} onClick={() => { setFStatus(t.k); setPage(1); }}
             className={`shrink-0 inline-flex items-center gap-2 px-3.5 h-9 rounded-xl text-[13.5px] font-semibold transition-colors ${
@@ -288,7 +297,7 @@ const MarketingDataPage = () => {
             <span className={`text-[11.5px] tabular-nums px-1.5 rounded-full ${fStatus === t.k ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}`}>{t.n.toLocaleString('vi-VN')}</span>
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ===== Thanh công cụ ===== */}
       <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-3 space-y-2">
@@ -305,6 +314,14 @@ const MarketingDataPage = () => {
         </button>
         {/* Thao tác */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center p-1 rounded-xl bg-slate-100" role="tablist" aria-label="Chế độ xem">
+            {[{ v: 'list', label: 'Danh sách', icon: LayoutList }, { v: 'pipeline', label: 'Pipeline', icon: Columns3 }].map(o => (
+              <button key={o.v} onClick={() => changeView(o.v)} role="tab" aria-selected={view === o.v} title={o.label}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-semibold transition ${view === o.v ? 'bg-white text-teal-700 shadow-soft' : 'text-slate-500 hover:text-slate-800'}`}>
+                <o.icon className="w-4 h-4" /><span className="hidden xl:inline">{o.label}</span>
+              </button>
+            ))}
+          </div>
           {canWrite && (
             <button onClick={buildQueue} className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 shadow-sm whitespace-nowrap">
               <PhoneCall className="w-4 h-4" /><span className="hidden sm:inline">Bắt đầu gọi</span>{dueCount > 0 && <span className="bg-white/25 rounded-full px-1.5 text-xs">{dueCount}</span>}
@@ -347,9 +364,11 @@ const MarketingDataPage = () => {
         </div>
       </div>
 
-      {/* ===== Danh sách ===== */}
+      {/* ===== Danh sách / Pipeline ===== */}
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+      ) : view === 'pipeline' ? (
+        <PipelineBoard rows={baseVisible} STATUS={STATUS} isDue={isDue} phoneView={phoneView} me={me} canWrite={canWrite} onOpen={setDetail} onMove={moveStage} />
       ) : (
         <div className="bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
