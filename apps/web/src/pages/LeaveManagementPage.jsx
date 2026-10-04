@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { Check, X, Clock, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Check, X, Clock, ChevronLeft, ChevronRight, Search, FileText, CalendarDays } from 'lucide-react';
 
 const LEAVE_TYPES = {
-  late:     { label: 'Đi muộn',       color: 'bg-yellow-100 text-yellow-700' },
-  early:    { label: 'Về sớm',         color: 'bg-orange-100 text-orange-700' },
-  leave:    { label: 'Nghỉ phép',      color: 'bg-purple-100 text-purple-700' },
-  half_day: { label: 'Nghỉ nửa ngày', color: 'bg-blue-100 text-blue-700' },
+  late:     { label: 'Đi muộn',       color: 'e-tone-warning' },
+  early:    { label: 'Về sớm',         color: 'e-tone-peach' },
+  leave:    { label: 'Nghỉ phép',      color: 'e-tone-lavender' },
+  half_day: { label: 'Nghỉ nửa ngày', color: 'e-tone-info' },
 };
 
 const HALF_DAY = { morning: 'Buổi sáng', afternoon: 'Buổi chiều' };
 
 const LEAVE_STATUS = {
-  pending:  { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700' },
-  approved: { label: 'Đã duyệt',  color: 'bg-teal-100 text-teal-700' },
-  rejected: { label: 'Từ chối',   color: 'bg-red-100 text-red-700' },
+  pending:  { label: 'Chờ duyệt', color: 'e-tone-warning' },
+  approved: { label: 'Đã duyệt',  color: 'e-tone-success' },
+  rejected: { label: 'Từ chối',   color: 'e-tone-danger' },
 };
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
@@ -168,131 +168,136 @@ const LeaveManagementPage = () => {
   const pendingCount = requests.filter(r => r.status === 'pending').length;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between mt-2">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-800">Danh sách đơn</h3>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month-1]} {year}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronLeft className="w-4 h-4 text-slate-500" />
+    <div className="space-y-4">
+      {/* Thanh lọc: tháng · tìm kiếm · trạng thái */}
+      <div className="e-toolbar">
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white">
+          <button onClick={prevMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month-1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronRight className="w-4 h-4 text-slate-500" />
+          <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-slate-800 min-w-[120px] justify-center tabular-nums"><CalendarDays className="w-4 h-4 text-teal-600" />{MONTHS[month-1]} {year}</span>
+          <button onClick={nextMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { key: 'pending', label: 'Chờ duyệt', color: 'text-yellow-500' },
-          { key: 'approved', label: 'Đã duyệt', color: 'text-teal-600' },
-          { key: 'rejected', label: 'Từ chối', color: 'text-red-400' },
-        ].map(s => (
-          <button key={s.key} onClick={() => setFilter(s.key)}
-            className={`bg-white rounded-2xl p-4 border shadow-sm text-center transition-all ${filter === s.key ? 'border-teal-300 shadow-md' : 'border-slate-100'}`}>
-            <div className={`text-2xl font-bold ${s.color}`}>{requests.filter(r => r.status === s.key).length}</div>
-            <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
-          </button>
-        ))}
-      </div>
-
-      {/* Filter + Search */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+        <div className="e-search flex-1 min-w-[180px] sm:max-w-xs">
+          <Search />
           <input
-            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-teal-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400"
             placeholder="Tìm nhân sự..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
+        <div className="e-seg ml-auto overflow-x-auto max-w-full">
           {[{key:'all',label:'Tất cả'},{key:'pending',label:'Chờ duyệt'},{key:'approved',label:'Đã duyệt'},{key:'rejected',label:'Từ chối'}].map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${filter === f.key ? 'bg-teal-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+              className={`e-seg-item ${filter === f.key ? 'e-seg-active' : 'text-slate-500'}`}>
               {f.label}
               {f.key === 'pending' && pendingCount > 0 && (
-                <span className="ml-1 bg-red-400 text-white text-[10px] rounded-full px-1">{pendingCount}</span>
+                <span className="e-badge e-badge-sm e-tone-danger h-[18px] px-1.5 text-[10.5px]">{pendingCount}</span>
               )}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Chỉ số (bấm để lọc) */}
+      <div className="grid grid-cols-3 gap-3 lg:gap-4">
+        {[
+          { key: 'pending', label: 'Chờ duyệt', color: 'bg-warning-50 text-warning-600' },
+          { key: 'approved', label: 'Đã duyệt', color: 'bg-success-50 text-success-600' },
+          { key: 'rejected', label: 'Từ chối', color: 'bg-danger-50 text-danger-600' },
+        ].map(s => (
+          <button key={s.key} onClick={() => setFilter(s.key)}
+            className={`e-metric flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 p-3.5 lg:p-5 transition ${filter === s.key ? 'border-teal-500 ring-2 ring-teal-100' : 'hover:border-teal-200'}`}>
+            <span className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full grid place-items-center shrink-0 ${s.color}`}>
+              <FileText className="w-5 h-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="e-metric-label block">{s.label}</span>
+              <span className="e-metric-value block">{requests.filter(r => r.status === s.key).length}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Tiêu đề danh sách */}
+      <div className="flex items-end justify-between gap-3 pt-1">
+        <div>
+          <h3 className="e-card-title">Danh sách đơn</h3>
+          <p className="e-card-sub">{MONTHS[month-1]} {year}</p>
+        </div>
+      </div>
+
       {/* List */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400 text-sm shadow-sm">
-          Không có đơn xin phép nào
+        <div className="e-card e-empty">
+          <div className="e-empty-icon"><FileText /></div>
+          <div className="e-empty-title">Không có đơn xin phép nào</div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
           {filtered.map(r => (
-            <div key={r.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-4">
+            <div key={r.id} className="e-card overflow-hidden flex flex-col">
+              <div className="p-4 flex-1">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-teal-50 grid place-items-center shrink-0">
                       {r.profiles?.avatar_url ? (
                         <img src={r.profiles.avatar_url} alt={r.profiles.full_name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-bold text-teal-500">{r.profiles?.full_name?.charAt(0)}</span>
+                        <span className="text-[15px] font-bold text-teal-700">{r.profiles?.full_name?.charAt(0)}</span>
                       )}
                     </div>
-                    <div>
-                      <div className="font-semibold text-slate-800 text-sm">{r.profiles?.full_name}</div>
-                      <div className="text-xs text-slate-400">{r.profiles?.employee_id}</div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-900 text-[14.5px] truncate">{r.profiles?.full_name}</div>
+                      <div className="text-[12px] text-slate-500">{r.profiles?.employee_id}</div>
                     </div>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${LEAVE_STATUS[r.status]?.color}`}>
+                  <span className={`e-badge e-badge-sm e-badge-dot shrink-0 ${LEAVE_STATUS[r.status]?.color}`}>
                     {LEAVE_STATUS[r.status]?.label}
                   </span>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div className="bg-slate-50 rounded-xl px-3 py-2">
-                    <div className="text-[10px] text-slate-400">Loại đơn</div>
-                    <div className="text-xs font-semibold text-slate-700 mt-0.5">
+                  <div className="e-subtle px-3 py-2">
+                    <div className="e-kv-label">Loại đơn</div>
+                    <div className="text-[13px] font-semibold text-slate-800 mt-0.5">
                       {LEAVE_TYPES[r.type]?.label}
                       {r.type === 'half_day' && r.half_day_period && ` · ${HALF_DAY[r.half_day_period]}`}
                     </div>
                   </div>
-                  <div className="bg-slate-50 rounded-xl px-3 py-2">
-                    <div className="text-[10px] text-slate-400">Ngày</div>
-                    <div className="text-xs font-semibold text-slate-700 mt-0.5">
+                  <div className="e-subtle px-3 py-2">
+                    <div className="e-kv-label">Ngày</div>
+                    <div className="text-[13px] font-semibold text-slate-800 mt-0.5">
                       {new Date(r.date).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' })}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-2 bg-slate-50 rounded-xl px-3 py-2">
-                  <div className="text-[10px] text-slate-400">Lý do</div>
-                  <div className="text-xs text-slate-700 mt-0.5">{r.reason}</div>
+                <div className="mt-2 e-subtle px-3 py-2">
+                  <div className="e-kv-label">Lý do</div>
+                  <div className="text-[13px] text-slate-700 mt-0.5">{r.reason}</div>
                 </div>
 
-                <div className="text-[10px] text-slate-300 mt-2">
+                <div className="text-[11.5px] text-slate-400 mt-2.5">
                   Gửi lúc {new Date(r.created_at).toLocaleString('vi-VN')}
                 </div>
               </div>
 
               {r.status === 'pending' && (
-                <div className="flex border-t border-slate-50">
+                <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-slate-100 bg-slate-50/60">
                   <button onClick={() => handleReject(r.id)} disabled={saving === r.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium text-red-400 hover:bg-red-50 transition-colors border-r border-slate-50 disabled:opacity-50">
-                    <X className="w-4 h-4" /> Từ chối
+                    className="e-btn e-btn-secondary e-btn-sm hover:!text-danger-600 hover:!border-danger-200">
+                    <X /> Từ chối
                   </button>
                   <button onClick={() => handleApprove(r.id)} disabled={saving === r.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium text-teal-600 hover:bg-teal-50 transition-colors disabled:opacity-50">
-                    <Check className="w-4 h-4" /> Duyệt
+                    className="e-btn e-btn-primary e-btn-sm">
+                    <Check /> Duyệt
                   </button>
                 </div>
               )}

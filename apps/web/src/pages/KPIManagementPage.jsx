@@ -19,12 +19,12 @@ const DEPARTMENTS = [
 ];
 
 const ComingSoon = ({ label }) => (
-  <div className="bg-white border border-slate-100 rounded-2xl shadow-sm py-16 flex flex-col items-center text-center">
-    <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center mb-3">
-      <Construction className="w-7 h-7 text-teal-500" />
+  <div className="e-card e-empty py-16">
+    <div className="e-empty-icon">
+      <Construction />
     </div>
-    <div className="font-semibold text-slate-700">KPI {label}</div>
-    <div className="text-sm text-slate-400 mt-1">Đang được xây dựng</div>
+    <div className="e-empty-title">KPI {label}</div>
+    <div className="e-empty-desc">Đang được xây dựng</div>
   </div>
 );
 
@@ -38,30 +38,26 @@ const KPIManagementPage = () => {
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   return (
-    <div className="space-y-5">
-      {/* Header + month nav */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-[13px] text-slate-500">{MONTHS[month - 1]} {year}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronLeft className="w-4 h-4 text-slate-500" />
+    <div className="space-y-4">
+      {/* Thanh lọc: kỳ KPI */}
+      <div className="e-toolbar justify-between pl-4">
+        <p className="e-page-desc">Giao chỉ tiêu & theo dõi KPI theo bộ phận · {MONTHS[month - 1]} {year}</p>
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white">
+          <button onClick={prevMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronRight className="w-4 h-4 text-slate-500" />
+          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[110px] text-center tabular-nums">{MONTHS[month - 1]} {year}</span>
+          <button onClick={nextMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Department tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
+      {/* Department tabs (gạch chân teal) */}
+      <div className="e-tabs">
         {DEPARTMENTS.map(d => (
           <button key={d.id} onClick={() => setDept(d.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-              dept === d.id ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-700'
-            }`}>
+            className={`e-tab ${dept === d.id ? 'e-tab-active' : 'text-slate-500'}`}>
             {d.label}
           </button>
         ))}

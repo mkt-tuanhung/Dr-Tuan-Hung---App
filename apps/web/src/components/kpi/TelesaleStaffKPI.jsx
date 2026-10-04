@@ -10,15 +10,16 @@ const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 
 const STATUS_LABEL = { phau_thuat: 'Phẫu thuật', coc: 'Cọc', bong: 'Bong', scheduled: 'Đã hẹn', cancelled: 'Huỷ' };
-const STATUS_COLOR = { phau_thuat: 'bg-teal-100 text-teal-700', coc: 'bg-blue-100 text-blue-700', bong: 'bg-red-100 text-red-600', scheduled: 'bg-slate-100 text-slate-600', cancelled: 'bg-slate-100 text-slate-400' };
+const STATUS_COLOR = { phau_thuat: 'e-tone-success', coc: 'e-tone-info', bong: 'e-tone-danger', scheduled: 'e-tone-neutral', cancelled: 'e-tone-neutral' };
 
-const ACCENTS = { emerald: 'bg-teal-50 text-teal-600', blue: 'bg-blue-50 text-blue-600', violet: 'bg-violet-50 text-violet-600', orange: 'bg-orange-50 text-orange-600', red: 'bg-red-50 text-red-500' };
+const ACCENTS = { emerald: 'bg-teal-50 text-teal-700', blue: 'bg-info-50 text-info-600', violet: 'bg-lavender-50 text-lavender-600', orange: 'bg-peach-50 text-peach-600', red: 'bg-danger-50 text-danger-600' };
 const Card = ({ icon: Icon, label, value, accent = 'emerald' }) => (
-  <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-      <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${ACCENTS[accent]}`}><Icon className="w-3.5 h-3.5" /></span>{label}
+<div className="e-metric items-start p-3.5 lg:p-4 gap-3">
+    <span className={`w-10 h-10 lg:w-11 lg:h-11 rounded-full grid place-items-center shrink-0 ${ACCENTS[accent]}`}><Icon className="w-5 h-5" /></span>
+    <div className="min-w-0">
+      <div className="e-metric-label whitespace-normal">{label}</div>
+      <div className="text-[18px] lg:text-[20px] font-bold text-slate-900 leading-tight tabular-nums break-words mt-0.5">{value}</div>
     </div>
-    <div className="text-2xl font-black text-slate-800 mt-2">{value}</div>
   </div>
 );
 
@@ -76,36 +77,36 @@ const TelesaleStaffKPI = () => {
   const revProgress = revTarget > 0 ? Math.min(Math.round(r.doanhThu / revTarget * 100), 100) : 0;
   const hasKpi = kpi && (apptTarget || revTarget || kpi.target_close_rate);
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-4">
+      <div className="e-toolbar justify-between pl-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">KPI cá nhân · Telesale</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Theo dõi hiệu suất và hoa hồng của bạn — {MONTHS[month - 1]} {year}</p>
+          <h2 className="text-[15px] font-semibold text-slate-900">KPI cá nhân · Telesale</h2>
+          <p className="e-page-desc">Theo dõi hiệu suất và hoa hồng của bạn — {MONTHS[month - 1]} {year}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
-          <span className="text-sm font-medium text-slate-700 min-w-[96px] text-center">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
+          <button onClick={prevMonth} className="e-icon-btn w-9 h-9"><ChevronLeft className="w-4 h-4" /></button>
+          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[104px] text-center tabular-nums">{MONTHS[month - 1]} {year}</span>
+          <button onClick={nextMonth} className="e-icon-btn w-9 h-9"><ChevronRight className="w-4 h-4" /></button>
         </div>
       </div>
 
       {/* KPI tháng được giao (cảnh báo nếu chưa có) */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-teal-700">KPI tháng được giao</h3></div>
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="e-card-title">KPI tháng được giao</h3></div>
         <div className="p-5">
           {!hasKpi ? (
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl py-8 flex flex-col items-center text-center">
-              <AlertCircle className="w-8 h-8 text-amber-500 mb-2" />
-              <div className="font-semibold text-amber-700">Bạn chưa được giao KPI cho tháng này.</div>
+            <div className="e-subtle e-empty">
+              <AlertCircle className="w-12 h-12 p-3 rounded-full bg-warning-50 text-warning-600 mb-3" />
+              <div className="e-empty-title">Bạn chưa được giao KPI cho tháng này.</div>
             </div>
           ) : (
             <div className="grid sm:grid-cols-3 gap-3 text-sm">
-              <div className="bg-slate-50 rounded-xl p-3"><div className="text-slate-400 text-xs">Tổng lịch hẹn</div><div className="font-bold text-slate-800 mt-0.5">{fmt(apptTarget)}</div></div>
-              <div className="bg-slate-50 rounded-xl p-3"><div className="text-slate-400 text-xs">Doanh thu</div><div className="font-bold text-slate-800 mt-0.5">{fmtM(revTarget)}</div></div>
-              <div className="bg-slate-50 rounded-xl p-3"><div className="text-slate-400 text-xs">Tỉ lệ chốt hẹn</div><div className="font-bold text-slate-800 mt-0.5">{Number(kpi.target_close_rate || 0).toFixed(1)}%</div></div>
+              <div className="e-subtle p-3"><div className="text-slate-400 text-xs">Tổng lịch hẹn</div><div className="font-bold text-slate-800 mt-0.5">{fmt(apptTarget)}</div></div>
+              <div className="e-subtle p-3"><div className="text-slate-400 text-xs">Doanh thu</div><div className="font-bold text-slate-800 mt-0.5">{fmtM(revTarget)}</div></div>
+              <div className="e-subtle p-3"><div className="text-slate-400 text-xs">Tỉ lệ chốt hẹn</div><div className="font-bold text-slate-800 mt-0.5">{Number(kpi.target_close_rate || 0).toFixed(1)}%</div></div>
             </div>
           )}
         </div>
@@ -117,55 +118,55 @@ const TelesaleStaffKPI = () => {
         <Card icon={CalendarCheck} label="Tổng lịch hẹn" value={fmt(r.tongLichHen)} accent="blue" />
         <Card icon={Percent} label="Tỷ lệ chốt hẹn" value={`${r.tyLeChotHen.toFixed(1)}%`} accent="orange" />
         <Card icon={Wallet} label="Doanh thu được gán" value={fmtM(r.doanhThu)} accent="violet" />
-        <div className="col-span-2 bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-2xl p-4 shadow-md flex flex-col justify-center">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-white/90">Hoa hồng tạm tính</div>
-          <div className="text-3xl font-black mt-1">{fmtM(r.tongHH)}</div>
-          <div className="text-xs text-white/80 mt-1">Thưởng DT {fmtM(r.thuongDoanhThu)} + Thưởng lịch hẹn {fmtM(r.thuongLichHen)}</div>
+        <div className="col-span-2 e-card e-card-pad bg-teal-50 border-teal-100 flex flex-col justify-center">
+          <div className="e-caption text-teal-700">Hoa hồng tạm tính</div>
+          <div className="text-[28px] font-bold text-teal-800 mt-1 tabular-nums">{fmtM(r.tongHH)}</div>
+          <div className="text-[12px] text-slate-600 mt-1">Thưởng DT {fmtM(r.thuongDoanhThu)} + Thưởng lịch hẹn {fmtM(r.thuongLichHen)}</div>
         </div>
         <Card icon={CalendarClock} label="Lịch hẹn còn thiếu" value={fmt(Math.max(apptTarget - r.tongLichHen, 0))} accent="blue" />
         <Card icon={TrendingDown} label="Doanh thu còn thiếu" value={fmtM(Math.max(revTarget - r.doanhThu, 0))} accent="red" />
       </div>
 
       {/* Tiến độ hoàn thành KPI */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5 space-y-5">
-        <h3 className="font-bold text-teal-700">Tiến độ hoàn thành KPI</h3>
+      <div className="e-card e-card-pad space-y-5">
+        <h3 className="e-card-title">Tiến độ hoàn thành KPI</h3>
         <div>
           <div className="flex items-center justify-between mb-1"><span className="font-semibold text-slate-700 text-sm">Tiến độ KPI lịch hẹn</span><span className="font-bold text-slate-800">{apptProgress}%</span></div>
-          <div className="w-full bg-slate-100 rounded-full h-2"><div className="h-2 rounded-full bg-teal-500" style={{ width: `${apptProgress}%` }} /></div>
+          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div className="h-2 rounded-full bg-teal-500" style={{ width: `${apptProgress}%` }} /></div>
           <div className="flex justify-between text-xs text-slate-400 mt-1"><span>Đạt: <b className="text-slate-600">{fmt(r.tongLichHen)}</b></span><span>Mục tiêu: <b className="text-slate-600">{fmt(apptTarget)}</b></span></div>
         </div>
         <div>
           <div className="flex items-center justify-between mb-1"><span className="font-semibold text-slate-700 text-sm">Tiến độ KPI doanh thu</span><span className="font-bold text-slate-800">{revProgress}%</span></div>
-          <div className="w-full bg-slate-100 rounded-full h-2"><div className="h-2 rounded-full bg-violet-500" style={{ width: `${revProgress}%` }} /></div>
+          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div className="h-2 rounded-full bg-teal-700" style={{ width: `${revProgress}%` }} /></div>
           <div className="flex justify-between text-xs text-slate-400 mt-1"><span>Đạt: <b className="text-slate-600">{fmtM(r.doanhThu)}</b></span><span>Mục tiêu: <b className="text-slate-600">{fmtM(revTarget)}</b></span></div>
         </div>
       </div>
 
       {/* Ghi chú hoa hồng */}
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs text-slate-500 space-y-1">
+      <div className="e-subtle p-4 text-[12.5px] text-slate-500 space-y-1">
         <div className="font-semibold text-slate-600">Cách tính hoa hồng:</div>
         <div>• <b>Thưởng doanh thu</b> = Doanh thu × A% (A: &lt;500tr=0.5% · 500tr–&lt;1 tỷ=1% · ≥1 tỷ=1.5%).</div>
         <div>• <b>Thưởng lịch hẹn</b>: PT trực tiếp 500k · đánh giá bong 200k (PT sau +300k) · đánh giá cọc 300k (PT sau +200k) — chia theo tháng diễn ra.</div>
       </div>
 
       {/* Lịch hẹn của tôi */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-teal-500" /> Lịch hẹn của tôi</h3></div>
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-teal-600" /> Lịch hẹn của tôi</h3></div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-              <th className="text-left px-4 py-2.5 font-medium">STT</th><th className="text-left px-4 py-2.5 font-medium">Ngày hẹn</th>
-              <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th><th className="text-left px-4 py-2.5 font-medium">Trạng thái</th><th className="text-left px-4 py-2.5 font-medium">Ghi chú</th>
+          <table className="e-table">
+            <thead><tr>
+              <th className="text-left">STT</th><th className="text-left">Ngày hẹn</th>
+              <th className="text-left">Khách hàng</th><th className="text-left">Trạng thái</th><th className="text-left">Ghi chú</th>
             </tr></thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {appts.length === 0 ? (<tr><td colSpan={5} className="text-center py-8 text-slate-400">Chưa có lịch hẹn.</td></tr>)
                 : appts.map((a, i) => (
-                  <tr key={a.id} className="hover:bg-slate-50/50">
-                    <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{a.appointment_date}</td>
-                    <td className="px-4 py-2.5 font-medium text-slate-800">{a.customer_name}</td>
-                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[a.status] || 'bg-slate-100 text-slate-600'}`}>{STATUS_LABEL[a.status] || a.status}</span></td>
-                    <td className="px-4 py-2.5 text-slate-400">{a.notes || '—'}</td>
+                  <tr key={a.id}>
+                    <td className="text-slate-400">{i + 1}</td>
+                    <td className="text-slate-600">{a.appointment_date}</td>
+                    <td className="font-semibold text-slate-900">{a.customer_name}</td>
+                    <td className="align-middle"><span className={`e-badge e-badge-sm ${STATUS_COLOR[a.status] || 'e-tone-neutral'}`}>{STATUS_LABEL[a.status] || a.status}</span></td>
+                    <td className="text-slate-400">{a.notes || '—'}</td>
                   </tr>
                 ))}
             </tbody>
@@ -174,23 +175,23 @@ const TelesaleStaffKPI = () => {
       </div>
 
       {/* Doanh thu được gán */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700 flex items-center gap-2"><Wallet className="w-4 h-4 text-violet-500" /> Doanh thu được gán</h3></div>
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Wallet className="w-4 h-4 text-teal-600" /> Doanh thu được gán</h3></div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-              <th className="text-left px-4 py-2.5 font-medium">STT</th><th className="text-left px-4 py-2.5 font-medium">Ngày</th>
-              <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th><th className="text-left px-4 py-2.5 font-medium">Dịch vụ</th><th className="text-right px-4 py-2.5 font-medium">Số tiền</th>
+          <table className="e-table">
+            <thead><tr>
+              <th className="text-left">STT</th><th className="text-left">Ngày</th>
+              <th className="text-left">Khách hàng</th><th className="text-left">Dịch vụ</th><th className="text-right">Số tiền</th>
             </tr></thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {surgRows.length === 0 ? (<tr><td colSpan={5} className="text-center py-8 text-slate-400">Chưa có doanh thu được gán.</td></tr>)
                 : surgRows.map((a, i) => (
-                  <tr key={a.id} className="hover:bg-slate-50/50">
-                    <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{a.surgery_date}</td>
-                    <td className="px-4 py-2.5 font-medium text-slate-800">{a.customer_name}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{a.service || '—'}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-teal-700">{fmtM(a.revenue)}</td>
+                  <tr key={a.id}>
+                    <td className="text-slate-400">{i + 1}</td>
+                    <td className="text-slate-600">{a.surgery_date}</td>
+                    <td className="font-semibold text-slate-900">{a.customer_name}</td>
+                    <td className="text-slate-500">{a.service || '—'}</td>
+                    <td className="text-right font-semibold text-teal-700">{fmtM(a.revenue)}</td>
                   </tr>
                 ))}
             </tbody>

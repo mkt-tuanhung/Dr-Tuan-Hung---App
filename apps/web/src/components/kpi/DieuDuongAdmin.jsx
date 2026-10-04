@@ -81,94 +81,94 @@ const DieuDuongAdmin = ({ month, year }) => {
 
   const editRow = (r) => setForm({ staff_id: r.staff.id, target_close_rate: String(r.kpi?.target_close_rate || ''), note: r.kpi?.notes || '' });
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   const hhChart = rows.map(r => ({ name: r.staff.full_name, 'Hoa hồng': r.tongHH }));
 
   return (
-    <div className="space-y-5">
-      <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+    <div className="space-y-4">
+      <div className="e-seg">
         {[['assign', 'Giao KPI & Danh sách'], ['progress', 'Theo dõi Tiến độ']].map(([id, label]) => (
-          <button key={id} onClick={() => setSubTab(id)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${subTab === id ? 'bg-white text-teal-700 shadow' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+          <button key={id} onClick={() => setSubTab(id)} className={`e-seg-item ${subTab === id ? 'e-seg-active' : 'text-slate-500'}`}>{label}</button>
         ))}
       </div>
 
       {subTab === 'assign' && (
         <>
-          <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5">
-            <h3 className="font-bold text-teal-700 mb-4">{form.staff_id ? 'Cập nhật' : 'Tạo mới'} KPI Điều dưỡng</h3>
+          <div className="e-card e-card-pad">
+            <h3 className="e-card-title mb-4">{form.staff_id ? 'Cập nhật' : 'Tạo mới'} KPI Điều dưỡng</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Điều dưỡng *</label>
-                <select value={form.staff_id} onChange={e => setForm(f => ({ ...f, staff_id: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400">
+                <label className="e-label">Điều dưỡng *</label>
+                <select value={form.staff_id} onChange={e => setForm(f => ({ ...f, staff_id: e.target.value }))} className="e-input">
                   <option value="">Chọn điều dưỡng</option>
                   {staff.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.employee_id})</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Tháng áp dụng</label>
-                <input disabled value={`Tháng ${month} / ${year}`} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500" />
+                <label className="e-label">Tháng áp dụng</label>
+                <input disabled value={`Tháng ${month} / ${year}`} className="e-input bg-slate-50 text-slate-500" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Tỉ lệ hài lòng hậu phẫu/trực đêm mục tiêu (%)</label>
-                <input type="number" step="0.1" value={form.target_close_rate} onChange={e => setForm(f => ({ ...f, target_close_rate: e.target.value }))} placeholder="VD: 95" className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
+                <label className="e-label">Tỉ lệ hài lòng hậu phẫu/trực đêm mục tiêu (%)</label>
+                <input type="number" step="0.1" value={form.target_close_rate} onChange={e => setForm(f => ({ ...f, target_close_rate: e.target.value }))} placeholder="VD: 95" className="e-input" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Đánh giá chuyên môn phụ mổ</label>
-                <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="VD: Tốt / Cần cải thiện..." className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm focus:outline-none focus:border-teal-400" />
+                <label className="e-label">Đánh giá chuyên môn phụ mổ</label>
+                <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="VD: Tốt / Cần cải thiện..." className="e-input" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              {form.staff_id && <button onClick={() => setForm(EMPTY)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>}
-              <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">{saving ? 'Đang lưu...' : 'Lưu KPI Điều dưỡng'}</button>
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
+              {form.staff_id && <button onClick={() => setForm(EMPTY)} className="e-btn e-btn-secondary">Hủy</button>}
+              <button onClick={handleSave} disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Lưu KPI Điều dưỡng'}</button>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700">Bảng thông số Điều dưỡng ({year}-{String(month).padStart(2, '0')})</h3></div>
+          <div className="e-card overflow-hidden">
+            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900">Bảng thông số Điều dưỡng ({year}-{String(month).padStart(2, '0')})</h3></div>
             <div className="overflow-x-auto hidden md:block">
-              <table className="w-full text-sm whitespace-nowrap">
-                <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-                  <th className="text-left px-4 py-2.5 font-medium">Nhân sự</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Trực đêm</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Phụ mổ 1</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Phụ mổ 2</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Phụ mổ 3</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Hậu phẫu</th>
-                  <th className="text-right px-4 py-2.5 font-medium">Hoa hồng</th>
-                  <th className="text-center px-3 py-2.5 font-medium">KPI</th>
+              <table className="e-table whitespace-nowrap">
+                <thead><tr>
+                  <th className="text-left">Nhân sự</th>
+                  <th className="text-center">Trực đêm</th>
+                  <th className="text-center">Phụ mổ 1</th>
+                  <th className="text-center">Phụ mổ 2</th>
+                  <th className="text-center">Phụ mổ 3</th>
+                  <th className="text-center">Hậu phẫu</th>
+                  <th className="text-right">Hoa hồng</th>
+                  <th className="text-center">KPI</th>
                 </tr></thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {rows.length === 0 ? (<tr><td colSpan={8} className="text-center py-8 text-slate-400">Chưa có điều dưỡng.</td></tr>)
                     : rows.map(r => (
-                      <tr key={r.staff.id} className="hover:bg-slate-50/50">
-                        <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}<div className="text-[11px] text-slate-400">{r.staff.position || r.staff.employee_id}</div></td>
-                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'truc_dem')} disabled={!r.trucDem} className="text-orange-600 font-semibold hover:underline disabled:no-underline disabled:text-slate-400">{r.trucDem}</button></td>
-                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'pm1')} disabled={!r.pm1} className="text-slate-700 hover:underline hover:text-teal-600 disabled:text-slate-400">{r.pm1}</button></td>
-                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'pm2')} disabled={!r.pm2} className="text-slate-700 hover:underline hover:text-teal-600 disabled:text-slate-400">{r.pm2}</button></td>
-                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'pm3')} disabled={!r.pm3} className="text-slate-700 hover:underline hover:text-teal-600 disabled:text-slate-400">{r.pm3}</button></td>
-                        <td className="text-center px-3 py-2.5"><button onClick={() => openDetail(r.staff, 'hau_phau')} disabled={!r.hauPhau} className="text-pink-600 hover:underline disabled:no-underline disabled:text-slate-400">{r.hauPhau}</button></td>
-                        <td className="text-right px-4 py-2.5 text-teal-700 font-bold">{fmtM(r.tongHH)}</td>
-                        <td className="text-center px-3 py-2.5"><button onClick={() => editRow(r)} className={`text-xs font-medium px-2.5 py-1 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600 hover:bg-teal-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>{r.kpi ? 'Sửa' : 'Giao KPI'}</button></td>
+                      <tr key={r.staff.id}>
+                        <td className="font-semibold text-slate-900">{r.staff.full_name}<div className="text-[11px] text-slate-400">{r.staff.position || r.staff.employee_id}</div></td>
+                        <td className="text-center"><button onClick={() => openDetail(r.staff, 'truc_dem')} disabled={!r.trucDem} className="text-peach-600 font-semibold hover:underline disabled:no-underline disabled:text-slate-400">{r.trucDem}</button></td>
+                        <td className="text-center"><button onClick={() => openDetail(r.staff, 'pm1')} disabled={!r.pm1} className="text-slate-700 hover:underline hover:text-teal-700 disabled:text-slate-400">{r.pm1}</button></td>
+                        <td className="text-center"><button onClick={() => openDetail(r.staff, 'pm2')} disabled={!r.pm2} className="text-slate-700 hover:underline hover:text-teal-700 disabled:text-slate-400">{r.pm2}</button></td>
+                        <td className="text-center"><button onClick={() => openDetail(r.staff, 'pm3')} disabled={!r.pm3} className="text-slate-700 hover:underline hover:text-teal-700 disabled:text-slate-400">{r.pm3}</button></td>
+                        <td className="text-center"><button onClick={() => openDetail(r.staff, 'hau_phau')} disabled={!r.hauPhau} className="text-rose-600 hover:underline disabled:no-underline disabled:text-slate-400">{r.hauPhau}</button></td>
+                        <td className="text-right text-teal-700 font-bold">{fmtM(r.tongHH)}</td>
+                        <td className="text-center"><button onClick={() => editRow(r)} className={`e-btn e-btn-sm h-8 ${r.kpi ? 'e-btn-ghost' : 'e-btn-outline'}`}>{r.kpi ? 'Sửa' : 'Giao KPI'}</button></td>
                       </tr>
                     ))}
                 </tbody>
               </table>
             </div>
-            <div className="md:hidden divide-y divide-slate-50">
+            <div className="md:hidden divide-y divide-slate-100">
               {rows.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">Chưa có điều dưỡng.</div>
                 : rows.map(r => (
                   <div key={r.staff.id} className="p-4">
                     <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <div className="min-w-0"><div className="font-bold text-slate-800 truncate">{r.staff.full_name}</div><div className="text-[11px] text-slate-400">{r.staff.position || r.staff.employee_id}</div></div>
-                      <button onClick={() => editRow(r)} className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full ${r.kpi ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>{r.kpi ? 'Sửa KPI' : 'Giao KPI'}</button>
+                      <div className="min-w-0"><div className="font-semibold text-slate-900 truncate">{r.staff.full_name}</div><div className="text-[11px] text-slate-400">{r.staff.position || r.staff.employee_id}</div></div>
+                      <button onClick={() => editRow(r)} className={`shrink-0 e-btn e-btn-sm h-8 ${r.kpi ? 'e-btn-ghost' : 'e-btn-outline'}`}>{r.kpi ? 'Sửa KPI' : 'Giao KPI'}</button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 mb-2">
-                      <StatCell label="Trực đêm" value={<button onClick={() => openDetail(r.staff, 'truc_dem')} disabled={!r.trucDem} className="text-orange-600 disabled:text-slate-400">{r.trucDem}</button>} />
+                      <StatCell label="Trực đêm" value={<button onClick={() => openDetail(r.staff, 'truc_dem')} disabled={!r.trucDem} className="text-peach-600 disabled:text-slate-400">{r.trucDem}</button>} />
                       <StatCell label="Phụ mổ 1" value={<button onClick={() => openDetail(r.staff, 'pm1')} disabled={!r.pm1} className="text-slate-700 disabled:text-slate-400">{r.pm1}</button>} />
                       <StatCell label="Phụ mổ 2" value={<button onClick={() => openDetail(r.staff, 'pm2')} disabled={!r.pm2} className="text-slate-700 disabled:text-slate-400">{r.pm2}</button>} />
                       <StatCell label="Phụ mổ 3" value={<button onClick={() => openDetail(r.staff, 'pm3')} disabled={!r.pm3} className="text-slate-700 disabled:text-slate-400">{r.pm3}</button>} />
-                      <StatCell label="Hậu phẫu" value={<button onClick={() => openDetail(r.staff, 'hau_phau')} disabled={!r.hauPhau} className="text-pink-600 disabled:text-slate-400">{r.hauPhau}</button>} />
+                      <StatCell label="Hậu phẫu" value={<button onClick={() => openDetail(r.staff, 'hau_phau')} disabled={!r.hauPhau} className="text-rose-600 disabled:text-slate-400">{r.hauPhau}</button>} />
                     </div>
                     <StatCell label="Hoa hồng" value={fmtM(r.tongHH)} className="text-teal-700" />
                   </div>
@@ -180,44 +180,44 @@ const DieuDuongAdmin = ({ month, year }) => {
 
       {subTab === 'progress' && (
         <>
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-            <h3 className="font-bold text-teal-700 mb-4">Tổng hoa hồng theo điều dưỡng (VNĐ)</h3>
+          <div className="e-card e-card-pad">
+            <h3 className="e-card-title mb-4">Tổng hoa hồng theo điều dưỡng (VNĐ)</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={hhChart}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip formatter={(v) => fmtM(v)} />
-                  <Bar dataKey="Hoa hồng" fill="#12A4A5" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Hoa hồng" fill="#067B7F" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700">Bảng phân tích chi tiết</h3></div>
+          <div className="e-card overflow-hidden">
+            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900">Bảng phân tích chi tiết</h3></div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm whitespace-nowrap">
-                <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-                  <th className="text-left px-4 py-2.5 font-medium">Nhân sự</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Trực đêm</th>
-                  <th className="text-right px-4 py-2.5 font-medium">Thưởng trực đêm</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Phụ mổ (1/2/3)</th>
-                  <th className="text-right px-4 py-2.5 font-medium">Thưởng phụ mổ</th>
-                  <th className="text-center px-3 py-2.5 font-medium">Hậu phẫu</th>
-                  <th className="text-right px-4 py-2.5 font-medium">Tổng HH</th>
+              <table className="e-table whitespace-nowrap">
+                <thead><tr>
+                  <th className="text-left">Nhân sự</th>
+                  <th className="text-center">Trực đêm</th>
+                  <th className="text-right">Thưởng trực đêm</th>
+                  <th className="text-center">Phụ mổ (1/2/3)</th>
+                  <th className="text-right">Thưởng phụ mổ</th>
+                  <th className="text-center">Hậu phẫu</th>
+                  <th className="text-right">Tổng HH</th>
                 </tr></thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {rows.map(r => (
-                    <tr key={r.staff.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}</td>
-                      <td className="text-center px-3 py-2.5">{r.trucDem}</td>
-                      <td className="text-right px-4 py-2.5">{fmtM(r.thuongTrucDem)}</td>
-                      <td className="text-center px-3 py-2.5">{r.pm1}/{r.pm2}/{r.pm3}</td>
-                      <td className="text-right px-4 py-2.5">{fmtM(r.thuongPhuMo)}</td>
-                      <td className="text-center px-3 py-2.5">{r.hauPhau}</td>
-                      <td className="text-right px-4 py-2.5 font-bold text-teal-700">{fmtM(r.tongHH)}</td>
+                    <tr key={r.staff.id}>
+                      <td className="font-semibold text-slate-900">{r.staff.full_name}</td>
+                      <td className="text-center">{r.trucDem}</td>
+                      <td className="text-right">{fmtM(r.thuongTrucDem)}</td>
+                      <td className="text-center">{r.pm1}/{r.pm2}/{r.pm3}</td>
+                      <td className="text-right">{fmtM(r.thuongPhuMo)}</td>
+                      <td className="text-center">{r.hauPhau}</td>
+                      <td className="text-right font-bold text-teal-700">{fmtM(r.tongHH)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -229,30 +229,30 @@ const DieuDuongAdmin = ({ month, year }) => {
 
       {/* Modal danh sách khách theo vai trò */}
       {detail && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setDetail(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b bg-teal-50 shrink-0">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
               <div>
-                <h3 className="font-bold text-teal-800">{ROLE_LABEL[detail.roleKey]} — {detail.staff.full_name}</h3>
+                <h3 className="e-modal-title">{ROLE_LABEL[detail.roleKey]} — {detail.staff.full_name}</h3>
                 <p className="text-xs text-slate-500 mt-0.5">{detail.items.length} khách · {MONTHS_SHORT(month)}/{year}</p>
               </div>
-              <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              <button onClick={() => setDetail(null)} className="e-icon-btn w-8 h-8 rounded-full shrink-0"><X className="w-4 h-4" /></button>
             </div>
             <div className="overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100 sticky top-0"><tr>
-                  <th className="text-left px-4 py-2.5 font-medium">STT</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Ngày mổ</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Loại PT</th>
+              <table className="e-table">
+                <thead className="sticky top-0 z-10"><tr>
+                  <th className="text-left">STT</th>
+                  <th className="text-left">Ngày mổ</th>
+                  <th className="text-left">Khách hàng</th>
+                  <th className="text-left">Loại PT</th>
                 </tr></thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {detail.items.map((s, i) => (
-                    <tr key={s.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
-                      <td className="px-4 py-2.5 text-slate-600">{s.surgery_date ? new Date(s.surgery_date).toLocaleDateString('vi-VN') : '—'}</td>
-                      <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
+                    <tr key={s.id}>
+                      <td className="text-slate-400">{i + 1}</td>
+                      <td className="text-slate-600">{s.surgery_date ? new Date(s.surgery_date).toLocaleDateString('vi-VN') : '—'}</td>
+                      <td className="font-semibold text-slate-900">{s.customer_name}</td>
+                      <td className="text-slate-500">{s.surgery_type || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
