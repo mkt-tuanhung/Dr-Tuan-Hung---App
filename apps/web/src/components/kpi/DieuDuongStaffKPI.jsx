@@ -9,22 +9,23 @@ const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
 
-const ACCENTS = { orange: 'bg-orange-50 text-orange-600', blue: 'bg-blue-50 text-blue-600', violet: 'bg-violet-50 text-violet-600', emerald: 'bg-teal-50 text-teal-600', pink: 'bg-pink-50 text-pink-600' };
+const ACCENTS = { orange: 'bg-peach-50 text-peach-600', blue: 'bg-info-50 text-info-600', violet: 'bg-lavender-50 text-lavender-600', emerald: 'bg-teal-50 text-teal-700', pink: 'bg-rose-50 text-rose-600' };
 const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
-  <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-      <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${ACCENTS[accent]}`}><Icon className="w-3.5 h-3.5" /></span>{label}
+<div className="e-metric items-start p-3.5 lg:p-4 gap-3">
+    <span className={`w-10 h-10 lg:w-11 lg:h-11 rounded-full grid place-items-center shrink-0 ${ACCENTS[accent]}`}><Icon className="w-5 h-5" /></span>
+    <div className="min-w-0">
+      <div className="e-metric-label whitespace-normal">{label}</div>
+      <div className="text-[18px] lg:text-[20px] font-bold text-slate-900 leading-tight tabular-nums break-words mt-0.5">{value}</div>
+      {sub && <div className="text-[11.5px] text-slate-400 mt-1">{sub}</div>}
     </div>
-    <div className="text-2xl font-black text-slate-800 mt-2">{value}</div>
-    {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
   </div>
 );
 
 const roleBadgeClass = (role) =>
-  role === 'Trực đêm' ? 'bg-violet-100 text-violet-700'
-  : role === 'Hậu phẫu' ? 'bg-pink-100 text-pink-700'
-  : role.startsWith('Phụ mổ') ? 'bg-teal-100 text-teal-700'
-  : 'bg-slate-100 text-slate-600';
+  role === 'Trực đêm' ? 'e-tone-lavender'
+  : role === 'Hậu phẫu' ? 'e-tone-rose'
+  : role.startsWith('Phụ mổ') ? 'e-tone-brand'
+  : 'e-tone-neutral';
 
 const ROLE_OF = (s, id, major) => {
   // Trả về [nhãn vai trò, thưởng] của điều dưỡng trong 1 ca
@@ -82,31 +83,31 @@ const DieuDuongStaffKPI = () => {
     s.hau_phau_id === id || (s.additional_hau_phau_ids || []).includes(id));
   const myPartnerCases = partner.filter(s => s.phu_mo_1_id === id || s.phu_mo_2_id === id || s.phu_mo_3_id === id);
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-4">
+      <div className="e-toolbar justify-between pl-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">KPI của tôi · Điều dưỡng</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month - 1]} {year}</p>
+          <h2 className="text-[15px] font-semibold text-slate-900">KPI của tôi · Điều dưỡng</h2>
+          <p className="e-page-desc">{MONTHS[month - 1]} {year}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
-          <span className="text-sm font-medium text-slate-700 min-w-[96px] text-center">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
+          <button onClick={prevMonth} className="e-icon-btn w-9 h-9"><ChevronLeft className="w-4 h-4" /></button>
+          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[104px] text-center tabular-nums">{MONTHS[month - 1]} {year}</span>
+          <button onClick={nextMonth} className="e-icon-btn w-9 h-9"><ChevronRight className="w-4 h-4" /></button>
         </div>
       </div>
 
       {/* KPI được giao */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-teal-700 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3></div>
-        <div className="p-5 grid sm:grid-cols-2 gap-3 text-sm">
-          <div className="bg-slate-50 rounded-xl p-3">
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900 flex items-center gap-2"><Target className="w-4 h-4" /> KPI tháng được giao</h3></div>
+        <div className="p-4 lg:p-5 grid sm:grid-cols-2 gap-3 text-sm">
+          <div className="e-subtle p-3">
             <div className="text-slate-400 text-xs">Tỉ lệ hài lòng mục tiêu</div>
             <div className="font-bold text-slate-800 mt-0.5">{kpi?.target_close_rate ? Number(kpi.target_close_rate).toFixed(1) + '%' : '— (chưa giao)'}</div>
           </div>
-          <div className="bg-slate-50 rounded-xl p-3">
+          <div className="e-subtle p-3">
             <div className="text-slate-400 text-xs">Đánh giá chuyên môn phụ mổ</div>
             <div className="font-medium text-slate-700 mt-0.5">{kpi?.notes || '— (chưa có)'}</div>
           </div>
@@ -121,15 +122,15 @@ const DieuDuongStaffKPI = () => {
         <Card icon={Scissors} label="Phụ mổ 3" value={fmt(r.pm3)} accent="emerald" />
         <Card icon={HeartPulse} label="Ca hậu phẫu" value={fmt(r.hauPhau)} accent="pink" />
         <Card icon={Smile} label="Tỉ lệ hài lòng" value="—" sub="Dữ liệu cập nhật sau" accent="emerald" />
-        <div className="col-span-2 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-2xl p-4 shadow-md flex flex-col justify-center">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-white/90">Tổng hoa hồng ước tính</div>
-          <div className="text-3xl font-black mt-1">{fmtM(tongHHAll)}</div>
-          <div className="text-xs text-white/80 mt-1">Trực đêm {fmtM(r.thuongTrucDem)} + Phụ mổ {fmtM(r.thuongPhuMo)}{partnerR.phuMoBonus ? ` + Phụ mổ đối tác ${fmtM(partnerR.phuMoBonus)}` : ''}</div>
+        <div className="col-span-2 e-card e-card-pad bg-teal-50 border-teal-100 flex flex-col justify-center">
+          <div className="e-caption text-teal-700">Tổng hoa hồng ước tính</div>
+          <div className="text-[28px] font-bold text-teal-800 mt-1 tabular-nums">{fmtM(tongHHAll)}</div>
+          <div className="text-[12px] text-slate-600 mt-1">Trực đêm {fmtM(r.thuongTrucDem)} + Phụ mổ {fmtM(r.thuongPhuMo)}{partnerR.phuMoBonus ? ` + Phụ mổ đối tác ${fmtM(partnerR.phuMoBonus)}` : ''}</div>
         </div>
       </div>
 
       {/* Ghi chú cách tính */}
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs text-slate-500 space-y-1">
+      <div className="e-subtle p-4 text-[12.5px] text-slate-500 space-y-1">
         <div className="font-semibold text-slate-600">Cách tính thưởng:</div>
         <div>• <b>Trực đêm</b>: 500.000đ / khách.</div>
         <div>• <b>Phụ mổ — Đại phẫu</b>: P1 500k · P2 250k · P3 150k / khách.</div>
@@ -138,8 +139,8 @@ const DieuDuongStaffKPI = () => {
       </div>
 
       {/* Ca của tôi */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50"><h3 className="font-bold text-slate-700">Ca của tôi trong tháng</h3></div>
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900">Ca của tôi trong tháng</h3></div>
 
         {myCases.length === 0 ? (
           <div className="text-center py-8 text-slate-400 text-sm">Chưa có ca nào trong tháng.</div>
@@ -147,24 +148,24 @@ const DieuDuongStaffKPI = () => {
           <>
             {/* Desktop: bảng */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm whitespace-nowrap">
-                <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-                  <th className="text-left px-4 py-2.5 font-medium">Ngày mổ</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Khách hàng</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Loại PT</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Vai trò</th>
-                  <th className="text-right px-4 py-2.5 font-medium">Thưởng</th>
+              <table className="e-table whitespace-nowrap">
+                <thead><tr>
+                  <th className="text-left">Ngày mổ</th>
+                  <th className="text-left">Khách hàng</th>
+                  <th className="text-left">Loại PT</th>
+                  <th className="text-left">Vai trò</th>
+                  <th className="text-right">Thưởng</th>
                 </tr></thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {myCases.map(s => {
                     const [role, bonus] = ROLE_OF(s, id, s.surgery_type === 'Đại phẫu');
                     return (
-                      <tr key={s.id} className="hover:bg-slate-50/50">
-                        <td className="px-4 py-2.5 text-slate-600">{s.surgery_date}</td>
-                        <td className="px-4 py-2.5 font-medium text-slate-800">{s.customer_name}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{s.surgery_type || '—'}</td>
-                        <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(role)}`}>{role}</span></td>
-                        <td className="px-4 py-2.5 text-right font-semibold text-teal-700">{bonus ? fmtM(bonus) : '—'}</td>
+                      <tr key={s.id}>
+                        <td className="text-slate-600">{s.surgery_date}</td>
+                        <td className="font-semibold text-slate-900">{s.customer_name}</td>
+                        <td className="text-slate-500">{s.surgery_type || '—'}</td>
+                        <td className="align-middle"><span className={`e-badge e-badge-sm ${roleBadgeClass(role)}`}>{role}</span></td>
+                        <td className="text-right font-semibold text-teal-700">{bonus ? fmtM(bonus) : '—'}</td>
                       </tr>
                     );
                   })}
@@ -173,7 +174,7 @@ const DieuDuongStaffKPI = () => {
             </div>
 
             {/* Mobile: thẻ */}
-            <div className="md:hidden divide-y divide-slate-50">
+            <div className="md:hidden divide-y divide-slate-100">
               {myCases.map(s => {
                 const [role, bonus] = ROLE_OF(s, id, s.surgery_type === 'Đại phẫu');
                 return (
@@ -184,7 +185,7 @@ const DieuDuongStaffKPI = () => {
                         <div className="text-xs text-slate-400 mt-0.5">{s.surgery_date} · {s.surgery_type || '—'}</div>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeClass(role)}`}>{role}</span>
+                        <span className={`e-badge e-badge-sm ${roleBadgeClass(role)}`}>{role}</span>
                         <div className="text-sm font-bold text-teal-700 mt-1">{bonus ? fmtM(bonus) : '—'}</div>
                       </div>
                     </div>
@@ -198,8 +199,8 @@ const DieuDuongStaffKPI = () => {
 
       {/* Ca mổ đối tác của tôi (phụ mổ) */}
       {myPartnerCases.length > 0 && (
-        <div className="bg-white border border-amber-100 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-amber-50"><h3 className="font-bold text-amber-700">Ca mổ đối tác (phụ mổ)</h3></div>
+        <div className="e-card overflow-hidden">
+          <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100"><h3 className="text-[16px] font-[650] text-slate-900">Ca mổ đối tác (phụ mổ)</h3></div>
           <div className="divide-y divide-slate-50">
             {myPartnerCases.map((s, i) => {
               const major = s.surgery_type === 'Đại phẫu';
@@ -209,7 +210,7 @@ const DieuDuongStaffKPI = () => {
               return (
                 <div key={i} className="p-4 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-800 truncate">{s.customer_name}{s.partner_name ? <span className="text-[11px] text-amber-600"> · {s.partner_name}</span> : ''}</div>
+                    <div className="font-semibold text-slate-800 truncate">{s.customer_name}{s.partner_name ? <span className="text-[11px] text-peach-600"> · {s.partner_name}</span> : ''}</div>
                     <div className="text-xs text-slate-400 mt-0.5">{s.surgery_date} · {s.surgery_type || '—'} · {role[0]}</div>
                   </div>
                   <div className="text-sm font-bold text-teal-700 shrink-0">{fmtM(role[1])}</div>

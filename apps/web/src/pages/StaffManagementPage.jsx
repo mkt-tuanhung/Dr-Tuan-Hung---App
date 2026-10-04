@@ -15,7 +15,7 @@ import {
 import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, Clock, BadgeCheck } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
-const AV_TONES = ['bg-teal-100 text-teal-700', 'bg-violet-100 text-violet-700', 'bg-orange-100 text-orange-600', 'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-rose-100 text-rose-600'];
+const AV_TONES = ['bg-teal-50 text-teal-700', 'bg-lavender-50 text-lavender-600', 'bg-peach-50 text-peach-600', 'bg-info-50 text-info-600', 'bg-success-50 text-success-600', 'bg-rose-50 text-rose-600'];
 const avTone = (n) => AV_TONES[[...(n || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_TONES.length];
 const avInit = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
@@ -46,20 +46,20 @@ const ROLES = [
 const ROLE_LABELS = Object.fromEntries(ROLES.map(r => [r.value, r.label]));
 
 const ROLE_COLORS = {
-  admin:        'bg-red-100 text-red-700',
-  accountant:   'bg-blue-100 text-blue-700',
-  shareholder:  'bg-purple-100 text-purple-700',
-  telesale:     'bg-green-100 text-green-700',
-  sale_offline: 'bg-orange-100 text-orange-700',
-  cskh:         'bg-yellow-100 text-yellow-700',
-  truc_page:    'bg-pink-100 text-pink-700',
-  media:        'bg-cyan-100 text-cyan-700',
-  editor:       'bg-teal-100 text-teal-700',
-  designer:     'bg-fuchsia-100 text-fuchsia-700',
-  marketing:    'bg-indigo-100 text-indigo-700',
-  seeding:      'bg-emerald-100 text-emerald-700',
-  dieu_duong:   'bg-teal-100 text-teal-700',
-  bac_si:       'bg-sky-100 text-sky-700',
+  admin:        'e-tone-rose',
+  accountant:   'e-tone-info',
+  shareholder:  'e-tone-lavender',
+  telesale:     'e-tone-success',
+  sale_offline: 'e-tone-peach',
+  cskh:         'e-tone-warning',
+  truc_page:    'e-tone-rose',
+  media:        'e-tone-sky',
+  editor:       'e-tone-brand',
+  designer:     'e-tone-lavender',
+  marketing:    'e-tone-info',
+  seeding:      'e-tone-success',
+  dieu_duong:   'e-tone-brand',
+  bac_si:       'e-tone-sky',
 };
 
 const EMPTY_FORM = {
@@ -266,142 +266,141 @@ const StaffManagementPage = ({ isNested = false }) => {
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {!isNested && (
         <div>
-          <p className="text-[13px] text-slate-500">Danh sách, chấm công và duyệt đơn từ</p>
+          <p className="e-page-desc">Danh sách, chấm công và duyệt đơn từ</p>
         </div>
       )}
 
       {/* Stat cards */}
       {!loading && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           {[
             { label: 'Tổng nhân sự', icon: Users, tone: 'teal', value: staff.length, sub: 'trong hệ thống' },
             { label: 'Đang làm việc', icon: UserCheck, tone: 'violet', value: staff.filter(s => s.is_active).length, sub: 'đang hoạt động' },
             { label: 'Chính thức', icon: BadgeCheck, tone: 'blue', value: staff.filter(s => s.employment_status !== 'probation').length, sub: 'nhân sự' },
             { label: 'Thử việc', icon: Clock, tone: 'amber', value: staff.filter(s => s.employment_status === 'probation').length, sub: 'nhân sự' },
           ].map(t => {
-            const TT = { teal: 'bg-teal-50 text-teal-600', violet: 'bg-violet-50 text-violet-600', blue: 'bg-blue-50 text-blue-600', amber: 'bg-amber-50 text-amber-500' }[t.tone];
+            const TT = { teal: 'bg-teal-50 text-teal-700', violet: 'bg-success-50 text-success-600', blue: 'bg-info-50 text-info-600', amber: 'bg-warning-50 text-warning-600' }[t.tone];
             return (
-              <div key={t.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
-                <div className={`w-10 h-10 rounded-xl grid place-items-center mb-2 ${TT}`}><t.icon className="w-5 h-5" strokeWidth={1.9} /></div>
-                <div className="text-[11px] text-slate-500 font-semibold">{t.label}</div>
-                <div className="text-2xl font-extrabold text-slate-800 leading-none mt-0.5">{t.value}</div>
-                <div className="text-[10.5px] text-slate-400 mt-1">{t.sub}</div>
+              <div key={t.label} className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 lg:gap-x-4 gap-y-0 p-3.5">
+                <div className={`e-metric-icon row-span-3 w-11 h-11 ${TT}`}><t.icon className="w-5 h-5 lg:w-6 lg:h-6" strokeWidth={1.9} /></div>
+                <div className="e-metric-label">{t.label}</div>
+                <div className="e-metric-value">{t.value}</div>
+                <div className="e-metric-hint">{t.sub}</div>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Hàng thao tác */}
-      <div className="flex items-center gap-2.5">
-        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-teal-600 text-white text-sm font-bold shadow-md shadow-teal-200 hover:bg-teal-700 transition shrink-0">
-          <Plus className="w-4 h-4" /> Thêm nhân sự
-        </button>
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" placeholder="Tìm theo tên, ID, SĐT…" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Thanh lọc / công cụ (mockup 05: ô tìm bên trái, nút thêm bên phải) */}
+      <div className="e-toolbar">
+        <div className="e-search flex-1 min-w-[160px] sm:max-w-[340px]">
+          <Search />
+          <input placeholder="Tìm theo tên, ID, SĐT…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <button onClick={openCreate} className="e-btn e-btn-primary ml-auto shrink-0">
+          <Plus /> Thêm nhân sự
+        </button>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-white border border-teal-100 rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-sm">
-              <thead className="bg-teal-50/50 text-slate-500 border-b border-teal-100">
+          <div className="e-card e-table-wrap overflow-x-auto">
+            <table className="e-table min-w-[860px]">
+              <thead className="text-slate-500">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Nhân sự</th>
-                  <th className="text-left px-4 py-3 font-medium">Vị trí</th>
-                  <th className="text-left px-4 py-3 font-medium">Lương cơ bản</th>
-                  <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
-                  <th className="text-left px-4 py-3 font-medium">SĐT</th>
-                  <th className="text-left px-4 py-3 font-medium">Nhận lương</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="text-left">Nhân sự</th>
+                  <th className="text-left">Mã NV</th>
+                  <th className="text-left">Vị trí</th>
+                  <th className="text-left">Lương cơ bản</th>
+                  <th className="text-left">Trạng thái</th>
+                  <th className="text-left">SĐT</th>
+                  <th className="text-left">Nhận lương</th>
+                  <th className="text-right"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-teal-50">
+              <tbody className="align-middle">
                 {filtered.map(s => (
-                  <tr key={s.id} className={`hover:bg-teal-50/40 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
+                  <tr key={s.id} className={`transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
+                    <td className="align-middle">
+                      <div className="flex items-center gap-3 min-w-[200px]">
+                        <div className="w-11 h-11 rounded-full overflow-hidden bg-teal-50 grid place-items-center shrink-0">
                           {s.avatar_url ? (
                             <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-xs font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
+                            <span className="text-[15px] font-bold text-teal-700">{s.full_name?.charAt(0)}</span>
                           )}
                         </div>
-                        <div>
-                          <div className="font-medium text-slate-800">{s.full_name}</div>
-                          <div className="text-xs text-slate-400">{s.employee_id}</div>
-                        </div>
+                        <div className="font-semibold text-slate-900 text-[14px] leading-tight">{s.full_name}</div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[s.role] || 'bg-gray-100 text-gray-700'}`}>
+                    <td className="text-slate-600 tabular-nums whitespace-nowrap">{s.employee_id}</td>
+                    <td className="align-middle">
+                      <span className={`e-badge e-badge-sm ${ROLE_COLORS[s.role] || 'e-tone-neutral'}`}>
                         {ROLE_LABELS[s.role] || s.role}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="text-slate-800 font-medium tabular-nums whitespace-nowrap">
                       <div>{fmt(s.base_salary)}</div>
-                      {s.allowance > 0 && <div className="text-xs text-slate-400">PC: {fmt(s.allowance)}</div>}
+                      {s.allowance > 0 && <div className="text-[12px] text-slate-400 font-normal">PC: {fmt(s.allowance)}</div>}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="align-middle">
                       {s.employment_status === 'probation' ? (
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600">Thử việc</span>
-                          <button onClick={() => handleEndProbation(s)} className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <span className="e-badge e-tone-warning"><Clock />Thử việc</span>
+                          <button onClick={() => handleEndProbation(s)} className="text-[12px] text-teal-700 hover:underline font-semibold inline-flex items-center gap-1">
                             <UserCheck className="w-3 h-3" /> Kết thúc TV
                           </button>
                         </div>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">Chính thức</span>
+                        <span className="e-badge e-tone-success"><BadgeCheck />Chính thức</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-400">{s.phone || '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="text-slate-600 tabular-nums whitespace-nowrap">{s.phone || '—'}</td>
+                    <td className="align-middle">
                       {s.bank_name && s.bank_account ? (
-                        <button onClick={() => setViewQR(s)} className="flex items-center gap-1.5 px-2 py-1 bg-teal-50 text-teal-600 rounded-lg hover:bg-teal-100 transition-colors text-xs font-medium">
+                        <button onClick={() => setViewQR(s)} className="e-btn e-btn-outline e-btn-sm h-8 px-2.5">
                           <QrCode className="w-3.5 h-3.5" /> VietQR
                         </button>
                       ) : (
-                        <span className="text-xs text-slate-300">Chưa cập nhật</span>
+                        <span className="text-[12px] text-slate-400">Chưa cập nhật</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="align-middle">
                       <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => handleImpersonate(s)} title="Đăng nhập với tư cách" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                          <LogIn className="w-3.5 h-3.5" />
+                        <button onClick={() => handleImpersonate(s)} title="Đăng nhập với tư cách" className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-teal-50 hover:text-teal-700 transition-colors">
+                          <LogIn className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openEdit(s)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors">
-                          <Pencil className="w-3.5 h-3.5" />
+                        <button onClick={() => openEdit(s)} className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-teal-50 hover:text-teal-700 transition-colors">
+                          <Pencil className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-amber-50 hover:text-amber-500 transition-colors">
-                          <UserX className="w-3.5 h-3.5" />
+                        <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-warning-50 hover:text-warning-600 transition-colors">
+                          <UserX className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(s)} title="Xóa hẳn" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
+                        <button onClick={() => handleDelete(s)} title="Xóa hẳn" className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition-colors">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-10 text-slate-400">Không tìm thấy nhân sự</td></tr>
+                  <tr><td colSpan={7} className="text-center py-12 text-slate-400 text-[13px] border-r-0">Không tìm thấy nhân sự</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
           {/* Mobile card list */}
-          <div className="md:hidden space-y-3">
+          <div className="hidden">
             {filtered.length === 0 && (
               <div className="text-center py-10 text-slate-400">Không tìm thấy nhân sự</div>
             )}
@@ -453,56 +452,54 @@ const StaffManagementPage = ({ isNested = false }) => {
 
       {/* QR Code Dialog */}
       <Dialog open={!!viewQR} onOpenChange={(open) => !open && setViewQR(null)}>
-        <DialogContent className="max-w-xs rounded-3xl border-teal-100 p-6 flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center mb-2">
-            <QrCode className="w-6 h-6 text-teal-500" />
+        <DialogContent className="max-w-xs rounded-2xl border-slate-200 p-6 flex flex-col items-center text-center gap-0">
+          <div className="e-empty-icon">
+            <QrCode />
           </div>
-          <DialogTitle className="text-lg font-bold text-slate-800">QR Nhận tiền</DialogTitle>
-          <p className="text-sm text-slate-500 mb-4">{viewQR?.full_name}</p>
-          
-          <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 mb-4">
-            <img 
+          <DialogTitle className="e-modal-title">QR Nhận tiền</DialogTitle>
+          <p className="text-[13px] text-slate-500 mt-1 mb-4">{viewQR?.full_name}</p>
+
+          <div className="e-card-flat p-3 mb-4">
+            <img
               src={viewQR ? `https://img.vietqr.io/image/${viewQR.bank_name.replace(/\s+/g, '').toLowerCase()}-${viewQR.bank_account.trim()}-compact.jpg?accountName=${encodeURIComponent(viewQR.full_name)}` : ''}
               alt="VietQR"
               className="w-48 h-48 object-contain"
               onError={(e) => e.target.style.display = 'none'}
             />
           </div>
-          
-          <div className="w-full bg-teal-50 rounded-xl p-3 text-left">
-            <div className="text-xs text-teal-600 mb-1">Ngân hàng: <span className="font-bold">{viewQR?.bank_name}</span></div>
-            <div className="text-xs text-teal-600">Số TK: <span className="font-bold">{viewQR?.bank_account}</span></div>
+
+          <div className="e-subtle w-full p-3 text-left space-y-1.5">
+            <div className="flex items-center justify-between gap-3 e-kv-label text-[12.5px]">Ngân hàng: <span className="e-kv-value">{viewQR?.bank_name}</span></div>
+            <div className="flex items-center justify-between gap-3 e-kv-label text-[12.5px]">Số TK: <span className="e-kv-value tabular-nums">{viewQR?.bank_account}</span></div>
           </div>
-          
-          <Button onClick={() => setViewQR(null)} className="w-full mt-4 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+
+          <Button onClick={() => setViewQR(null)} className="w-full mt-4 h-10 rounded-xl font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-teal-300">
             Đóng
           </Button>
         </DialogContent>
       </Dialog>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-teal-100">
-          <DialogHeader>
-            <DialogTitle className="text-slate-800">{editTarget ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}</DialogTitle>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200 p-0 gap-0">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-100 text-left">
+            <DialogTitle className="e-modal-title">{editTarget ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="e-modal-body space-y-4">
             {/* Avatar upload */}
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-teal-50 border-2 border-teal-200 flex items-center justify-center">
+            <div className="flex items-center gap-4 e-subtle p-3">
+              <div className="relative shrink-0">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-teal-50 border-2 border-white shadow-soft flex items-center justify-center">
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-teal-400">
+                    <span className="text-2xl font-bold text-teal-700">
                       {form.full_name?.charAt(0)?.toUpperCase() || '?'}
                     </span>
                   )}
                 </div>
-                <label className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center cursor-pointer hover:bg-teal-600 transition-colors">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                <label className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-teal-600 border-2 border-white flex items-center justify-center cursor-pointer hover:bg-teal-700 transition-colors">
+                  <Plus className="w-3 h-3 text-white" strokeWidth={3} />
                   <input
                     type="file"
                     accept="image/*"
@@ -517,38 +514,41 @@ const StaffManagementPage = ({ isNested = false }) => {
                   />
                 </label>
               </div>
-              <p className="text-xs text-slate-400">Ảnh đại diện (JPG, PNG, tối đa 2MB)</p>
+              <div>
+                <div className="text-[13.5px] font-semibold text-slate-800">Ảnh đại diện</div>
+                <p className="text-[12px] text-slate-500">JPG, PNG, tối đa 2MB</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">ID nhân sự *</label>
+              <div>
+                <label className="e-label">ID nhân sự *</label>
                 <input
-                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  className="e-input disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="VD: NV001"
                   value={form.employee_id}
                   onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))}
                   disabled={!!editTarget}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">{editTarget ? 'Mật khẩu mới' : 'Mật khẩu *'}</label>
-                {editTarget && <p className="text-xs text-slate-400">Bỏ trống = giữ nguyên</p>}
+              <div>
+                <label className="e-label">{editTarget ? 'Mật khẩu mới' : 'Mật khẩu *'}</label>
                 <input
                   type="password"
                   autoComplete="new-password"
-                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  className="e-input"
                   placeholder={editTarget ? 'Bỏ trống nếu không đổi' : 'Nhập mật khẩu'}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 />
+                {editTarget && <p className="text-xs text-slate-400">Bỏ trống = giữ nguyên</p>}
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">Họ và tên *</label>
+            <div>
+              <label className="e-label">Họ và tên *</label>
               <input
-                className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                className="e-input"
                 placeholder="Nhập họ và tên"
                 value={form.full_name}
                 onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
@@ -556,10 +556,10 @@ const StaffManagementPage = ({ isNested = false }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">Vị trí chuyên môn *</label>
+              <div>
+                <label className="e-label">Vị trí chuyên môn *</label>
                 <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-                  <SelectTrigger className="rounded-xl border-teal-100 bg-teal-50/30"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ROLES.map(r => (
                       <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -567,10 +567,10 @@ const StaffManagementPage = ({ isNested = false }) => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">Chức vụ</label>
+              <div>
+                <label className="e-label">Chức vụ</label>
                 <Select value={form.position} onValueChange={v => setForm(f => ({ ...f, position: v }))}>
-                  <SelectTrigger className="rounded-xl border-teal-100 bg-teal-50/30"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Trưởng bộ phận">Trưởng bộ phận</SelectItem>
                     <SelectItem value="Giám đốc">Giám đốc</SelectItem>
@@ -581,10 +581,10 @@ const StaffManagementPage = ({ isNested = false }) => {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">Vị trí kiêm nhiệm 2 <span className="text-slate-400 font-normal">(nếu làm 2 vị trí — cộng dồn quyền & lương)</span></label>
+            <div>
+              <label className="e-label">Vị trí kiêm nhiệm 2 <span className="text-slate-400 font-normal">(nếu làm 2 vị trí — cộng dồn quyền & lương)</span></label>
               <Select value={form.role_2 || 'none'} onValueChange={v => setForm(f => ({ ...f, role_2: v === 'none' ? '' : v }))}>
-                <SelectTrigger className="rounded-xl border-teal-100 bg-teal-50/30"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— Không có —</SelectItem>
                   {ROLES.filter(r => r.value !== form.role).map(r => (
@@ -595,23 +595,23 @@ const StaffManagementPage = ({ isNested = false }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">Lương cơ bản (đ)</label>
+              <div>
+                <label className="e-label">Lương cơ bản (đ)</label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  className="e-input tabular-nums"
                   placeholder="VD: 10.000.000"
                   value={fmtInput(form.base_salary)}
                   onChange={e => setForm(f => ({ ...f, base_salary: e.target.value.replace(/\D/g, '') }))}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">Phụ cấp (đ)</label>
+              <div>
+                <label className="e-label">Phụ cấp (đ)</label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  className="e-input tabular-nums"
                   placeholder="VD: 500.000"
                   value={fmtInput(form.allowance)}
                   onChange={e => setForm(f => ({ ...f, allowance: e.target.value.replace(/\D/g, '') }))}
@@ -619,64 +619,56 @@ const StaffManagementPage = ({ isNested = false }) => {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">Số điện thoại</label>
+            <div>
+              <label className="e-label">Số điện thoại</label>
               <input
-                className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                className="e-input"
                 placeholder="VD: 0901234567"
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">Trạng thái hợp đồng</label>
-              <div className="flex gap-3">
+            <div>
+              <label className="e-label">Trạng thái hợp đồng</label>
+              <div className="e-seg w-full">
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, employment_status: 'official' }))}
-                  className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
-                    form.employment_status === 'official'
-                      ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white border-transparent shadow-md shadow-teal-200'
-                      : 'border-teal-100 text-slate-500 hover:border-teal-300'
-                  }`}
+                  className={`e-seg-item flex-1 ${form.employment_status === 'official' ? 'e-seg-active' : ''}`}
                 >
                   Chính thức (100%)
                 </button>
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, employment_status: 'probation' }))}
-                  className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
-                    form.employment_status === 'probation'
-                      ? 'bg-orange-500 text-white border-transparent shadow-md shadow-orange-200'
-                      : 'border-teal-100 text-slate-500 hover:border-orange-300'
-                  }`}
+                  className={`e-seg-item flex-1 ${form.employment_status === 'probation' ? 'bg-warning-50 text-warning-600 font-semibold' : ''}`}
                 >
                   Thử việc (85%)
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border border-teal-100 bg-teal-50/30 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3 e-subtle px-3 py-2.5">
               <div>
-                <div className="text-sm font-medium text-slate-700">Lương cố định</div>
-                <div className="text-xs text-slate-400">Nhận đủ lương tháng, không cần chấm công</div>
+                <div className="text-[13.5px] font-semibold text-slate-800">Lương cố định</div>
+                <div className="text-[12px] text-slate-500">Nhận đủ lương tháng, không cần chấm công</div>
               </div>
               <button
                 type="button"
                 onClick={() => setForm(f => ({ ...f, fixed_salary: !f.fixed_salary }))}
-                className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${form.fixed_salary ? 'bg-teal-500' : 'bg-slate-300'}`}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${form.fixed_salary ? 'bg-teal-500' : 'bg-slate-300'}`}
               >
-                <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${form.fixed_salary ? 'translate-x-5' : ''}`} />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.fixed_salary ? 'translate-x-5' : ''}`} />
               </button>
             </div>
 
             {form.employment_status === 'probation' && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">Ngày bắt đầu thử việc</label>
+              <div>
+                <label className="e-label">Ngày bắt đầu thử việc</label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2.5 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  className="e-input"
                   value={form.probation_started_at}
                   onChange={e => setForm(f => ({ ...f, probation_started_at: e.target.value }))}
                 />
@@ -684,10 +676,9 @@ const StaffManagementPage = ({ isNested = false }) => {
             )}
           </div>
 
-          <DialogFooter>
-            <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
-            <button onClick={handleSave} disabled={saving}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-teal-200 hover:from-teal-600 hover:to-teal-600 disabled:opacity-50">
+          <DialogFooter className="e-modal-footer gap-2 sm:space-x-0">
+            <button onClick={() => setModalOpen(false)} className="e-btn e-btn-secondary">Hủy</button>
+            <button onClick={handleSave} disabled={saving} className="e-btn e-btn-primary">
               {saving ? 'Đang lưu...' : (editTarget ? 'Cập nhật' : 'Tạo nhân sự')}
             </button>
           </DialogFooter>

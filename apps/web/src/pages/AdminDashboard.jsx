@@ -39,9 +39,10 @@ import {
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
-  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
+import SchedulePage from '@/features/hr/SchedulePage.jsx';
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
 
@@ -73,6 +74,7 @@ const MENU_GROUPS = [
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
     { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },
+    { id: 'schedule', label: 'Lịch làm việc / Phân ca', shortLabel: 'Phân ca', icon: CalendarRange },
     { id: 'kpi', label: 'KPI & Hoa hồng', shortLabel: 'KPI', icon: Target },
     { id: 'payroll', label: 'Bảng lương', icon: Wallet },
   ]},
@@ -261,9 +263,9 @@ const Overview = ({ profile, setActiveTab }) => {
   return (
     <div className="space-y-4 lg:space-y-5">
       {/* Sub-tabs trong Tổng quan */}
-      <div className="flex gap-1 bg-white rounded-2xl p-1 shadow-soft border border-slate-200/70 lg:w-fit">
+      <div className="e-tabs">
         {SUBTABS.map(t => (
-          <button key={t.id} onClick={() => setSub(t.id)} className={`flex-1 lg:flex-none lg:px-7 px-3 h-9 rounded-xl text-[13.5px] font-semibold transition ${sub === t.id ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>{t.label}</button>
+          <button key={t.id} onClick={() => setSub(t.id)} className={`e-tab flex-1 lg:flex-none justify-center ${sub === t.id ? 'e-tab-active' : ''}`}>{t.label}</button>
         ))}
       </div>
 
@@ -429,13 +431,13 @@ const Overview = ({ profile, setActiveTab }) => {
 
       {sub === 'phan_tich' && (
         <div className="space-y-4">
-          <div className="flex gap-1.5 bg-white rounded-2xl p-1.5 shadow-sm border border-slate-100">
+          <div className="e-seg w-full sm:w-auto">
             {RANGES.map(r => (
-              <button key={r.id} onClick={() => setRangeKey(r.id)} className={`flex-1 px-2 py-2 rounded-xl text-[13px] font-semibold transition ${rangeKey === r.id ? 'bg-teal-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>{r.label}</button>
+              <button key={r.id} onClick={() => setRangeKey(r.id)} className={`e-seg-item flex-1 ${rangeKey === r.id ? 'e-seg-active' : ''}`}>{r.label}</button>
             ))}
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between"><h3 className="font-bold text-slate-800">Doanh thu</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">Theo {RANGES.find(r => r.id === rangeKey)?.unit}</span></div>
+          <div className="e-card-flat e-card-pad">
+            <div className="flex items-center justify-between"><h3 className="e-card-title">Doanh thu</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">Theo {RANGES.find(r => r.id === rangeKey)?.unit}</span></div>
             <div className="text-2xl font-bold text-slate-800 mt-1">{fmtVND((d.ranges[rangeKey] || []).reduce((s, x) => s + x.value, 0))}</div>
             <div className="text-[11px] text-slate-400">{RANGES.find(r => r.id === rangeKey)?.note}</div>
             <ResponsiveContainer width="100%" height={230}>
@@ -449,8 +451,8 @@ const Overview = ({ profile, setActiveTab }) => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-3">Cơ cấu dịch vụ</h3>
+          <div className="e-card-flat e-card-pad">
+            <h3 className="e-card-title mb-3">Cơ cấu dịch vụ</h3>
             {d.services.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu</div> : (
             <div className="flex items-center gap-4">
               <div className="relative w-[130px] h-[130px] shrink-0">
@@ -466,8 +468,8 @@ const Overview = ({ profile, setActiveTab }) => {
               </div>
             </div>)}
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-1">Lịch hẹn theo tuần</h3>
+          <div className="e-card-flat e-card-pad">
+            <h3 className="e-card-title mb-1">Lịch hẹn theo tuần</h3>
             <div className="text-2xl font-bold text-slate-800">{d.weekly.reduce((s, x) => s + x.v, 0)}</div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={d.weekly} margin={{ top: 12, right: 0, left: -28, bottom: 0 }}>
@@ -482,8 +484,8 @@ const Overview = ({ profile, setActiveTab }) => {
 
       {sub === 'van_hanh' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-2"><h3 className="font-bold text-slate-800">Lịch hẹn hôm nay</h3><button onClick={() => setActiveTab('appointments')} className="text-xs text-teal-600 font-semibold inline-flex items-center gap-1">Xem tất cả <ChevronRight className="w-3 h-3" /></button></div>
+          <div className="e-card-flat e-card-pad">
+            <div className="flex items-center justify-between mb-2"><h3 className="e-card-title">Lịch hẹn hôm nay</h3><button onClick={() => setActiveTab('appointments')} className="text-xs text-teal-600 font-semibold inline-flex items-center gap-1">Xem tất cả <ChevronRight className="w-3 h-3" /></button></div>
             <div className="flex items-center gap-2 mb-3"><span className="text-xl font-bold text-slate-800">{d.appointmentsToday}</span><span className="text-sm text-slate-400">cuộc hẹn</span>{d.apptTrend != null && <span className={`text-[11px] font-bold ${d.apptTrend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{d.apptTrend >= 0 ? '↑' : '↓'} {Math.abs(d.apptTrend)}% <span className="text-slate-400 font-normal">so với hôm qua</span></span>}</div>
             {d.todayList.length === 0 ? <div className="text-sm text-slate-400 py-6 text-center">Chưa có lịch hẹn</div> : (
             <div className="divide-y divide-slate-50">
@@ -496,8 +498,8 @@ const Overview = ({ profile, setActiveTab }) => {
               ))}
             </div>)}
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-3">Nhắc việc / Phê duyệt</h3>
+          <div className="e-card-flat e-card-pad">
+            <h3 className="e-card-title mb-3">Nhắc việc / Phê duyệt</h3>
             <div className="space-y-1">
               {reminders.map(r => (
                 <button key={r.label} onClick={() => setActiveTab(r.tab)} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition text-left">
@@ -508,8 +510,8 @@ const Overview = ({ profile, setActiveTab }) => {
               ))}
             </div>
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-800">Top tư vấn viên</h3><button onClick={() => setActiveTab('khach_tu_van')} className="text-xs text-teal-600 font-semibold">Xem tất cả</button></div>
+          <div className="e-card-flat e-card-pad">
+            <div className="flex items-center justify-between mb-3"><h3 className="e-card-title">Top tư vấn viên</h3><button onClick={() => setActiveTab('khach_tu_van')} className="text-xs text-teal-600 font-semibold">Xem tất cả</button></div>
             {d.topConsultants.length === 0 ? <div className="text-sm text-slate-400 py-4 text-center">Chưa có dữ liệu</div> : (
             <div className="space-y-3">
               {d.topConsultants.map((t, i) => (
@@ -617,6 +619,7 @@ const AdminDashboard = () => {
       case 'seeding_rev': return <SeedingRevenuePage />;
       case 'service_quality': return <ServiceQualityPage />;
       case 'permissions': return <PermissionsPage />;
+      case 'schedule': return <SchedulePage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };

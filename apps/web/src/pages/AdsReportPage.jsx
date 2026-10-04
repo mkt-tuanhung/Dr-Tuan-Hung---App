@@ -201,189 +201,179 @@ const AdsReportPage = () => {
 
   const fmt = (n) => new Intl.NumberFormat('vi-VN').format(n || 0);
 
-  if (loading) return <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
+  if (loading) return <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 lg:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <BarChart2 className="w-6 h-6 text-blue-600" />
-            Báo cáo Quảng cáo (Ads)
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">Quản lý ngân sách và hiệu quả quảng cáo hằng ngày</p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-            <select value={month} onChange={e => setMonth(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-slate-700 outline-none">
+    <div className="space-y-4">
+      {/* Thanh công cụ: kỳ báo cáo + thao tác */}
+      <div className="e-toolbar justify-between">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <div className="flex items-center gap-1.5 h-10 px-3 rounded-xl border border-slate-200 bg-slate-50">
+            <select value={month} onChange={e => setMonth(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold text-slate-800 outline-none cursor-pointer">
               {Array.from({length: 12}, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
             </select>
             <span className="text-slate-300">/</span>
-            <select value={year} onChange={e => setYear(Number(e.target.value))} className="bg-transparent text-sm font-semibold text-slate-700 outline-none">
+            <select value={year} onChange={e => setYear(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold text-slate-800 outline-none cursor-pointer">
               {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
+          <span className="e-page-desc hidden md:inline px-1">Ngân sách và hiệu quả quảng cáo hằng ngày</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           {['admin', 'marketing'].includes(profile?.role) && (
-            <button onClick={openConfig} className="bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold px-4 py-2 rounded-xl text-sm transition-colors shadow-sm flex items-center gap-2">
+            <button onClick={openConfig} className="e-btn e-btn-secondary">
               <Target className="w-4 h-4" /> Cài KPI
             </button>
           )}
           {['admin', 'marketing'].includes(profile?.role) && (
-            <button onClick={() => openEntry()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 font-semibold px-4 py-2 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
+            <button onClick={() => openEntry()} className="e-btn e-btn-primary">
               <Plus className="w-4 h-4" /> Nhập chi tiêu
             </button>
           )}
         </div>
       </div>
 
-      {/* KPI Cards (Giống hệt Excel) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Ngân sách */}
-        <div className="col-span-2 md:col-span-2 lg:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="relative z-10 flex flex-col h-full justify-between">
-            <div>
-              <p className="text-slate-300 text-xs font-semibold uppercase tracking-wider mb-1">Ngân sách</p>
-              <div className="text-2xl font-bold">{fmt(targets.budget)}đ</div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-700 flex justify-between items-end">
-              <div>
-                <p className="text-slate-400 text-[10px] uppercase">Data KPI</p>
-                <p className="text-lg font-bold text-blue-400">{fmt(targets.target_leads)}</p>
-              </div>
-            </div>
+      {/* Chỉ số (MetricCard Ethics) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
+        <div className="e-metric">
+          <span className="e-metric-icon"><DollarSign /></span>
+          <div className="min-w-0">
+            <p className="e-metric-label">Ngân sách</p>
+            <div className="e-metric-value">{fmt(targets.budget)}đ</div>
+            <p className="e-metric-hint">Data KPI <b className="text-slate-600 tabular-nums">{fmt(targets.target_leads)}</b></p>
           </div>
         </div>
-
-        {/* Tiêu thụ */}
-        <div className="col-span-2 md:col-span-2 lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
-          <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Đã tiêu</p>
-            <div className="text-2xl font-bold text-slate-800">{fmt(stats.totalSpent)}đ</div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-end">
-            <div>
-              <p className="text-slate-500 text-[10px] uppercase">Tiền còn</p>
-              <p className={`text-sm font-bold ${stats.remaining < 0 ? 'text-red-500' : 'text-teal-500'}`}>
+        <div className="e-metric">
+          <span className="e-metric-icon bg-peach-50 text-peach-600"><TrendingUp /></span>
+          <div className="min-w-0">
+            <p className="e-metric-label">Đã tiêu</p>
+            <div className="e-metric-value">{fmt(stats.totalSpent)}đ</div>
+            <p className="text-[12px] text-slate-400 truncate">Tiền còn <b className={`tabular-nums ${stats.remaining < 0 ? 'text-danger-600' : 'text-success-600'}`}>
                 {fmt(stats.remaining)}đ
-              </p>
-            </div>
+              </b></p>
           </div>
         </div>
-
-        {/* Lead thu về */}
-        <div className="col-span-2 md:col-span-2 lg:col-span-1 bg-blue-50 rounded-2xl border border-blue-100 p-4 flex flex-col justify-center items-center text-center">
-          <p className="text-blue-600 text-xs font-semibold uppercase tracking-wider mb-1">SĐT xin được</p>
-          <div className="text-3xl font-black text-blue-700">{fmt(stats.totalLeads)}</div>
-          <p className="text-[10px] text-blue-400 mt-1">QT {fmt(stats.totalInterested)} · Tin {fmt(stats.totalMessages)}</p>
+        <div className="e-metric">
+          <span className="e-metric-icon bg-info-50 text-info-600"><Phone /></span>
+          <div className="min-w-0">
+            <p className="e-metric-label">SĐT xin được</p>
+            <div className="e-metric-value">{fmt(stats.totalLeads)}</div>
+            <p className="e-metric-hint">QT {fmt(stats.totalInterested)} · Tin {fmt(stats.totalMessages)}</p>
+          </div>
         </div>
-
-        {/* Giá 1 số */}
-        <div className="col-span-2 md:col-span-2 lg:col-span-1 bg-slate-800 rounded-2xl border border-slate-700 p-4 flex flex-col justify-center items-center text-center text-white">
-          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Giá 1 số</p>
-          <div className="text-lg font-bold text-teal-400">{fmt(stats.cpa)}đ</div>
+        <div className="e-metric">
+          <span className="e-metric-icon bg-lavender-50 text-lavender-600"><Target /></span>
+          <div className="min-w-0">
+            <p className="e-metric-label">Giá 1 số (CPA)</p>
+            <div className="e-metric-value">{fmt(stats.cpa)}đ</div>
+          </div>
         </div>
-
-        {/* TB số */}
-        <div className="col-span-2 md:col-span-4 lg:col-span-1 bg-amber-50 rounded-2xl border border-amber-100 p-4 flex flex-col justify-center items-center text-center">
-          <p className="text-amber-700 text-xs font-semibold uppercase tracking-wider mb-1">TB số/ngày</p>
-          <div className="text-2xl font-black text-amber-600">{stats.avgLeads}</div>
+        <div className="e-metric">
+          <span className="e-metric-icon bg-warning-50 text-warning-600"><BarChart2 /></span>
+          <div className="min-w-0">
+            <p className="e-metric-label">TB số/ngày</p>
+            <div className="e-metric-value">{stats.avgLeads}</div>
+          </div>
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <h3 className="text-slate-700 font-bold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-500" /> Biểu đồ Chi phí & Số đơn PAGE
-        </h3>
+      {/* Biểu đồ */}
+      <div className="e-card e-card-pad">
+        <div className="e-card-header">
+          <div>
+            <h3 className="e-card-title">Biểu đồ Chi phí &amp; Số đơn PAGE</h3>
+            <p className="e-card-sub">Chi phí quảng cáo (trục trái) so với SĐT xin được (trục phải)</p>
+          </div>
+          <span className="e-metric-icon w-10 h-10 lg:w-10 lg:h-10"><TrendingUp className="!w-5 !h-5" /></span>
+        </div>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(val) => (val/1000000) + 'M'} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} stroke="#A3ABAA" />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(val) => (val/1000000) + 'M'} stroke="#A3ABAA" />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} stroke="#A3ABAA" />
               <RechartsTooltip formatter={(val, name) => [fmt(val), name]} />
               <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="Chi phí (VNĐ)" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 8 }} />
-              <Line yAxisId="right" type="monotone" dataKey="SĐT xin được" stroke="#f59e0b" strokeWidth={3} />
+              <Line yAxisId="left" type="monotone" dataKey="Chi phí (VNĐ)" stroke="#067B7F" strokeWidth={3} activeDot={{ r: 8 }} />
+              <Line yAxisId="right" type="monotone" dataKey="SĐT xin được" stroke="#F4B183" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 bg-white flex justify-between items-center gap-2 flex-wrap">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><BarChart2 className="w-4 h-4 text-blue-600" />Chi tiết theo ngày</h3>
+      {/* Bảng chi tiết */}
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 pt-4 lg:pt-5 pb-3 flex justify-between items-center gap-2 flex-wrap">
+          <div>
+            <h3 className="e-card-title">Chi tiết theo ngày</h3>
+            <p className="e-card-sub">Chi tiêu do Marketing nhập · SĐT/Quan tâm/Tin nhắn lấy từ báo cáo Trực page (theo ngày)</p>
+          </div>
           {['admin', 'marketing', 'accountant'].includes(profile?.role) && (
-            <button onClick={syncDailyCost} disabled={syncingCost} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60 shadow-sm">
+            <button onClick={syncDailyCost} disabled={syncingCost} className="e-btn e-btn-outline e-btn-sm shrink-0">
               {syncingCost ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart2 className="w-4 h-4" />}{syncingCost ? 'Đang lấy…' : 'Lấy chi phí hôm qua'}
             </button>
           )}
         </div>
-        <div className="px-5 py-2 text-[11px] text-slate-400 bg-slate-50 border-b border-slate-100">Chi tiêu do Marketing nhập · SĐT/Quan tâm/Tin nhắn lấy từ báo cáo Trực page (theo ngày)</div>
         {/* Mobile: dạng thẻ */}
-        <div className="md:hidden divide-y divide-slate-100">
+        <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
           {rows.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-sm">Chưa có dữ liệu</div>
+            <div className="e-empty"><p className="e-empty-title">Chưa có dữ liệu</p></div>
           ) : rows.map((r) => (
             <div key={r.date} className="p-4">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800">{r.date}</span>
+                <span className="font-semibold text-slate-900 tabular-nums">{r.date}</span>
                 <div className="flex gap-2">
                   {['admin', 'marketing'].includes(profile?.role) && (r.id
-                    ? <><button onClick={() => openEntry(r)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => deleteEntry(r.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></button></>
-                    : <button onClick={() => openEntry(r)} className="px-2 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold flex items-center gap-1"><Plus className="w-3.5 h-3.5" />Chi phí</button>)}
+                    ? <><button onClick={() => openEntry(r)} className="e-icon-btn w-8 h-8 rounded-[10px]"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => deleteEntry(r.id)} className="e-icon-btn w-8 h-8 rounded-[10px] text-danger-600 hover:!text-danger-600 hover:!border-danger-200 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button></>
+                    : <button onClick={() => openEntry(r)} className="e-btn e-btn-outline e-btn-sm"><Plus className="w-3.5 h-3.5" />Chi phí</button>)}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-                <div className="bg-slate-50 rounded-lg py-2"><div className="text-[10px] text-slate-400 uppercase">Chi phí</div><div className="font-bold text-slate-700 text-sm">{fmt(r.amount_spent)}đ</div></div>
-                <div className="bg-blue-50 rounded-lg py-2"><div className="text-[10px] text-blue-400 uppercase">SĐT xin được</div><div className="font-bold text-blue-600 text-sm">{fmt(r.phones)}</div></div>
-                <div className="bg-teal-50 rounded-lg py-2"><div className="text-[10px] text-teal-400 uppercase">CP/số</div><div className="font-bold text-teal-600 text-sm">{r.cpa ? fmt(r.cpa) : 0}đ</div></div>
-                <div className="bg-violet-50 rounded-lg py-2"><div className="text-[10px] text-violet-400 uppercase">Quan tâm</div><div className="font-bold text-violet-600 text-sm">{fmt(r.interested)}</div></div>
-                <div className="bg-amber-50 rounded-lg py-2 col-span-2"><div className="text-[10px] text-amber-500 uppercase">Tin nhắn</div><div className="font-bold text-amber-600 text-sm">{fmt(r.messages)}</div></div>
+                <div className="e-subtle py-2"><div className="text-[11px] text-slate-400">Chi phí</div><div className="font-bold text-slate-800 text-[13px] tabular-nums">{fmt(r.amount_spent)}đ</div></div>
+                <div className="e-subtle py-2"><div className="text-[11px] text-slate-400">SĐT xin được</div><div className="font-bold text-info-600 text-[13px] tabular-nums">{fmt(r.phones)}</div></div>
+                <div className="e-subtle py-2"><div className="text-[11px] text-slate-400">CP/số</div><div className="font-bold text-teal-700 text-[13px] tabular-nums">{r.cpa ? fmt(r.cpa) : 0}đ</div></div>
+                <div className="e-subtle py-2"><div className="text-[11px] text-slate-400">Quan tâm</div><div className="font-bold text-lavender-600 text-[13px] tabular-nums">{fmt(r.interested)}</div></div>
+                <div className="e-subtle py-2 col-span-2"><div className="text-[11px] text-slate-400">Tin nhắn</div><div className="font-bold text-peach-600 text-[13px] tabular-nums">{fmt(r.messages)}</div></div>
               </div>
             </div>
           ))}
         </div>
 
         {/* Desktop: bảng */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm text-left">
-            <thead className="bg-amber-400 text-slate-800 uppercase text-xs font-bold">
+        <div className="hidden md:block e-table-wrap">
+          <table className="e-table min-w-[760px]">
+            <thead>
               <tr>
-                <th className="px-4 py-3">Ngày</th>
-                <th className="px-4 py-3">Chi tiêu (Marketing)</th>
-                <th className="px-4 py-3 text-center">SĐT xin được</th>
-                <th className="px-4 py-3 text-center">Quan tâm</th>
-                <th className="px-4 py-3 text-center">Tin nhắn</th>
-                <th className="px-4 py-3 text-right">Chi phí/số (CPA)</th>
-                <th className="px-4 py-3 text-center">Thao tác</th>
+                <th>Ngày</th>
+                <th className="num">Chi tiêu (Marketing)</th>
+                <th className="num">SĐT xin được</th>
+                <th className="num">Quan tâm</th>
+                <th className="num">Tin nhắn</th>
+                <th className="num">Chi phí/số (CPA)</th>
+                <th className="!text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-8 text-slate-500">Chưa có dữ liệu</td></tr>
+                <tr><td colSpan="7" className="text-center text-slate-400">Chưa có dữ liệu</td></tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.date} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-slate-700">{r.date}</td>
-                    <td className="px-4 py-3 font-medium text-slate-600">{fmt(r.amount_spent)} đ</td>
-                    <td className="px-4 py-3 text-center font-bold text-blue-600">{fmt(r.phones)}</td>
-                    <td className="px-4 py-3 text-center text-violet-600">{fmt(r.interested)}</td>
-                    <td className="px-4 py-3 text-center text-amber-600">{fmt(r.messages)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-teal-600">{r.cpa ? fmt(r.cpa) : 0} đ</td>
-                    <td className="px-4 py-3 text-center">
+                  <tr key={r.date}>
+                    <td className="font-semibold text-slate-900 tabular-nums">{r.date}</td>
+                    <td className="num font-medium text-slate-700">{fmt(r.amount_spent)} đ</td>
+                    <td className="num font-bold text-info-600">{fmt(r.phones)}</td>
+                    <td className="num text-lavender-600">{fmt(r.interested)}</td>
+                    <td className="num text-peach-600">{fmt(r.messages)}</td>
+                    <td className="num font-bold text-teal-700">{r.cpa ? fmt(r.cpa) : 0} đ</td>
+                    <td className="text-center">
                       {['admin', 'marketing'].includes(profile?.role) ? (
                         <div className="flex justify-center gap-2">
                           {r.id
-                            ? <><button onClick={() => openEntry(r)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"><Edit className="w-4 h-4" /></button>
-                                <button onClick={() => deleteEntry(r.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4" /></button></>
-                            : <button onClick={() => openEntry(r)} className="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-blue-100"><Plus className="w-3.5 h-3.5" />Chi phí</button>}
+                            ? <><button onClick={() => openEntry(r)} className="e-icon-btn w-8 h-8 rounded-[10px]"><Edit className="w-4 h-4" /></button>
+                                <button onClick={() => deleteEntry(r.id)} className="e-icon-btn w-8 h-8 rounded-[10px] text-danger-600 hover:!text-danger-600 hover:!border-danger-200 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button></>
+                            : <button onClick={() => openEntry(r)} className="e-btn e-btn-outline e-btn-sm"><Plus className="w-3.5 h-3.5" />Chi phí</button>}
                         </div>
                       ) : <span className="text-slate-300">—</span>}
                     </td>
@@ -397,26 +387,28 @@ const AdsReportPage = () => {
 
       {/* Modals */}
       {showConfigModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 text-lg">Cài đặt KPI Tháng {month}/{year}</h3>
-              <button onClick={() => setShowConfigModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Cài đặt KPI Tháng {month}/{year}</h3>
+              <button onClick={() => setShowConfigModal(false)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng">
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleConfigSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ngân sách (VNĐ)</label>
-                <MoneyInput required value={configForm.budget} onChange={v => setConfigForm({...configForm, budget: v})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+            <form onSubmit={handleConfigSubmit}>
+              <div className="e-modal-body space-y-4">
+                <div>
+                  <label className="e-label">Ngân sách (VNĐ)</label>
+                  <MoneyInput required value={configForm.budget} onChange={v => setConfigForm({...configForm, budget: v})} className="e-input" />
+                </div>
+                <div>
+                  <label className="e-label">Data KPI (Số Leads mục tiêu)</label>
+                  <input required type="number" value={configForm.target_leads} onChange={e => setConfigForm({...configForm, target_leads: e.target.value})} className="e-input" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Data KPI (Số Leads mục tiêu)</label>
-                <input required type="number" value={configForm.target_leads} onChange={e => setConfigForm({...configForm, target_leads: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
-              </div>
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setShowConfigModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium">Hủy</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 flex items-center gap-2">
+              <div className="e-modal-footer">
+                <button type="button" onClick={() => setShowConfigModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+                <button type="submit" disabled={saving} className="e-btn e-btn-primary">
                   {saving ? 'Đang lưu...' : <><Save className="w-4 h-4" /> Lưu KPI</>}
                 </button>
               </div>
@@ -426,27 +418,29 @@ const AdsReportPage = () => {
       )}
 
       {showEntryModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 text-lg">{entryForm.id ? 'Sửa chi tiêu ngày' : 'Nhập chi tiêu ngày'}</h3>
-              <button onClick={() => setShowEntryModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">{entryForm.id ? 'Sửa chi tiêu ngày' : 'Nhập chi tiêu ngày'}</h3>
+              <button onClick={() => setShowEntryModal(false)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng">
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleEntrySubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ngày (Date)</label>
-                <input required type="date" value={entryForm.date} onChange={e => setEntryForm({...entryForm, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+            <form onSubmit={handleEntrySubmit}>
+              <div className="e-modal-body space-y-4">
+                <div>
+                  <label className="e-label">Ngày (Date)</label>
+                  <input required type="date" value={entryForm.date} onChange={e => setEntryForm({...entryForm, date: e.target.value})} className="e-input" />
+                </div>
+                <div>
+                  <label className="e-label">Số tiền chi tiêu (VNĐ)</label>
+                  <MoneyInput required value={entryForm.amount_spent} onChange={v => setEntryForm({...entryForm, amount_spent: v})} className="e-input" />
+                </div>
+                <p className="e-subtle text-[12px] text-slate-500 px-3 py-2.5">Số lead (SĐT xin được, quan tâm, tin nhắn) lấy tự động từ báo cáo Trực page theo ngày.</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Số tiền chi tiêu (VNĐ)</label>
-                <MoneyInput required value={entryForm.amount_spent} onChange={v => setEntryForm({...entryForm, amount_spent: v})} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
-              </div>
-              <p className="text-xs text-slate-400 -mt-1">Số lead (SĐT xin được, quan tâm, tin nhắn) lấy tự động từ báo cáo Trực page theo ngày.</p>
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setShowEntryModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium">Hủy</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 flex items-center gap-2">
+              <div className="e-modal-footer">
+                <button type="button" onClick={() => setShowEntryModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+                <button type="submit" disabled={saving} className="e-btn e-btn-primary">
                   {saving ? 'Đang lưu...' : <><Save className="w-4 h-4" /> Lưu chi tiêu</>}
                 </button>
               </div>

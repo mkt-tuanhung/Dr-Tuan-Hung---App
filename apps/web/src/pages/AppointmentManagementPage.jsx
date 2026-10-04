@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck, List, BarChart2 } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, Clock, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck, List, BarChart2 } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
@@ -15,13 +15,13 @@ import { isRecheck } from '@/features/appointments/calendarUtils';
 import { vnToday } from '@/lib/vnTime';
 
 // Style tokens dùng chung cho form lịch hẹn
-const FLD_INP = 'w-full min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[15px] outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
-const FLD_LBL = 'block text-[13px] font-semibold text-slate-600 mb-1.5';
+const FLD_INP = 'w-full min-w-0 min-h-[40px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-400 focus:ring-[3px] focus:ring-teal-500/20';
+const FLD_LBL = 'e-label';
 const FormSection = ({ icon: Icon, title, children }) => (
-  <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-    <div className="flex items-center gap-2.5 mb-4">
-      <span className="w-8 h-8 rounded-xl grid place-items-center bg-teal-50 text-teal-600 shrink-0"><Icon className="w-4 h-4" /></span>
-      <h4 className="text-sm font-bold text-slate-800">{title}</h4>
+  <section className="e-card-flat e-card-pad">
+    <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-slate-100">
+      <span className="w-8 h-8 rounded-full grid place-items-center bg-teal-50 text-teal-700 shrink-0"><Icon className="w-4 h-4" /></span>
+      <h4 className="text-[14px] font-semibold text-slate-900">{title}</h4>
     </div>
     {children}
   </section>
@@ -92,7 +92,7 @@ const AppointmentManagementPage = () => {
         if (date !== currentDate) {
           currentDate = date;
           elements.push(
-            <div key={`date-${index}`} className="font-extrabold text-teal-700 text-[13px] mt-4 mb-1.5 uppercase tracking-wide border-b border-teal-100 pb-0.5 inline-block">
+            <div key={`date-${index}`} className="e-caption text-teal-700 mt-4 mb-1.5">
               NGÀY {date} :
             </div>
           );
@@ -241,10 +241,10 @@ const AppointmentManagementPage = () => {
     }
 
     const pd = [
-      { name: 'Phẫu thuật', value: st.pt, color: '#12A4A5' },
-      { name: 'Cọc', value: st.coc, color: '#3b82f6' },
-      { name: 'Chờ tư vấn', value: Math.max(0, st.total - st.pt - st.coc - st.bong), color: '#f59e0b' },
-      { name: 'Bong', value: st.bong, color: '#ef4444' }
+      { name: 'Phẫu thuật', value: st.pt, color: '#067B7F' },
+      { name: 'Cọc', value: st.coc, color: '#76C2C3' },
+      { name: 'Chờ tư vấn', value: Math.max(0, st.total - st.pt - st.coc - st.bong), color: '#F4B183' },
+      { name: 'Bong', value: st.bong, color: '#B8C4CC' }
     ].filter(i => i.value > 0);
 
     const _pct = (c, p) => p > 0 ? Math.round((c - p) / p * 1000) / 10 : null;
@@ -439,24 +439,24 @@ const AppointmentManagementPage = () => {
 
   // Hành trình sau chốt mổ — cập nhật từ nút bấm trong nhóm Telegram "Hành trình khách hàng"
   const JOURNEY_BADGE = {
-    ho_so: { label: '📋 Hoàn thiện hồ sơ - XN', cls: 'bg-slate-100 text-slate-700' },
-    xn_xong: { label: '🧪 Đã XN xong', cls: 'bg-violet-100 text-violet-700' },
-    dang_mo: { label: '🔪 Đang phẫu thuật', cls: 'bg-orange-100 text-orange-700' },
-    mo_xong: { label: '✅ Đã mổ xong', cls: 'bg-emerald-100 text-emerald-700' },
-    ra_vien: { label: '🏠 Đã ra viện', cls: 'bg-sky-100 text-sky-700' },
+    ho_so: { label: '📋 Hoàn thiện hồ sơ - XN', cls: 'e-tone-warning' },
+    xn_xong: { label: '🧪 Đã XN xong', cls: 'e-tone-info' },
+    dang_mo: { label: '🔪 Đang phẫu thuật', cls: 'e-tone-brand' },
+    mo_xong: { label: '✅ Đã mổ xong', cls: 'e-tone-success' },
+    ra_vien: { label: '🏠 Đã ra viện', cls: 'e-tone-lavender' },
   };
   const JourneyBadge = ({ app }) => {
     const j = JOURNEY_BADGE[app.journey_status];
     if (!j) return null;
-    return <span className={`px-3 py-1 font-semibold rounded-full text-xs ${j.cls}`} title={app.journey_updated_by ? `Cập nhật bởi ${app.journey_updated_by}` : ''}>{j.label}</span>;
+    return <span className={`e-badge e-badge-sm shrink-0 ${j.cls}`} title={app.journey_updated_by ? `Cập nhật bởi ${app.journey_updated_by}` : ''}>{j.label}</span>;
   };
 
   const StatusBadge = ({ status }) => {
     switch(status) {
-      case 'phau_thuat': return <span className="px-3 py-1 bg-teal-100 text-teal-700 font-semibold rounded-full text-xs">Phẫu thuật</span>;
-      case 'coc': return <span className="px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full text-xs">Đã cọc</span>;
-      case 'bong': return <span className="px-3 py-1 bg-red-100 text-red-700 font-semibold rounded-full text-xs">Khách bong</span>;
-      default: return <span className="px-3 py-1 bg-slate-100 text-slate-600 font-semibold rounded-full text-xs">Chờ tư vấn</span>;
+      case 'phau_thuat': return <span className="e-badge e-badge-sm e-badge-dot e-tone-success shrink-0">Phẫu thuật</span>;
+      case 'coc': return <span className="e-badge e-badge-sm e-badge-dot e-tone-info shrink-0">Đã cọc</span>;
+      case 'bong': return <span className="e-badge e-badge-sm e-badge-dot e-tone-danger shrink-0">Khách bong</span>;
+      default: return <span className="e-badge e-badge-sm e-badge-dot e-tone-warning shrink-0">Chờ tư vấn</span>;
     }
   };
 
@@ -478,13 +478,13 @@ const AppointmentManagementPage = () => {
   const createButtons = (
     <>
       {canCreateNew && (
-        <button onClick={() => openCreate('new')} className="flex items-center gap-2 px-4 h-10 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm whitespace-nowrap">
+        <button onClick={() => openCreate('new')} className="e-btn e-btn-primary">
           <Plus className="w-4 h-4" /> Thêm lịch hẹn
         </button>
       )}
       {canCreateRecheck && (
-        <button onClick={() => openCreate('recheck')} className="flex items-center gap-2 px-4 h-10 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors whitespace-nowrap">
-          <Stethoscope className="w-4 h-4 text-violet-500" /> Tái khám
+        <button onClick={() => openCreate('recheck')} className="e-btn e-btn-secondary">
+          <Stethoscope className="w-4 h-4 text-teal-600" /> Tái khám
         </button>
       )}
     </>
@@ -496,46 +496,46 @@ const AppointmentManagementPage = () => {
   const renderApptActions = (app) => (
     <>
                           {app.notes && (isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
-                            <button onClick={() => setViewNoteApp(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
+                            <button onClick={() => setViewNoteApp(app)} className="e-btn e-btn-secondary e-btn-sm">
                               <FileText className="w-4 h-4" /> Tình trạng KH
                             </button>
                           )}
                           {app.care_notes && (
-                            <button onClick={() => setCareHistoryApp(app)} className="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                            <button onClick={() => setCareHistoryApp(app)} className="e-btn e-btn-secondary e-btn-sm">
                               <MessageCircle className="w-4 h-4" /> Lịch sử tư vấn
                             </button>
                           )}
                           {profile?.role !== 'sale_offline' && ((app.consult_image_urls || []).length > 0 || app.consult_note) && (
-                            <button onClick={() => setConsultView(app)} className="w-full py-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm rounded-xl hover:bg-teal-100 transition-colors flex items-center justify-center gap-2">
+                            <button onClick={() => setConsultView(app)} className="e-btn e-btn-secondary e-btn-sm">
                               <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
                             </button>
                           )}
                           {app.status === 'scheduled' && !app.consult_received && ['admin', 'sale_offline', 'telesale'].includes(profile?.role) && (
-                            <button onClick={() => receiveConsult(app)} className="w-full py-2 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
+                            <button onClick={() => receiveConsult(app)} className="e-btn e-btn-primary e-btn-sm">
                               <UserCheck className="w-4 h-4" /> Tiếp nhận tư vấn
                             </button>
                           )}
                           {app.consult_received && app.status === 'scheduled' && (
-                            <div className="w-full py-1.5 text-center text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg">✓ Đã tiếp nhận tư vấn</div>
+                            <div className="e-badge e-tone-success">✓ Đã tiếp nhận tư vấn</div>
                           )}
-                          <div className="flex items-center gap-2 w-full">
+                          <div className="flex items-center gap-2 w-full pt-1">
                             {profile?.role === 'admin' && (
-                              <button onClick={() => openEval(app)} className="flex-1 flex items-center justify-center gap-2 bg-teal-50 text-teal-700 border border-teal-200 font-bold text-sm py-2 rounded-xl hover:bg-teal-100 transition-colors">
+                              <button onClick={() => openEval(app)} className="e-btn e-btn-outline e-btn-sm flex-1">
                                 <Edit className="w-4 h-4" /> Đánh giá
                               </button>
                             )}
                             {(profile?.role === 'admin' || (['telesale', 'sale_offline'].includes(profile?.role) && app.status === 'scheduled')) && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Sửa đầy đủ thông tin">
+                              <button onClick={() => openEditModal(app)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] shrink-0" title="Sửa đầy đủ thông tin">
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
                             {canEditCustomer && (
-                              <button onClick={() => openCustEdit(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-colors" title="Sửa tên & SĐT khách">
+                              <button onClick={() => openCustEdit(app)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] shrink-0" title="Sửa tên & SĐT khách">
                                 <User className="w-4 h-4" />
                               </button>
                             )}
                             {(isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
-                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                              <button onClick={() => deleteApp(app.id)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] shrink-0 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             )}
@@ -545,17 +545,17 @@ const AppointmentManagementPage = () => {
   const renderRecheckActions = (app) => (
     <>
                             {(isAdmin || isNurse) && (
-                              <button onClick={() => setViewNoteApp(app)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm py-2 rounded-xl hover:bg-blue-100 transition-colors">
+                              <button onClick={() => setViewNoteApp(app)} className="e-btn e-btn-secondary e-btn-sm flex-1">
                                 <FileText className="w-4 h-4" /> Lịch sử chăm sóc
                               </button>
                             )}
                             {(isAdmin || isNurse) && (
-                              <button onClick={() => openEditModal(app)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-100 transition-colors" title="Sửa lịch tái khám">
+                              <button onClick={() => openEditModal(app)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] shrink-0" title="Sửa lịch tái khám">
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
                             {(isAdmin || isHeadNurse) && (
-                              <button onClick={() => deleteApp(app.id)} className="w-10 h-10 flex shrink-0 items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                              <button onClick={() => deleteApp(app.id)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] shrink-0 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             )}
@@ -563,10 +563,10 @@ const AppointmentManagementPage = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ===== Thanh chế độ xem (Ethics BOS) ===== */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-soft inline-flex max-w-full overflow-x-auto scrollbar-hide self-start">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-x-3 gap-y-2 border-b border-slate-200">
+        <div className="e-tabs border-b-0 max-w-full -mb-px">
           {[
             { id: 'calendar', label: 'Lịch', icon: CalendarDays },
             { id: 'appointments', label: `Danh sách (${listCount})`, icon: List },
@@ -574,25 +574,25 @@ const AppointmentManagementPage = () => {
             { id: 'stats', label: 'Thống kê', icon: BarChart2 },
           ].map(t => (
             <button key={t.id} onClick={() => setActiveViewTab(t.id)}
-              className={`px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
-                activeViewTab === t.id ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              className={`e-tab ${
+                activeViewTab === t.id ? 'e-tab-active' : 'hover:text-teal-800'
               }`}>
               <t.icon className="w-4 h-4" /> {t.label}
             </button>
           ))}
         </div>
-        {activeViewTab !== 'calendar' && <div className="hidden lg:flex gap-2">{createButtons}</div>}
+        {activeViewTab !== 'calendar' && <div className="hidden lg:flex gap-2 pb-2">{createButtons}</div>}
       </div>
 
       {!showCreateModal && !showEvalModal && !drawerApp && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition">
+        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-nav ring-4 ring-white flex items-center justify-center active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
 
       {/* Nút nổi (+) TÁI KHÁM cho Điều dưỡng trên mobile (desktop đã có nút riêng ở header) */}
       {!showCreateModal && !showEvalModal && !drawerApp && ['dieu_duong', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-2xl shadow-orange-900/40 ring-4 ring-orange-500/20 flex items-center justify-center hover:bg-orange-600 active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
+        <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-white text-teal-700 border border-teal-200 shadow-card ring-4 ring-white flex items-center justify-center active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
           <Stethoscope className="w-6 h-6" strokeWidth={2.5} />
         </button>
       )}
@@ -614,37 +614,39 @@ const AppointmentManagementPage = () => {
           )}
 
           {activeViewTab === 'stats' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
           {/* Stats Row — số liệu THÁNG HIỆN TẠI */}
           <div className="flex items-center gap-2">
-            <h3 className="text-slate-700 font-bold">Số liệu tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</h3>
-            <span className="text-[11px] font-semibold text-teal-600 bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5">Tháng này</span>
+            <h3 className="e-card-title">Số liệu tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</h3>
+            <span className="e-badge e-badge-sm e-tone-brand">Tháng này</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
             {[
-              { icon: CalendarDays, color: '#3b82f6', label: 'Tổng lịch hẹn', value: stats.total, trend: trends.total },
-              { icon: Stethoscope, color: '#12A4A5', label: 'Phẫu thuật', value: stats.pt, trend: trends.pt },
-              { icon: Wallet, color: '#3b82f6', label: 'Đã cọc', value: stats.coc, trend: trends.coc },
-              { icon: Ban, color: '#ef4444', label: 'Khách bong', value: stats.bong, trend: trends.bong },
-              { icon: Activity, color: '#f59e0b', label: 'Tổng bill dự kiến', value: stats.expected_bill.toLocaleString('vi-VN') + 'đ', trend: trends.bill },
-              { icon: Activity, color: '#12A4A5', label: 'Tổng đã cọc', value: stats.total_deposit.toLocaleString('vi-VN') + 'đ', trend: trends.deposit },
+              { icon: CalendarDays, color: '#067B7F', label: 'Tổng lịch hẹn', value: stats.total, trend: trends.total },
+              { icon: Stethoscope, color: '#3CA7A9', label: 'Phẫu thuật', value: stats.pt, trend: trends.pt },
+              { icon: Wallet, color: '#76C2C3', label: 'Đã cọc', value: stats.coc, trend: trends.coc },
+              { icon: Ban, color: '#B8C4CC', label: 'Khách bong', value: stats.bong, trend: trends.bong },
+              { icon: Activity, color: '#F4B183', label: 'Tổng bill dự kiến', value: stats.expected_bill.toLocaleString('vi-VN') + 'đ', trend: trends.bill },
+              { icon: Activity, color: '#A99BE0', label: 'Tổng đã cọc', value: stats.total_deposit.toLocaleString('vi-VN') + 'đ', trend: trends.deposit },
             ].map((c, i) => (
-              <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
-                <div className="text-xl font-bold text-slate-800">{c.value}</div>
-                <div className="text-xs text-slate-500 font-medium mt-0.5">{c.label}</div>
-                {c.trend != null
-                  ? <div className={`text-[11px] font-semibold mt-2 ${c.trend >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{c.trend >= 0 ? '↑' : '↓'} {Math.abs(c.trend)}% <span className="text-slate-400 font-normal">so với tháng trước</span></div>
-                  : <div className="text-[11px] text-slate-300 mt-2">— so với tháng trước</div>}
+              <div key={i} className="e-metric">
+                <span className={`e-metric-icon ${['e-tone-brand', 'e-tone-success', 'e-tone-info', 'e-tone-danger', 'e-tone-peach', 'e-tone-lavender'][i]}`}><c.icon /></span>
+                <div className="min-w-0">
+                  <div className="e-metric-label">{c.label}</div>
+                  <div className="e-metric-value">{c.value}</div>
+                  {c.trend != null
+                    ? <div className={`truncate ${c.trend >= 0 ? 'e-delta-up' : 'e-delta-down'}`}>{c.trend >= 0 ? '↑' : '↓'} {Math.abs(c.trend)}% <span className="text-slate-400 font-normal">so với tháng trước</span></div>
+                    : <div className="e-metric-hint">— so với tháng trước</div>}
+                </div>
               </div>
             ))}
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <h3 className="text-slate-700 font-bold mb-3">Tỷ lệ trạng thái</h3>
-              {pieData.length === 0 ? <div className="text-sm text-slate-400 py-12 text-center">Chưa có dữ liệu</div> : (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            <div className="lg:col-span-2 e-card e-card-pad">
+              <h3 className="e-card-title mb-4">Tỷ lệ trạng thái</h3>
+              {pieData.length === 0 ? <div className="e-empty py-12 text-[13px] text-slate-400">Chưa có dữ liệu</div> : (
               <div className="flex items-center gap-4">
                 <div className="relative w-[150px] h-[150px] shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -655,27 +657,27 @@ const AppointmentManagementPage = () => {
                       <RechartsTooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center"><div className="text-2xl font-bold text-slate-800">{stats.total}</div><div className="text-[10px] text-slate-400">Tổng lịch hẹn</div></div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center"><div className="text-[22px] font-bold text-slate-900 tabular-nums">{stats.total}</div><div className="text-[11px] text-slate-500">Tổng lịch hẹn</div></div>
                 </div>
                 <div className="flex-1 min-w-0 space-y-2.5">
                   {pieData.map((e, i) => { const tot = pieData.reduce((s, x) => s + x.value, 0); const p = tot ? Math.round(e.value / tot * 1000) / 10 : 0; return (
-                    <div key={i} className="flex items-center gap-2 text-sm"><span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: e.color }} /><span className="flex-1 min-w-0 text-slate-600">{e.name}</span><span className="font-bold text-slate-700">{e.value}</span><span className="text-slate-400 text-xs">({p}%)</span></div>
+                    <div key={i} className="flex items-center gap-2 text-[13px]"><span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: e.color }} /><span className="flex-1 min-w-0 text-slate-600">{e.name}</span><span className="font-bold text-slate-900 tabular-nums">{e.value}</span><span className="text-slate-400 text-[12px] tabular-nums">({p}%)</span></div>
                   ); })}
                 </div>
               </div>)}
             </div>
-            <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <div className="flex items-center justify-between mb-3"><h3 className="text-slate-700 font-bold">Biểu đồ lịch hẹn theo tháng</h3><span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1">6 tháng gần nhất</span></div>
+            <div className="lg:col-span-3 e-card e-card-pad">
+              <div className="e-card-header"><h3 className="e-card-title">Biểu đồ lịch hẹn theo tháng</h3><span className="e-badge e-badge-sm e-tone-neutral">6 tháng gần nhất</span></div>
               <div className="h-[210px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
                     <RechartsTooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }} />
                     <Legend />
-                    <Line type="monotone" dataKey="Tổng lịch" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#12A4A5" strokeWidth={3} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Tổng lịch" stroke="#76C2C3" strokeWidth={2.5} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Phẫu thuật" stroke="#067B7F" strokeWidth={2.5} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -685,14 +687,14 @@ const AppointmentManagementPage = () => {
           )}
 
           {(activeViewTab === 'appointments' || activeViewTab === 'rechecks') && (
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="e-search w-full sm:w-80">
+              <Search className="w-4 h-4" />
               <input
                 type="text"
                 placeholder="Tìm tên KH hoặc số điện thoại..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all shadow-soft"
+                className="bg-white shadow-soft focus:ring-[3px] focus:ring-teal-500/20"
               />
             </div>
           )}
@@ -700,7 +702,7 @@ const AppointmentManagementPage = () => {
           {/* Tab Content */}
           {activeViewTab === 'rechecks' ? (
             recheckAppointments.length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {Object.entries(
                   recheckAppointments.reduce((acc, app) => {
                     if (!acc[app.appointment_date]) acc[app.appointment_date] = [];
@@ -708,60 +710,61 @@ const AppointmentManagementPage = () => {
                     return acc;
                   }, {})
                 ).sort(([a], [b]) => new Date(b) - new Date(a)).map(([dateStr, apps]) => (
-                  <div key={dateStr} className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden mb-6">
-                    <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
-                      <div className="flex items-center gap-2 text-orange-800 font-bold">
-                        <Stethoscope className="w-5 h-5" />
+                  <div key={dateStr} className="space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-800 tabular-nums">
+                        <Stethoscope className="w-4 h-4 text-lavender-600 shrink-0" />
                         {new Date(dateStr).toLocaleDateString('vi-VN')}
                       </div>
-                      <span className="bg-orange-200 text-orange-800 text-xs font-bold px-2 py-1 rounded-full">{apps.length} lịch</span>
+                      <span className="e-badge e-badge-sm e-tone-neutral">{apps.length} lịch</span>
+                      <span className="flex-1 h-px bg-slate-200" />
                     </div>
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
                       {apps.map(app => (
-                        <div key={app.id} id={`appt-${app.id}`} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <User className="w-5 h-5 text-orange-600" />
-                              <span className="font-bold text-slate-800 text-base">{app.customer_name}</span>
-                            </div>
-                            <span className="px-3 py-1 bg-orange-100 text-orange-700 font-semibold rounded-full text-xs">Tái khám</span>
-                          </div>
-                          
-                          <div className="p-4 space-y-4 flex-1">
-                            <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                              <Phone className="w-4 h-4 text-slate-400" />
-                              <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-orange-700">{app.service?.replace('[Tái khám] ', '') || 'Chưa chọn dịch vụ'}</span>
+                        <div key={app.id} id={`appt-${app.id}`} className="bg-white border border-slate-200/80 rounded-2xl shadow-soft hover:shadow-card hover:border-teal-100 transition flex flex-col">
+                          <div className="p-4 flex flex-col gap-2.5 flex-1">
+                            {/* Đầu thẻ */}
+                            <div className="flex items-start gap-3">
+                              <User className="w-12 h-12 p-3 rounded-full bg-lavender-50 text-lavender-600 shrink-0" />
+                              <div className="min-w-0 flex-1 pt-0.5">
+                                <span className="block text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</span>
+                                <div className="flex items-center gap-1.5 mt-0.5 text-[12px] text-slate-500 tabular-nums min-w-0">
+                                  <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="truncate">{app.service?.replace('[Tái khám] ', '') || 'Chưa chọn dịch vụ'}</span>
+                                </div>
+                              </div>
+                              <span className="e-badge e-badge-sm e-badge-dot e-tone-lavender shrink-0">Tái khám</span>
                             </div>
 
-                            <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3 space-y-2 text-sm">
-                              <div className="flex justify-between gap-2">
-                                <span className="text-slate-500 shrink-0">Lý do tái khám:</span>
-                                <span className="font-medium text-slate-700 text-right">{app.service?.replace('[Tái khám] ', '') || '—'}</span>
+                            <div className="e-subtle px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2 text-[12.5px]">
+                              <div className="col-span-2 min-w-0">
+                                <span className="block text-slate-400">Lý do tái khám:</span>
+                                <span className="block font-medium text-slate-700">{app.service?.replace('[Tái khám] ', '') || '—'}</span>
                               </div>
-                              <div className="flex justify-between gap-2">
-                                <span className="text-slate-500 shrink-0">Dịch vụ sử dụng:</span>
-                                <span className="font-medium text-slate-700 text-right">{app.used_service || '—'}</span>
+                              <div className="min-w-0">
+                                <span className="block text-slate-400">Dịch vụ sử dụng:</span>
+                                <span className="block font-medium text-slate-700 truncate">{app.used_service || '—'}</span>
                               </div>
-                              <div className="flex justify-between gap-2">
-                                <span className="text-slate-500 shrink-0">Ngày phẫu thuật:</span>
-                                <span className="font-medium text-slate-700 text-right">{app.surgery_date ? new Date(app.surgery_date).toLocaleDateString('vi-VN') : '—'}</span>
-                              </div>
-                              <div className="flex justify-between gap-2 border-t border-orange-100 pt-2">
-                                <span className="text-slate-500 shrink-0">Phụ trách:</span>
-                                <span className="font-semibold text-orange-700 text-right">{app.sale || 'Không có'}</span>
+                              <div className="min-w-0">
+                                <span className="block text-slate-400">Ngày phẫu thuật:</span>
+                                <span className="block font-medium text-slate-700 tabular-nums">{app.surgery_date ? new Date(app.surgery_date).toLocaleDateString('vi-VN') : '—'}</span>
                               </div>
                             </div>
-                            
-                            {app.social_link && (
-                              <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
-                                <LinkIcon className="w-3 h-3" /> Xem link tham khảo
-                              </a>
-                            )}
+
+                            {/* Chân thẻ */}
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-dashed border-slate-200 text-[11.5px]">
+                              <span className="truncate"><span className="text-slate-400">Phụ trách:</span> <span className="font-medium text-slate-700">{app.sale || 'Không có'}</span></span>
+                              {app.social_link && (
+                                <a href={app.social_link} target="_blank" rel="noreferrer" className="text-[12px] font-medium text-teal-700 inline-flex items-center gap-1 hover:underline shrink-0">
+                                  <LinkIcon className="w-3 h-3" /> Xem link tham khảo
+                                </a>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
+                          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex items-center gap-2 mt-auto">
                             {renderRecheckActions(app)}
                           </div>
                         </div>
@@ -771,74 +774,79 @@ const AppointmentManagementPage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 font-medium">
+              <div className="e-card e-empty py-16 text-[13px] font-medium text-slate-400">
                 Chưa có lịch tái khám nào.
               </div>
             )
           ) : activeViewTab === 'appointments' ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a)).map(dateStr => (
-                <div key={dateStr} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-teal-700 font-bold">
-                      <CalendarIcon className="w-5 h-5" />
+                <div key={dateStr} className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-800 tabular-nums">
+                      <CalendarIcon className="w-4 h-4 text-teal-600 shrink-0" />
                       {new Date(dateStr).toLocaleDateString('vi-VN')}
                     </div>
-                    <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">{groupedByDate[dateStr].length} lịch</span>
+                    <span className="e-badge e-badge-sm e-tone-neutral">{groupedByDate[dateStr].length} lịch</span>
+                    <span className="flex-1 h-px bg-slate-200" />
                   </div>
-                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
                     {groupedByDate[dateStr].map(app => (
-                      <div key={app.id} id={`appt-${app.id}`} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                        <div className="p-4 border-b border-slate-100 flex items-start justify-between">
-                          <div className="flex items-start gap-2 min-w-0">
-                            <User className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                              <div className="font-bold text-slate-800 text-base truncate">{app.customer_name}</div>
+                      <div key={app.id} id={`appt-${app.id}`} className="bg-white border border-slate-200/80 rounded-2xl shadow-soft hover:shadow-card hover:border-teal-100 transition flex flex-col">
+                        <div className="p-4 flex flex-col gap-2.5 flex-1">
+                          {/* Đầu thẻ: avatar + tên + SĐT + trạng thái */}
+                          <div className="flex items-start gap-3">
+                            <User className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-700 shrink-0" />
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <div className="text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</div>
                               {app.phone && (isSaleOffline(profile)
-                                ? <span className="text-sm text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</span>
-                                : <a href={`tel:${app.phone}`} className="text-sm text-blue-600 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>)}
+                                ? <span className="text-[12px] text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</span>
+                                : <a href={`tel:${app.phone}`} className="text-[12px] text-slate-500 hover:text-teal-700 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>)}
                             </div>
-                          </div>
-                          <StatusBadge status={app.status} />
-                          <JourneyBadge app={app} />
-                        </div>
-                        
-                        <div className="p-4 space-y-4 flex-1">
-                          <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                            <Phone className="w-4 h-4 text-slate-400" />
-                            <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="text-teal-700">{app.service || 'Chưa chọn dịch vụ'}</span>
+                            <StatusBadge status={app.status} />
                           </div>
 
-                          <div className="bg-teal-50/50 border border-teal-100 rounded-xl p-3 space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-slate-500">Telesale:</span>
-                              <span className="font-semibold text-blue-700">{app.telesale}</span>
+                          {/* Giờ hẹn · dịch vụ */}
+                          <div className="flex items-center gap-1.5 text-[13px] text-slate-500 tabular-nums min-w-0">
+                            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-700 font-medium truncate">{app.service || 'Chưa chọn dịch vụ'}</span>
+                          </div>
+
+                          {/* Giá trị + hành trình */}
+                          <div className="flex items-end justify-between gap-2 flex-wrap">
+                            <div className="min-w-0">
+                              <span className="block text-[11.5px] text-slate-400">Dự kiến:</span>
+                              <span className="text-[18px] font-bold text-slate-900 tabular-nums">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-500">Sale Offline:</span>
-                              <span className="font-semibold text-purple-700">{app.sale}</span>
+                            <JourneyBadge app={app} />
+                          </div>
+
+                          {/* Chân thẻ: phụ trách + cọc */}
+                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-slate-200 text-[11.5px]">
+                            <div className="min-w-0">
+                              <span className="block text-slate-400">Telesale:</span>
+                              <span className="block font-medium text-slate-700 truncate">{app.telesale}</span>
                             </div>
-                            <div className="border-t border-teal-100/60 my-1 pt-1" />
-                            <div className="flex justify-between">
-                              <span className="text-slate-500">Dự kiến:</span>
-                              <span className="font-bold text-teal-700">{Number(app.expected_bill||0).toLocaleString('vi-VN')}đ</span>
+                            <div className="min-w-0">
+                              <span className="block text-slate-400">Sale Offline:</span>
+                              <span className="block font-medium text-slate-700 truncate">{app.sale}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-500">Đã cọc:</span>
-                              <span className="font-bold text-teal-700">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
+                            <div className="min-w-0 text-right">
+                              <span className="block text-slate-400">Đã cọc:</span>
+                              <span className="block font-semibold text-slate-900 tabular-nums truncate">{Number(app.deposit_amount||0).toLocaleString('vi-VN')}đ</span>
                             </div>
                           </div>
-                          
+
                           {app.social_link && (
-                            <a href={app.social_link} target="_blank" rel="noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
+                            <a href={app.social_link} target="_blank" rel="noreferrer" className="text-[12px] font-medium text-teal-700 inline-flex items-center gap-1 hover:underline">
                               <LinkIcon className="w-3 h-3" /> Xem link tham khảo
                             </a>
                           )}
                         </div>
 
-                        <div className="p-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex flex-col gap-2 mt-auto">
+                        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex flex-wrap items-center gap-2 mt-auto">
                           {renderApptActions(app)}
                         </div>
                       </div>
@@ -858,51 +866,51 @@ const AppointmentManagementPage = () => {
         onClose={() => setDrawerId(null)}
         actions={drawerApp && (isRecheck(drawerApp)
           ? <div className="flex items-center gap-2">{renderRecheckActions(drawerApp)}</div>
-          : <div className="flex flex-col gap-2">{renderApptActions(drawerApp)}</div>)}
+          : <div className="flex flex-wrap items-center gap-2">{renderApptActions(drawerApp)}</div>)}
       />
 
       {/* Modal Thêm Lịch Hẹn Mới */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[70] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="e-modal-backdrop z-[70] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowCreateModal(false)}>
+          <div className="e-modal sm:max-w-2xl rounded-b-none sm:rounded-2xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="shrink-0 px-5 py-4 flex items-center gap-3 text-white" style={{ background: 'linear-gradient(135deg,#0f5148 0%,#136b5e 100%)' }}>
-              <span className="w-10 h-10 rounded-2xl bg-white/15 grid place-items-center shrink-0"><CalendarDays className="w-5 h-5" /></span>
+            <div className="e-modal-header shrink-0 items-center">
+              <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><CalendarDays className="w-5 h-5" /></span>
               <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-lg leading-tight">{createForm.id ? 'Cập nhật lịch hẹn' : (createForm.appointment_type === 'new' ? 'Thêm lịch Tư vấn / PT' : 'Thêm lịch Tái khám')}</h3>
-                <p className="text-white/70 text-[12px] mt-0.5">Điền thông tin để tạo lịch hẹn cho khách</p>
+                <h3 className="e-modal-title leading-tight">{createForm.id ? 'Cập nhật lịch hẹn' : (createForm.appointment_type === 'new' ? 'Thêm lịch Tư vấn / PT' : 'Thêm lịch Tái khám')}</h3>
+                <p className="e-card-sub">Điền thông tin để tạo lịch hẹn cho khách</p>
               </div>
-              <button type="button" onClick={() => setShowCreateModal(false)} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 grid place-items-center shrink-0"><X className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /></button>
+              <button type="button" onClick={() => setShowCreateModal(false)} className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /></button>
             </div>
 
             <form onSubmit={handleCreateSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/70">
                 {/* Thông tin Khách hàng */}
                 <FormSection icon={User} title="Thông tin khách hàng">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                     {/* Ngày + Giờ cùng 1 hàng trên mobile (md trở lên chảy vào lưới 3 cột) */}
                     <div className="grid grid-cols-2 gap-3.5 md:contents">
                       <div className="min-w-0">
-                        <label className={FLD_LBL}>Ngày hẹn <span className="text-rose-500">*</span></label>
+                        <label className={FLD_LBL}>Ngày hẹn <span className="text-danger-500">*</span></label>
                         <input required type="date" value={createForm.appointment_date} onChange={e => setCreateForm({...createForm, appointment_date: e.target.value})} className={`${FLD_INP} appearance-none`} />
                       </div>
                       <div className="min-w-0">
-                        <label className={FLD_LBL}>Giờ hẹn <span className="text-rose-500">*</span></label>
+                        <label className={FLD_LBL}>Giờ hẹn <span className="text-danger-500">*</span></label>
                         <input required type="time" value={createForm.appointment_time} onChange={e => setCreateForm({...createForm, appointment_time: e.target.value})} className={`${FLD_INP} appearance-none`} />
                       </div>
                     </div>
                     <div>
-                      <label className={FLD_LBL}>Tên khách hàng <span className="text-rose-500">*</span></label>
+                      <label className={FLD_LBL}>Tên khách hàng <span className="text-danger-500">*</span></label>
                       <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className={FLD_INP} placeholder="Nhập tên..." />
                     </div>
                     <div>
-                      <label className={FLD_LBL}>Số điện thoại <span className="text-rose-500">*</span></label>
+                      <label className={FLD_LBL}>Số điện thoại <span className="text-danger-500">*</span></label>
                       <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className={FLD_INP} placeholder="Nhập SĐT..." />
                     </div>
                     {createForm.appointment_type === 'new' && (
                       <>
                         <div>
-                          <label className={FLD_LBL}>Nguồn khách <span className="text-rose-500">*</span></label>
+                          <label className={FLD_LBL}>Nguồn khách <span className="text-danger-500">*</span></label>
                           <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className={FLD_INP}>
                             <option value="Ads">Ads</option>
                             <option value="Seeding">Seeding</option>
@@ -912,7 +920,7 @@ const AppointmentManagementPage = () => {
                           </select>
                         </div>
                         <div>
-                          <label className={FLD_LBL}>Tệp khách hàng <span className="text-rose-500">*</span></label>
+                          <label className={FLD_LBL}>Tệp khách hàng <span className="text-danger-500">*</span></label>
                           <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className={FLD_INP}>
                             <option value="Mới">Khách Mới</option>
                             <option value="Cũ">Khách Cũ</option>
@@ -927,7 +935,7 @@ const AppointmentManagementPage = () => {
                 <FormSection icon={Stethoscope} title={createForm.appointment_type === 'new' ? 'Chi tiết dịch vụ' : 'Dịch vụ tái khám'}>
                   <div className={`grid grid-cols-1 gap-3.5 ${createForm.appointment_type === 'new' ? 'md:grid-cols-2' : 'md:grid-cols-2'}`}>
                     <div className="md:col-span-2">
-                      <label className={FLD_LBL}>{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-rose-500">*</span></label>
+                      <label className={FLD_LBL}>{createForm.appointment_type === 'new' ? 'Dịch vụ' : 'Lý do tái khám / Dịch vụ cũ'} <span className="text-danger-500">*</span></label>
                       <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className={FLD_INP} placeholder={createForm.appointment_type === 'new' ? "Chọn dịch vụ" : "VD: Tái khám cắt chỉ mũi"} />
                     </div>
                     {createForm.appointment_type === 'new' && (
@@ -943,7 +951,7 @@ const AppointmentManagementPage = () => {
                       </div>
                     )}
                     <div>
-                      <label className={FLD_LBL}>Nhóm dịch vụ <span className="text-rose-500">*</span></label>
+                      <label className={FLD_LBL}>Nhóm dịch vụ <span className="text-danger-500">*</span></label>
                       <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className={FLD_INP}>
                         <option value="Hàm mặt">Hàm mặt</option>
                         <option value="Body">Body</option>
@@ -951,7 +959,7 @@ const AppointmentManagementPage = () => {
                       </select>
                     </div>
                     <div>
-                      <label className={FLD_LBL}>Loại phẫu thuật <span className="text-rose-500">*</span></label>
+                      <label className={FLD_LBL}>Loại phẫu thuật <span className="text-danger-500">*</span></label>
                       <select value={createForm.surgery_type} onChange={e => setCreateForm({...createForm, surgery_type: e.target.value})} className={FLD_INP}>
                         <option value="Tiểu phẫu">Tiểu phẫu</option>
                         <option value="Đại phẫu">Đại phẫu</option>
@@ -981,17 +989,17 @@ const AppointmentManagementPage = () => {
                           <label className={FLD_LBL}>Đã cọc (VNĐ)</label>
                           <MoneyInput value={createForm.deposit_amount} onChange={v => setCreateForm({...createForm, deposit_amount: v})} className={FLD_INP} placeholder="0" />
                         </div>
-                        <label className={`md:col-span-2 flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${createForm.consult_do_now ? 'border-orange-300 bg-orange-50' : 'border-slate-200 hover:bg-slate-50'}`}>
-                          <input type="checkbox" checked={!!createForm.consult_do_now} onChange={e => setCreateForm({...createForm, consult_do_now: e.target.checked})} className="w-4 h-4 mt-0.5 accent-orange-500 shrink-0" />
+                        <label className={`md:col-span-2 flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${createForm.consult_do_now ? 'border-peach-300 bg-peach-50' : 'border-slate-200 hover:border-teal-300'}`}>
+                          <input type="checkbox" checked={!!createForm.consult_do_now} onChange={e => setCreateForm({...createForm, consult_do_now: e.target.checked})} className="w-4 h-4 mt-0.5 accent-teal-600 shrink-0" />
                           <span className="text-sm">
-                            <b className="text-orange-600">⚡ TƯ VẤN LÀM LUÔN</b>
+                            <b className="text-peach-600">⚡ TƯ VẤN LÀM LUÔN</b>
                             <span className="block text-xs text-slate-400 mt-0.5">Khách tư vấn xong phẫu thuật ngay trong ngày — lịch sẽ được báo về cả nhóm Tư vấn và nhóm Phẫu thuật</span>
                           </span>
                         </label>
                       </>
                     )}
                   </div>
-                  {createForm.appointment_type === 'new' && <p className="mt-3 text-xs text-slate-400 flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>}
+                  {createForm.appointment_type === 'new' && <p className="mt-3 text-[12px] text-slate-400 flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>}
                 </FormSection>
 
                 {/* Phụ trách & Ghi chú */}
@@ -1040,7 +1048,7 @@ const AppointmentManagementPage = () => {
                   <div>
                     <div className="flex justify-between items-end mb-1.5">
                       <label className={`${FLD_LBL} mb-0 flex items-center gap-1.5`}><FileText className="w-3.5 h-3.5 text-slate-400" /> Note tình trạng khách hàng</label>
-                      <label className="cursor-pointer inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 text-xs font-bold transition-colors">
+                      <label className="e-btn e-btn-ghost e-btn-sm h-7 px-2 cursor-pointer">
                         {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
                         {uploadingImage ? 'Đang tải...' : 'Đính kèm ảnh'}
                         <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
@@ -1052,9 +1060,9 @@ const AppointmentManagementPage = () => {
               </div>
 
               {/* Footer cố định */}
-              <div className="shrink-0 flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-slate-100 bg-white">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-5 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-                <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 disabled:opacity-60 transition-colors text-sm inline-flex items-center gap-2"><CalendarDays className="w-4 h-4" />{saving ? 'Đang lưu...' : 'Lưu Lịch Hẹn'}</button>
+              <div className="e-modal-footer shrink-0 rounded-b-none sm:rounded-b-2xl">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+                <button type="submit" disabled={saving} className="e-btn e-btn-primary"><CalendarDays className="w-4 h-4" />{saving ? 'Đang lưu...' : 'Lưu Lịch Hẹn'}</button>
               </div>
             </form>
           </div>
@@ -1063,68 +1071,68 @@ const AppointmentManagementPage = () => {
 
       {/* Modal Đánh Giá */}
       {showEvalModal && evalApp && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-white shrink-0">
-              <h3 className="font-bold text-slate-800 text-lg">Đánh giá lịch hẹn: {evalApp.customer_name}</h3>
-              <button onClick={() => setShowEvalModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Đánh giá lịch hẹn: {evalApp.customer_name}</h3>
+              <button onClick={() => setShowEvalModal(false)} className="e-icon-btn w-9 h-9 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleEvalSubmit} className="flex flex-col min-h-0 flex-1">
-              <div className="p-6 space-y-6 bg-slate-50 overflow-y-auto flex-1">
+              <div className="e-modal-body space-y-4 bg-slate-50/70 overflow-y-auto flex-1">
               {/* Tabs */}
-              <div className="flex rounded-full bg-white border border-slate-200 p-1">
+              <div className="e-seg w-full">
                 <button type="button" onClick={() => setEvalForm({...evalForm, status: 'bong'})}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${evalForm.status === 'bong' ? 'bg-orange-400 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  className={`e-seg-item flex-1 ${evalForm.status === 'bong' ? 'bg-danger-50 text-danger-600 font-semibold' : 'text-slate-500'}`}>
                   Bong
                 </button>
                 <button type="button" onClick={() => setEvalForm({...evalForm, status: 'coc'})}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${evalForm.status === 'coc' ? 'bg-teal-500 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  className={`e-seg-item flex-1 ${evalForm.status === 'coc' ? 'bg-info-50 text-info-600 font-semibold' : 'text-slate-500'}`}>
                   Cọc
                 </button>
                 <button type="button" onClick={() => setEvalForm({...evalForm, status: 'phau_thuat'})}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${evalForm.status === 'phau_thuat' ? 'bg-orange-300 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  className={`e-seg-item flex-1 ${evalForm.status === 'phau_thuat' ? 'bg-success-50 text-success-600 font-semibold' : 'text-slate-500'}`}>
                   Phẫu thuật
                 </button>
               </div>
 
               {/* Loại phẫu thuật — quyết định mức thưởng hẹn telesale (Tiểu 300k / Đại 500k) */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Loại phẫu thuật <span className="text-red-500">*</span></label>
-                <div className="flex gap-2">
+              <div className="e-card-flat p-4">
+                <label className="e-label">Loại phẫu thuật <span className="text-danger-500">*</span></label>
+                <div className="e-seg w-full">
                   {['Tiểu phẫu', 'Đại phẫu'].map(t => (
                     <button key={t} type="button" onClick={() => setEvalForm({...evalForm, surgery_type: t})}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-xl border transition-colors ${evalForm.surgery_type === t ? 'bg-purple-500 text-white border-purple-500 shadow' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      className={`e-seg-item flex-1 ${evalForm.surgery_type === t ? 'e-seg-active' : 'text-slate-500'}`}>
                       {t}
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-slate-400">Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
+                <p className="mt-2 text-[12px] text-slate-400">Thưởng hẹn telesale: Tiểu phẫu 300k · Đại phẫu 500k / khách</p>
               </div>
 
               {/* Form Nội dung */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+              <div className="e-card-flat p-4 sm:p-5 space-y-4">
                 {evalForm.status === 'phau_thuat' && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Ngày phẫu thuật <span className="text-red-500">*</span></label>
-                        <input type="date" required value={evalForm.expected_surgery_date} onChange={e => setEvalForm({...evalForm, expected_surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
+                        <label className="e-label">Ngày phẫu thuật <span className="text-danger-500">*</span></label>
+                        <input type="date" required value={evalForm.expected_surgery_date} onChange={e => setEvalForm({...evalForm, expected_surgery_date: e.target.value})} className="e-input" />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Doanh thu (VNĐ) <span className="text-red-500">*</span></label>
-                        <MoneyInput required value={evalForm.revenue} onChange={v => setEvalForm({...evalForm, revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="VD: 50.000.000" />
+                        <label className="e-label">Doanh thu (VNĐ) <span className="text-danger-500">*</span></label>
+                        <MoneyInput required value={evalForm.revenue} onChange={v => setEvalForm({...evalForm, revenue: v})} className="e-input font-semibold tabular-nums" placeholder="VD: 50.000.000" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Doanh thu Upsale (VNĐ)</label>
-                      <MoneyInput value={evalForm.upsale_revenue} onChange={v => setEvalForm({...evalForm, upsale_revenue: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="0" />
+                      <label className="e-label">Doanh thu Upsale (VNĐ)</label>
+                      <MoneyInput value={evalForm.upsale_revenue} onChange={v => setEvalForm({...evalForm, upsale_revenue: v})} className="e-input font-semibold tabular-nums" placeholder="0" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Dịch vụ thực tế làm</label>
-                      <input type="text" value={evalForm.service} onChange={e => setEvalForm({...evalForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" placeholder="VD: Nâng mũi" />
+                      <label className="e-label">Dịch vụ thực tế làm</label>
+                      <input type="text" value={evalForm.service} onChange={e => setEvalForm({...evalForm, service: e.target.value})} className="e-input" placeholder="VD: Nâng mũi" />
                     </div>
                   </>
                 )}
@@ -1133,50 +1141,50 @@ const AppointmentManagementPage = () => {
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Ngày cọc <span className="text-red-500">*</span></label>
-                        <input type="date" required value={evalForm.deposit_date} onChange={e => setEvalForm({...evalForm, deposit_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
+                        <label className="e-label">Ngày cọc <span className="text-danger-500">*</span></label>
+                        <input type="date" required value={evalForm.deposit_date} onChange={e => setEvalForm({...evalForm, deposit_date: e.target.value})} className="e-input" />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Tiền cọc (VNĐ) <span className="text-red-500">*</span></label>
-                        <MoneyInput required value={evalForm.deposit_amount} onChange={v => setEvalForm({...evalForm, deposit_amount: v})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none text-teal-600 font-semibold" placeholder="0" />
+                        <label className="e-label">Tiền cọc (VNĐ) <span className="text-danger-500">*</span></label>
+                        <MoneyInput required value={evalForm.deposit_amount} onChange={v => setEvalForm({...evalForm, deposit_amount: v})} className="e-input font-semibold tabular-nums" placeholder="0" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Ngày PT dự kiến</label>
-                      <input type="date" value={evalForm.expected_surgery_date} onChange={e => setEvalForm({...evalForm, expected_surgery_date: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
+                      <label className="e-label">Ngày PT dự kiến</label>
+                      <input type="date" value={evalForm.expected_surgery_date} onChange={e => setEvalForm({...evalForm, expected_surgery_date: e.target.value})} className="e-input" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Dịch vụ sử dụng</label>
-                      <input type="text" value={evalForm.service} onChange={e => setEvalForm({...evalForm, service: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none" />
+                      <label className="e-label">Dịch vụ sử dụng</label>
+                      <input type="text" value={evalForm.service} onChange={e => setEvalForm({...evalForm, service: e.target.value})} className="e-input" />
                     </div>
                   </>
                 )}
 
                 {evalForm.status === 'bong' && (
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Ghi chú / Lý do khách bong</label>
-                    <textarea rows={4} value={evalForm.notes} onChange={e => setEvalForm({...evalForm, notes: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-orange-400 outline-none resize-none" placeholder="Khách báo kẹt tiền, khách đổi ý..." />
+                    <label className="e-label">Ghi chú / Lý do khách bong</label>
+                    <textarea rows={4} value={evalForm.notes} onChange={e => setEvalForm({...evalForm, notes: e.target.value})} className="e-textarea resize-none text-[14px] leading-relaxed" placeholder="Khách báo kẹt tiền, khách đổi ý..." />
                   </div>
                 )}
 
                 {/* Hồ sơ tư vấn (ghi chú + ảnh) — áp dụng mọi trạng thái */}
                 <div className="border-t border-slate-100 pt-4">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Hồ sơ tư vấn</label>
-                  <textarea rows={2} value={evalForm.consult_note} onChange={e => setEvalForm({ ...evalForm, consult_note: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-teal-500 outline-none resize-none text-sm" placeholder="Ghi chú hồ sơ tư vấn..." />
+                  <label className="e-label">Hồ sơ tư vấn</label>
+                  <textarea rows={2} value={evalForm.consult_note} onChange={e => setEvalForm({ ...evalForm, consult_note: e.target.value })} className="e-textarea resize-none text-[14px] leading-relaxed" placeholder="Ghi chú hồ sơ tư vấn..." />
                   {((evalApp.consult_image_urls || []).length > 0 || consultFiles.length > 0) && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {(evalApp.consult_image_urls || []).map((u, i) => (
-                        <img key={'old' + i} src={u} alt="" onClick={() => setViewImage(u)} className="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" />
+                        <img key={'old' + i} src={u} alt="" onClick={() => setViewImage(u)} className="w-16 h-16 rounded-xl object-cover border border-slate-200 cursor-pointer hover:opacity-90" />
                       ))}
                       {consultFiles.map((f, i) => (
                         <div key={'new' + i} className="relative w-16 h-16">
-                          <img src={URL.createObjectURL(f)} alt="" className="w-16 h-16 rounded-lg object-cover border border-teal-300" />
-                          <button type="button" onClick={() => setConsultFiles(fs => fs.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                          <img src={URL.createObjectURL(f)} alt="" className="w-16 h-16 rounded-xl object-cover border border-teal-300" />
+                          <button type="button" onClick={() => setConsultFiles(fs => fs.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-slate-900/70 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
                         </div>
                       ))}
                     </div>
                   )}
-                  <label className="mt-2 inline-flex items-center gap-2 px-3 py-2 border border-dashed border-teal-300 rounded-xl cursor-pointer hover:bg-teal-50 text-teal-700 text-sm font-semibold">
+                  <label className="e-btn e-btn-outline e-btn-sm mt-2 border-dashed cursor-pointer">
                     <ImagePlus className="w-4 h-4" /> Thêm ảnh hồ sơ tư vấn
                     <input type="file" accept="image/*" multiple className="hidden" onChange={e => setConsultFiles(fs => [...fs, ...Array.from(e.target.files || [])])} />
                   </label>
@@ -1184,9 +1192,9 @@ const AppointmentManagementPage = () => {
               </div>
               </div>
 
-              <div className="p-4 bg-white border-t shrink-0">
+              <div className="e-modal-footer shrink-0">
               <button type="submit" disabled={saving}
-                className="w-full py-3.5 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 transition-colors shadow-lg shadow-teal-600/20 disabled:opacity-50">
+                className="e-btn e-btn-primary e-btn-block">
                 {saving ? 'Đang lưu...' : `Xác nhận khách ${evalForm.status === 'bong' ? 'Bong' : evalForm.status === 'coc' ? 'Cọc' : 'Phẫu thuật'}`}
               </button>
               </div>
@@ -1197,19 +1205,19 @@ const AppointmentManagementPage = () => {
 
       {/* Modal View Note (Lịch sử chăm sóc) */}
       {viewNoteApp && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-white shrink-0">
-              <h3 className="font-bold text-slate-800 text-lg">Lịch sử chăm sóc: {viewNoteApp.customer_name}</h3>
-              <button onClick={() => setViewNoteApp(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Lịch sử chăm sóc: {viewNoteApp.customer_name}</h3>
+              <button onClick={() => setViewNoteApp(null)} className="e-icon-btn w-9 h-9 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 flex-1">
+            <div className="e-modal-body overflow-y-auto text-[13.5px] leading-relaxed text-slate-700 whitespace-pre-wrap flex-1">
               {viewNoteApp.notes ? (
                 renderNotes(viewNoteApp.notes)
               ) : (
-                <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử chăm sóc.</div>
+                <div className="e-empty py-8 text-[13px] text-slate-400">Chưa có lịch sử chăm sóc.</div>
               )}
             </div>
           </div>
@@ -1218,20 +1226,20 @@ const AppointmentManagementPage = () => {
 
       {/* Modal Lịch sử tư vấn (care_notes từ Khách Cọc/Bong) */}
       {careHistoryApp && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50 shrink-0">
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="e-modal-header items-center shrink-0">
               <div>
-                <h3 className="font-bold text-indigo-800 text-lg">Lịch sử tư vấn</h3>
-                <p className="text-xs text-indigo-400 mt-0.5">{careHistoryApp.customer_name} · {phoneFor(careHistoryApp.phone, profile)}</p>
+                <h3 className="e-modal-title">Lịch sử tư vấn</h3>
+                <p className="e-card-sub">{careHistoryApp.customer_name} · {phoneFor(careHistoryApp.phone, profile)}</p>
               </div>
-              <button onClick={() => setCareHistoryApp(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white">
+              <button onClick={() => setCareHistoryApp(null)} className="e-icon-btn w-9 h-9 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 flex-1">
+            <div className="e-modal-body overflow-y-auto text-[13.5px] leading-relaxed text-slate-700 whitespace-pre-wrap flex-1">
               {careHistoryApp.care_notes ? renderNotes(careHistoryApp.care_notes) : (
-                <div className="text-slate-400 italic text-center py-4">Chưa có lịch sử tư vấn.</div>
+                <div className="e-empty py-8 text-[13px] text-slate-400">Chưa có lịch sử tư vấn.</div>
               )}
             </div>
           </div>
@@ -1240,18 +1248,18 @@ const AppointmentManagementPage = () => {
 
       {/* Modal Hồ sơ tư vấn (ảnh + ghi chú) */}
       {consultView && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-teal-50 shrink-0">
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="e-modal-header items-center shrink-0">
               <div>
-                <h3 className="font-bold text-teal-800 text-lg">Hồ sơ tư vấn</h3>
-                <p className="text-xs text-teal-500 mt-0.5">{consultView.customer_name} · {phoneFor(consultView.phone, profile)}</p>
+                <h3 className="e-modal-title">Hồ sơ tư vấn</h3>
+                <p className="e-card-sub">{consultView.customer_name} · {phoneFor(consultView.phone, profile)}</p>
               </div>
-              <button onClick={() => setConsultView(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white"><X className="w-4 h-4" /></button>
+              <button onClick={() => setConsultView(null)} className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-4">
+            <div className="e-modal-body overflow-y-auto space-y-4">
               {consultView.consult_note && (
-                <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-700 whitespace-pre-wrap">{consultView.consult_note}</div>
+                <div className="e-subtle p-3 text-[13.5px] leading-relaxed text-slate-700 whitespace-pre-wrap">{consultView.consult_note}</div>
               )}
               {(consultView.consult_image_urls || []).length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
@@ -1259,7 +1267,7 @@ const AppointmentManagementPage = () => {
                     <img key={i} src={u} alt="" onClick={() => setViewImage(u)} className="w-full h-28 rounded-xl object-cover border border-slate-200 cursor-zoom-in hover:opacity-90" />
                   ))}
                 </div>
-              ) : (!consultView.consult_note && <div className="text-slate-400 italic text-center py-4">Chưa có hồ sơ tư vấn.</div>)}
+              ) : (!consultView.consult_note && <div className="e-empty py-8 text-[13px] text-slate-400">Chưa có hồ sơ tư vấn.</div>)}
             </div>
           </div>
         </div>
@@ -1277,30 +1285,30 @@ const AppointmentManagementPage = () => {
 
       {/* Sửa nhanh Tên + SĐT khách (Admin / Telesale) — dùng được ở mọi trạng thái */}
       {custEdit && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50">
-              <h3 className="font-bold text-amber-800 flex items-center gap-2"><User className="w-4 h-4" /> Sửa thông tin khách</h3>
-              <button onClick={() => setCustEdit(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white"><X className="w-4 h-4" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-sm overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title flex items-center gap-2"><User className="w-4 h-4 text-teal-600" /> Sửa thông tin khách</h3>
+              <button onClick={() => setCustEdit(null)} className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tên khách <span className="text-red-500">*</span></label>
+                <label className="e-label">Tên khách <span className="text-danger-500">*</span></label>
                 <input value={custForm.customer_name} onChange={e => setCustForm(f => ({ ...f, customer_name: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none" placeholder="Tên khách hàng" />
+                  className="e-input" placeholder="Tên khách hàng" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
+                <label className="e-label">Số điện thoại</label>
                 <input value={custForm.phone} onChange={e => setCustForm(f => ({ ...f, phone: e.target.value }))}
-                  inputMode="tel" className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none" placeholder="SĐT khách" />
+                  inputMode="tel" className="e-input" placeholder="SĐT khách" />
               </div>
               {isAdmin && (
                 <>
-                  <div className="pt-2 border-t border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">Nhân sự phụ trách (ảnh hưởng hoa hồng)</div>
+                  <div className="e-caption flex pt-3 border-t border-slate-100">Nhân sự phụ trách (ảnh hưởng hoa hồng)</div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách</label>
+                    <label className="e-label">Telesale phụ trách</label>
                     <select value={custForm.telesale_id} onChange={e => setCustForm(f => ({ ...f, telesale_id: e.target.value, telesale_id_2: e.target.value === f.telesale_id_2 ? '' : f.telesale_id_2 }))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none bg-white">
+                      className="e-input">
                       <option value="">— Không có —</option>
                       {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale').map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -1308,9 +1316,9 @@ const AppointmentManagementPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi hoa hồng)</span></label>
+                    <label className="e-label">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi hoa hồng)</span></label>
                     <select value={custForm.telesale_id_2} onChange={e => setCustForm(f => ({ ...f, telesale_id_2: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none bg-white">
+                      className="e-input">
                       <option value="">— Không có —</option>
                       {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale') && s.id !== custForm.telesale_id).map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -1318,9 +1326,9 @@ const AppointmentManagementPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Sale Offline phụ trách</label>
+                    <label className="e-label">Sale Offline phụ trách</label>
                     <select value={custForm.sale_id} onChange={e => setCustForm(f => ({ ...f, sale_id: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none bg-white">
+                      className="e-input">
                       <option value="">— Không có —</option>
                       {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline').map(s => (
                         <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -1330,9 +1338,9 @@ const AppointmentManagementPage = () => {
                 </>
               )}
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-              <button onClick={() => setCustEdit(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={saveCustEdit} disabled={saving} className="px-6 py-2 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50">
+            <div className="e-modal-footer">
+              <button onClick={() => setCustEdit(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={saveCustEdit} disabled={saving} className="e-btn e-btn-primary">
                 {saving ? 'Đang lưu...' : 'Lưu'}
               </button>
             </div>

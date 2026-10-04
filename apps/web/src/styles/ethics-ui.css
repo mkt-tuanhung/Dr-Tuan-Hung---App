@@ -1,0 +1,142 @@
+/* ============================================================
+   BỘ KHỐI GIAO DIỆN ETHICS BOS (theo ethics-bos/starter/apps/web/src/ds)
+   Dùng bằng className, KHÔNG chứa logic. Mọi màn dùng chung để đồng bộ.
+   Tên lớp bắt đầu bằng "e-" để không đụng lớp cũ.
+   ============================================================ */
+@layer components {
+  /* ---------- Thẻ ---------- */
+  .e-card { @apply rounded-2xl bg-white border border-slate-200/80 shadow-card; }
+  .e-card-flat { @apply rounded-2xl bg-white border border-slate-200/80 shadow-soft; }
+  .e-card-pad { @apply p-4 lg:p-5; }
+  .e-card-hover { @apply transition hover:border-teal-100 hover:shadow-float cursor-pointer; }
+  .e-card-header { @apply flex items-center justify-between gap-3 mb-4 min-h-[32px]; }
+  .e-card-title { @apply text-[16px] lg:text-[18px] font-[650] text-slate-900 leading-snug; }
+  .e-card-sub { @apply text-[12px] text-slate-500 mt-0.5; }
+  .e-subtle { @apply rounded-xl bg-slate-50 border border-slate-100; }
+
+  /* ---------- Tiêu đề nhóm (chấm teal, chữ hoa nhỏ — như sidebar) ---------- */
+  .e-caption { @apply inline-flex items-center gap-2 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-slate-400; }
+  .e-caption::before { content: ''; @apply w-1.5 h-1.5 rounded-full bg-teal-300; }
+  .e-page-desc { @apply text-[13px] text-slate-500; }
+
+  /* ---------- Nút ---------- */
+  .e-btn { @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-[14px] font-semibold border border-transparent whitespace-nowrap transition disabled:opacity-55 disabled:cursor-not-allowed; }
+  .e-btn svg { @apply w-[18px] h-[18px] shrink-0; }
+  .e-btn-primary { @apply text-white shadow-nav; background-image: linear-gradient(135deg, #067B7F 0%, #12A4A5 100%); }
+  .e-btn-primary:hover:not(:disabled) { filter: brightness(1.05); }
+  .e-btn-secondary { @apply bg-white text-slate-700 border-slate-200 hover:border-teal-300 hover:text-teal-800; }
+  .e-btn-outline { @apply bg-white text-teal-800 border-teal-300 hover:bg-teal-50; }
+  .e-btn-ghost { @apply text-teal-800 hover:bg-teal-50; }
+  .e-btn-danger { @apply bg-danger-500 text-white hover:brightness-95; }
+  .e-btn-danger-soft { @apply bg-danger-50 text-danger-600 hover:bg-danger-100; }
+  .e-btn-success { @apply bg-success-500 text-white hover:brightness-95; }
+  .e-btn-sm { @apply h-[34px] px-3 text-[13px] rounded-[10px]; }
+  .e-btn-sm svg { @apply w-4 h-4; }
+  .e-btn-lg { @apply h-12 px-5 text-[15px]; }
+  .e-btn-block { @apply w-full; }
+  .e-icon-btn { @apply inline-grid place-items-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-teal-700 hover:border-teal-300 transition; }
+
+  /* ---------- Nhãn trạng thái (badge) ---------- */
+  .e-badge { @apply inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[12px] font-semibold whitespace-nowrap; }
+  .e-badge svg { @apply w-3.5 h-3.5; }
+  .e-badge-sm { @apply h-[22px] px-2 text-[11px]; }
+  .e-badge-dot::before { content: ''; @apply w-1.5 h-1.5 rounded-full bg-current; }
+
+  /* ---------- Thẻ chỉ số (MetricCard) ---------- */
+  .e-metric { @apply rounded-2xl bg-white border border-slate-200/80 shadow-card p-4 lg:p-5 flex items-center gap-4 min-w-0 text-left; }
+  .e-metric-icon { @apply w-12 h-12 lg:w-14 lg:h-14 rounded-full grid place-items-center shrink-0 bg-teal-50 text-teal-700; }
+  .e-metric-icon svg { @apply w-6 h-6; }
+  .e-metric-label { @apply text-[13px] text-slate-500 font-medium truncate; }
+  .e-metric-value { @apply text-[20px] lg:text-[22px] font-bold text-slate-900 leading-tight tabular-nums truncate; }
+  .e-metric-hint { @apply text-[12px] text-slate-400 truncate; }
+  .e-delta-up { @apply text-[12px] font-semibold text-success-600; }
+  .e-delta-down { @apply text-[12px] font-semibold text-danger-600; }
+  /* Tông màu đặt SAU e-metric-icon để "e-metric-icon e-tone-*" đổi được màu */
+  .e-tone-brand { @apply bg-teal-50 text-teal-800; }
+  .e-tone-success { @apply bg-success-50 text-success-600; }
+  .e-tone-warning { @apply bg-warning-50 text-warning-600; }
+  .e-tone-danger { @apply bg-danger-50 text-danger-600; }
+  .e-tone-info { @apply bg-info-50 text-info-600; }
+  .e-tone-neutral { @apply bg-slate-100 text-slate-600; }
+  .e-tone-peach { @apply bg-peach-50 text-peach-600; }
+  .e-tone-lavender { @apply bg-lavender-50 text-lavender-600; }
+  .e-tone-rose { @apply bg-rose-50 text-rose-600; }
+  .e-tone-sky { @apply bg-sky-50 text-sky-600; }
+
+  /* ---------- Tab ---------- */
+  .e-tabs { @apply flex items-stretch gap-1 border-b border-slate-200 overflow-x-auto; scrollbar-width: none; }
+  .e-tabs::-webkit-scrollbar { display: none; }
+  .e-tab { @apply relative inline-flex items-center gap-1.5 h-11 px-4 text-[14px] font-medium text-slate-500 whitespace-nowrap hover:text-teal-800 transition; }
+  .e-tab svg { @apply w-4 h-4; }
+  .e-tab-active { @apply text-teal-700 font-semibold; }
+  .e-tab-active::after { content: ''; @apply absolute left-2 right-2 bottom-0 h-[3px] rounded-full bg-teal-500; }
+  .e-tab-count { @apply text-[12px] font-medium text-slate-400; }
+  .e-seg { @apply inline-flex items-center p-1 rounded-xl bg-white border border-slate-200; }
+  .e-seg-item { @apply inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-[9px] text-[13px] font-medium text-slate-500 whitespace-nowrap hover:text-teal-800 transition; }
+  .e-seg-item svg { @apply w-4 h-4; }
+  .e-seg-active { @apply bg-teal-50 text-teal-800 font-semibold; }
+
+  /* ---------- Chip lọc nhanh ---------- */
+  .e-chip { @apply inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-slate-200 bg-white text-[13px] font-medium text-slate-600 whitespace-nowrap hover:border-teal-300 hover:text-teal-800 transition; }
+  .e-chip-active { @apply border-teal-500 bg-teal-50 text-teal-800 font-semibold; }
+
+  /* ---------- Ô nhập ---------- */
+  .e-label { @apply block text-[12.5px] font-semibold text-slate-600 mb-1.5; }
+  .e-input { @apply w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-400; }
+  .e-input:focus { box-shadow: 0 0 0 3px rgba(18, 164, 165, 0.22); }
+  .e-textarea { @apply w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-400; }
+  .e-textarea:focus { box-shadow: 0 0 0 3px rgba(18, 164, 165, 0.22); }
+  .e-search { @apply relative; }
+  .e-search > svg { @apply w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none; }
+  .e-search > input { @apply w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-[14px] outline-none transition focus:bg-white focus:border-teal-400; }
+
+  /* ---------- Thanh lọc / công cụ ---------- */
+  .e-toolbar { @apply rounded-2xl bg-white border border-slate-200/80 shadow-soft p-2.5 flex flex-wrap items-center gap-2; }
+
+  /* ---------- Bảng ---------- */
+  .e-table-wrap { @apply overflow-x-auto; }
+  .e-table { @apply w-full text-[14px] border-separate border-spacing-0; }
+  .e-table thead th { @apply h-12 px-3 text-left text-[12px] font-semibold text-slate-500 bg-slate-50 border-b border-slate-200 whitespace-nowrap first:pl-5 last:pr-5; }
+  .e-table tbody td { @apply h-[60px] px-3 border-b border-slate-100 text-slate-700 first:pl-5 last:pr-5; }
+  .e-table tbody tr:hover td { @apply bg-teal-50/30; }
+  .e-table .num { @apply text-right tabular-nums; }
+
+  /* ---------- Trạng thái rỗng ---------- */
+  .e-empty { @apply flex flex-col items-center justify-center text-center py-10 px-4; }
+  .e-empty-icon { @apply w-12 h-12 rounded-full bg-teal-50 text-teal-600 grid place-items-center mb-3; }
+  .e-empty-icon svg { @apply w-6 h-6; }
+  .e-empty-title { @apply text-[14px] font-semibold text-slate-700; }
+  .e-empty-desc { @apply text-[12.5px] text-slate-400 mt-1 max-w-sm; }
+
+  /* ---------- Hộp thoại ---------- */
+  .e-modal-backdrop { @apply fixed inset-0 bg-slate-900/40 backdrop-blur-[1px]; }
+  .e-modal { @apply relative w-full bg-white rounded-2xl shadow-float; }
+  .e-modal-header { @apply flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100; }
+  .e-modal-title { @apply text-[17px] font-bold text-slate-900; }
+  .e-modal-body { @apply px-5 py-4; }
+  .e-modal-footer { @apply flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60 rounded-b-2xl; }
+
+  /* ---------- Dòng thông tin (kv) ---------- */
+  .e-kv-label { @apply text-[11.5px] text-slate-400; }
+  .e-kv-value { @apply text-[13.5px] font-semibold text-slate-800; }
+
+  /* ---------- Avatar chữ ---------- */
+  .e-avatar { @apply inline-grid place-items-center rounded-full bg-teal-50 text-teal-700 font-bold shrink-0; }
+}
+
+/* ---------- Lịch làm việc / Phân ca (Ethics hr.css: sch-*) ---------- */
+@layer components {
+  .e-shift { @apply relative w-full max-w-[132px] h-[46px] mx-auto rounded-xl text-[13.5px] font-semibold grid place-items-center border border-transparent transition; }
+  .e-shift:hover { @apply shadow-soft -translate-y-px; }
+  .e-shift-peach { @apply bg-peach-50 text-peach-600; }
+  .e-shift-success { @apply bg-success-50 text-success-600; }
+  .e-shift-rose { @apply bg-rose-50 text-rose-600; }
+  .e-shift-lavender { @apply bg-lavender-50 text-lavender-600; }
+  .e-shift-sky { @apply bg-sky-50 text-sky-600; }
+  .e-shift-neutral { @apply bg-slate-100 text-slate-500; }
+  .e-shift-empty { @apply bg-transparent border-[1.5px] border-dashed border-slate-200 text-slate-400 font-medium; }
+  .e-shift-leave { @apply text-slate-500; background: repeating-linear-gradient(45deg, #EEF2F4, #EEF2F4 6px, #fff 6px, #fff 12px); }
+  .e-shift-draft::after { content: ''; @apply absolute top-1.5 right-1.5 w-[7px] h-[7px] rounded-full bg-warning-500; }
+  .e-shift-warn { box-shadow: 0 0 0 2px #E95757 inset; }
+  .e-shift-drop { @apply border-teal-500 border-dashed; }
+}

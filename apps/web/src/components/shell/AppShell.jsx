@@ -42,7 +42,7 @@ export default function AppShell({
   profile,
   roleLabel,
   bottomItems = [], // mục trên thanh dưới (mobile) — tối đa 3 nếu có nút nổi, 4 nếu không
-  centerAction = null, // { id, label, icon } — nút nổi giữa thanh dưới
+  centerAction = null, // { id, label, icon, onPress? } — nút nổi giữa thanh dưới
   children,
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -248,7 +248,7 @@ export default function AppShell({
               const CIcon = centerAction.icon;
               const active = activeTab === centerAction.id;
               return (
-                <button key="__center" onClick={() => go(centerAction.id)} className="flex-1 flex flex-col items-center gap-0.5 min-w-0" aria-label={centerAction.label}>
+                <button key="__center" onClick={() => { go(centerAction.id); centerAction.onPress?.(); }}className="flex-1 flex flex-col items-center gap-0.5 min-w-0" aria-label={centerAction.label}>
                   <span className={`-mt-7 w-14 h-14 rounded-full grid place-items-center text-white ring-4 ring-white shadow-float active:scale-95 transition ${active ? 'bg-teal-700' : 'bg-teal-600'}`}>
                     <CIcon className="w-6 h-6" />
                   </span>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
@@ -529,124 +529,139 @@ const PayrollPage = () => {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-[13px] text-slate-500">{MONTHS[month - 1]} {year} · Tổng thực nhận: <b className="text-teal-600">{fmtM(totalNet)}</b>{locked && <span className="ml-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Đã chốt</span>}</p>
+    <div className="space-y-4">
+      {/* Thanh chọn kỳ lương */}
+      <div className="e-toolbar">
+        <button onClick={prevMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng trước"><ChevronLeft className="w-4 h-4" /></button>
+        <span className="min-w-[120px] text-center text-[14px] font-semibold text-slate-800 tabular-nums">{MONTHS[month - 1]} {year}</span>
+        <button onClick={nextMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
+        <span className="e-page-desc hidden sm:inline ml-2">Bảng lương tổng hợp — tính tự động từ chấm công, CRM và ca phẫu thuật</span>
+      </div>
+
+      {/* Tổng kỳ lương + thao tác (kiểu pay-flow Ethics) */}
+      <div className="e-card e-card-pad flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="e-metric-icon"><Wallet /></div>
+          <div className="min-w-0">
+            <p className="e-metric-label">Tổng thực nhận · {MONTHS[month - 1]} {year}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <b className="text-[24px] lg:text-[28px] font-bold text-teal-800 leading-tight tabular-nums">{fmtM(totalNet)}</b>{locked && <span className="e-badge e-badge-sm e-badge-dot e-tone-brand">Đã chốt</span>}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
-          <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
+        <div className="flex gap-2 flex-wrap lg:justify-end">
+          <button onClick={exportImage} disabled={loading || exportSel.size === 0} className="e-btn e-btn-secondary">
+            <ImageDown /> Xuất ảnh ({exportSel.size}/{rowsView.length})
+          </button>
+          <button onClick={() => savePayroll(false)} disabled={saving} className="e-btn e-btn-outline">
+            <Save /> Lưu nháp
+          </button>
+          <button onClick={() => savePayroll(true)} disabled={saving} className="e-btn e-btn-primary">
+            <Lock /> Chốt lương tháng
+          </button>
         </div>
       </div>
 
       {/* Chart lương các tháng */}
       {history.length > 0 && (
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-          <h3 className="font-bold text-teal-700 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Tổng lương các tháng</h3>
+        <div className="e-card e-card-pad">
+          <h3 className="e-card-title mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-600" /> Tổng lương các tháng</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={history}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(v) => (v / 1000000) + 'tr'} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v) => fmtM(v)} />
-                <Bar dataKey="Tổng lương" fill="#12A4A5" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Tổng lương" fill="#067B7F" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex justify-end gap-2 flex-wrap">
-        <button onClick={exportImage} disabled={loading || exportSel.size === 0} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
-          <ImageDown className="w-4 h-4" /> Xuất ảnh ({exportSel.size}/{rowsView.length})
-        </button>
-        <button onClick={() => savePayroll(false)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-teal-200 text-teal-600 text-sm font-semibold hover:bg-teal-50 disabled:opacity-50">
-          <Save className="w-4 h-4" /> Lưu nháp
-        </button>
-        <button onClick={() => savePayroll(true)} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md disabled:opacity-50">
-          <Lock className="w-4 h-4" /> Chốt lương tháng
-        </button>
-      </div>
-
       {/* Bảng lương */}
       {loading ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+        <div className="e-card flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : (
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm whitespace-nowrap">
-              <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100"><tr>
-                <th className="px-3 py-3">
+        <div className="e-card overflow-hidden">
+          <div className="e-table-wrap">
+            <table className="e-table whitespace-nowrap">
+              <thead><tr>
+                <th className="w-10">
                   <input type="checkbox" title="Tích/bỏ tích tất cả để xuất ảnh"
                     checked={rowsView.length > 0 && exportSel.size === rowsView.length}
                     onChange={e => setExportSel(e.target.checked ? new Set(rowsView.map(r => r.staff.id)) : new Set())}
-                    className="w-4 h-4 accent-teal-600 cursor-pointer" />
+                    className="w-4 h-4 accent-teal-600 cursor-pointer align-middle" />
                 </th>
-                <th className="text-left px-4 py-3 font-medium">Nhân sự</th>
-                <th className="text-center px-3 py-3 font-medium">Công</th>
-                <th className="text-right px-4 py-3 font-medium">Lương theo công</th>
-                <th className="text-right px-4 py-3 font-medium">Phụ cấp</th>
-                <th className="text-right px-4 py-3 font-medium">Hoa hồng</th>
-                <th className="text-right px-4 py-3 font-medium">Lương tăng ca</th>
-                <th className="text-right px-4 py-3 font-medium">Thưởng khác</th>
-                <th className="text-right px-4 py-3 font-medium">Ứng lương</th>
-                <th className="text-right px-4 py-3 font-medium">Khấu trừ</th>
-                <th className="text-right px-4 py-3 font-medium">Thực nhận</th>
-                <th className="px-3 py-3"></th>
+                <th>Nhân sự</th>
+                <th className="!text-center">Công</th>
+                <th className="num">Lương theo công</th>
+                <th className="num">Phụ cấp</th>
+                <th className="num">Hoa hồng</th>
+                <th className="num">Lương tăng ca</th>
+                <th className="num">Thưởng khác</th>
+                <th className="num">Ứng lương</th>
+                <th className="num">Khấu trừ</th>
+                <th className="num">Thực nhận</th>
+                <th></th>
               </tr></thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {rowsView.length === 0 ? (
-                  <tr><td colSpan={12} className="text-center py-8 text-slate-400">Chưa có nhân sự.</td></tr>
+                  <tr><td colSpan={12} className="!h-24 text-center text-[13px] text-slate-400">Chưa có nhân sự.</td></tr>
                 ) : rowsView.map(r => (
-                  <tr key={r.staff.id} className={`hover:bg-slate-50/50 ${exportSel.has(r.staff.id) ? '' : 'opacity-50'}`}>
-                    <td className="px-3 py-2.5">
+                  <tr key={r.staff.id} className={exportSel.has(r.staff.id) ? '' : 'opacity-50'}>
+                    <td>
                       <input type="checkbox" title="Tích để đưa vào ảnh xuất"
                         checked={exportSel.has(r.staff.id)}
                         onChange={() => setExportSel(sel => { const s = new Set(sel); s.has(r.staff.id) ? s.delete(r.staff.id) : s.add(r.staff.id); return s; })}
-                        className="w-4 h-4 accent-teal-600 cursor-pointer" />
+                        className="w-4 h-4 accent-teal-600 cursor-pointer align-middle" />
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-slate-800">{r.staff.full_name}
-                      <div className="text-[11px] text-slate-400">{ROLE_LABELS[r.staff.role] || r.staff.role}{r.staff.employment_status === 'probation' ? ' · TV' : ''}</div></td>
-                    <td className="text-center px-3 py-2.5">
-                      <div className="font-semibold text-slate-700">{r.workingDays}</div>
-                      {r.daysOff > 0 && <div className="text-[10px] text-rose-400">nghỉ {r.daysOff}</div>}
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <span className="e-avatar w-11 h-11 ring-2 ring-teal-50"><UserRound className="w-5 h-5" /></span>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900">{r.staff.full_name}</div>
+                          <div className="text-[12px] text-slate-400">{ROLE_LABELS[r.staff.role] || r.staff.role}{r.staff.employment_status === 'probation' ? ' · TV' : ''}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="text-right px-4 py-2.5">{fmtM(r.luongCong)}</td>
-                    <td className="text-right px-4 py-2.5 text-slate-500">{fmtM(r.phuCap)}</td>
-                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{fmtM(r.commission)}
+                    <td className="text-center">
+                      <div className="font-semibold text-slate-800 tabular-nums">{r.workingDays}</div>
+                      {r.daysOff > 0 && <div className="text-[11px] font-medium text-danger-500">nghỉ {r.daysOff}</div>}
+                    </td>
+                    <td className="num">{fmtM(r.luongCong)}</td>
+                    <td className="num text-slate-500">{fmtM(r.phuCap)}</td>
+                    <td className="num font-semibold text-slate-800">{fmtM(r.commission)}
                       {r.commission > 0 && (
                         <button onClick={() => setSaleDetail(r)}
-                          className="block ml-auto mt-0.5 text-[11px] font-normal text-blue-500 hover:underline">
+                          className="block ml-auto mt-0.5 text-[12px] font-medium text-teal-700 hover:underline">
                           Chi tiết
                         </button>
                       )}</td>
-                    <td className="text-right px-4 py-2.5 text-teal-700 font-semibold">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}
+                    <td className="num font-semibold text-slate-800">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}
                       {(r.otDetail?.length > 0 || r.lateEarlyHours > 0) && (
                         <button onClick={() => setSaleDetail(r)}
-                          className="block ml-auto mt-0.5 text-[11px] font-normal text-blue-500 hover:underline">
+                          className="block ml-auto mt-0.5 text-[12px] font-medium text-teal-700 hover:underline">
                           {r.overtimeHours}h{r.lateEarlyHours > 0 ? ` − ${r.lateEarlyHours}h muộn/sớm = ${r.otNetHours}h` : ''} · chi tiết
                         </button>
                       )}</td>
-                    <td className="text-right px-2 py-2.5">
+                    <td className="num">
                       <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
-                        className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-teal-400 disabled:bg-slate-50" />
+                        className="e-input h-9 w-28 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
                     </td>
-                    <td className="text-right px-4 py-2.5 text-rose-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</td>
-                    <td className="text-right px-2 py-2.5">
+                    <td className="num text-danger-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</td>
+                    <td className="num">
                       <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
-                        className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-teal-400 disabled:bg-slate-50" />
+                        className="e-input h-9 w-28 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
                     </td>
-                    <td className="text-right px-4 py-2.5 font-bold text-slate-900">{fmtM(r.net)}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => { setSaModal({ staff: r.staff }); setSaForm({ amount: '', reason: '' }); }} title="Ứng lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600"><HandCoins className="w-4 h-4" /></button>
+                    <td className="num text-[15px] font-bold text-teal-700">{fmtM(r.net)}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button onClick={() => { setSaModal({ staff: r.staff }); setSaForm({ amount: '', reason: '' }); }} title="Ứng lương" className="e-icon-btn w-8 h-8 rounded-[10px] text-slate-500"><HandCoins className="w-4 h-4" /></button>
                         <button onClick={() => { setPassInput(''); setPassModal({ staff: r.staff }); }} title={r.staff.payslip_code ? 'Đổi mã bảo mật phiếu lương' : 'Đặt mã bảo mật phiếu lương'}
-                          className={`p-1.5 rounded-lg hover:bg-teal-50 ${r.staff.payslip_code ? 'text-teal-500 hover:text-teal-700' : 'text-amber-500 hover:text-amber-600'}`}><KeyRound className="w-4 h-4" /></button>
-                        <button onClick={() => printPayslip(r)} title="In phiếu lương" className="p-1.5 rounded-lg text-slate-400 hover:bg-teal-50 hover:text-teal-600"><Printer className="w-4 h-4" /></button>
+                          className={`e-icon-btn w-8 h-8 rounded-[10px] ${r.staff.payslip_code ? 'text-teal-600' : 'text-warning-600 border-warning-200 bg-warning-50'}`}><KeyRound className="w-4 h-4" /></button>
+                        <button onClick={() => printPayslip(r)} title="In phiếu lương" className="e-icon-btn w-8 h-8 rounded-[10px] text-slate-500"><Printer className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -659,40 +674,40 @@ const PayrollPage = () => {
 
       {/* Yêu cầu XEM LƯƠNG chờ duyệt — duyệt ngay trong app */}
       {pendingPV.length > 0 && (
-        <div className="bg-white border border-teal-200 rounded-2xl shadow-sm p-4">
-          <h3 className="font-bold text-teal-700 mb-3 flex items-center gap-2"><KeyRound className="w-5 h-5" /> Yêu cầu xem lương chờ duyệt ({pendingPV.length})</h3>
+        <div className="e-card e-card-pad">
+          <h3 className="e-card-title mb-4 flex items-center gap-2"><KeyRound className="w-5 h-5 text-teal-600" /> Yêu cầu xem lương chờ duyệt ({pendingPV.length})</h3>
           <div className="space-y-2">
             {pendingPV.map(pv => (
-              <div key={pv.id} className={`flex items-center justify-between gap-3 border rounded-xl p-3 ${pv.is_duplicate ? 'border-rose-200 bg-rose-50/50' : 'border-slate-100'}`}>
+              <div key={pv.id} className={`e-subtle flex items-center justify-between gap-3 p-3 ${pv.is_duplicate ? '!border-danger-200 !bg-danger-50/60' : ''}`}>
                 <div className="min-w-0">
-                  <div className="font-semibold text-slate-800 truncate">{pv.staff_name || '—'} <span className="text-slate-400 font-normal">· {pv.period || ''}</span></div>
-                  <div className="text-xs text-slate-400 truncate">📱 {pv.device_label || 'Thiết bị ?'}{pv.is_duplicate && <span className="text-rose-600 font-semibold"> · ⚠️ Thiết bị khác đã/đang xem phiếu này</span>}</div>
+                  <div className="font-semibold text-slate-900 truncate">{pv.staff_name || '—'} <span className="text-slate-400 font-normal">· {pv.period || ''}</span></div>
+                  <div className="text-[12px] text-slate-500 truncate mt-0.5">Thiết bị: {pv.device_label || 'Thiết bị ?'}{pv.is_duplicate && <span className="e-badge e-badge-sm e-badge-dot e-tone-danger ml-1.5">Thiết bị khác đã/đang xem phiếu này</span>}</div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => resolvePV(pv.id, true)} className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Duyệt</button>
-                  <button onClick={() => resolvePV(pv.id, false)} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">Từ chối</button>
+                  <button onClick={() => resolvePV(pv.id, false)} className="e-btn e-btn-sm e-btn-danger-soft">Từ chối</button>
+                  <button onClick={() => resolvePV(pv.id, true)} className="e-btn e-btn-sm e-btn-primary"><Check className="w-4 h-4" /> Duyệt</button>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">Tự làm mới mỗi 15 giây · nhân sự sẽ thấy lương ngay sau khi bạn duyệt.</p>
+          <p className="text-[12px] text-slate-400 mt-3">Tự làm mới mỗi 15 giây · nhân sự sẽ thấy lương ngay sau khi bạn duyệt.</p>
         </div>
       )}
 
       {/* Đơn ứng lương chờ duyệt */}
       {pendingSA.length > 0 && (
-        <div className="bg-white border border-amber-200 rounded-2xl shadow-sm p-4">
-          <h3 className="font-bold text-amber-700 mb-3 flex items-center gap-2"><HandCoins className="w-5 h-5" /> Đơn ứng lương chờ duyệt ({pendingSA.length})</h3>
+        <div className="e-card e-card-pad">
+          <h3 className="e-card-title mb-4 flex items-center gap-2"><HandCoins className="w-5 h-5 text-warning-600" /> Đơn ứng lương chờ duyệt ({pendingSA.length})</h3>
           <div className="space-y-2">
             {pendingSA.map(sa => (
-              <div key={sa.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-xl p-3">
+              <div key={sa.id} className="e-subtle flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
-                  <div className="font-semibold text-slate-800">{sa.staff?.full_name} · <span className="text-amber-600">{fmtM(sa.amount)}</span></div>
-                  <div className="text-xs text-slate-400">{sa.reason || 'Không nêu lý do'} · {new Date(sa.created_at).toLocaleDateString('vi-VN')}</div>
+                  <div className="font-semibold text-slate-900">{sa.staff?.full_name} · <span className="text-warning-600 tabular-nums">{fmtM(sa.amount)}</span></div>
+                  <div className="text-[12px] text-slate-500 mt-0.5">{sa.reason || 'Không nêu lý do'} · {new Date(sa.created_at).toLocaleDateString('vi-VN')}</div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => approveSA(sa.id)} className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Duyệt</button>
-                  <button onClick={() => { setRejectSA(sa); setRejectReason(''); }} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">Từ chối</button>
+                  <button onClick={() => { setRejectSA(sa); setRejectReason(''); }} className="e-btn e-btn-sm e-btn-danger-soft">Từ chối</button>
+                  <button onClick={() => approveSA(sa.id)} className="e-btn e-btn-sm e-btn-primary"><Check className="w-4 h-4" /> Duyệt</button>
                 </div>
               </div>
             ))}
@@ -700,32 +715,33 @@ const PayrollPage = () => {
         </div>
       )}
 
-      <p className="text-xs text-slate-400">
+      <p className="e-subtle px-4 py-3 text-[12px] text-slate-500 leading-relaxed">
+        <span className="e-caption mr-2">Công thức</span>
         Thực nhận = Lương theo công + Phụ cấp + Hoa hồng + Lương tăng ca + Thưởng khác − Ứng lương − Khấu trừ. (Tạm ứng chi thanh toán riêng, không tính vào đây.)
         Tăng ca = số giờ {'×'} (150% ngày thường / 200% chủ nhật) {'×'} Lương cơ bản ÷ {STANDARD_DAYS} ÷ 8.
       </p>
 
       {/* Modal tạo đơn ứng lương */}
       {saModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
-              <div><h3 className="font-bold text-amber-800">Ứng lương</h3><p className="text-xs text-amber-500">{saModal.staff.full_name}</p></div>
-              <button onClick={() => setSaModal(null)}><X className="w-5 h-5 text-amber-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-sm overflow-hidden">
+            <div className="e-modal-header items-center">
+              <div><h3 className="e-modal-title">Ứng lương</h3><p className="e-card-sub">{saModal.staff.full_name}</p></div>
+              <button onClick={() => setSaModal(null)} className="e-icon-btn w-9 h-9" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="e-modal-body space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền ứng (VNĐ)</label>
-                <input type="text" inputMode="numeric" value={saForm.amount} onChange={e => setSaForm(f => ({ ...f, amount: fmt(Number(e.target.value.replace(/\D/g, ''))) }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-amber-700 text-lg" placeholder="2.000.000" />
+                <label className="e-label">Số tiền ứng (VNĐ)</label>
+                <input type="text" inputMode="numeric" value={saForm.amount} onChange={e => setSaForm(f => ({ ...f, amount: fmt(Number(e.target.value.replace(/\D/g, ''))) }))} className="e-input h-11 text-[18px] font-bold text-slate-900 tabular-nums" placeholder="2.000.000" />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Lý do</label>
-                <textarea rows={2} value={saForm.reason} onChange={e => setSaForm(f => ({ ...f, reason: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 resize-none text-sm" placeholder="Lý do ứng lương..." />
+                <label className="e-label">Lý do</label>
+                <textarea rows={2} value={saForm.reason} onChange={e => setSaForm(f => ({ ...f, reason: e.target.value }))} className="e-textarea resize-none" placeholder="Lý do ứng lương..." />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-              <button onClick={() => setSaModal(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={submitSalaryAdvance} className="px-6 py-2 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-700">Gửi duyệt</button>
+            <div className="e-modal-footer">
+              <button onClick={() => setSaModal(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={submitSalaryAdvance} className="e-btn e-btn-primary">Gửi duyệt</button>
             </div>
           </div>
         </div>
@@ -733,71 +749,71 @@ const PayrollPage = () => {
 
       {/* Modal từ chối ứng lương */}
       {rejectSA && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-red-50">
-              <h3 className="font-bold text-red-800">Từ chối ứng lương</h3>
-              <button onClick={() => setRejectSA(null)}><X className="w-5 h-5 text-red-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-sm overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Từ chối ứng lương</h3>
+              <button onClick={() => setRejectSA(null)} className="e-icon-btn w-9 h-9" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6">
-              <label className="block text-sm font-semibold mb-2 text-slate-700">Lý do từ chối</label>
-              <textarea rows={3} value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-red-500 resize-none text-sm" placeholder="Nhập lý do..." />
+            <div className="e-modal-body">
+              <label className="e-label">Lý do từ chối</label>
+              <textarea rows={3} value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="e-textarea resize-none" placeholder="Nhập lý do..." />
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-              <button onClick={() => setRejectSA(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={doRejectSA} className="px-6 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700">Từ chối</button>
+            <div className="e-modal-footer">
+              <button onClick={() => setRejectSA(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={doRejectSA} className="e-btn e-btn-danger">Từ chối</button>
             </div>
           </div>
         </div>
       )}
 
       {passModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-sm overflow-hidden">
+            <div className="e-modal-header items-center">
               <div>
-                <h3 className="font-bold text-teal-800 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Mã bảo mật phiếu lương</h3>
-                <p className="text-xs text-teal-500 mt-0.5">{passModal.staff.full_name}</p>
+                <h3 className="e-modal-title flex items-center gap-2"><KeyRound className="w-5 h-5 text-teal-600" /> Mã bảo mật phiếu lương</h3>
+                <p className="e-card-sub">{passModal.staff.full_name}</p>
               </div>
-              <button onClick={() => setPassModal(null)}><X className="w-5 h-5 text-teal-400" /></button>
+              <button onClick={() => setPassModal(null)} className="e-icon-btn w-9 h-9" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6">
-              <p className="text-sm text-slate-500 mb-4">
+            <div className="e-modal-body">
+              <p className="text-[13px] text-slate-500 leading-relaxed mb-4">
                 Mỗi nhân sự có <b>một mã riêng</b> để mã hoá & mở phiếu lương. Chia sẻ mã này cho đúng <b>{passModal.staff.full_name}</b>.
                 Sau khi nhập mã, nhân sự vẫn cần <b>Admin duyệt</b> mới xem được chi tiết.
               </p>
-              <label className="block text-sm font-semibold mb-2 text-slate-700">Mã bảo mật (≥ 4 ký tự)</label>
+              <label className="e-label">Mã bảo mật (≥ 4 ký tự)</label>
               <input type="text" autoFocus value={passInput} onChange={e => setPassInput(e.target.value.toUpperCase())}
                 onKeyDown={e => { if (e.key === 'Enter') savePasscode(); }}
-                className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 text-center tracking-widest text-lg" placeholder="VD: 2468" />
-              {passModal.staff.payslip_code && <p className="text-xs text-slate-400 mt-2">Nhân sự này đã có mã. Nhập mã mới để thay đổi.</p>}
+                className="e-input h-12 text-center tracking-[0.3em] text-[18px] font-semibold" placeholder="VD: 2468" />
+              {passModal.staff.payslip_code && <p className="text-[12px] text-slate-400 mt-2">Nhân sự này đã có mã. Nhập mã mới để thay đổi.</p>}
             </div>
-            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-              <button onClick={() => setPassModal(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={savePasscode} className="px-6 py-2 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700">Lưu mã</button>
+            <div className="e-modal-footer">
+              <button onClick={() => setPassModal(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={savePasscode} className="e-btn e-btn-primary">Lưu mã</button>
             </div>
           </div>
         </div>
       )}
 
       {saleDetail && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-xl overflow-hidden flex flex-col max-h-[88vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50 shrink-0">
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-3xl overflow-hidden flex flex-col max-h-[88vh]">
+            <div className="e-modal-header items-center shrink-0">
               <div>
-                <h3 className="font-bold text-teal-800">Chi tiết lương — {saleDetail.staff.full_name}</h3>
-                <p className="text-xs text-teal-600 mt-0.5">{ROLE_LABELS[saleDetail.staff.role] || saleDetail.staff.role}{saleDetail.staff.role_2 ? ' + ' + (ROLE_LABELS[saleDetail.staff.role_2] || saleDetail.staff.role_2) : ''} · {MONTHS[month - 1]} {year}</p>
+                <h3 className="e-modal-title">Chi tiết lương — {saleDetail.staff.full_name}</h3>
+                <p className="e-card-sub">{ROLE_LABELS[saleDetail.staff.role] || saleDetail.staff.role}{saleDetail.staff.role_2 ? ' + ' + (ROLE_LABELS[saleDetail.staff.role_2] || saleDetail.staff.role_2) : ''} · {MONTHS[month - 1]} {year}</p>
               </div>
-              <button onClick={() => setSaleDetail(null)}><X className="w-5 h-5 text-teal-400" /></button>
+              <button onClick={() => setSaleDetail(null)} className="e-icon-btn w-9 h-9" aria-label="Đóng"><X className="w-4 h-4" /></button>
             </div>
-            <div className="overflow-auto p-5 space-y-6">
+            <div className="overflow-auto px-5 py-5 space-y-6">
               {/* Hoa hồng / thưởng */}
               <div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hoa hồng / thưởng · Tổng {fmtM(saleDetail.commission)}</div>
+                <div className="e-caption mb-2.5">Hoa hồng / thưởng · Tổng {fmtM(saleDetail.commission)}</div>
                 {saleDetail.commDetail?.length > 0 && (
-                  <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl mb-3">
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl mb-3">
                     {saleDetail.commDetail.map((d, i) => (
-                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <div key={i} className="flex items-center justify-between px-3.5 py-2.5 text-[13px]">
                         <span className="text-slate-600 pr-2">{d.label}</span>
                         <span className="font-semibold text-teal-700 tabular-nums shrink-0">{fmtM(d.amount)}</span>
                       </div>
@@ -805,29 +821,29 @@ const PayrollPage = () => {
                   </div>
                 )}
                 {saleDetail.saleOff?.perCustomer?.length > 0 && (
-                  <div className="overflow-auto border border-slate-100 rounded-xl">
-                    <table className="w-full text-sm whitespace-nowrap">
-                      <thead className="bg-slate-50 text-slate-500 border-b">
+                  <div className="overflow-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-[13px] whitespace-nowrap">
+                      <thead className="bg-slate-50 text-[12px] text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Khách (Sale Offline)</th>
-                          <th className="text-left px-3 py-2 font-medium">Nguồn</th>
-                          <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
-                          <th className="text-right px-3 py-2 font-medium">Upsale</th>
-                          <th className="text-right px-3 py-2 font-medium">HH cơ bản</th>
-                          <th className="text-right px-3 py-2 font-medium">HH upsale</th>
-                          <th className="text-right px-3 py-2 font-medium">Tổng HH</th>
+                          <th className="text-left px-3 h-10 font-semibold">Khách (Sale Offline)</th>
+                          <th className="text-left px-3 h-10 font-semibold">Nguồn</th>
+                          <th className="text-right px-3 h-10 font-semibold">Doanh thu</th>
+                          <th className="text-right px-3 h-10 font-semibold">Upsale</th>
+                          <th className="text-right px-3 h-10 font-semibold">HH cơ bản</th>
+                          <th className="text-right px-3 h-10 font-semibold">HH upsale</th>
+                          <th className="text-right px-3 h-10 font-semibold">Tổng HH</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {saleDetail.saleOff.perCustomer.map((c, i) => (
                           <tr key={i}>
                             <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.service && <div className="text-[11px] text-slate-400">{c.service}</div>}</td>
-                            <td className="px-3 py-2 text-slate-500">{c.source || '—'}{SALE_HALF_SOURCES.includes(c.source) && <span className="text-[10px] text-amber-600"> ·×50%</span>}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.revenue)}</td>
-                            <td className="text-right px-3 py-2 tabular-nums text-orange-600">{c.upsale ? fmtM(c.upsale) : '—'}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.hhBase)} <span className="text-[10px] text-slate-400">({c.dtRate}%)</span></td>
-                            <td className="text-right px-3 py-2 tabular-nums">{c.hhUp ? `${fmtM(c.hhUp)} (${c.upRate}%)` : '—'}</td>
-                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.source || '—'}{SALE_HALF_SOURCES.includes(c.source) && <span className="text-[11px] text-warning-600"> ·×50%</span>}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(c.revenue)}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums text-peach-600">{c.upsale ? fmtM(c.upsale) : '—'}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(c.hhBase)} <span className="text-[11px] text-slate-400">({c.dtRate}%)</span></td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{c.hhUp ? `${fmtM(c.hhUp)} (${c.upRate}%)` : '—'}</td>
+                            <td className="text-right px-3 py-2.5 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -835,28 +851,28 @@ const PayrollPage = () => {
                   </div>
                 )}
                 {saleDetail.teleOff?.perCustomer?.length > 0 && (
-                  <div className="overflow-auto border border-slate-100 rounded-xl mt-3">
-                    <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-500 border-b">Telesale · Thưởng DT {fmtM(saleDetail.teleOff.thuongDoanhThu)} ({saleDetail.teleOff.dtRate}%) + Thưởng hẹn {fmtM(saleDetail.teleOff.thuongLichHen)}</div>
-                    <table className="w-full text-sm whitespace-nowrap">
-                      <thead className="bg-slate-50 text-slate-500 border-b">
+                  <div className="overflow-auto border border-slate-200 rounded-xl mt-3">
+                    <div className="px-3.5 py-2 bg-teal-50/60 text-[12px] font-semibold text-teal-800 border-b border-slate-200">Telesale · Thưởng DT {fmtM(saleDetail.teleOff.thuongDoanhThu)} ({saleDetail.teleOff.dtRate}%) + Thưởng hẹn {fmtM(saleDetail.teleOff.thuongLichHen)}</div>
+                    <table className="w-full text-[13px] whitespace-nowrap">
+                      <thead className="bg-slate-50 text-[12px] text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Khách</th>
-                          <th className="text-left px-3 py-2 font-medium">Giai đoạn</th>
-                          <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
-                          <th className="text-right px-3 py-2 font-medium">Thưởng DT</th>
-                          <th className="text-right px-3 py-2 font-medium">Thưởng hẹn</th>
-                          <th className="text-right px-3 py-2 font-medium">Tổng</th>
+                          <th className="text-left px-3 h-10 font-semibold">Khách</th>
+                          <th className="text-left px-3 h-10 font-semibold">Giai đoạn</th>
+                          <th className="text-right px-3 h-10 font-semibold">Doanh thu</th>
+                          <th className="text-right px-3 h-10 font-semibold">Thưởng DT</th>
+                          <th className="text-right px-3 h-10 font-semibold">Thưởng hẹn</th>
+                          <th className="text-right px-3 h-10 font-semibold">Tổng</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {saleDetail.teleOff.perCustomer.map((c, i) => (
                           <tr key={i}>
-                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.share === 0.5 && <span className="text-[10px] text-amber-600"> ·½</span>}{c.half && <span className="text-[10px] text-rose-500"> ·{c.source || 'Quen/CTV'} 50%</span>}</td>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.share === 0.5 && <span className="text-[11px] text-warning-600"> ·½</span>}{c.half && <span className="text-[11px] text-danger-500"> ·{c.source || 'Quen/CTV'} 50%</span>}</td>
                             <td className="px-3 py-2 text-slate-500">{c.journey} · {c.dai ? 'Đại' : 'Tiểu'}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{c.revenue ? fmtM(c.revenue) : '—'}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{c.hhRev ? fmtM(c.hhRev) : '—'}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{c.hhHen ? fmtM(c.hhHen) : '—'}</td>
-                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{c.revenue ? fmtM(c.revenue) : '—'}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{c.hhRev ? fmtM(c.hhRev) : '—'}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{c.hhHen ? fmtM(c.hhHen) : '—'}</td>
+                            <td className="text-right px-3 py-2.5 font-bold text-teal-700 tabular-nums">{fmtM(c.hh)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -864,24 +880,24 @@ const PayrollPage = () => {
                   </div>
                 )}
                 {saleDetail.ddOff?.perCase?.length > 0 && (
-                  <div className="overflow-auto border border-slate-100 rounded-xl mt-3">
-                    <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-500 border-b">Điều dưỡng · từng ca mổ</div>
-                    <table className="w-full text-sm whitespace-nowrap">
-                      <thead className="bg-slate-50 text-slate-500 border-b">
+                  <div className="overflow-auto border border-slate-200 rounded-xl mt-3">
+                    <div className="px-3.5 py-2 bg-teal-50/60 text-[12px] font-semibold text-teal-800 border-b border-slate-200">Điều dưỡng · từng ca mổ</div>
+                    <table className="w-full text-[13px] whitespace-nowrap">
+                      <thead className="bg-slate-50 text-[12px] text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Khách</th>
-                          <th className="text-left px-3 py-2 font-medium">Loại PT</th>
-                          <th className="text-left px-3 py-2 font-medium">Vai trò</th>
-                          <th className="text-right px-3 py-2 font-medium">Thưởng</th>
+                          <th className="text-left px-3 h-10 font-semibold">Khách</th>
+                          <th className="text-left px-3 h-10 font-semibold">Loại PT</th>
+                          <th className="text-left px-3 h-10 font-semibold">Vai trò</th>
+                          <th className="text-right px-3 h-10 font-semibold">Thưởng</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {saleDetail.ddOff.perCase.map((c, i) => (
                           <tr key={i}>
                             <td className="px-3 py-2 font-medium text-slate-800">{c.name}</td>
                             <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
                             <td className="px-3 py-2 text-slate-500">{c.roles.join(', ')}</td>
-                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.bonus)}</td>
+                            <td className="text-right px-3 py-2.5 font-bold text-teal-700 tabular-nums">{fmtM(c.bonus)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -889,26 +905,26 @@ const PayrollPage = () => {
                   </div>
                 )}
                 {saleDetail.bacSiOff?.perCase?.length > 0 && (
-                  <div className="overflow-auto border border-slate-100 rounded-xl mt-3">
-                    <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-500 border-b">Bác sĩ · công mổ (Tiểu 10% · Đại 5% doanh thu)</div>
-                    <table className="w-full text-sm whitespace-nowrap">
-                      <thead className="bg-slate-50 text-slate-500 border-b">
+                  <div className="overflow-auto border border-slate-200 rounded-xl mt-3">
+                    <div className="px-3.5 py-2 bg-teal-50/60 text-[12px] font-semibold text-teal-800 border-b border-slate-200">Bác sĩ · công mổ (Tiểu 10% · Đại 5% doanh thu)</div>
+                    <table className="w-full text-[13px] whitespace-nowrap">
+                      <thead className="bg-slate-50 text-[12px] text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Khách</th>
-                          <th className="text-left px-3 py-2 font-medium">Loại PT</th>
-                          <th className="text-right px-3 py-2 font-medium">Doanh thu</th>
-                          <th className="text-right px-3 py-2 font-medium">%</th>
-                          <th className="text-right px-3 py-2 font-medium">Công mổ</th>
+                          <th className="text-left px-3 h-10 font-semibold">Khách</th>
+                          <th className="text-left px-3 h-10 font-semibold">Loại PT</th>
+                          <th className="text-right px-3 h-10 font-semibold">Doanh thu</th>
+                          <th className="text-right px-3 h-10 font-semibold">%</th>
+                          <th className="text-right px-3 h-10 font-semibold">Công mổ</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {saleDetail.bacSiOff.perCase.map((c, i) => (
                           <tr key={i}>
                             <td className="px-3 py-2 font-medium text-slate-800">{c.name}</td>
                             <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{fmtM(c.revenue)}</td>
-                            <td className="text-right px-3 py-2 tabular-nums text-slate-500">{c.ratePct}%</td>
-                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.cong)}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{fmtM(c.revenue)}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums text-slate-500">{c.ratePct}%</td>
+                            <td className="text-right px-3 py-2.5 font-bold text-teal-700 tabular-nums">{fmtM(c.cong)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -916,32 +932,32 @@ const PayrollPage = () => {
                   </div>
                 )}
                 {(saleDetail.partnerOff?.bacSiCases?.length > 0 || saleDetail.partnerOff?.phuMoCases?.length > 0) && (
-                  <div className="overflow-auto border border-amber-100 rounded-xl mt-3">
-                    <div className="px-3 py-1.5 bg-amber-50 text-[11px] font-semibold text-amber-700 border-b">Mổ đối tác · BS 50% tiền đối tác · phụ mổ như khách nội bộ</div>
-                    <table className="w-full text-sm whitespace-nowrap">
-                      <thead className="bg-slate-50 text-slate-500 border-b">
+                  <div className="overflow-auto border border-peach-200 rounded-xl mt-3">
+                    <div className="px-3.5 py-2 bg-peach-50 text-[12px] font-semibold text-peach-700 border-b border-peach-200">Mổ đối tác · BS 50% tiền đối tác · phụ mổ như khách nội bộ</div>
+                    <table className="w-full text-[13px] whitespace-nowrap">
+                      <thead className="bg-slate-50 text-[12px] text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Khách</th>
-                          <th className="text-left px-3 py-2 font-medium">Loại PT</th>
-                          <th className="text-left px-3 py-2 font-medium">Vai trò</th>
-                          <th className="text-right px-3 py-2 font-medium">Nhận</th>
+                          <th className="text-left px-3 h-10 font-semibold">Khách</th>
+                          <th className="text-left px-3 h-10 font-semibold">Loại PT</th>
+                          <th className="text-left px-3 h-10 font-semibold">Vai trò</th>
+                          <th className="text-right px-3 h-10 font-semibold">Nhận</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {(saleDetail.partnerOff.bacSiCases || []).map((c, i) => (
                           <tr key={'b' + i}>
-                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.partner ? <span className="text-[11px] text-amber-600"> · {c.partner}</span> : ''}</td>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.partner ? <span className="text-[11px] text-peach-600"> · {c.partner}</span> : ''}</td>
                             <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
-                            <td className="px-3 py-2 text-blue-600">Công BS 50% ({fmtM(c.fee)})</td>
-                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.cong)}</td>
+                            <td className="px-3 py-2 text-info-600">Công BS 50% ({fmtM(c.fee)})</td>
+                            <td className="text-right px-3 py-2.5 font-bold text-teal-700 tabular-nums">{fmtM(c.cong)}</td>
                           </tr>
                         ))}
                         {(saleDetail.partnerOff.phuMoCases || []).map((c, i) => (
                           <tr key={'p' + i}>
-                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.partner ? <span className="text-[11px] text-amber-600"> · {c.partner}</span> : ''}</td>
+                            <td className="px-3 py-2 font-medium text-slate-800">{c.name}{c.partner ? <span className="text-[11px] text-peach-600"> · {c.partner}</span> : ''}</td>
                             <td className="px-3 py-2 text-slate-500">{c.surgeryType}</td>
                             <td className="px-3 py-2 text-slate-500">{c.roles.join(', ')}</td>
-                            <td className="text-right px-3 py-2 font-bold text-teal-700 tabular-nums">{fmtM(c.bonus)}</td>
+                            <td className="text-right px-3 py-2.5 font-bold text-teal-700 tabular-nums">{fmtM(c.bonus)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -949,24 +965,24 @@ const PayrollPage = () => {
                   </div>
                 )}
                 {!saleDetail.commDetail?.length && !saleDetail.saleOff?.perCustomer?.length && !saleDetail.teleOff?.perCustomer?.length && !saleDetail.ddOff?.perCase?.length && !saleDetail.bacSiOff?.perCase?.length && !saleDetail.partnerOff?.bacSiCases?.length && !saleDetail.partnerOff?.phuMoCases?.length && (
-                  <div className="text-sm text-slate-400 italic">Không có hoa hồng/thưởng trong tháng.</div>
+                  <div className="e-subtle px-4 py-3 text-[13px] text-slate-400">Không có hoa hồng/thưởng trong tháng.</div>
                 )}
               </div>
 
               {/* Ngày công & ngày nghỉ */}
               {!saleDetail.staff?.fixed_salary && (
                 <div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ngày công · {saleDetail.workingDays}/{STANDARD_DAYS} · nghỉ {saleDetail.daysOff}</div>
+                  <div className="e-caption mb-2.5">Ngày công · {saleDetail.workingDays}/{STANDARD_DAYS} · nghỉ {saleDetail.daysOff}</div>
                   {saleDetail.offDetail?.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {saleDetail.offDetail.map((o, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 text-xs bg-rose-50 text-rose-600 border border-rose-100 px-2 py-1 rounded-lg font-medium">
+                        <span key={i} className="e-badge e-badge-sm e-tone-rose">
                           {new Date(o.date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })} · {ATT_STATUS_LABEL[o.status] || o.status || 'Nghỉ'}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-slate-400 italic">{saleDetail.daysOff > 0 ? 'Nghỉ (không có bản ghi chấm công cụ thể).' : 'Đi làm đủ công.'}</div>
+                    <div className="e-subtle px-4 py-3 text-[13px] text-slate-400">{saleDetail.daysOff > 0 ? 'Nghỉ (không có bản ghi chấm công cụ thể).' : 'Đi làm đủ công.'}</div>
                   )}
                 </div>
               )}
@@ -974,24 +990,24 @@ const PayrollPage = () => {
               {/* Tăng ca theo ngày */}
               {saleDetail.otDetail?.length > 0 && (
                 <div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tăng ca · {saleDetail.overtimeHours} giờ · {fmtM(saleDetail.overtime)}</div>
-                  <div className="overflow-auto border border-slate-100 rounded-xl">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 text-slate-500 border-b">
+                  <div className="e-caption mb-2.5">Tăng ca · {saleDetail.overtimeHours} giờ · {fmtM(saleDetail.overtime)}</div>
+                  <div className="overflow-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-[13px]">
+                      <thead className="bg-slate-50 text-[12px] text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Ngày</th>
-                          <th className="text-right px-3 py-2 font-medium">Số giờ</th>
-                          <th className="text-right px-3 py-2 font-medium">Hệ số</th>
-                          <th className="text-right px-3 py-2 font-medium">Thành tiền</th>
+                          <th className="text-left px-3 h-10 font-semibold">Ngày</th>
+                          <th className="text-right px-3 h-10 font-semibold">Số giờ</th>
+                          <th className="text-right px-3 h-10 font-semibold">Hệ số</th>
+                          <th className="text-right px-3 h-10 font-semibold">Thành tiền</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-100">
                         {saleDetail.otDetail.map((o, i) => (
                           <tr key={i}>
-                            <td className="px-3 py-2 text-slate-700">{new Date(o.date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
-                            <td className="text-right px-3 py-2 tabular-nums">{o.hours}h</td>
-                            <td className="text-right px-3 py-2 tabular-nums text-slate-500">{o.rate === 2 ? '200% (CN)' : '150%'}</td>
-                            <td className="text-right px-3 py-2 font-semibold text-teal-700 tabular-nums">{fmtM(o.amount)}</td>
+                            <td className="px-3 py-2.5 text-slate-700">{new Date(o.date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums">{o.hours}h</td>
+                            <td className="text-right px-3 py-2.5 tabular-nums text-slate-500">{o.rate === 2 ? '200% (CN)' : '150%'}</td>
+                            <td className="text-right px-3 py-2.5 font-semibold text-teal-700 tabular-nums">{fmtM(o.amount)}</td>
                           </tr>
                         ))}
                       </tbody>

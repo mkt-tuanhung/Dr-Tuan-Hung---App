@@ -13,10 +13,10 @@ const ProgressRing = ({ value, size = 80 }) => {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (value / 100) * circ;
-  const color = value >= 100 ? '#12A4A5' : value >= 70 ? '#f59e0b' : '#ef4444';
+  const color = value >= 100 ? '#067B7F' : value >= 70 ? '#3CA7A9' : '#F4B183';
   return (
     <svg width={size} height={size} className="-rotate-90">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={6} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#EAF4F4" strokeWidth={6} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
         style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
@@ -25,8 +25,8 @@ const ProgressRing = ({ value, size = 80 }) => {
 };
 
 const ProgressBar = ({ value }) => (
-  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
-    <div className={`h-1.5 rounded-full transition-all ${value >= 100 ? 'bg-teal-500' : value >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`}
+  <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
+    <div className={`h-2 rounded-full transition-all ${value >= 100 ? 'bg-success-500' : value >= 70 ? 'bg-teal-500' : 'bg-warning-500'}`}
       style={{ width: `${Math.min(value, 100)}%` }} />
   </div>
 );
@@ -64,88 +64,83 @@ const KPIPage = () => {
   const overallPct = kpi ? Math.round((revPct + custPct + callPct) / 3) : 0;
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[13px] text-slate-500">{MONTHS[month-1]} {year}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronLeft className="w-4 h-4 text-slate-500" />
+    <div className="space-y-4">
+      <div className="e-toolbar justify-between pl-4">
+        <p className="e-page-desc">KPI cá nhân · {MONTHS[month-1]} {year}</p>
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-slate-200 bg-white">
+          <button onClick={prevMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng trước">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month-1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-            <ChevronRight className="w-4 h-4 text-slate-500" />
+          <span className="text-[13.5px] font-semibold text-slate-800 min-w-[110px] text-center tabular-nums">{MONTHS[month-1]} {year}</span>
+          <button onClick={nextMonth} className="w-8 h-8 rounded-lg grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-700" aria-label="Tháng sau">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
+          <div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : !kpi ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center shadow-sm">
-          <div className="text-3xl mb-3">📊</div>
-          <div className="text-sm font-medium text-slate-600">Chưa có KPI tháng này</div>
-          <div className="text-xs text-slate-400 mt-1">Admin sẽ cập nhật KPI cho bạn</div>
+        <div className="e-card e-empty">
+          <div className="e-empty-icon text-[22px]">📊</div>
+          <div className="e-empty-title">Chưa có KPI tháng này</div>
+          <div className="e-empty-desc">Admin sẽ cập nhật KPI cho bạn</div>
         </div>
       ) : (
         <>
-          {/* Overall progress */}
-          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white">
-            <div className="flex items-center gap-5">
+          {/* Overall progress (vòng KPI kiểu Ethics M15) */}
+          <div className="e-card e-card-pad">
+            <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
               <div className="relative shrink-0">
-                <ProgressRing value={overallPct} size={88} />
+                <ProgressRing value={overallPct} size={132} />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center rotate-90" style={{transform:'rotate(90deg)'}}>
-                    <div className="text-lg font-bold">{overallPct}%</div>
+                  <div className="text-center">
+                    <div className="text-[28px] font-bold text-slate-900 leading-none tabular-nums">{overallPct}%</div>
+                    <div className="text-[11.5px] text-slate-500 mt-1">Đạt được</div>
                   </div>
                 </div>
               </div>
-              <div className="flex-1">
-                <div className="text-teal-100 text-xs font-medium">Hoàn thành KPI tổng</div>
-                <div className="text-2xl font-bold mt-1">{MONTHS[month-1]} {year}</div>
-                <div className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
-                  ${overallPct >= 100 ? 'bg-white/25 text-white' : overallPct >= 70 ? 'bg-yellow-400/30 text-yellow-100' : 'bg-red-400/30 text-red-100'}`}>
-                  <Award className="w-3 h-3" />
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <div className="e-caption">Hoàn thành KPI tổng</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-1.5">{MONTHS[month-1]} {year}</div>
+                <div className={`mt-2 e-badge ${overallPct >= 100 ? 'e-tone-success' : overallPct >= 70 ? 'e-tone-brand' : 'e-tone-warning'}`}>
+                  <Award />
                   {overallPct >= 100 ? 'Xuất sắc — Đạt KPI' : overallPct >= 70 ? 'Đang tiến đến mục tiêu' : 'Cần cố gắng thêm'}
                 </div>
+                {kpi.commission_amount > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <div className="text-[12.5px] text-slate-500">Hoa hồng tháng này ({kpi.commission_rate}%)</div>
+                    <div className="text-[24px] font-bold text-teal-700 mt-0.5 tabular-nums">{fmtM(kpi.commission_amount)}</div>
+                  </div>
+                )}
               </div>
             </div>
-
-            {kpi.commission_amount > 0 && (
-              <div className="mt-4 pt-4 border-t border-teal-400/40">
-                <div className="text-teal-200 text-xs">Hoa hồng tháng này ({kpi.commission_rate}%)</div>
-                <div className="text-2xl font-bold mt-0.5">{fmtM(kpi.commission_amount)}</div>
-              </div>
-            )}
           </div>
 
           {/* Detail metrics */}
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { icon: TrendingUp, label: 'Doanh thu', actual: fmtM(kpi.actual_revenue), target: fmtM(kpi.target_revenue), pct: revPct, color: 'text-teal-600', bg: 'bg-teal-50' },
-              { icon: Users, label: 'Khách hàng', actual: fmt(kpi.actual_customers), target: fmt(kpi.target_customers), pct: custPct, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { icon: Phone, label: 'Cuộc gọi', actual: fmt(kpi.actual_calls), target: fmt(kpi.target_calls), pct: callPct, color: 'text-violet-600', bg: 'bg-violet-50' },
+              { icon: TrendingUp, label: 'Doanh thu', actual: fmtM(kpi.actual_revenue), target: fmtM(kpi.target_revenue), pct: revPct, color: 'text-teal-700', bg: 'bg-teal-50' },
+              { icon: Users, label: 'Khách hàng', actual: fmt(kpi.actual_customers), target: fmt(kpi.target_customers), pct: custPct, color: 'text-teal-700', bg: 'bg-teal-50' },
+              { icon: Phone, label: 'Cuộc gọi', actual: fmt(kpi.actual_calls), target: fmt(kpi.target_calls), pct: callPct, color: 'text-teal-700', bg: 'bg-teal-50' },
             ].map(m => (
-              <div key={m.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center`}>
-                      <m.icon className={`w-4 h-4 ${m.color}`} />
+              <div key={m.label} className="e-card e-card-pad">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-full ${m.bg} grid place-items-center shrink-0`}>
+                      <m.icon className={`w-5 h-5 ${m.color}`} />
                     </div>
-                    <span className="text-sm font-medium text-slate-700">{m.label}</span>
+                    <span className="text-[14px] font-semibold text-slate-700">{m.label}</span>
                   </div>
-                  <span className={`text-sm font-bold ${m.pct >= 100 ? 'text-teal-600' : m.pct >= 70 ? 'text-yellow-500' : 'text-red-400'}`}>
+                  <span className={`e-badge e-badge-sm ${m.pct >= 100 ? 'e-tone-success' : m.pct >= 70 ? 'e-tone-brand' : 'e-tone-warning'}`}>
                     {m.pct}%
                   </span>
                 </div>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <div className="text-xl font-bold text-slate-800">{m.actual}</div>
-                    <div className="text-xs text-slate-400">Mục tiêu: {m.target}</div>
-                  </div>
+                <div className="mt-3">
+                  <div className="text-[22px] font-bold text-slate-900 tabular-nums">{m.actual}</div>
+                  <div className="text-[12.5px] text-slate-500">Mục tiêu: {m.target}</div>
                 </div>
                 <ProgressBar value={m.pct} />
               </div>
@@ -153,9 +148,9 @@ const KPIPage = () => {
           </div>
 
           {kpi.note && (
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-              <div className="text-xs font-semibold text-amber-700 mb-1">Ghi chú từ quản lý</div>
-              <div className="text-sm text-amber-800">{kpi.note}</div>
+            <div className="e-card-flat p-4 border-l-4 border-l-teal-500">
+              <div className="e-caption mb-1.5">Ghi chú từ quản lý</div>
+              <div className="text-[14px] text-slate-700">{kpi.note}</div>
             </div>
           )}
         </>
@@ -163,25 +158,24 @@ const KPIPage = () => {
 
       {/* History */}
       {history.length > 1 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-50">
-            <h3 className="text-sm font-semibold text-slate-700">Lịch sử KPI</h3>
+        <div className="e-card overflow-hidden">
+          <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100">
+            <h3 className="text-[16px] font-[650] text-slate-900">Lịch sử KPI</h3>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-100">
             {history.map(h => {
               const p = pct(h.actual_revenue, h.target_revenue);
               return (
-                <div key={h.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700">{MONTHS[h.month-1]} {h.year}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{fmtM(h.actual_revenue)} / {fmtM(h.target_revenue)}</div>
+                <div key={h.id} className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3">
+                  <div className="min-w-0">
+                    <div className="text-[14px] font-semibold text-slate-800">{MONTHS[h.month-1]} {h.year}</div>
+                    <div className="text-[12px] text-slate-500 mt-0.5 tabular-nums">{fmtM(h.actual_revenue)} / {fmtM(h.target_revenue)}</div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     {h.commission_amount > 0 && (
-                      <div className="text-xs font-medium text-teal-600">{fmtM(h.commission_amount)}</div>
+                      <div className="text-[12.5px] font-semibold text-teal-700 tabular-nums">{fmtM(h.commission_amount)}</div>
                     )}
-                    <div className={`text-xs font-bold px-2 py-1 rounded-full
-                      ${p >= 100 ? 'bg-teal-100 text-teal-700' : p >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
+                    <div className={`e-badge e-badge-sm tabular-nums ${p >= 100 ? 'e-tone-success' : p >= 70 ? 'e-tone-brand' : 'e-tone-warning'}`}>
                       {p}%
                     </div>
                   </div>

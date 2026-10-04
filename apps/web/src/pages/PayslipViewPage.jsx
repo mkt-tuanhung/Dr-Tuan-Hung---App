@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Loader2, Clock, Ban } from 'lucide-react';
+import { Lock, ShieldCheck, AlertCircle, Loader2, Clock, Ban, UserRound, Wallet } from 'lucide-react';
 import { decryptPayslip } from '@/lib/payslipCrypto';
 import { supabase } from '@/lib/supabaseClient';
 import { getDeviceId, getDeviceLabel } from '@/lib/device';
@@ -78,16 +78,16 @@ const PayslipViewPage = () => {
   };
 
   const Shell = ({ children }) => (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full text-center">{children}</div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F3F9F9] p-4">
+      <div className="e-card p-8 max-w-sm w-full text-center">{children}</div>
     </div>
   );
 
   if (fetching) {
     return (
       <Shell>
-        <Loader2 className="w-8 h-8 animate-spin text-teal-400 mx-auto" />
-        <p className="text-slate-500 text-sm mt-3">Đang tải phiếu lương…</p>
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600 mx-auto" />
+        <p className="text-[14px] text-slate-500 mt-3">Đang tải phiếu lương…</p>
       </Shell>
     );
   }
@@ -95,8 +95,8 @@ const PayslipViewPage = () => {
   if (!payload) {
     return (
       <Shell>
-        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-        <p className="text-slate-600 text-sm">Không tìm thấy dữ liệu phiếu lương. Vui lòng quét lại mã QR trên phiếu lương.</p>
+        <div className="e-empty-icon mx-auto bg-warning-50 text-warning-600"><AlertCircle /></div>
+        <p className="text-[14px] text-slate-600 leading-relaxed">Không tìm thấy dữ liệu phiếu lương. Vui lòng quét lại mã QR trên phiếu lương.</p>
       </Shell>
     );
   }
@@ -105,12 +105,12 @@ const PayslipViewPage = () => {
   if (phase === 'pending') {
     return (
       <Shell>
-        <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-4"><Clock className="w-7 h-7" /></div>
-        <h1 className="text-lg font-bold text-slate-800">Đang chờ Admin duyệt</h1>
-        <p className="text-sm text-slate-500 mt-1">Yêu cầu xem lương đã được gửi. Trang sẽ tự mở khi Admin duyệt.</p>
-        <Loader2 className="w-5 h-5 animate-spin text-amber-400 mx-auto mt-4" />
+        <div className="w-16 h-16 rounded-full bg-warning-50 text-warning-600 flex items-center justify-center mx-auto mb-4"><Clock className="w-8 h-8" /></div>
+        <h1 className="text-[18px] font-bold text-slate-900">Đang chờ Admin duyệt</h1>
+        <p className="text-[14px] text-slate-500 mt-1.5 leading-relaxed">Yêu cầu xem lương đã được gửi. Trang sẽ tự mở khi Admin duyệt.</p>
+        <Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto mt-5" />
         {dup && (
-          <div className="mt-4 bg-rose-50 border border-rose-100 rounded-xl p-3 text-left text-xs text-rose-600 leading-relaxed">
+          <div className="mt-5 bg-danger-50 border border-danger-100 rounded-xl px-3.5 py-3 text-left text-[13px] text-danger-600 leading-relaxed">
             ⚠️ <b>Cảnh báo:</b> phiếu lương này đã được xem trên một <b>thiết bị khác</b>. Admin đã nhận cảnh báo — nếu không phải bạn, việc xem có thể bị từ chối.
           </div>
         )}
@@ -122,9 +122,9 @@ const PayslipViewPage = () => {
   if (phase === 'rejected') {
     return (
       <Shell>
-        <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4"><Ban className="w-7 h-7" /></div>
-        <h1 className="text-lg font-bold text-slate-800">Yêu cầu bị từ chối</h1>
-        <p className="text-sm text-slate-500 mt-1">Admin đã từ chối / chặn xem phiếu lương này trên thiết bị của bạn.</p>
+        <div className="w-16 h-16 rounded-full bg-danger-50 text-danger-600 flex items-center justify-center mx-auto mb-4"><Ban className="w-8 h-8" /></div>
+        <h1 className="text-[18px] font-bold text-slate-900">Yêu cầu bị từ chối</h1>
+        <p className="text-[14px] text-slate-500 mt-1.5 leading-relaxed">Admin đã từ chối / chặn xem phiếu lương này trên thiết bị của bạn.</p>
       </Shell>
     );
   }
@@ -132,54 +132,62 @@ const PayslipViewPage = () => {
   // Đã duyệt -> hiện lương
   if (phase === 'approved' && data) {
     return (
-      <div className="min-h-screen bg-slate-50 py-8 px-4">
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-lg font-bold">PHIẾU LƯƠNG</h1>
-                <p className="text-teal-100 text-sm">Tháng {data.m}</p>
+      <div className="min-h-screen bg-[#F3F9F9] py-6 sm:py-10 px-4">
+        <div className="max-w-xl mx-auto space-y-4">
+          {/* Đầu phiếu */}
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h1 className="text-[22px] sm:text-[26px] font-bold text-slate-900">Phiếu lương <span className="font-semibold text-slate-400">· Tháng {data.m}</span></h1>
+            <span className="e-badge e-tone-brand shrink-0"><ShieldCheck /> Bảo mật</span>
+          </div>
+
+          {/* Thẻ nhân sự */}
+          <div className="e-card p-5 sm:p-6">
+            <div className="flex items-center gap-4">
+              <div className="e-avatar w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-teal-50"><UserRound className="w-8 h-8 sm:w-10 sm:h-10" /></div>
+              <div className="min-w-0">
+                <div className="text-[19px] sm:text-[22px] font-bold text-slate-900 leading-tight">{data.n}</div>
+                <div className="text-[14px] text-slate-500 mt-1">{data.r}</div>
+                {data.bank && <div className="text-[13px] text-slate-400 mt-0.5">{data.bank}</div>}
               </div>
-              <ShieldCheck className="w-6 h-6 text-teal-100" />
             </div>
           </div>
-          <div className="p-5">
-            <div className="mb-4">
-              <div className="font-bold text-slate-800">{data.n}</div>
-              <div className="text-sm text-slate-500">{data.r}</div>
-              {data.bank && <div className="text-sm text-slate-400 mt-0.5">{data.bank}</div>}
-            </div>
-            <table className="w-full text-sm">
+
+          {/* Các khoản lương */}
+          <div className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white shadow-soft px-5 pt-5 pb-3">
+            <h2 className="text-[17px] font-bold text-teal-700 mb-1">Thu nhập &amp; khấu trừ</h2>
+            <table className="w-full text-[14px]">
               <tbody>
                 {(data.items || []).map(([label, val], i) => (
-                  <tr key={i} className="border-b border-slate-50 last:border-0">
-                    <td className="py-2 text-slate-500">{label}</td>
-                    <td className="py-2 text-right font-medium text-slate-700 tabular-nums">{val}</td>
+                  <tr key={i} className="border-b border-slate-100/80 last:border-0">
+                    <td className="py-2.5 pr-2 text-slate-600">{label}</td>
+                    <td className="py-2.5 text-right font-medium text-slate-800 tabular-nums whitespace-nowrap">{val}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
             {Array.isArray(data.hh) && data.hh.length > 0 && (
-              <div className="mt-4">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Chi tiết hoa hồng / thưởng ({data.hh.length})</div>
-                <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+              <div className="e-card e-card-pad">
+                <div className="e-caption mb-3">Chi tiết hoa hồng / thưởng ({data.hh.length})</div>
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                   {data.hh.map((c, i) => {
                     const amt = c.a ?? c.hh;
                     const note = c.d ?? [c.rev && `DT ${c.rev}`, c.up && `Upsale ${c.up}`].filter(Boolean).join(' · ');
                     return (
-                      <div key={i} className={`px-3 py-2 text-sm ${c.half ? 'bg-rose-50/70' : ''}`}>
+                      <div key={i} className={`px-3.5 py-2.5 text-[14px] ${c.half ? 'bg-danger-50/60' : ''}`}>
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <div className={`font-medium truncate ${c.half ? 'text-rose-700' : 'text-slate-700'}`}>{c.n}</div>
-                            {note && <div className="text-[11px] text-slate-400 truncate">{note}</div>}
-                            {c.half && <div className="text-[11px] font-bold text-rose-600 mt-0.5">⚠ {c.hsrc || 'Người quen'} · hưởng 50%</div>}
+                            <div className={`font-semibold truncate ${c.half ? 'text-danger-600' : 'text-slate-800'}`}>{c.n}</div>
+                            {note && <div className="text-[12px] text-slate-400 truncate">{note}</div>}
+                            {c.half && <div className="e-badge e-badge-sm e-tone-danger mt-1">Nguồn {c.hsrc || 'Người quen'} · hưởng 50%</div>}
                           </div>
-                          <div className={`font-semibold tabular-nums shrink-0 ${c.half ? 'text-rose-700' : 'text-teal-700'}`}>{amt}</div>
+                          <div className={`font-bold tabular-nums shrink-0 ${c.half ? 'text-danger-600' : 'text-teal-700'}`}>{amt}</div>
                         </div>
                         {Array.isArray(c.parts) && c.parts.length > 0 && (
-                          <div className="mt-1 pl-2 border-l-2 border-slate-100 space-y-0.5">
+                          <div className="mt-1.5 pl-2.5 border-l-2 border-teal-100 space-y-0.5">
                             {c.parts.map((p, j) => (
-                              <div key={j} className="flex items-center justify-between text-[11px] text-slate-500">
+                              <div key={j} className="flex items-center justify-between text-[12px] text-slate-500">
                                 <span>{p.l}</span>
                                 <span className="tabular-nums">{p.v}</span>
                               </div>
@@ -195,16 +203,16 @@ const PayslipViewPage = () => {
 
             {/* Mổ đối tác — mục riêng màu vàng */}
             {Array.isArray(data.pt) && data.pt.length > 0 && (
-              <div className="mt-4">
-                <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1.5">Mổ đối tác ({data.pt.length})</div>
-                <div className="divide-y divide-amber-100/70 border border-amber-200 rounded-xl overflow-hidden bg-amber-50/50">
+              <div className="e-card e-card-pad">
+                <div className="e-caption mb-3 !text-peach-600">Mổ đối tác ({data.pt.length})</div>
+                <div className="divide-y divide-peach-100 border border-peach-200 rounded-xl overflow-hidden bg-peach-50/50">
                   {data.pt.map((c, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
+                    <div key={i} className="flex items-center justify-between px-3.5 py-2.5 text-[14px] gap-2">
                       <div className="min-w-0">
-                        <div className="font-medium text-slate-700 truncate">{c.n}</div>
-                        <div className="text-[11px] text-amber-700/80 truncate">{c.t} · {c.role}</div>
+                        <div className="font-semibold text-slate-800 truncate">{c.n}</div>
+                        <div className="text-[12px] text-peach-700/80 truncate">{c.t} · {c.role}</div>
                       </div>
-                      <div className="font-semibold text-amber-700 tabular-nums shrink-0">{c.a}</div>
+                      <div className="font-bold text-peach-700 tabular-nums shrink-0">{c.a}</div>
                     </div>
                   ))}
                 </div>
@@ -213,21 +221,21 @@ const PayslipViewPage = () => {
 
             {/* Ngày công & ngày nghỉ */}
             {data.cong && (
-              <div className="mt-4">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Ngày công · nghỉ</div>
-                <div className="border border-slate-100 rounded-xl p-3 text-sm">
+              <div className="e-card e-card-pad">
+                <div className="e-caption mb-3">Ngày công · nghỉ</div>
+                <div className="e-subtle px-3.5 py-3 text-[14px]">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Số ngày công</span>
-                    <span className="font-semibold text-slate-700">{data.cong.w}/{data.cong.std}</span>
+                    <span className="text-slate-600">Số ngày công</span>
+                    <span className="font-bold text-slate-900 tabular-nums">{data.cong.w}/{data.cong.std}</span>
                   </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-slate-500">Số ngày nghỉ</span>
-                    <span className="font-semibold text-rose-600">{data.cong.off} ngày</span>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-slate-600">Số ngày nghỉ</span>
+                    <span className="font-bold text-danger-600 tabular-nums">{data.cong.off} ngày</span>
                   </div>
                   {Array.isArray(data.off) && data.off.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-50 flex flex-wrap gap-1.5">
+                    <div className="mt-2.5 pt-2.5 border-t border-slate-200 flex flex-wrap gap-1.5">
                       {data.off.map((o, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 text-[11px] bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded-lg font-medium">{o.d} · {o.s}</span>
+                        <span key={i} className="e-badge e-badge-sm e-tone-rose">{o.d} · {o.s}</span>
                       ))}
                     </div>
                   )}
@@ -237,13 +245,13 @@ const PayslipViewPage = () => {
 
             {/* Chi tiết tăng ca theo ngày */}
             {Array.isArray(data.ot) && data.ot.length > 0 && (
-              <div className="mt-4">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Chi tiết tăng ca ({data.ot.length} ngày)</div>
-                <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+              <div className="e-card e-card-pad">
+                <div className="e-caption mb-3">Chi tiết tăng ca ({data.ot.length} ngày)</div>
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                   {data.ot.map((o, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
-                      <div className="text-slate-600">{o.d}</div>
-                      <div className="text-slate-400 text-[11px]">{o.h}h · {o.r}</div>
+                    <div key={i} className="flex items-center justify-between px-3.5 py-2.5 text-[14px] gap-2">
+                      <div className="text-slate-700">{o.d}</div>
+                      <div className="text-slate-400 text-[12px]">{o.h}h · {o.r}</div>
                       <div className="font-semibold text-teal-700 tabular-nums shrink-0">{o.a}</div>
                     </div>
                   ))}
@@ -251,12 +259,12 @@ const PayslipViewPage = () => {
               </div>
             )}
 
-            <div className="mt-4 bg-teal-50 border border-teal-100 rounded-xl p-4 flex items-center justify-between">
-              <span className="font-bold text-slate-700">THỰC NHẬN</span>
-              <span className="text-2xl font-bold text-teal-700 tabular-nums">{data.net}</span>
-            </div>
-            <p className="text-xs text-slate-400 text-center mt-4">Nội dung được mã hoá đầu cuối · PK Dr Tuấn Hùng</p>
+          {/* Thực nhận */}
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 to-[#EAF7F7] px-5 py-5 sm:px-6 sm:py-6 shadow-soft">
+            <span className="flex items-center gap-2 text-[18px] sm:text-[20px] font-bold text-teal-900"><Wallet className="w-6 h-6 text-teal-700" /> Thực nhận</span>
+            <span className="text-[26px] sm:text-[32px] font-bold text-teal-800 tabular-nums">{data.net}</span>
           </div>
+          <p className="text-[12px] text-slate-400 text-center">Nội dung được mã hoá đầu cuối · PK Dr Tuấn Hùng</p>
         </div>
       </div>
     );
@@ -264,13 +272,13 @@ const PayslipViewPage = () => {
 
   // Nhập mã bảo mật
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-sm w-full">
-        <div className="w-14 h-14 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
-          <Lock className="w-7 h-7" />
+    <div className="min-h-screen flex items-center justify-center bg-[#F3F9F9] p-4">
+      <form onSubmit={handleSubmit} className="e-card p-8 max-w-sm w-full">
+        <div className="w-16 h-16 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center mx-auto mb-4 ring-8 ring-teal-50/50">
+          <Lock className="w-8 h-8" />
         </div>
-        <h1 className="text-lg font-bold text-slate-800 text-center">Phiếu lương bảo mật</h1>
-        <p className="text-sm text-slate-500 text-center mt-1 mb-5">Nhập mã bảo mật, sau đó chờ Admin duyệt để xem lương.</p>
+        <h1 className="text-[20px] font-bold text-slate-900 text-center">Phiếu lương bảo mật</h1>
+        <p className="text-[14px] text-slate-500 text-center mt-1.5 mb-6 leading-relaxed">Nhập mã bảo mật, sau đó chờ Admin duyệt để xem lương.</p>
         <input
           type="text"
           autoFocus
@@ -280,13 +288,13 @@ const PayslipViewPage = () => {
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Mã bảo mật"
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-400 outline-none text-center tracking-[0.3em] text-lg uppercase"
+          className="e-input h-12 text-center tracking-[0.3em] text-[18px] font-semibold uppercase"
         />
-        {error && <p className="text-sm text-rose-500 text-center mt-3 flex items-center justify-center gap-1"><AlertCircle className="w-4 h-4" /> {error}</p>}
+        {error && <p className="text-[13px] text-danger-600 text-center mt-3 flex items-center justify-center gap-1.5"><AlertCircle className="w-4 h-4" /> {error}</p>}
         <button
           type="submit"
           disabled={loading || !code.trim()}
-          className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white font-semibold shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+          className="e-btn e-btn-primary e-btn-lg e-btn-block mt-5"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gửi yêu cầu xem lương'}
         </button>

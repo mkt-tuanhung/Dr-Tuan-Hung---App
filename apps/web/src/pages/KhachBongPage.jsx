@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft, Wallet } from 'lucide-react';
+import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft, Wallet, UserX } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { phoneFor } from '@/lib/phoneMask';
@@ -18,10 +18,10 @@ const CARE_TABS = [
 ];
 
 const STATUS_STYLE = {
-  'Đang chăm sóc': 'bg-amber-100 text-amber-700 border-amber-200',
-  'Đã quay lại tư vấn': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Đã làm dịch vụ bên khác': 'bg-slate-100 text-slate-600 border-slate-200',
-  'Hủy hẳn': 'bg-red-100 text-red-700 border-red-200',
+  'Đang chăm sóc': 'e-tone-warning',
+  'Đã quay lại tư vấn': 'e-tone-info',
+  'Đã làm dịch vụ bên khác': 'e-tone-neutral',
+  'Hủy hẳn': 'e-tone-danger',
 };
 
 const QUICK_NOTES = [
@@ -212,13 +212,13 @@ const KhachBongPage = ({ isNested = false }) => {
         if (date !== currentDate) {
           currentDate = date;
           elements.push(
-            <div key={`date-${index}`} className="font-extrabold text-teal-700 text-[13px] mt-3 mb-1 uppercase tracking-wide border-b border-teal-100 pb-0.5 inline-block">
+            <div key={`date-${index}`} className="e-caption text-teal-700 mt-4 mb-1.5 first:mt-0">
               CẬP NHẬT {date} :
             </div>
           );
         }
       }
-      elements.push(<div key={`line-${index}`} className="mb-0.5">{line}</div>);
+      elements.push(<div key={`line-${index}`} className="pl-3 ml-[3px] border-l-2 border-teal-100 py-0.5">{line}</div>);
     });
     return elements;
   };
@@ -228,142 +228,155 @@ const KhachBongPage = ({ isNested = false }) => {
       {careApp ? (
         /* ===== TRANG CHĂM SÓC RIÊNG ===== */
         <form onSubmit={handleCareSubmit} className="max-w-3xl mx-auto space-y-4 pb-10">
-          <button type="button" onClick={() => setCareApp(null)} className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-semibold">
+          <button type="button" onClick={() => setCareApp(null)} className="e-btn e-btn-ghost e-btn-sm -ml-2">
             <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
           </button>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
-                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
+          <div className="e-card e-card-pad">
+            <div className="flex items-center gap-4">
+              <span className="e-avatar w-14 h-14 ring-4 ring-teal-50/70"><UserX className="w-6 h-6" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-[20px] font-bold text-slate-900 leading-tight truncate">{careApp.customer_name}</h2>
+                  <span className={`e-badge e-badge-sm ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
+                    {careApp.care_status || 'Đang chăm sóc'}
+                  </span>
+                </div>
+                <div className="text-[13px] text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
               </div>
-              <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
-                {careApp.care_status || 'Đang chăm sóc'}
-              </span>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm bg-slate-50 p-3 rounded-xl">
-              <div className="text-slate-500 text-xs">Lý do rớt</div>
-              <div className="font-semibold text-red-600 text-right">{careApp.notes || '—'}</div>
-              <div className="text-slate-500 text-xs">Telesale</div>
-              <div className="text-slate-700 text-right">{careApp.telesale?.full_name || 'N/A'}</div>
-              <div className="text-slate-500 text-xs">Sale</div>
-              <div className="text-slate-700 text-right">{careApp.sale?.full_name || 'N/A'}</div>
+            <div className="grid grid-cols-2 gap-2.5 mt-4">
+              <div className="e-subtle px-3 py-2.5 col-span-2">
+                <div className="e-kv-label">Lý do rớt</div>
+                <div className="e-kv-value whitespace-pre-line">{careApp.notes || '—'}</div>
+              </div>
+              <div className="e-subtle px-3 py-2.5 min-w-0">
+                <div className="e-kv-label">Telesale</div>
+                <div className="e-kv-value truncate">{careApp.telesale?.full_name || 'N/A'}</div>
+              </div>
+              <div className="e-subtle px-3 py-2.5 min-w-0">
+                <div className="e-kv-label">Sale</div>
+                <div className="e-kv-value truncate">{careApp.sale?.full_name || 'N/A'}</div>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
               <ConsultButton app={careApp} />
-              <button type="button" onClick={() => openRevert(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+              <button type="button" onClick={() => openRevert(careApp)} className="e-btn e-btn-secondary e-btn-sm">
                 <RotateCcw className="w-4 h-4" /> Quay lại lịch hẹn
               </button>
-              <button type="button" onClick={() => openDeposit(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200">
+              <button type="button" onClick={() => openDeposit(careApp)} className="e-btn e-btn-outline e-btn-sm">
                 <Wallet className="w-4 h-4" /> Chốt cọc
               </button>
-              <button type="button" onClick={() => openSurgery(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200">
+              <button type="button" onClick={() => openSurgery(careApp)} className="e-btn e-btn-primary e-btn-sm">
                 <ArrowUpCircle className="w-4 h-4" /> Chốt phẫu thuật
               </button>
             </div>
           </div>
 
           {/* Nhật ký CSKH */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký chăm sóc</h3>
-            <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
-              {careApp.care_notes ? renderNotes(careApp.care_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
+          <div className="e-card e-card-pad">
+            <h3 className="e-card-title mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký chăm sóc</h3>
+            <div className="text-[13.5px] leading-relaxed text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+              {careApp.care_notes ? renderNotes(careApp.care_notes) : <div className="text-[13px] text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
             </div>
           </div>
 
           {/* Thêm mốc */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-            <h3 className="font-bold text-slate-800">Thêm mốc chăm sóc</h3>
+          <div className="e-card e-card-pad space-y-4">
+            <h3 className="e-card-title">Thêm mốc chăm sóc</h3>
             <div>
-              <label className="block text-sm font-semibold mb-2 text-slate-600">Cập nhật trạng thái</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="e-label">Cập nhật trạng thái</label>
+              <div className="flex flex-wrap gap-1.5">
                 {CARE_TABS.filter(t => t.id !== 'all').map(t => (
                   <button key={t.id} type="button" onClick={() => setCareForm({ ...careForm, care_status: t.id })}
-                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${careForm.care_status === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                    className={`inline-flex items-center h-9 px-3.5 rounded-full border text-[13px] font-medium transition ${careForm.care_status === t.id ? STATUS_STYLE[t.id] + ' border-current font-semibold' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300 hover:text-teal-800'}`}>
                     {t.label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {QUICK_NOTES.map(q => (
                 <button key={q} type="button" onClick={() => addQuickNote(q)}
-                  className="px-3 py-1.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium border border-teal-100 hover:bg-teal-100">
+                  className="e-chip h-8 px-3 text-[12.5px]">
                   + {q}
                 </button>
               ))}
             </div>
-            <textarea rows={3} value={careForm.care_notes} onChange={e => setCareForm({ ...careForm, care_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
+            <textarea rows={3} value={careForm.care_notes} onChange={e => setCareForm({ ...careForm, care_notes: e.target.value })} className="e-textarea resize-none text-[14px] leading-relaxed" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
             <div className="flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
             </div>
           </div>
         </form>
       ) : (
         /* ===== DANH SÁCH ===== */
-        <div className="space-y-6 w-full">
+        <div className="space-y-4 w-full">
           {!isNested && (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-slate-500">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
+                <p className="e-page-desc">Chăm sóc khách hàng rớt và điều hướng trạng thái</p>
               </div>
-              <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold">{customers.length} Khách</div>
+              <div className="e-badge e-tone-danger">{customers.length} Khách</div>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="e-toolbar">
             {CARE_TABS.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                className={`e-chip ${activeTab === tab.id ? 'e-chip-active' : 'bg-white'}`}>
                 {tab.label}
               </button>
             ))}
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-red-200 border-t-red-500 rounded-full animate-spin" /></div>
+            <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">Không có khách hàng nào trong mục này</div>
+            <div className="e-card e-empty py-16 text-[13px] font-medium text-slate-400">Không có khách hàng nào trong mục này</div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {Object.entries(groupedCustomers).map(([date, apps]) => (
-                <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
-                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                    <Calendar className="w-5 h-5 text-red-600" />
-                    <h3 className="font-bold text-red-800 text-lg">Cập nhật: {date}</h3>
-                    <span className="px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
+                <section key={date}>
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <Calendar className="w-4 h-4 text-teal-600 shrink-0" />
+                    <h3 className="text-[14px] font-semibold text-slate-800 tabular-nums">Cập nhật: {date}</h3>
+                    <span className="e-badge e-badge-sm e-tone-neutral">{apps.length} khách</span>
+                    <span className="flex-1 h-px bg-slate-200" />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
                     {apps.map(app => {
                       const st = app.care_status || 'Đang chăm sóc';
                       const noteCount = app.care_notes ? app.care_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                       return (
                         <button key={app.id} type="button" onClick={() => openCare(app)}
-                          className="text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-red-400 hover:shadow-md transition-all">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-slate-800 text-lg truncate">{app.customer_name}</h4>
-                              <div className="text-slate-500 text-sm mt-0.5 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</div>
+                          className="w-full text-left rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex flex-col gap-2.5 transition hover:border-teal-100 hover:shadow-card focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-teal-500/25">
+                          {/* Đầu thẻ: avatar + tên + SĐT */}
+                          <div className="flex items-start gap-3 w-full">
+                            <span className="e-avatar w-12 h-12 bg-danger-50 text-danger-600"><UserX className="w-5 h-5" /></span>
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <h4 className="text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</h4>
+                              <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 truncate"><Phone className="w-3.5 h-3.5 shrink-0" /> {phoneFor(app.phone, profile)}</div>
                             </div>
-                            <span className={`font-semibold px-2 py-1 rounded-lg text-xs border whitespace-nowrap shrink-0 ${STATUS_STYLE[st]}`}>{st}</span>
+                            <span className={`e-badge e-badge-sm shrink-0 ${STATUS_STYLE[st]}`}>{st}</span>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 text-sm bg-slate-50 p-3 rounded-xl">
-                            <div className="text-slate-500 text-xs">Lý do rớt:</div>
-                            <div className="font-semibold text-red-600 text-right truncate">{app.notes || 'Không rõ'}</div>
-                            <div className="text-slate-500 text-xs">Telesale:</div>
-                            <div className="text-slate-700 text-right truncate">{app.telesale?.full_name || 'N/A'}</div>
+                          {/* Lý do rớt */}
+                          <div className="e-subtle px-3 py-2 w-full min-w-0">
+                            <div className="e-kv-label">Lý do rớt:</div>
+                            <div className="text-[13px] font-medium text-slate-700 truncate">{app.notes || 'Không rõ'}</div>
                           </div>
-                          <div className="mt-auto flex items-center justify-between pt-1 text-sm">
-                            <span className="text-slate-400 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {noteCount} mốc</span>
-                            <span className="text-red-600 font-semibold">Mở nhật ký →</span>
+                          {/* Chân thẻ */}
+                          <div className="mt-auto flex items-center justify-between gap-2 w-full pt-2 border-t border-dashed border-slate-200 text-[11.5px] text-slate-400">
+                            <span className="truncate"><span className="text-slate-400">Telesale:</span> <span className="text-slate-600 font-medium">{app.telesale?.full_name || 'N/A'}</span></span>
+                            <span className="flex items-center gap-1 whitespace-nowrap"><MessageCircle className="w-3 h-3" /> {noteCount} mốc</span>
                           </div>
+                          <span className="text-[12.5px] text-teal-700 font-semibold">Mở nhật ký →</span>
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               ))}
             </div>
           )}
@@ -372,30 +385,30 @@ const KhachBongPage = ({ isNested = false }) => {
 
       {/* Modal: Chuyển lại Lịch Hẹn */}
       {showRevertModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleRevertSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
-              <h3 className="font-bold text-blue-800">Đặt Lịch Hẹn Mới: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowRevertModal(false)}><X className="w-5 h-5 text-blue-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleRevertSubmit} className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Đặt Lịch Hẹn Mới: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowRevertModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="e-modal-body space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày hẹn</label>
-                  <input required type="date" value={revertForm.appointment_date} onChange={e => setRevertForm({ ...revertForm, appointment_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" />
+                  <label className="e-label">Ngày hẹn</label>
+                  <input required type="date" value={revertForm.appointment_date} onChange={e => setRevertForm({ ...revertForm, appointment_date: e.target.value })} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Giờ hẹn</label>
-                  <input required type="time" value={revertForm.appointment_time} onChange={e => setRevertForm({ ...revertForm, appointment_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" />
+                  <label className="e-label">Giờ hẹn</label>
+                  <input required type="time" value={revertForm.appointment_time} onChange={e => setRevertForm({ ...revertForm, appointment_time: e.target.value })} className="e-input" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Ghi chú cho ca hẹn này</label>
-                <input required type="text" value={revertForm.notes} onChange={e => setRevertForm({ ...revertForm, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500" placeholder="Khách hẹn tới kiểm tra lại..." />
+                <label className="e-label">Ghi chú cho ca hẹn này</label>
+                <input required type="text" value={revertForm.notes} onChange={e => setRevertForm({ ...revertForm, notes: e.target.value })} className="e-input" placeholder="Khách hẹn tới kiểm tra lại..." />
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700">{saving ? 'Đang lưu...' : 'Xác nhận tạo lịch'}</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Xác nhận tạo lịch'}</button>
             </div>
           </form>
         </div>
@@ -403,42 +416,42 @@ const KhachBongPage = ({ isNested = false }) => {
 
       {/* Modal: Chốt Phẫu Thuật */}
       {showSurgeryModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSurgerySubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
-              <h3 className="font-bold text-teal-800">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSurgerySubmit} className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowSurgeryModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
-                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Ngày phẫu thuật</label>
+                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
-                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({ ...surgeryForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Nâng mũi..." />
+                  <label className="e-label">Dịch vụ thực tế làm</label>
+                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({ ...surgeryForm, service: e.target.value })} className="e-input" placeholder="Nâng mũi..." />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Nhóm dịch vụ</label>
-                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({ ...surgeryForm, service_group: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Nhóm dịch vụ</label>
+                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({ ...surgeryForm, service_group: e.target.value })} className="e-input">
                     <option value="Hàm mặt">Hàm mặt</option>
                     <option value="Body">Body</option>
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Loại phẫu thuật</label>
-                  <select value={surgeryForm.surgery_type} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <label className="e-label">Loại phẫu thuật</label>
+                  <select value={surgeryForm.surgery_type} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_type: e.target.value })} className="e-input">
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
                     <option value="Đại phẫu">Đại phẫu</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Nguồn khách</label>
-                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Nguồn khách</label>
+                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="e-input">
                     <option value="Ads">Ads</option>
                     <option value="Seeding">Seeding</option>
                     <option value="CTV">CTV</option>
@@ -447,26 +460,26 @@ const KhachBongPage = ({ isNested = false }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Tệp khách</label>
-                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({ ...surgeryForm, customer_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Tệp khách</label>
+                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({ ...surgeryForm, customer_type: e.target.value })} className="e-input">
                     <option value="Mới">Khách Mới</option>
                     <option value="Cũ">Khách Cũ</option>
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Doanh thu (VNĐ)</label>
-                  <MoneyInput required value={surgeryForm.revenue} onChange={v => setSurgeryForm({ ...surgeryForm, revenue: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
+                  <label className="e-label">Doanh thu (VNĐ)</label>
+                  <MoneyInput required value={surgeryForm.revenue} onChange={v => setSurgeryForm({ ...surgeryForm, revenue: v })} className="e-input" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Upsale (VNĐ)</label>
-                  <MoneyInput value={surgeryForm.upsale_revenue} onChange={v => setSurgeryForm({ ...surgeryForm, upsale_revenue: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
+                  <label className="e-label">Upsale (VNĐ)</label>
+                  <MoneyInput value={surgeryForm.upsale_revenue} onChange={v => setSurgeryForm({ ...surgeryForm, upsale_revenue: v })} className="e-input" placeholder="0" />
                 </div>
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
             </div>
           </form>
         </div>
@@ -474,44 +487,44 @@ const KhachBongPage = ({ isNested = false }) => {
 
       {/* Modal: Chốt Cọc */}
       {showDepositModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleDepositSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50">
-              <h3 className="font-bold text-indigo-800 flex items-center gap-2"><Wallet className="w-5 h-5" /> Chốt cọc: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowDepositModal(false)}><X className="w-5 h-5 text-indigo-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleDepositSubmit} className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title flex items-center gap-2"><Wallet className="w-5 h-5 text-teal-600" /> Chốt cọc: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowDepositModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Số tiền cọc (VNĐ)</label>
-                  <MoneyInput required value={depositForm.deposit_amount} onChange={v => setDepositForm({ ...depositForm, deposit_amount: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: 5.000.000" />
+                  <label className="e-label">Số tiền cọc (VNĐ)</label>
+                  <MoneyInput required value={depositForm.deposit_amount} onChange={v => setDepositForm({ ...depositForm, deposit_amount: v })} className="e-input" placeholder="VD: 5.000.000" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày cọc</label>
-                  <input required type="date" value={depositForm.deposit_date} onChange={e => setDepositForm({ ...depositForm, deposit_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                  <label className="e-label">Ngày cọc</label>
+                  <input required type="date" value={depositForm.deposit_date} onChange={e => setDepositForm({ ...depositForm, deposit_date: e.target.value })} className="e-input" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Dịch vụ dự kiến</label>
-                  <input type="text" value={depositForm.service} onChange={e => setDepositForm({ ...depositForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="Nâng mũi..." />
+                  <label className="e-label">Dịch vụ dự kiến</label>
+                  <input type="text" value={depositForm.service} onChange={e => setDepositForm({ ...depositForm, service: e.target.value })} className="e-input" placeholder="Nâng mũi..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày dự kiến PT (tuỳ chọn)</label>
-                  <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                  <label className="e-label">Ngày dự kiến PT (tuỳ chọn)</label>
+                  <input type="date" value={depositForm.expected_surgery_date} onChange={e => setDepositForm({ ...depositForm, expected_surgery_date: e.target.value })} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Giờ dự kiến PT (tuỳ chọn)</label>
-                  <input type="time" value={depositForm.surgery_time} onChange={e => setDepositForm({ ...depositForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" />
+                  <label className="e-label">Giờ dự kiến PT (tuỳ chọn)</label>
+                  <input type="time" value={depositForm.surgery_time} onChange={e => setDepositForm({ ...depositForm, surgery_time: e.target.value })} className="e-input" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Ghi chú (tuỳ chọn)</label>
-                <input type="text" value={depositForm.notes} onChange={e => setDepositForm({ ...depositForm, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-indigo-500" placeholder="VD: cọc giữ suất tuần sau làm" />
+                <label className="e-label">Ghi chú (tuỳ chọn)</label>
+                <input type="text" value={depositForm.notes} onChange={e => setDepositForm({ ...depositForm, notes: e.target.value })} className="e-input" placeholder="VD: cọc giữ suất tuần sau làm" />
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700">{saving ? 'Đang lưu...' : 'Chốt cọc & chuyển sang Khách cọc'}</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Chốt cọc & chuyển sang Khách cọc'}</button>
             </div>
           </form>
         </div>

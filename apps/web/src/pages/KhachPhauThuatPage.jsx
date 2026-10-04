@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import MoDoiTacPage from '@/pages/MoDoiTacPage.jsx';
-import { Handshake } from 'lucide-react';
+import { Handshake, Stethoscope } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
@@ -302,163 +302,161 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   }, {});
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Tabs module: Khách nội bộ | Mổ đối tác */}
-      <div className="flex gap-2 border-b border-slate-200">
-        <button onClick={() => setModuleTab('noi_bo')} className={`px-4 py-2.5 font-semibold text-sm border-b-2 -mb-px transition-colors ${moduleTab === 'noi_bo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Khách phòng khám</button>
-        <button onClick={() => setModuleTab('doi_tac')} className={`px-4 py-2.5 font-semibold text-sm border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${moduleTab === 'doi_tac' ? 'border-amber-600 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}><Handshake className="w-4 h-4" /> Mổ Đối Tác</button>
+      <div className="e-tabs">
+        <button onClick={() => setModuleTab('noi_bo')} className={`e-tab ${moduleTab === 'noi_bo' ? 'e-tab-active' : ''}`}><Stethoscope /> Khách phòng khám</button>
+        <button onClick={() => setModuleTab('doi_tac')} className={`e-tab ${moduleTab === 'doi_tac' ? 'e-tab-active' : ''}`}><Handshake /> Mổ Đối Tác</button>
       </div>
 
       {moduleTab === 'doi_tac' && <MoDoiTacPage />}
 
       {moduleTab === 'noi_bo' && (<>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <p className="text-[13px] text-slate-500">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
-        </div>
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-72 shrink-0">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="e-page-desc">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="e-search w-full sm:w-72 shrink-0">
+            <Search />
             <input 
               type="text" 
               placeholder="Tìm tên KH hoặc số điện thoại..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+              className="w-full"
             />
           </div>
-          <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-xl font-bold whitespace-nowrap hidden sm:block">
+          <div className="e-badge e-tone-brand h-10 px-4 rounded-xl tabular-nums hidden sm:inline-flex">
             {filteredCustomers.length} Khách
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin" /></div>
+        <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : customers.length === 0 ? (
-         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
+         <div className="e-card py-16 text-center text-[13px] text-slate-400">
             Không có khách phẫu thuật nào
          </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(groupedCustomers).map(([date, apps]) => (
-            <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                <CalendarIcon className="w-5 h-5 text-purple-600" />
-                <h3 className="font-bold text-purple-800 text-lg">Ngày mổ: {date}</h3>
-                <span className="px-2.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full ml-auto">{apps.length} ca</span>
+            <section key={date} className="space-y-3">
+              {/* Tiêu đề nhóm ngày mổ */}
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 grid place-items-center shrink-0"><CalendarIcon className="w-[18px] h-[18px]" /></span>
+                <div className="min-w-0">
+                  <div className="e-caption">Ngày mổ</div>
+                  <h3 className="text-[15px] font-semibold text-slate-900 tabular-nums leading-tight">{date}</h3>
+                </div>
+                <span className="flex-1 h-px bg-slate-200" />
+                <span className="e-badge e-badge-sm e-tone-brand tabular-nums shrink-0">{apps.length} ca</span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {apps.map(app => {
                   const isAssigned = app.hau_phau_id;
                   return (
-                    <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col hover:border-purple-300 transition-colors">
-                      <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-slate-800 text-lg">{app.customer_name}</h4>
-                            {isAdmin && (
-                              <button onClick={() => openModal(app, 'lich_mo')} title="Sửa ngày & giờ mổ"
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg px-2 py-1 transition-colors">
-                                <Edit className="w-3 h-3" /> Sửa lịch
-                              </button>
-                            )}
-                          </div>
-                          <div className="text-slate-500 text-sm mt-0.5">{app.service}</div>
-                          {app.surgery_time && (
-                            <div className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">
-                              <Clock className="w-3 h-3" /> {app.surgery_time}
-                            </div>
-                          )}
+                    <div key={app.id} className="e-card p-4 flex flex-col gap-3.5 transition hover:border-teal-100 hover:shadow-float">
+                      {/* Đầu thẻ: avatar + tên + dịch vụ | doanh thu */}
+                      <div className="flex items-start gap-3">
+                        <span className="e-avatar w-11 h-11 text-[15px] before:content-[attr(data-av)]" data-av={(app.customer_name || '?').trim().split(/\s+/).pop().charAt(0).toUpperCase()} />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-[15px] font-semibold text-slate-900 leading-snug truncate">{app.customer_name}</h4>
+                          <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{app.service}</div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-xs text-slate-500 mb-0.5">Doanh thu</div>
-                          <div className="text-sm font-bold text-purple-600">{Number(app.revenue || 0).toLocaleString('vi-VN')} đ</div>
+                        <div className="text-right shrink-0">
+                          <div className="e-kv-label">Doanh thu</div>
+                          <div className="text-[15px] font-bold text-slate-900 tabular-nums">{Number(app.revenue || 0).toLocaleString('vi-VN')} đ</div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 mb-3 text-xs bg-slate-50 rounded-xl px-3 py-2">
+                      {/* Nhãn trạng thái: giờ mổ · phụ mổ · trực đêm */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {app.surgery_time && (
+                          <span className="e-badge e-badge-sm e-tone-info tabular-nums">
+                            <Clock className="w-3 h-3" /> {app.surgery_time}
+                          </span>
+                        )}
+                        <span className={`e-badge e-badge-sm ${app.phu_mo_1_id ? 'e-tone-success' : 'e-tone-neutral'}`}>
+                          Phụ mổ {app.phu_mo_1_id ? <CheckCircle className="w-3.5 h-3.5" /> : <span className="text-slate-400">-</span>}
+                        </span>
+                        <span className={`e-badge e-badge-sm ${(app.truc_dem_id || app.truc_dem_id_2) ? 'e-tone-success' : 'e-tone-neutral'}`}>
+                          Trực đêm {(app.truc_dem_id || app.truc_dem_id_2) ? <CheckCircle className="w-3.5 h-3.5" /> : <span className="text-slate-400">-</span>}
+                        </span>
+                        {isAdmin && (
+                          <button onClick={() => openModal(app, 'lich_mo')} title="Sửa ngày & giờ mổ"
+                            className="ml-auto inline-flex items-center gap-1 h-[22px] px-2 rounded-full text-[11px] font-semibold text-teal-800 hover:bg-teal-50 transition">
+                            <Edit className="w-3 h-3" /> Sửa lịch
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Người phụ trách */}
+                      <dl className="e-subtle grid grid-cols-2 gap-3 px-3 py-2.5">
                         <div className="min-w-0">
-                          <div className="text-[10px] text-slate-400 uppercase font-semibold">Telesale</div>
-                          <div className="font-semibold text-blue-700 truncate">{app.telesale?.full_name || '—'}</div>
+                          <dt className="e-kv-label">Telesale</dt>
+                          <dd className="text-[13px] font-semibold text-slate-700 truncate">{app.telesale?.full_name || '—'}</dd>
                         </div>
-                        <div className="min-w-0 text-right">
-                          <div className="text-[10px] text-slate-400 uppercase font-semibold">Sale Offline</div>
-                          <div className="font-semibold text-violet-700 truncate">{app.sale?.full_name || '—'}</div>
+                        <div className="min-w-0">
+                          <dt className="e-kv-label">Sale Offline</dt>
+                          <dd className="text-[13px] font-semibold text-slate-700 truncate">{app.sale?.full_name || '—'}</dd>
                         </div>
-                      </div>
+                      </dl>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
-                        <div className="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50 flex flex-col items-center justify-center text-center">
-                          <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Phụ mổ</span>
-                          {app.phu_mo_1_id ? <CheckCircle className="w-4 h-4 text-blue-600" /> : <span className="text-xs text-slate-400">-</span>}
-                        </div>
-                        <div className="bg-orange-50/50 p-2 rounded-xl border border-orange-100/50 flex flex-col items-center justify-center text-center">
-                          <span className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Trực đêm</span>
-                          {(app.truc_dem_id || app.truc_dem_id_2) ? <CheckCircle className="w-4 h-4 text-orange-600" /> : <span className="text-xs text-slate-400">-</span>}
-                        </div>
-                      </div>
-
-                      <div className="mt-auto flex flex-col gap-2 pt-2">
-                        <div className="flex gap-2">
+                      {/* Hành động: 1 nút chính + các nút phụ */}
+                      <div className="mt-auto pt-3 border-t border-slate-100 space-y-2">
+                        <div className="flex gap-2 empty:hidden">
                           {isAssigned ? (
                             <>
                               {(profile?.role === 'admin' || (profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận')) && (
-                                <button onClick={() => openModal(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-colors border border-slate-200">
+                                <button onClick={() => openModal(app)} className="e-btn e-btn-secondary e-btn-sm">
                                   <Edit className="w-3.5 h-3.5" /> Sửa ca
                                 </button>
                               )}
-                              <button onClick={() => handleGoToHauPhau(app)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold rounded-xl transition-colors border border-teal-200">
+                              <button onClick={() => handleGoToHauPhau(app)} className="e-btn e-btn-primary e-btn-sm flex-1">
                                 <ClipboardList className="w-3.5 h-3.5" /> Hậu phẫu
                               </button>
                             </>
                           ) : (
                             (profile?.role === 'admin' || (profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận')) && (
-                              <button onClick={() => openModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-bold rounded-xl transition-colors border border-purple-200 shadow-sm">
+                              <button onClick={() => openModal(app)} className="e-btn e-btn-primary e-btn-sm flex-1">
                                 <ClipboardList className="w-4 h-4" /> Đăng ký Phân công
                               </button>
                             )
                           )}
                         </div>
-                        
-                        {['admin', 'accountant', 'cskh'].includes(profile?.role) && (
-                          <div className="pt-1">
+
+                        <div className="flex flex-wrap gap-2 empty:hidden">
+                          {['admin', 'accountant', 'cskh'].includes(profile?.role) && (<>
                             {app.hospital_fee ? (
-                              <div className="w-full flex justify-center items-center py-2 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl border border-blue-200">
-                                <CheckCircle className="w-4 h-4 mr-1.5" /> Đã nhập viện phí
-                              </div>
+                              <span className="e-badge e-tone-success h-[34px] rounded-[10px] justify-center grow basis-[120px]">
+                                <CheckCircle className="w-4 h-4" /> Đã nhập viện phí
+                              </span>
                             ) : (
-                              <button onClick={() => openFeeModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm">
-                                <Banknote className="w-4 h-4" /> Nhập viện phí
+                              <button onClick={() => openFeeModal(app)} className="e-btn e-btn-secondary e-btn-sm grow basis-[120px]">
+                                <Banknote className="w-4 h-4 text-teal-600" /> Nhập viện phí
                               </button>
                             )}
-                          </div>
-                        )}
-
-                        <div className="pt-1">
-                          <ConsultButton app={app} className="w-full flex justify-center items-center gap-1.5 py-2 bg-teal-50 text-teal-700 text-xs font-bold rounded-xl border border-teal-200 hover:bg-teal-100 transition-colors" />
-                        </div>
-
-                        {['admin', 'accountant', 'dieu_duong', 'cskh'].includes(profile?.role) && (
-                          <div className="pt-1">
+                          </>)}
+                          <ConsultButton app={app} className="e-btn e-btn-secondary e-btn-sm grow basis-[120px]" />
+                          {['admin', 'accountant', 'dieu_duong', 'cskh'].includes(profile?.role) && (<>
                             {app.has_materials ? (
-                              <button onClick={() => openMaterialModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
-                                <PackageOpen className="w-4 h-4 text-indigo-500" /> Vật tư tiêu hao (Đã xuất)
+                              <button onClick={() => openMaterialModal(app)} className="e-btn e-btn-secondary e-btn-sm grow basis-[120px]">
+                                <PackageOpen className="w-4 h-4 text-success-500" /> Vật tư tiêu hao (Đã xuất)
                               </button>
                             ) : (
-                              <button onClick={() => openMaterialModal(app)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-orange-50 text-orange-700 text-xs font-bold rounded-xl border border-orange-200 hover:bg-orange-100 transition-colors shadow-sm">
-                                <PackageOpen className="w-4 h-4" /> Báo cáo Vật tư
+                              <button onClick={() => openMaterialModal(app)} className="e-btn e-btn-secondary e-btn-sm grow basis-[120px]">
+                                <PackageOpen className="w-4 h-4 text-warning-500" /> Báo cáo Vật tư
                               </button>
                             )}
-                          </div>
-                        )}
+                          </>)}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
@@ -466,56 +464,56 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
       {/* Modal Phân công Điều dưỡng */}
       {showNurseModal && selectedApp && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSave} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
-              <h3 className="font-bold text-slate-800">Phân công điều dưỡng: {selectedApp.customer_name}</h3>
-              <button type="button" onClick={() => setShowNurseModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSave} className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Phân công điều dưỡng: {selectedApp.customer_name}</h3>
+              <button type="button" onClick={() => setShowNurseModal(false)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>
             </div>
             
-            <div className="flex bg-white border-b shrink-0 px-6 pt-2">
-              <button type="button" onClick={() => setForm({...form, activeTab: 'phu_mo'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'phu_mo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Phụ mổ</button>
-              <button type="button" onClick={() => setForm({...form, activeTab: 'truc_dem'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'truc_dem' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Trực đêm</button>
-              <button type="button" onClick={() => setForm({...form, activeTab: 'hau_phau'})} className={`px-4 py-3 font-semibold text-sm border-b-2 ${form.activeTab === 'hau_phau' ? 'border-teal-600 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Chăm hậu phẫu</button>
+            <div className="e-tabs shrink-0 px-3">
+              <button type="button" onClick={() => setForm({...form, activeTab: 'phu_mo'})} className={`e-tab ${form.activeTab === 'phu_mo' ? 'e-tab-active' : ''}`}>Phụ mổ</button>
+              <button type="button" onClick={() => setForm({...form, activeTab: 'truc_dem'})} className={`e-tab ${form.activeTab === 'truc_dem' ? 'e-tab-active' : ''}`}>Trực đêm</button>
+              <button type="button" onClick={() => setForm({...form, activeTab: 'hau_phau'})} className={`e-tab ${form.activeTab === 'hau_phau' ? 'e-tab-active' : ''}`}>Chăm hậu phẫu</button>
               {isAdmin && (
-                <button type="button" onClick={() => setForm({...form, activeTab: 'lich_mo'})} className={`px-4 py-3 font-semibold text-sm border-b-2 whitespace-nowrap ${form.activeTab === 'lich_mo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Ngày giờ mổ</button>
+                <button type="button" onClick={() => setForm({...form, activeTab: 'lich_mo'})} className={`e-tab ${form.activeTab === 'lich_mo' ? 'e-tab-active' : ''}`}>Ngày giờ mổ</button>
               )}
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="e-modal-body overflow-y-auto space-y-4 flex-1">
               {form.activeTab === 'phu_mo' && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Loại phẫu thuật</label>
-                    <div className="w-full border bg-slate-50 text-slate-700 p-2.5 rounded-xl font-medium">
+                    <label className="e-label">Loại phẫu thuật</label>
+                    <div className="e-subtle h-10 px-3 flex items-center text-[14px] font-medium text-slate-700">
                       {selectedApp?.surgery_type || 'Tiểu phẫu'}
                     </div>
-                    <p className="mt-1 text-xs text-slate-400">Theo lịch hẹn / đánh giá đã chọn — không sửa ở đây</p>
+                    <p className="mt-1.5 text-[12px] text-slate-400">Theo lịch hẹn / đánh giá đã chọn — không sửa ở đây</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Bác sĩ mổ</label>
-                    <select value={form.bac_si_id} onChange={e => setForm({...form, bac_si_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <label className="e-label">Bác sĩ mổ</label>
+                    <select value={form.bac_si_id} onChange={e => setForm({...form, bac_si_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
                       {nurses.filter(n => n.role === 'bac_si' || n.role_2 === 'bac_si' || n.role === 'admin').map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Phụ mổ 1</label>
-                    <select value={form.phu_mo_1_id} onChange={e => setForm({...form, phu_mo_1_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <label className="e-label">Phụ mổ 1</label>
+                    <select value={form.phu_mo_1_id} onChange={e => setForm({...form, phu_mo_1_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
                       {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Phụ mổ 2</label>
-                    <select value={form.phu_mo_2_id} onChange={e => setForm({...form, phu_mo_2_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <label className="e-label">Phụ mổ 2</label>
+                    <select value={form.phu_mo_2_id} onChange={e => setForm({...form, phu_mo_2_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
                       {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Phụ mổ 3</label>
-                    <select value={form.phu_mo_3_id} onChange={e => setForm({...form, phu_mo_3_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <label className="e-label">Phụ mổ 3</label>
+                    <select value={form.phu_mo_3_id} onChange={e => setForm({...form, phu_mo_3_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
                       {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
@@ -525,15 +523,15 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               {form.activeTab === 'truc_dem' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Người trực đêm 1</label>
-                    <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <label className="e-label">Người trực đêm 1</label>
+                    <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
                       {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Người trực đêm 2 <span className="text-slate-400 font-normal">(nếu có)</span></label>
-                    <select value={form.truc_dem_id_2} onChange={e => setForm({...form, truc_dem_id_2: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500">
+                    <label className="e-label">Người trực đêm 2 <span className="text-slate-400 font-normal">(nếu có)</span></label>
+                    <select value={form.truc_dem_id_2} onChange={e => setForm({...form, truc_dem_id_2: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
                       {nurses.filter(n => n.id !== form.truc_dem_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
@@ -542,8 +540,8 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               )}
               {form.activeTab === 'hau_phau' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Người chăm sóc hậu phẫu</label>
-                  <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Người chăm sóc hậu phẫu</label>
+                  <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="e-input">
                     <option value="">-- Trống --</option>
                     {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                   </select>
@@ -551,24 +549,24 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
               )}
               {form.activeTab === 'lich_mo' && isAdmin && (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-2 rounded-xl bg-purple-50 border border-purple-100 px-3 py-2 text-xs text-purple-700">
-                    <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div className="e-subtle flex items-start gap-2 px-3 py-2.5 text-[12.5px] text-slate-600">
+                    <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-teal-600" />
                     <span>Chỉ quản trị viên được đổi ngày &amp; giờ mổ. Đổi ngày sẽ tự chuyển ca sang nhóm ngày mới.</span>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Ngày mổ</label>
-                    <input type="date" value={form.surgery_date} onChange={e => setForm({...form, surgery_date: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500" />
+                    <label className="e-label">Ngày mổ</label>
+                    <input type="date" value={form.surgery_date} onChange={e => setForm({...form, surgery_date: e.target.value})} className="e-input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Giờ mổ <span className="text-slate-400 font-normal">(nếu có)</span></label>
-                    <input type="time" value={form.surgery_time} onChange={e => setForm({...form, surgery_time: e.target.value})} className="w-full border p-2.5 rounded-xl outline-none focus:border-purple-500" />
+                    <label className="e-label">Giờ mổ <span className="text-slate-400 font-normal">(nếu có)</span></label>
+                    <input type="time" value={form.surgery_time} onChange={e => setForm({...form, surgery_time: e.target.value})} className="e-input" />
                   </div>
                 </div>
               )}
             </div>
             
-            <div className="p-6 bg-slate-50 shrink-0 rounded-b-2xl">
-              <button type="submit" disabled={saving} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">
+            <div className="e-modal-footer shrink-0">
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary w-full sm:w-auto">
                 {saving ? 'Đang lưu...' : 'Lưu phân công'}
               </button>
             </div>
@@ -578,29 +576,29 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
       {/* Modal Nhập Viện Phí */}
       {showFeeModal && selectedApp && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50 shrink-0">
-              <h3 className="font-bold text-blue-800">Nhập viện phí</h3>
-              <button type="button" onClick={() => setShowFeeModal(false)}><X className="w-5 h-5 text-blue-400" /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-sm overflow-hidden flex flex-col">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Nhập viện phí</h3>
+              <button type="button" onClick={() => setShowFeeModal(false)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="e-modal-body space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Số tiền (VNĐ)</label>
-                <input type="text" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: formatCurrencyInput(e.target.value)})} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-700 text-lg" placeholder="1.000.000" />
+                <label className="e-label">Số tiền (VNĐ)</label>
+                <input type="text" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: formatCurrencyInput(e.target.value)})} className="e-input h-12 text-[18px] font-bold tabular-nums" placeholder="1.000.000" />
               </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'transfer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-slate-500 border-slate-200'}`}>Chuyển khoản</button>
-                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`flex-1 py-2 border rounded-xl font-bold text-sm ${feeForm.method === 'cash' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'text-slate-500 border-slate-200'}`}>Tiền mặt</button>
+              <div className="e-seg w-full">
+                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'transfer'})} className={`e-seg-item flex-1 ${feeForm.method === 'transfer' ? 'e-seg-active' : ''}`}>Chuyển khoản</button>
+                <button type="button" onClick={() => setFeeForm({...feeForm, method: 'cash'})} className={`e-seg-item flex-1 ${feeForm.method === 'cash' ? 'e-seg-active' : ''}`}>Tiền mặt</button>
               </div>
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-blue-400">
-                {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : (feeForm.proof ? <img src={feeForm.proof} className="max-h-20 mx-auto" /> : 'Tải bill lên')}
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-[13px] font-medium text-slate-400 hover:border-teal-300 hover:text-teal-700 transition">
+                {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : (feeForm.proof ? <img src={feeForm.proof} className="max-h-20 mx-auto rounded-lg" /> : 'Tải bill lên')}
               </button>
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
             </div>
-            <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setShowFeeModal(false)} className="px-6 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Đóng</button>
-              <button type="button" onClick={handleSaveFee} disabled={saving || uploadingImage} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-50">Lưu Viện Phí</button>
+            <div className="e-modal-footer shrink-0">
+              <button type="button" onClick={() => setShowFeeModal(false)} className="e-btn e-btn-secondary">Đóng</button>
+              <button type="button" onClick={handleSaveFee} disabled={saving || uploadingImage} className="e-btn e-btn-primary">Lưu Viện Phí</button>
             </div>
           </div>
         </div>
@@ -608,26 +606,26 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
       {/* MODAL: VẬT TƯ TIÊU HAO */}
       {showMaterialModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-indigo-50 shrink-0">
-              <h3 className="font-bold text-indigo-800 flex items-center gap-2"><PackageOpen className="w-5 h-5"/> Báo cáo Vật tư tiêu hao</h3>
-              <button onClick={() => setShowMaterialModal(false)}><X className="w-5 h-5 text-indigo-400 hover:text-indigo-600" /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title flex items-center gap-2"><PackageOpen className="w-5 h-5 text-teal-600"/> Báo cáo Vật tư tiêu hao</h3>
+              <button onClick={() => setShowMaterialModal(false)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-6">
-              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                <div className="font-bold text-slate-800">{selectedApp?.customer_name}</div>
-                <div className="text-sm text-slate-500">Phẫu thuật: {selectedApp?.surgery_type}</div>
+            <div className="e-modal-body overflow-y-auto space-y-5">
+              <div className="e-subtle px-4 py-3">
+                <div className="text-[15px] font-semibold text-slate-900">{selectedApp?.customer_name}</div>
+                <div className="text-[12.5px] text-slate-500 mt-0.5">Phẫu thuật: {selectedApp?.surgery_type}</div>
               </div>
               {consumedItems.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-sm text-slate-700 mb-3 uppercase">Đã báo cáo</h4>
-                  <div className="bg-slate-50 border rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-100 text-slate-500">
-                        <tr><th className="px-4 py-2">Tên vật tư</th><th className="px-4 py-2 text-right">SL</th><th className="px-2 py-2"></th></tr>
+                  <h4 className="e-caption mb-2.5">Đã báo cáo</h4>
+                  <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full text-[13.5px]">
+                      <thead className="bg-slate-50 text-slate-500 text-[12px]">
+                        <tr><th className="px-4 h-10 text-left font-semibold">Tên vật tư</th><th className="px-4 h-10 text-right font-semibold">SL</th><th className="px-2 h-10"></th></tr>
                       </thead>
-                      <tbody className="divide-y">
+                      <tbody className="divide-y divide-slate-100">
                         {Object.values(consumedItems.reduce((acc, t) => {
                           const key = t.item_id || t.inventory_items?.name;
                           if (!acc[key]) acc[key] = { name: t.inventory_items?.name, qty: 0, ids: [] };
@@ -636,10 +634,10 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                           return acc;
                         }, {})).map((m, i) => (
                           <tr key={i}>
-                            <td className="px-4 py-3 font-semibold">{m.name}</td>
-                            <td className="px-4 py-3 text-right font-bold text-red-600">-{m.qty}</td>
-                            <td className="px-2 py-3 text-right">
-                              <button onClick={() => handleDeleteConsumed(m.ids, m.name)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="Xoá khỏi báo cáo"><Trash2 className="w-4 h-4" /></button>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">{m.name}</td>
+                            <td className="px-4 py-2.5 text-right font-bold text-danger-600 tabular-nums">-{m.qty}</td>
+                            <td className="px-2 py-2.5 text-right">
+                              <button onClick={() => handleDeleteConsumed(m.ids, m.name)} className="w-8 h-8 inline-grid place-items-center rounded-lg text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition" title="Xoá khỏi báo cáo"><Trash2 className="w-4 h-4" /></button>
                             </td>
                           </tr>
                         ))}
@@ -649,46 +647,46 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                 </div>
               )}
               <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-bold text-sm text-slate-700 uppercase">Nhập thêm</h4>
-                  <button onClick={handleAddMaterialRow} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Thêm dòng</button>
+                <div className="flex justify-between items-center mb-2.5">
+                  <h4 className="e-caption">Nhập thêm</h4>
+                  <button onClick={handleAddMaterialRow} className="e-btn e-btn-ghost e-btn-sm"><Plus className="w-3.5 h-3.5" /> Thêm dòng</button>
                 </div>
                 {materialForm.map((row, index) => (
-                  <div key={index} className="flex gap-2 items-center bg-white border p-2 rounded-xl shadow-sm mb-2">
-                    <select value={row.item_id} onChange={(e) => handleUpdateMaterialRow(index, 'item_id', e.target.value)} className="flex-1 text-sm font-semibold outline-none">
+                  <div key={index} className="flex gap-2 items-center mb-2">
+                    <select value={row.item_id} onChange={(e) => handleUpdateMaterialRow(index, 'item_id', e.target.value)} className="e-input flex-1 min-w-0">
                       <option value="">-- Chọn vật tư --</option>
                       {inventoryItems.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                     </select>
-                    <input type="number" min="1" value={row.quantity} onChange={(e) => handleUpdateMaterialRow(index, 'quantity', Number(e.target.value))} className="w-20 text-center font-bold bg-slate-50 rounded-lg p-2 outline-none" />
-                    <button onClick={() => handleRemoveMaterialRow(index)} className="text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <input type="number" min="1" value={row.quantity} onChange={(e) => handleUpdateMaterialRow(index, 'quantity', Number(e.target.value))} className="e-input w-20 text-center font-bold tabular-nums" />
+                    <button onClick={() => handleRemoveMaterialRow(index)} className="w-10 h-10 shrink-0 grid place-items-center rounded-xl text-danger-500 hover:bg-danger-50 transition"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="p-4 bg-slate-50 shrink-0 border-t flex justify-end gap-3">
-              <button onClick={() => setShowMaterialModal(false)} className="px-6 py-2 border rounded-xl font-semibold text-slate-600">Đóng</button>
-              {materialForm.length > 0 && <button onClick={handleSaveMaterials} disabled={saving} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl">Lưu Vật Tư</button>}
+            <div className="e-modal-footer shrink-0">
+              <button onClick={() => setShowMaterialModal(false)} className="e-btn e-btn-secondary">Đóng</button>
+              {materialForm.length > 0 && <button onClick={handleSaveMaterials} disabled={saving} className="e-btn e-btn-primary">Lưu Vật Tư</button>}
             </div>
           </div>
         </div>
       )}
       {/* Modal Truy Cập Bị Từ Chối */}
       {accessDeniedInfo && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden scale-in-center">
-            <div className="p-8 text-center flex flex-col items-center">
-              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6">
-                <Ban className="w-8 h-8" />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="e-modal max-w-md overflow-hidden scale-in-center">
+            <div className="p-7 text-center flex flex-col items-center">
+              <div className="w-14 h-14 bg-danger-50 text-danger-600 rounded-full grid place-items-center mb-4">
+                <Ban className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-800 mb-4">Truy cập bị từ chối</h3>
-              <p className="text-slate-600 mb-6 leading-relaxed text-[15px]">
-                Hậu phẫu khách hàng <span className="font-bold text-slate-800">{accessDeniedInfo.customerName}</span> đang được phân công cho Điều Dưỡng <span className="font-bold text-red-600">{accessDeniedInfo.nurseName}</span>.
+              <h3 className="text-[18px] font-bold text-slate-900 mb-2">Truy cập bị từ chối</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed text-[14px]">
+                Hậu phẫu khách hàng <span className="font-semibold text-slate-900">{accessDeniedInfo.customerName}</span> đang được phân công cho Điều Dưỡng <span className="font-semibold text-teal-700">{accessDeniedInfo.nurseName}</span>.
                 <br/><br/>
                 Hãy liên hệ trưởng bộ phận để được phân công và xem chi tiết.
               </p>
               <button 
                 onClick={() => setAccessDeniedInfo(null)}
-                className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md"
+                className="e-btn e-btn-primary e-btn-block"
               >
                 Đã hiểu
               </button>

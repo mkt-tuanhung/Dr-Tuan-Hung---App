@@ -7,11 +7,11 @@ import FaceIdAdminPanel from '@/features/faceid/FaceIdAdminPanel.jsx';
 import { vnToday } from '@/lib/vnTime';
 
 const STATUS_CONFIG = {
-  present:  { label: 'Có mặt',    color: 'bg-teal-100 text-teal-700' },
-  late:     { label: 'Đi trễ',    color: 'bg-yellow-100 text-yellow-700' },
-  absent:   { label: 'Vắng mặt', color: 'bg-red-100 text-red-700' },
-  half_day: { label: 'Nửa ngày', color: 'bg-blue-100 text-blue-700' },
-  leave:    { label: 'Nghỉ phép', color: 'bg-purple-100 text-purple-700' },
+  present:  { label: 'Có mặt',    color: 'e-tone-success' },
+  late:     { label: 'Đi trễ',    color: 'e-tone-danger' },
+  absent:   { label: 'Vắng mặt', color: 'e-tone-rose' },
+  half_day: { label: 'Nửa ngày', color: 'e-tone-info' },
+  leave:    { label: 'Nghỉ phép', color: 'e-tone-lavender' },
 };
 
 const DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -455,51 +455,51 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   };
 
   return (
-    <div className="space-y-5">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-4 items-start">
       {/* Header & Tabs */}
       {!isNested && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        <div className="xl:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Chấm công & Nghỉ phép</h2>
-              {activeTab === 'attendance' && <p className="text-slate-400 text-sm mt-0.5">{MONTHS[month-1]} {year}</p>}
+              <h2 className="sr-only">Chấm công & Nghỉ phép</h2>
+              {activeTab === 'attendance' && <p className="e-page-desc">{MONTHS[month-1]} {year}</p>}
             </div>
             {activeTab === 'attendance' && (
               <div className="flex items-center gap-2">
-                <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-                  <ChevronLeft className="w-4 h-4 text-slate-500" />
+                <button onClick={prevMonth} className="e-icon-btn w-9 h-9">
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month-1]} {year}</span>
-                <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                <span className="text-[14px] font-semibold text-slate-800 min-w-[110px] text-center tabular-nums">{MONTHS[month-1]} {year}</span>
+                <button onClick={nextMonth} className="e-icon-btn w-9 h-9">
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-6 border-b border-slate-200">
+          <div className="e-tabs">
             <button
               onClick={() => setActiveTab('attendance')}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'attendance' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`e-tab ${activeTab === 'attendance' ? 'e-tab-active' : 'text-slate-500'}`}
             >
               Bảng chấm công
             </button>
             <button
               onClick={() => setActiveTab('leave')}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'leave' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`e-tab ${activeTab === 'leave' ? 'e-tab-active' : 'text-slate-500'}`}
             >
               Duyệt đơn xin phép
             </button>
             <button
               onClick={() => setActiveTab('warnings')}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'warnings' ? 'border-red-500 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`e-tab ${activeTab === 'warnings' ? 'e-tab-active' : 'text-slate-500'}`}
             >
               Cảnh báo
-              {violations.length > 0 && <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">{violations.length}</span>}
+              {violations.length > 0 && <span className="e-badge e-badge-sm e-tone-danger">{violations.length}</span>}
             </button>
             <button
               onClick={() => setActiveTab('faceid')}
-              className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'faceid' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`e-tab ${activeTab === 'faceid' ? 'e-tab-active' : 'text-slate-500'}`}
             >
               <ScanFace className="w-4 h-4" /> Face ID
             </button>
@@ -509,15 +509,15 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {/* When Nested, we still need the month selector for attendance tab */}
       {isNested && activeTab === 'attendance' && (
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-slate-600 font-medium">Bảng theo dõi chấm công hàng ngày</p>
+        <div className="e-toolbar justify-between pl-4 xl:col-span-2">
+          <p className="text-[14px] font-semibold text-slate-800">Bảng theo dõi chấm công hàng ngày</p>
           <div className="flex items-center gap-2">
-            <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-              <ChevronLeft className="w-4 h-4 text-slate-500" />
+            <button onClick={prevMonth} className="e-icon-btn w-9 h-9">
+              <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month-1]} {year}</span>
-            <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-              <ChevronRight className="w-4 h-4 text-slate-500" />
+            <span className="text-[14px] font-semibold text-slate-800 min-w-[110px] text-center tabular-nums">{MONTHS[month-1]} {year}</span>
+            <button onClick={nextMonth} className="e-icon-btn w-9 h-9">
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -525,30 +525,57 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {activeTab === 'attendance' ? (
         <>
-          {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center mb-2">
-            <Users className="w-4 h-4 text-teal-600" />
+      {/* Chấm công hôm nay (mockup 06): donut lớn "x/y Đang có mặt" */}
+      <div className="e-card e-card-pad xl:order-1">
+        <div className="e-card-header">
+          <div>
+            <div className="e-card-title">Chấm công hôm nay</div>
+            <div className="e-card-sub">Tỷ lệ nhân sự đã chấm công “Có mặt” trong ngày</div>
           </div>
-          <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Tổng nhân sự</div>
         </div>
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center mb-2">
-            <CalendarCheck className="w-4 h-4 text-blue-600" />
+        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-6 items-center">
+          <div className="flex flex-col gap-3 order-2 sm:order-1">
+            <div className="e-card-flat flex items-center gap-3 p-3.5">
+              <span className="w-11 h-11 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
+                <Users className="w-5 h-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-semibold text-slate-900">Tổng nhân sự</div>
+                <div className="text-[12px] text-slate-500">Đang hoạt động trong hệ thống</div>
+              </div>
+              <div className="text-[22px] font-bold text-slate-900 tabular-nums">{stats.total}</div>
+            </div>
+            <div className="e-card-flat flex items-center gap-3 p-3.5">
+              <span className="w-11 h-11 rounded-full bg-success-50 text-success-600 grid place-items-center shrink-0">
+                <CalendarCheck className="w-5 h-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-semibold text-slate-900">Có mặt hôm nay</div>
+                <div className="text-[12px] text-slate-500">Phần màu teal trên vòng tròn</div>
+              </div>
+              <span className="w-3 h-3 rounded-full bg-teal-600 shrink-0" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-slate-800">{stats.present}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Có mặt hôm nay</div>
+          <div className="order-1 sm:order-2 grid place-items-center">
+            <div
+              className="relative w-[200px] h-[200px] lg:w-[220px] lg:h-[220px] rounded-full shadow-soft"
+              style={{ background: `conic-gradient(#067B7F 0%, #3CA7A9 ${stats.total ? Math.min(100, (stats.present / stats.total) * 100) : 0}%, #EAF4F4 0)` }}
+            >
+              <div className="absolute inset-[24px] rounded-full bg-white grid place-content-center text-center">
+                <div className="text-[34px] lg:text-[38px] font-bold text-slate-900 leading-none tabular-nums">{stats.present}<span className="text-slate-400 after:content-[attr(data-total)]" data-total={`/${stats.total}`} /></div>
+                <div className="text-[13px] text-slate-500 mt-1.5">Đang có mặt</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Search & Bulk Toggle */}
-      <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="relative w-full max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+      <div className="e-toolbar xl:col-span-2 xl:order-3">
+        <div className="e-search w-full sm:w-auto sm:max-w-xs flex-1 min-w-[180px]">
+          <Search className="text-slate-400" />
           <input
-            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-teal-100 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+            className="text-slate-700 placeholder:text-slate-400"
             placeholder="Tìm nhân sự..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -559,21 +586,21 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             setIsMultiSelect(!isMultiSelect);
             if (isMultiSelect) setSelectedCells(new Set());
           }}
-          className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border ${isMultiSelect ? 'bg-teal-600 text-white border-teal-600 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+          className={`e-btn w-full sm:w-auto sm:ml-auto ${isMultiSelect ? 'e-btn-primary' : 'e-btn-secondary'}`}
         >
           {isMultiSelect ? 'Hủy chọn nhiều' : 'Tích chọn nhiều ô'}
         </button>
         <button
           onClick={exportViolationsImage}
           disabled={loading}
-          className="w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center gap-2 justify-center disabled:opacity-50"
+          className="e-btn e-btn-secondary w-full sm:w-auto"
         >
           <ImageDown className="w-4 h-4" /> Xuất lỗi tháng
         </button>
         {isNested && (
           <button 
             onClick={() => setShowViolationsModal(true)} 
-            className="w-full sm:w-auto px-6 py-2.5 rounded-2xl text-sm font-bold transition-all border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-2 justify-center"
+            className="e-btn e-btn-danger-soft w-full sm:w-auto"
           >
             <AlertTriangle className="w-4 h-4" /> 
             Cảnh báo vi phạm {violations.length > 0 && `(${violations.length})`}
@@ -583,46 +610,46 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {/* Desktop table */}
       {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
+        <div className="flex items-center justify-center h-40 xl:col-span-2 xl:order-3">
+          <div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
         <>
-          <div className="hidden lg:block bg-white border border-teal-100 rounded-2xl overflow-auto shadow-sm">
-            <table className="w-full text-xs">
-              <thead className="bg-teal-50/50 text-slate-500 border-b border-teal-100">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium sticky left-0 bg-teal-50/50 min-w-[160px]">Nhân sự</th>
+          <div className="hidden lg:block e-card overflow-auto xl:col-span-2 xl:order-3">
+            <table className="w-full text-[12.5px] border-separate border-spacing-0">
+              <thead className="text-slate-500">
+                <tr className="bg-slate-50">
+                  <th className="text-left pl-5 pr-3 h-12 text-[12px] font-semibold sticky left-0 z-10 bg-slate-50 border-b border-slate-200 min-w-[220px]">Nhân sự</th>
                   {days.map(d => {
                     const date = new Date(year, month-1, d);
                     const isToday = date.toDateString() === today.toDateString();
                     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                     return (
-                      <th key={d} className={`px-2 py-3 font-medium text-center min-w-[36px] ${isToday ? 'text-teal-600' : ''} ${isWeekend ? 'text-slate-300' : ''}`}>
+                      <th key={d} className={`px-1 h-12 text-[12px] font-semibold text-center min-w-[38px] border-b border-slate-200 ${isToday ? 'text-teal-700 bg-teal-50' : ''} ${isWeekend ? 'text-slate-300' : ''}`}>
                         <div>{d}</div>
-                        <div className="text-[9px] font-normal">{DAYS[date.getDay()]}</div>
+                        <div className="text-[10.5px] font-medium opacity-70">{DAYS[date.getDay()]}</div>
                       </th>
                     );
                   })}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-teal-50">
+              <tbody className="align-middle">
                 {filtered.map(s => (
-                  <tr key={s.id} className="hover:bg-teal-50/30 transition-colors">
-                    <td className="px-4 py-2.5 sticky left-0 bg-white">
+                  <tr key={s.id} className="group">
+                    <td className="pl-5 pr-3 py-2.5 sticky left-0 z-10 bg-white group-hover:bg-teal-50 border-b border-slate-100">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 grid place-items-center shrink-0">
                           {s.avatar_url ? (
                             <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-[10px] font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
+                            <span className="text-[13px] font-bold text-teal-700">{s.full_name?.charAt(0)}</span>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-medium text-slate-700 text-xs truncate">{s.full_name}</div>
-                          <div className="text-[10px] text-slate-400">{s.employee_id}</div>
+                          <div className="font-semibold text-slate-900 text-[13px] truncate">{s.full_name}</div>
+                          <div className="text-[11.5px] text-slate-500">{s.employee_id}</div>
                         </div>
-                        <button onClick={() => openTimesheet(s)} title="Xuất bảng công cá nhân" className="ml-auto shrink-0 w-7 h-7 rounded-lg border border-teal-200 text-teal-600 hover:bg-teal-50 flex items-center justify-center"><Download className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => openTimesheet(s)} title="Xuất bảng công cá nhân" className="ml-auto shrink-0 e-icon-btn w-8 h-8 rounded-lg"><Download className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
                     {days.map(d => {
@@ -633,20 +660,20 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                       const cellKey = `${s.id}_${d}`;
                       const isSelected = selectedCells.has(cellKey);
                       return (
-                        <td key={d} className={`px-1 py-2 text-center relative ${isWeekend ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-teal-50/40' : ''} ${isSelected ? 'ring-2 ring-inset ring-teal-500 bg-teal-100/50' : ''}`}>
+                        <td key={d} className={`px-0.5 py-2 text-center relative border-b border-slate-100 ${isWeekend ? 'bg-slate-50/70' : ''} ${isToday ? 'bg-teal-50/60' : ''} ${isSelected ? 'ring-2 ring-inset ring-teal-500 bg-teal-50' : ''}`}>
                           <button
                             onClick={() => handleCellClick(s.id, d)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all hover:scale-110 relative"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition hover:bg-teal-50 relative"
                             title={record ? STATUS_CONFIG[record.status]?.label : 'Chưa chấm'}
                           >
                             {record ? (
                               <>
-                                {record.status === 'present' ? <Check className="w-3.5 h-3.5 text-teal-500" /> :
-                                record.status === 'absent' ? <X className="w-3.5 h-3.5 text-red-400" /> :
-                                record.status === 'late' ? <Clock className="w-3.5 h-3.5 text-yellow-500" /> :
-                                <span className="text-[9px] font-bold text-purple-500">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
+                                {record.status === 'present' ? <Check className="w-4 h-4 text-success-500" strokeWidth={2.5} /> :
+                                record.status === 'absent' ? <X className="w-4 h-4 text-danger-500" strokeWidth={2.5} /> :
+                                record.status === 'late' ? <Clock className="w-4 h-4 text-warning-500" strokeWidth={2.5} /> :
+                                <span className="text-[10px] font-bold text-lavender-600">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
                                 {(record.location_status === 'outside' || record.location_status === 'unknown' || (record.ip_address && !OFFICE_IPS.includes(record.ip_address))) && (
-                                  <span className="absolute top-0 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white" title="Chấm công sai vị trí hoặc sai mạng"></span>
+                                  <span className="absolute top-0 -right-1 w-2 h-2 bg-danger-500 rounded-full border border-white" title="Chấm công sai vị trí hoặc sai mạng"></span>
                                 )}
                               </>
                             ) : (
@@ -662,68 +689,69 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             </table>
           </div>
 
-          {/* Mobile card list */}
-          <div className="lg:hidden space-y-3">
+          {/* Nhân viên hôm nay (mockup 06) — hiển thị ở mọi kích thước màn hình */}
+          <div className="e-card e-card-pad xl:order-2">
+            <div className="e-card-header">
+              <div>
+                <div className="e-card-title">Nhân viên hôm nay</div>
+                <div className="e-card-sub">Trạng thái chấm công hôm nay · số ngày có mặt trong tháng</div>
+              </div>
+            </div>
+            <ul className="xl:max-h-[330px] overflow-y-auto -mx-1 px-1">
             {filtered.map(s => {
               const todayStr = vnToday();
               const todayRecord = attendance.find(a => a.staff_id === s.id && a.date === todayStr);
               const monthCount = attendance.filter(a => a.staff_id === s.id && a.status === 'present').length;
               return (
-                <div key={s.id} className="bg-white border border-teal-100 rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-teal-50 border border-teal-100 flex items-center justify-center">
-                        {s.avatar_url ? (
-                          <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-sm font-bold text-teal-500">{s.full_name?.charAt(0)}</span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-800 text-sm">{s.full_name}</div>
-                        <div className="text-xs text-slate-400">{s.employee_id}</div>
-                      </div>
-                    </div>
-                    {todayRecord ? (
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_CONFIG[todayRecord.status]?.color}`}>
-                        {STATUS_CONFIG[todayRecord.status]?.label}
-                      </span>
+                <li key={s.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3 border-b border-slate-100 last:border-b-0">
+                  <div className="row-span-2 self-start w-10 h-10 rounded-full overflow-hidden bg-teal-50 grid place-items-center shrink-0">
+                    {s.avatar_url ? (
+                      <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-slate-100 text-slate-400">Chưa chấm</span>
+                      <span className="text-[14px] font-bold text-teal-700">{s.full_name?.charAt(0)}</span>
                     )}
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="text-xs text-slate-400">Có mặt tháng này: <span className="font-semibold text-slate-700">{monthCount} ngày</span></span>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => openTimesheet(s)} className="text-xs text-teal-600 font-medium hover:text-teal-700 inline-flex items-center gap-1"><Download className="w-3.5 h-3.5" />Bảng công</button>
-                      <button onClick={() => openEdit(s.id, today.getDate())} className="text-xs text-teal-600 font-medium hover:text-teal-700">Chấm hôm nay →</button>
-                    </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900 text-[14px] truncate">{s.full_name}</div>
+                    <div className="text-[12px] text-slate-500 truncate">{s.employee_id} · Có mặt tháng này: <span className="font-semibold text-slate-700 tabular-nums">{monthCount} ngày</span></div>
                   </div>
-                </div>
+                  {todayRecord ? (
+                    <span className={`e-badge e-badge-sm ${STATUS_CONFIG[todayRecord.status]?.color}`}>
+                      {STATUS_CONFIG[todayRecord.status]?.label}
+                    </span>
+                  ) : (
+                    <span className="e-badge e-badge-sm e-tone-neutral">Chưa chấm</span>
+                  )}
+                  <div className="col-start-2 col-span-2 flex flex-wrap items-center gap-1.5">
+                    <button onClick={() => openTimesheet(s)} className="e-btn e-btn-ghost e-btn-sm h-8 px-2.5"><Download className="w-3.5 h-3.5" />Bảng công</button>
+                    <button onClick={() => openEdit(s.id, today.getDate())} className="e-btn e-btn-outline e-btn-sm h-8 px-2.5">Chấm hôm nay →</button>
+                  </div>
+                </li>
               );
             })}
+            </ul>
           </div>
         </>
       )}
 
       {/* Floating Action Bar for Multi-Select */}
       {isMultiSelect && selectedCells.size > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur text-white px-6 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center gap-6 z-[60] animate-in slide-in-from-bottom-8">
-          <div className="font-semibold text-sm">Đã chọn {selectedCells.size} ô</div>
-          <div className="flex items-center gap-2 border-l border-slate-700 pl-6">
-            <button disabled={saving} onClick={() => handleBulkAction('present')} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-white rounded-xl text-sm font-bold transition-colors">Có mặt</button>
-            <button disabled={saving} onClick={() => handleBulkAction('half_day')} className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-sm font-bold transition-colors">Nửa ngày</button>
-            <button disabled={saving} onClick={() => handleBulkAction('late')} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl text-sm font-bold transition-colors">Đi trễ</button>
-            <button disabled={saving} onClick={() => handleBulkAction('absent')} className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-xl text-sm font-bold transition-colors">Vắng mặt</button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] sm:w-auto bg-white border border-teal-100 text-slate-800 px-4 py-3 rounded-2xl shadow-float flex flex-wrap items-center gap-3 z-[60] animate-in slide-in-from-bottom-8">
+          <div className="font-semibold text-[14px] text-teal-800">Đã chọn {selectedCells.size} ô</div>
+          <div className="flex flex-wrap items-center gap-2 sm:border-l sm:border-slate-200 sm:pl-3">
+            <button disabled={saving} onClick={() => handleBulkAction('present')} className="e-btn e-btn-sm e-btn-primary">Có mặt</button>
+            <button disabled={saving} onClick={() => handleBulkAction('half_day')} className="e-btn e-btn-sm e-tone-info">Nửa ngày</button>
+            <button disabled={saving} onClick={() => handleBulkAction('late')} className="e-btn e-btn-sm e-tone-warning">Đi trễ</button>
+            <button disabled={saving} onClick={() => handleBulkAction('absent')} className="e-btn e-btn-sm e-btn-danger-soft">Vắng mặt</button>
           </div>
         </div>
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 text-xs">
+      <div className="flex flex-wrap gap-2 xl:col-span-2 xl:order-3">
         {Object.entries(STATUS_CONFIG).map(([k, v]) => (
           <div key={k} className="flex items-center gap-1.5">
-            <span className={`px-2 py-0.5 rounded-full font-medium ${v.color}`}>{v.label}</span>
+            <span className={`e-badge e-badge-sm e-badge-dot ${v.color}`}>{v.label}</span>
           </div>
         ))}
       </div>
@@ -731,13 +759,13 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       {/* Edit modal */}
       {/* Modal xem/xuất Bảng công cá nhân */}
       {timesheet && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-3 sm:p-6" onClick={() => setTimesheet(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl h-[90vh] shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-              <h3 className="font-bold text-slate-800">Bảng chấm công cá nhân</h3>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[70] flex items-center justify-center p-3 sm:p-6" onClick={() => setTimesheet(null)}>
+          <div className="e-modal max-w-3xl h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-100 shrink-0">
+              <h3 className="e-modal-title">Bảng chấm công cá nhân</h3>
               <div className="flex items-center gap-2">
-                <button onClick={printTimesheet} className="px-4 h-9 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 inline-flex items-center gap-1.5"><Download className="w-4 h-4" />In / Lưu PDF</button>
-                <button onClick={() => setTimesheet(null)} className="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 flex items-center justify-center"><X className="w-5 h-5" /></button>
+                <button onClick={printTimesheet} className="e-btn e-btn-primary e-btn-sm"><Download className="w-4 h-4" />In / Lưu PDF</button>
+                <button onClick={() => setTimesheet(null)} className="e-icon-btn w-9 h-9"><X className="w-5 h-5" /></button>
               </div>
             </div>
             <iframe ref={tsRef} title="timesheet" srcDoc={timesheet.html} className="flex-1 w-full border-0" />
@@ -746,23 +774,23 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       )}
 
       {editModal && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl">
-            <h3 className="font-bold text-slate-800 text-lg mb-1">Chấm công</h3>
-            <p className="text-sm text-slate-400 mb-5">{editModal.staffName} · {fmtDate(editModal.date)}</p>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex items-center justify-center p-4">
+          <div className="e-modal max-w-sm p-5 max-h-[92vh] overflow-y-auto">
+            <h3 className="e-modal-title">Chấm công</h3>
+            <p className="text-[13px] text-slate-500 mt-0.5 mb-4 pb-3 border-b border-slate-100">{editModal.staffName} · {fmtDate(editModal.date)}</p>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-2">Trạng thái</label>
+                <label className="e-label">Trạng thái</label>
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                     <button
                       key={k}
                       onClick={() => setEditModal(m => ({ ...m, status: k }))}
-                      className={`py-2 rounded-xl text-xs font-medium border transition-all ${
+                      className={`h-9 rounded-xl text-[13px] font-medium border transition ${
                         editModal.status === k
-                          ? 'border-teal-400 bg-teal-50 text-teal-700'
-                          : 'border-slate-100 text-slate-500 hover:border-teal-200'
+                          ? 'border-teal-500 bg-teal-50 text-teal-800 font-semibold'
+                          : 'border-slate-200 text-slate-600 hover:border-teal-300'
                       }`}
                     >
                       {v.label}
@@ -773,79 +801,79 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-1.5">Giờ vào</label>
+                  <label className="e-label">Giờ vào</label>
                   <input
                     type="time"
                     value={editModal.check_in}
                     onChange={e => setEditModal(m => ({ ...m, check_in: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400"
+                    className="e-input tabular-nums"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-1.5">Giờ ra</label>
+                  <label className="e-label">Giờ ra</label>
                   <input
                     type="time"
                     value={editModal.check_out}
                     onChange={e => setEditModal(m => ({ ...m, check_out: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400"
+                    className="e-input tabular-nums"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-1.5">Tăng ca (giờ)</label>
+                  <label className="e-label">Tăng ca (giờ)</label>
                   <input
                     type="number" min="0" step="0.5"
                     value={editModal.overtime_hours}
                     onChange={e => setEditModal(m => ({ ...m, overtime_hours: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400"
+                    className="e-input tabular-nums"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-1.5">Đi muộn / về sớm (giờ)</label>
+                  <label className="e-label">Đi muộn / về sớm (giờ)</label>
                   <input
                     type="number" min="0" step="0.5"
                     value={editModal.late_early_hours}
                     onChange={e => setEditModal(m => ({ ...m, late_early_hours: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-amber-100 bg-amber-50/40 text-sm text-slate-700 focus:outline-none focus:border-amber-400"
+                    className="e-input tabular-nums"
                     placeholder="0"
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 -mt-1">Giờ đi muộn/về sớm sẽ tự trừ vào tổng giờ tăng ca khi tính lương.</p>
+              <p className="text-[12px] text-slate-400 -mt-1">Giờ đi muộn/về sớm sẽ tự trừ vào tổng giờ tăng ca khi tính lương.</p>
 
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Ghi chú</label>
+                <label className="e-label">Ghi chú</label>
                 <textarea
                   value={editModal.note}
                   onChange={e => setEditModal(m => ({ ...m, note: e.target.value }))}
                   rows={2}
-                  className="w-full px-3 py-2 rounded-xl border border-teal-100 bg-teal-50/30 text-sm text-slate-700 focus:outline-none focus:border-teal-400 resize-none"
+                  className="e-textarea resize-none"
                   placeholder="Ghi chú thêm..."
                 />
               </div>
 
               {editModal.id && (editModal.check_in_photo || editModal.check_out_photo) && (
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
-                  <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
+                <div className="e-subtle p-3">
+                  <div className="text-[12.5px] font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
                     Ảnh chấm công (Face AI)
                     {(editModal.check_in_method === 'face_ai' || editModal.check_out_method === 'face_ai') && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold">Face AI</span>
+                      <span className="e-badge e-badge-sm e-tone-brand">Face AI</span>
                     )}
                   </div>
                   <div className="flex gap-3">
                     {editModal.check_in_photo && (
                       <a href={editModal.check_in_photo} target="_blank" rel="noreferrer" className="flex-1">
                         <img src={editModal.check_in_photo} alt="Ảnh check-in" className="w-full h-28 object-cover rounded-lg border border-slate-200" />
-                        <div className="text-[10px] text-center text-slate-500 mt-1">Giờ vào {editModal.check_in ? String(editModal.check_in).slice(0,5) : ''}</div>
+                        <div className="text-[11.5px] text-center text-slate-500 mt-1 tabular-nums">Giờ vào {editModal.check_in ? String(editModal.check_in).slice(0,5) : ''}</div>
                       </a>
                     )}
                     {editModal.check_out_photo && (
                       <a href={editModal.check_out_photo} target="_blank" rel="noreferrer" className="flex-1">
                         <img src={editModal.check_out_photo} alt="Ảnh check-out" className="w-full h-28 object-cover rounded-lg border border-slate-200" />
-                        <div className="text-[10px] text-center text-slate-500 mt-1">Giờ ra {editModal.check_out ? String(editModal.check_out).slice(0,5) : ''}</div>
+                        <div className="text-[11.5px] text-center text-slate-500 mt-1 tabular-nums">Giờ ra {editModal.check_out ? String(editModal.check_out).slice(0,5) : ''}</div>
                       </a>
                     )}
                   </div>
@@ -853,20 +881,20 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
               )}
 
               {editModal.id && (
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-2 mt-2">
+                <div className="e-subtle p-3 text-[12.5px] text-slate-600 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold flex items-center gap-1.5">Vị trí GPS:</span>
                     {editModal.location_status === 'in_office' ? (
-                      <span className="text-teal-700 font-bold bg-teal-100 px-2 py-0.5 rounded border border-teal-200">Hợp lệ</span>
+                      <span className="e-badge e-badge-sm e-tone-success">Hợp lệ</span>
                     ) : editModal.location_status === 'outside' ? (
-                      <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded border border-red-200">Ngoài VP</span>
+                      <span className="e-badge e-badge-sm e-tone-danger">Ngoài VP</span>
                     ) : (
                       <span className="text-slate-400">Không có dữ liệu</span>
                     )}
                   </div>
                   {editModal.latitude && editModal.longitude && (
                     <div className="flex justify-end mt-1">
-                      <a href={`https://maps.google.com/?q=${editModal.latitude},${editModal.longitude}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 bg-blue-50 px-2 py-1 rounded">
+                      <a href={`https://maps.google.com/?q=${editModal.latitude},${editModal.longitude}`} target="_blank" rel="noreferrer" className="e-btn e-btn-ghost e-btn-sm h-8">
                         Xem bản đồ
                       </a>
                     </div>
@@ -876,10 +904,10 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-medium text-slate-700">{editModal.ip_address || 'N/A'}</span>
                       {editModal.ip_address && !OFFICE_IPS.includes(editModal.ip_address) && (
-                        <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
+                        <span className="e-badge e-badge-sm e-tone-danger">Sai mạng</span>
                       )}
                       {editModal.ip_address && OFFICE_IPS.includes(editModal.ip_address) && (
-                        <span className="text-teal-700 font-bold bg-teal-100 px-2 py-0.5 rounded text-[10px] border border-teal-200">Hợp lệ</span>
+                        <span className="e-badge e-badge-sm e-tone-success">Hợp lệ</span>
                       )}
                     </div>
                   </div>
@@ -887,17 +915,17 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
               )}
             </div>
 
-            <div className="flex gap-3 mt-5">
+            <div className="flex gap-2 mt-5 pt-4 border-t border-slate-100">
               <button
                 onClick={() => setEditModal(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50"
+                className="e-btn e-btn-secondary flex-1"
               >
                 Hủy
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold disabled:opacity-50"
+                className="e-btn e-btn-primary flex-1"
               >
                 {saving ? 'Đang lưu...' : 'Lưu'}
               </button>
@@ -907,62 +935,62 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       )}
         </>
       ) : activeTab === 'leave' ? (
-        <LeaveManagementPage />
+        <div className="xl:col-span-2"><LeaveManagementPage /></div>
       ) : activeTab === 'faceid' ? (
-        <FaceIdAdminPanel />
+        <div className="xl:col-span-2"><FaceIdAdminPanel /></div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 xl:col-span-2">
           {violations.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
-              <Check className="w-12 h-12 text-teal-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">Không có cảnh báo vi phạm nào trong tháng này.</p>
+            <div className="e-card e-empty">
+              <Check className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-600 mb-3" />
+              <p className="e-empty-title">Không có cảnh báo vi phạm nào trong tháng này.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {violations.map(v => {
                 const s = staff.find(x => x.id === v.staff_id);
                 return (
-                  <div key={v.id} className="bg-white border border-red-100 p-4 rounded-2xl shadow-sm hover:shadow transition-all relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                  <div key={v.id} className="e-card p-4 relative overflow-hidden">
+                    <div className="hidden"></div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
-                          {s?.avatar_url ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-slate-400">{s?.full_name?.charAt(0)}</span>}
+                        <div className="w-11 h-11 rounded-full bg-teal-50 overflow-hidden grid place-items-center shrink-0">
+                          {s?.avatar_url ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-teal-700">{s?.full_name?.charAt(0)}</span>}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-800">{s?.full_name}</div>
-                          <div className="text-xs text-slate-500">{fmtDate(v.date)} · Lúc {v.check_in?.slice(0, 5)}</div>
+                          <div className="font-semibold text-slate-900 text-[14.5px]">{s?.full_name}</div>
+                          <div className="text-[12px] text-slate-500 tabular-nums">{fmtDate(v.date)} · Lúc {v.check_in?.slice(0, 5)}</div>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${STATUS_CONFIG[v.status]?.color}`}>
+                      <span className={`e-badge e-badge-sm ${STATUS_CONFIG[v.status]?.color}`}>
                         {STATUS_CONFIG[v.status]?.label}
                       </span>
                     </div>
-                    <div className="space-y-2 text-xs text-slate-600 bg-red-50/50 p-3 rounded-xl border border-red-100">
+                    <div className="space-y-2 text-[12.5px] text-slate-600 e-subtle p-3">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">IP Wi-Fi:</span>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-slate-700">{v.ip_address || 'N/A'}</span>
                           {v.ip_address && !OFFICE_IPS.includes(v.ip_address) && (
-                            <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
+                            <span className="e-badge e-badge-sm e-tone-danger">Sai mạng</span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Vị trí GPS:</span>
                         {v.location_status === 'outside' ? (
-                          <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                          <span className="e-badge e-badge-sm e-tone-danger">Ngoài văn phòng</span>
                         ) : (
-                          <span className="text-teal-700 font-medium">Hợp lệ</span>
+                          <span className="e-badge e-badge-sm e-tone-success">Hợp lệ</span>
                         )}
                       </div>
                       {v.latitude && v.longitude && (
                         <div className="flex justify-end mt-1">
-                          <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Xem vị trí GPS</a>
+                          <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noreferrer" className="text-teal-700 font-semibold hover:underline">Xem vị trí GPS</a>
                         </div>
                       )}
                     </div>
-                    <button onClick={() => openEdit(v.staff_id, parseInt(v.date.split('-')[2]))} className="w-full mt-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                    <button onClick={() => openEdit(v.staff_id, parseInt(v.date.split('-')[2]))} className="e-btn e-btn-secondary e-btn-sm w-full mt-3">
                       Xử lý vi phạm
                     </button>
                   </div>
@@ -975,69 +1003,69 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {/* Modal Cảnh báo vi phạm */}
       {showViolationsModal && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex items-center justify-center p-4">
+          <div className="e-modal max-w-5xl max-h-[90vh] flex flex-col">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+              <h3 className="e-modal-title flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-danger-500" />
                 Danh sách vi phạm chấm công
               </h3>
-              <button onClick={() => setShowViolationsModal(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
-                <X className="w-5 h-5 text-slate-500" />
+              <button onClick={() => setShowViolationsModal(false)} className="e-icon-btn w-9 h-9">
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+            <div className="p-5 overflow-y-auto flex-1 bg-slate-50/70 rounded-b-2xl">
               {violations.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
-                  <Check className="w-12 h-12 text-teal-300 mx-auto mb-3" />
-                  <p className="text-slate-500 font-medium">Không có cảnh báo vi phạm nào trong tháng này.</p>
+                <div className="e-card e-empty">
+                  <Check className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-600 mb-3" />
+                  <p className="e-empty-title">Không có cảnh báo vi phạm nào trong tháng này.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {violations.map(v => {
                     const s = staff.find(x => x.id === v.staff_id);
                     return (
-                      <div key={v.id} className="bg-white border border-red-100 p-4 rounded-2xl shadow-sm hover:shadow transition-all relative overflow-hidden flex flex-col">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                      <div key={v.id} className="e-card p-4 relative overflow-hidden flex flex-col">
+                        <div className="hidden"></div>
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
-                              {s?.avatar_url ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-slate-400">{s?.full_name?.charAt(0)}</span>}
+                            <div className="w-11 h-11 rounded-full bg-teal-50 overflow-hidden grid place-items-center shrink-0">
+                              {s?.avatar_url ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-teal-700">{s?.full_name?.charAt(0)}</span>}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-800">{s?.full_name}</div>
-                              <div className="text-xs text-slate-500">{fmtDate(v.date)} · {v.check_in?.slice(0, 5)}</div>
+                              <div className="font-semibold text-slate-900 text-[14.5px]">{s?.full_name}</div>
+                              <div className="text-[12px] text-slate-500 tabular-nums">{fmtDate(v.date)} · {v.check_in?.slice(0, 5)}</div>
                             </div>
                           </div>
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${STATUS_CONFIG[v.status]?.color}`}>
+                          <span className={`e-badge e-badge-sm ${STATUS_CONFIG[v.status]?.color}`}>
                             {STATUS_CONFIG[v.status]?.label}
                           </span>
                         </div>
                         
-                        <div className="space-y-2 text-xs text-slate-600 bg-red-50/50 p-3 rounded-xl border border-red-100 flex-1">
+                        <div className="space-y-2 text-[12.5px] text-slate-600 e-subtle p-3 flex-1">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">IP Wi-Fi:</span>
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-slate-700">{v.ip_address || 'N/A'}</span>
                               {v.ip_address && !OFFICE_IPS.includes(v.ip_address) && (
-                                <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded text-[10px] border border-red-200">Sai mạng</span>
+                                <span className="e-badge e-badge-sm e-tone-danger">Sai mạng</span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="font-medium">Vị trí GPS:</span>
                             {v.location_status === 'outside' ? (
-                              <span className="text-red-700 font-medium">Ngoài văn phòng</span>
+                              <span className="e-badge e-badge-sm e-tone-danger">Ngoài văn phòng</span>
                             ) : v.location_status === 'unknown' ? (
-                              <span className="text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded border border-orange-100 text-[10px]">Chặn định vị</span>
+                              <span className="e-badge e-badge-sm e-tone-warning">Chặn định vị</span>
                             ) : (
-                              <span className="text-teal-700 font-medium">Hợp lệ</span>
+                              <span className="e-badge e-badge-sm e-tone-success">Hợp lệ</span>
                             )}
                           </div>
                           {v.latitude && v.longitude && (
                             <div className="flex justify-end mt-1">
-                              <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Xem vị trí GPS</a>
+                              <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noreferrer" className="text-teal-700 font-semibold hover:underline">Xem vị trí GPS</a>
                             </div>
                           )}
                           {v.note && (
@@ -1048,14 +1076,14 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                         <div className="grid grid-cols-2 gap-2 mt-4">
                           <button 
                             onClick={() => { setShowViolationsModal(false); openEdit(v.staff_id, parseInt(v.date.split('-')[2])); }} 
-                            className="py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                            className="e-btn e-btn-secondary e-btn-sm"
                           >
                             Chi tiết
                           </button>
                           <button 
                             onClick={() => handleClearAnomaly(v)} 
                             disabled={saving}
-                            className="py-2.5 bg-teal-50 border border-teal-200 rounded-xl text-sm font-bold text-teal-700 hover:bg-teal-100 transition-colors disabled:opacity-50"
+                            className="e-btn e-btn-outline e-btn-sm"
                           >
                             Bỏ qua sai phạm
                           </button>

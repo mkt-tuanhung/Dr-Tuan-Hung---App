@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import {
   ChevronLeft, ChevronRight, Wallet, TrendingUp, CalendarCheck, Award,
-  Clock, Lock, ShieldCheck, Search, Banknote, MinusCircle,
+  Clock, Lock, ShieldCheck, Search, Banknote, MinusCircle, UserRound,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { computePayrollRow, fetchTelesalePrior } from '@/lib/kpiCalc';
@@ -19,17 +19,20 @@ const MANAGER_ROLES = ['admin', 'accountant', 'shareholder'];
 
 const StatCard = ({ icon: Icon, label, value, tone = 'slate', sign }) => {
   const tones = {
-    emerald: 'bg-teal-50 text-teal-700 border-teal-100',
-    blue: 'bg-blue-50 text-blue-700 border-blue-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    violet: 'bg-violet-50 text-violet-700 border-violet-100',
-    rose: 'bg-rose-50 text-rose-700 border-rose-100',
-    slate: 'bg-slate-50 text-slate-700 border-slate-100',
+    emerald: 'bg-teal-50 text-teal-700',
+    blue: 'bg-info-50 text-info-600',
+    amber: 'bg-warning-50 text-warning-600',
+    violet: 'bg-lavender-50 text-lavender-600',
+    rose: 'bg-danger-50 text-danger-600',
+    slate: 'bg-slate-100 text-slate-600',
   };
   return (
-    <div className={`rounded-2xl border p-4 ${tones[tone]}`}>
-      <div className="flex items-center gap-1.5 text-xs font-semibold opacity-80"><Icon className="w-3.5 h-3.5" /> {label}</div>
-      <div className="text-xl font-bold mt-1.5 tabular-nums">{sign}{value}</div>
+    <div className="e-metric">
+      <div className={`e-metric-icon ${tones[tone]}`}><Icon /></div>
+      <div className="min-w-0">
+        <div className="e-metric-label">{label}</div>
+        <div className="e-metric-value">{sign}{value}</div>
+      </div>
     </div>
   );
 };
@@ -146,85 +149,89 @@ const MyPayrollPage = () => {
   ] : [];
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          {isManager && <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Wallet className="w-6 h-6 text-teal-600" /> Bảng lương nhân sự</h2>}
-          <p className={`text-[13px] text-slate-500 flex items-center gap-1.5 ${isManager ? 'mt-0.5' : ''}`}>
-            <ShieldCheck className="w-3.5 h-3.5 text-teal-500" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này · cập nhật tự động'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
-          <span className="text-sm font-medium text-slate-700 min-w-[100px] text-center">{MONTHS[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-4">
+      {isManager && <h2 className="hidden"><Wallet className="w-5 h-5" /> Bảng lương nhân sự</h2>}
 
-      {/* Bộ chọn nhân sự (chỉ quản lý) */}
+      {/* Thanh công cụ: chọn nhân sự (quản lý) + ghi chú bảo mật */}
+      <div className="e-toolbar">
       {isManager && (
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <button onClick={() => setPickerOpen(o => !o)}
-            className="w-full sm:w-80 flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-teal-300 text-sm">
-            <span className="font-semibold text-slate-700 truncate">{tp?.full_name || 'Chọn nhân sự'}{tp?.employee_id ? ` · ${tp.employee_id}` : ''}</span>
+            className="w-full sm:w-80 h-10 flex items-center justify-between gap-2 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-teal-300 hover:bg-white text-[14px] transition">
+            <span className="font-semibold text-slate-800 truncate">{tp?.full_name || 'Chọn nhân sự'}{tp?.employee_id ? ` · ${tp.employee_id}` : ''}</span>
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
           </button>
           {pickerOpen && (
-            <div className="absolute z-30 mt-1 w-full sm:w-80 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-              <div className="p-2 border-b">
+            <div className="absolute z-30 mt-1.5 w-full sm:w-80 bg-white border border-slate-200 rounded-2xl shadow-float overflow-hidden">
+              <div className="p-2 border-b border-slate-100">
                 <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên / mã NV..."
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-teal-400 outline-none" />
+                  className="e-input h-9" />
               </div>
               <div className="max-h-72 overflow-y-auto">
                 {filteredStaff.map(s => (
                   <button key={s.id} onClick={() => { setTargetId(s.id); setPickerOpen(false); setSearch(''); }}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-teal-50 flex items-center justify-between ${s.id === targetId ? 'bg-teal-50' : ''}`}>
-                    <span className="font-medium text-slate-700">{s.full_name}</span>
-                    <span className="text-xs text-slate-400">{ROLE_LABELS[s.role] || s.role}</span>
+                    className={`w-full text-left px-4 py-2.5 text-[14px] hover:bg-teal-50/60 flex items-center justify-between gap-2 ${s.id === targetId ? 'bg-teal-50' : ''}`}>
+                    <span className="font-medium text-slate-800">{s.full_name}</span>
+                    <span className="e-badge e-badge-sm e-tone-neutral">{ROLE_LABELS[s.role] || s.role}</span>
                   </button>
                 ))}
-                {filteredStaff.length === 0 && <div className="px-4 py-6 text-center text-sm text-slate-400">Không tìm thấy nhân sự</div>}
+                {filteredStaff.length === 0 && <div className="px-4 py-6 text-center text-[13px] text-slate-400">Không tìm thấy nhân sự</div>}
               </div>
             </div>
           )}
         </div>
       )}
+        <div className="flex-1 min-w-[220px] px-1.5">
+          <p className="e-page-desc flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" /> {isManager ? 'Bạn có quyền xem lương toàn bộ nhân sự' : 'Chỉ riêng bạn xem được bảng lương này · cập nhật tự động'}
+          </p>
+        </div>
+      </div>
 
-      {/* Hồ sơ + trạng thái */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="font-bold text-slate-800 text-lg">{tp?.full_name}</div>
-          <div className="text-sm text-slate-500">
-            {ROLE_LABELS[tp?.role] || tp?.role}
-            {tp?.employment_status === 'probation' && <span className="ml-1 text-amber-600">· Thử việc (85%)</span>}
+      {/* Đầu phiếu + thẻ nhân sự (mockup 09 Ethics) */}
+      <div className="e-card p-5 lg:p-7 space-y-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h2 className="text-[20px] lg:text-[24px] font-bold text-slate-900">Phiếu lương <span className="font-semibold text-slate-400">· {MONTHS[month - 1]}/{year}</span></h2>
+          <div className="flex items-center gap-1.5">
+            <button onClick={prevMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng trước"><ChevronLeft className="w-4 h-4" /></button>
+            <button onClick={nextMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
+        <div className="flex items-center gap-4 lg:gap-6 flex-wrap">
+          <div className="e-avatar w-16 h-16 lg:w-20 lg:h-20 ring-4 ring-teal-50"><UserRound className="w-8 h-8 lg:w-10 lg:h-10" /></div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[20px] lg:text-[24px] font-bold text-slate-900 leading-tight">{tp?.full_name}</div>
+            <div className="text-[14px] lg:text-[16px] text-slate-500 mt-1 flex items-center flex-wrap gap-y-1">
+              {ROLE_LABELS[tp?.role] || tp?.role}
+              {tp?.employment_status === 'probation' && <span className="e-badge e-badge-sm e-tone-warning ml-2">Thử việc (85%)</span>}
+            </div>
+          </div>
         {detail && (
           detail.status === 'locked'
-            ? <span className="inline-flex items-center gap-1 text-xs font-semibold bg-teal-100 text-teal-700 px-3 py-1 rounded-full"><Lock className="w-3 h-3" /> Đã chốt</span>
-            : <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Tạm tính · cập nhật theo thời gian thực</span>
+            ? <span className="e-badge e-tone-success"><Lock className="w-3.5 h-3.5" /> Đã chốt</span>
+            : <span className="e-badge e-badge-dot e-tone-warning">Tạm tính · cập nhật theo thời gian thực</span>
         )}
+        </div>
       </div>
 
       {loading && !detail ? (
-        <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
+        <div className="e-card flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : !detail ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
-          <Wallet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">Chưa có dữ liệu lương {MONTHS[month - 1]} {year}.</p>
+        <div className="e-card e-empty py-12">
+          <Wallet className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-600 mb-3" />
+          <p className="e-empty-title">Chưa có dữ liệu lương {MONTHS[month - 1]} {year}.</p>
         </div>
       ) : (
         <>
           {/* Thực nhận nổi bật */}
-          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-6 text-white shadow-sm">
-            <div className="text-teal-50 text-sm font-medium flex items-center gap-1.5"><Wallet className="w-4 h-4" /> Thực nhận {MONTHS[month - 1]} {year}</div>
-            <div className="text-4xl font-bold mt-1 tabular-nums">{fmtM(detail.net_salary)}</div>
-            <div className="text-teal-100 text-sm mt-1">Tổng thu nhập {fmtM(detail.gross_income)} · Khấu trừ {fmtM(detail.total_deductions)}</div>
+          <div className="order-3 grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 to-[#EAF7F7] px-5 py-5 lg:px-7 lg:py-6 shadow-soft">
+            <div className="text-[18px] lg:text-[22px] font-bold text-teal-900 flex items-center gap-2"><Wallet className="w-6 h-6 text-teal-700" /> Thực nhận {MONTHS[month - 1]} {year}</div>
+            <div className="col-span-2 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:row-span-2 text-[30px] lg:text-[40px] font-bold text-teal-800 leading-tight tabular-nums sm:text-right">{fmtM(detail.net_salary)}</div>
+            <div className="col-span-2 sm:col-span-1 sm:col-start-1 text-[13px] text-teal-900/70">Tổng thu nhập {fmtM(detail.gross_income)} · Khấu trừ {fmtM(detail.total_deductions)}</div>
           </div>
 
           {/* Chỉ số nổi bật */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="order-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard icon={Banknote} label="Tổng thu nhập" value={fmtM(detail.gross_income)} tone="blue" />
             <StatCard icon={CalendarCheck} label="Ngày công" value={`${detail.working_days || 0} công`} tone="violet" />
             <StatCard icon={Award} label="Hoa hồng / thưởng" value={fmtM(detail.total_commission)} tone="emerald" />
@@ -234,45 +241,45 @@ const MyPayrollPage = () => {
           </div>
 
           {/* Bảng chi tiết */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <h3 className="font-bold text-teal-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Thu nhập</h3>
-              <table className="w-full text-sm">
+          <div className="order-2 grid md:grid-cols-2 gap-4 items-stretch">
+            <div className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white shadow-soft px-5 pt-5 pb-4">
+              <h3 className="text-[17px] font-bold text-teal-700 mb-2 flex items-center gap-2"><TrendingUp className="w-5 h-5" /> Thu nhập</h3>
+              <table className="w-full text-[14px]">
                 <tbody>
                   {incomeRows.map(([label, val, extra], i) => (
-                    <tr key={i} className="border-b border-slate-50 last:border-0">
-                      <td className="py-2 text-slate-500">{label}{extra && <span className="text-xs text-slate-400 ml-1">({extra})</span>}</td>
-                      <td className="py-2 text-right font-medium text-slate-700 tabular-nums">{val}</td>
+                    <tr key={i} className="border-b border-slate-100/80">
+                      <td className="py-2.5 text-slate-600">{label}{extra && <span className="text-[12px] text-slate-400 ml-1">({extra})</span>}</td>
+                      <td className="py-2.5 text-right font-medium text-slate-800 tabular-nums">{val}</td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-slate-100">
-                    <td className="py-2 font-bold text-slate-700">Tổng thu nhập</td>
-                    <td className="py-2 text-right font-bold text-teal-700 tabular-nums">{fmtM(detail.gross_income)}</td>
+                  <tr className="bg-teal-50 text-teal-800">
+                    <td className="py-3.5 pl-3 rounded-l-xl font-bold text-[15px]">Tổng thu nhập</td>
+                    <td className="py-3.5 pr-3 rounded-r-xl text-right font-bold text-[17px] tabular-nums">{fmtM(detail.gross_income)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <h3 className="font-bold text-rose-600 mb-3 flex items-center gap-2"><MinusCircle className="w-4 h-4" /> Khấu trừ</h3>
+            <div className="flex flex-col rounded-2xl border border-danger-100 bg-gradient-to-b from-danger-50/70 to-white shadow-soft px-5 pt-5 pb-4">
+              <h3 className="text-[17px] font-bold text-danger-600 mb-2 flex items-center gap-2"><MinusCircle className="w-5 h-5" /> Khấu trừ</h3>
               {deductRows.length === 0 ? (
-                <p className="text-sm text-slate-400 py-2">Không có khoản khấu trừ.</p>
+                <p className="text-[13px] text-slate-400 py-2.5">Không có khoản khấu trừ.</p>
               ) : (
-                <table className="w-full text-sm">
+                <table className="w-full text-[14px]">
                   <tbody>
                     {deductRows.map(([label, val], i) => (
-                      <tr key={i} className="border-b border-slate-50 last:border-0">
-                        <td className="py-2 text-slate-500">{label}</td>
-                        <td className="py-2 text-right font-medium text-rose-600 tabular-nums">{val}</td>
+                      <tr key={i} className="border-b border-slate-100/80">
+                        <td className="py-2.5 text-slate-600">{label}</td>
+                        <td className="py-2.5 text-right font-medium text-slate-800 tabular-nums">{val}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
-              <div className="mt-3 pt-3 border-t-2 border-slate-100 flex justify-between">
-                <span className="font-bold text-slate-700">Tổng khấu trừ</span>
-                <span className="font-bold text-rose-600 tabular-nums">{fmtM(detail.total_deductions)}</span>
+              <div className="mt-auto pt-2 flex justify-between items-center rounded-xl bg-danger-50 text-danger-600 px-3 py-3.5">
+                <span className="font-bold text-[15px]">Tổng khấu trừ</span>
+                <span className="font-bold text-[17px] tabular-nums">{fmtM(detail.total_deductions)}</span>
               </div>
-              <div className="mt-3 bg-teal-50 border border-teal-100 rounded-xl p-3 flex justify-between items-center">
+              <div className="hidden">
                 <span className="font-bold text-slate-700">THỰC NHẬN</span>
                 <span className="text-xl font-bold text-teal-700 tabular-nums">{fmtM(detail.net_salary)}</span>
               </div>
@@ -283,16 +290,16 @@ const MyPayrollPage = () => {
 
       {/* Biểu đồ theo tháng */}
       {chartData.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h3 className="font-bold text-teal-700 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Thực nhận theo tháng ({year})</h3>
+        <div className="order-4 e-card e-card-pad">
+          <h3 className="e-card-title mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-600" /> Thực nhận theo tháng ({year})</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v >= 1e6 ? (v / 1e6) + 'tr' : v} width={42} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EAF4F4" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#A3ABAA' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#A3ABAA' }} tickFormatter={(v) => v >= 1e6 ? (v / 1e6) + 'tr' : v} width={42} />
                 <Tooltip formatter={(v) => fmtM(v)} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                <Bar dataKey="Thực nhận" fill="#12A4A5" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                <Bar dataKey="Thực nhận" fill="#067B7F" radius={[6, 6, 0, 0]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>

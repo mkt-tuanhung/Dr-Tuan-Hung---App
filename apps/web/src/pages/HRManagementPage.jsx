@@ -8,47 +8,36 @@ export default function HRManagementPage({ initialTab = 'staff' }) {
   useEffect(() => { setActiveTab(initialTab); }, [initialTab]);
 
   return (
-    <div className="space-y-6">
-      {/* Header Wrapper */}
-      <div>
-        <p className="text-[13px] text-slate-500">Danh sách, chấm công và duyệt đơn từ</p>
+    <div className="space-y-4">
+      {/* Mô tả trang + tab khu vực (gạch chân teal kiểu Ethics) */}
+      <p className="e-page-desc">Danh sách, chấm công và duyệt đơn từ</p>
+
+      <div className="e-tabs">
+        <button
+          onClick={() => setActiveTab('staff')}
+          className={`e-tab ${activeTab === 'staff' ? 'e-tab-active' : ''}`}
+        >
+          <Users /> Danh sách nhân sự
+        </button>
+        <button
+          onClick={() => setActiveTab('attendance')}
+          className={`e-tab ${activeTab === 'attendance' ? 'e-tab-active' : ''}`}
+        >
+          <CalendarCheck /> Bảng chấm công
+        </button>
+        <button
+          onClick={() => setActiveTab('leave')}
+          className={`e-tab ${activeTab === 'leave' ? 'e-tab-active' : ''}`}
+        >
+          <FileText /> Duyệt đơn
+        </button>
       </div>
 
-      {/* Main Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-        <div className="flex bg-slate-50 border-b overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('staff')}
-            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'staff' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-4 h-4" /> Danh sách nhân sự
-          </button>
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'attendance' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            <CalendarCheck className="w-4 h-4" /> Bảng chấm công
-          </button>
-          <button
-            onClick={() => setActiveTab('leave')}
-            className={`px-6 py-4 font-bold text-sm transition-colors shrink-0 flex items-center gap-2 ${
-              activeTab === 'leave' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            <FileText className="w-4 h-4" /> Duyệt đơn
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="p-6 bg-slate-50/50 min-h-[60vh]">
-          {activeTab === 'staff' && <StaffManagementPage isNested={true} />}
-          {activeTab === 'attendance' && <AttendanceManagementPage isNested={true} defaultTab="attendance" />}
-          {activeTab === 'leave' && <AttendanceManagementPage isNested={true} defaultTab="leave" />}
-        </div>
+      {/* Nội dung */}
+      <div className="min-h-[60vh]">
+        {activeTab === 'staff' && <StaffManagementPage isNested={true} />}
+        {activeTab === 'attendance' && <AttendanceManagementPage isNested={true} defaultTab="attendance" />}
+        {activeTab === 'leave' && <AttendanceManagementPage isNested={true} defaultTab="leave" />}
       </div>
     </div>
   );

@@ -1,11 +1,11 @@
 import React from 'react';
 
-// Ô thống kê nhỏ cho thẻ KPI trên mobile: nhãn nhỏ + giá trị đậm.
-export default function StatCell({ label, value, className = 'text-slate-700' }) {
+// Ô thống kê nhỏ cho thẻ KPI trên mobile: nhãn nhỏ + giá trị đậm (khối nền nhạt kiểu Ethics).
+export default function StatCell({ label, value, className = 'text-slate-900' }) {
   return (
-    <div className="bg-slate-50 rounded-lg px-2.5 py-1.5">
-      <div className="text-[11px] text-slate-400 mb-0.5">{label}</div>
-      <div className={`font-semibold text-sm ${className}`}>{value}</div>
+    <div className="e-subtle px-3 py-2 min-w-0">
+      <div className="text-[11.5px] text-slate-500 mb-0.5 truncate">{label}</div>
+      <div className={`font-semibold text-[14px] tabular-nums break-words ${className}`}>{value}</div>
     </div>
   );
 }

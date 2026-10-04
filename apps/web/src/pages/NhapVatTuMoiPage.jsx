@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
-import { PackagePlus, Plus, X, ChevronLeft, ChevronRight, Coins, Boxes, ReceiptText, Loader2, ImageIcon } from 'lucide-react';
+import { PackagePlus, Plus, X, ChevronLeft, ChevronRight, Coins, Boxes, ReceiptText, Loader2, ImageIcon, UserRound } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0));
@@ -109,101 +109,130 @@ export default function NhapVatTuMoiPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Thanh công cụ: mô tả + chọn tháng + nút chính */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><PackagePlus className="w-5 h-5 text-teal-600" /> Vật tư nhập mới</h3>
-          <p className="text-slate-500 text-sm mt-0.5">Nhập vật tư mới vào kho + theo dõi tiền vật tư nhập trong tháng</p>
-        </div>
+        <p className="e-page-desc">Nhập vật tư mới vào kho + theo dõi tiền vật tư nhập trong tháng</p>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-sm">
-            <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center"><ChevronLeft className="w-4 h-4 text-slate-500" /></button>
-            <span className="text-sm font-semibold text-slate-700 min-w-[74px] text-center">{MONTHS[month - 1]}/{year}</span>
-            <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center"><ChevronRight className="w-4 h-4 text-slate-500" /></button>
+          <div className="e-seg gap-0.5">
+            <button onClick={prevMonth} className="w-8 h-8 rounded-[9px] grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-800 transition"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-[13px] font-semibold text-slate-700 min-w-[74px] text-center tabular-nums">{MONTHS[month - 1]}/{year}</span>
+            <button onClick={nextMonth} className="w-8 h-8 rounded-[9px] grid place-items-center text-slate-500 hover:bg-teal-50 hover:text-teal-800 transition"><ChevronRight className="w-4 h-4" /></button>
           </div>
           {canWrite && (
-            <button onClick={() => setModal({ ...EMPTY })} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-sm shadow-sm flex items-center gap-2 whitespace-nowrap"><Plus className="w-4 h-4" /> Nhập vật tư mới</button>
+            <button onClick={() => setModal({ ...EMPTY })} className="e-btn e-btn-primary"><Plus className="w-4 h-4" /> Nhập vật tư mới</button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-2xl p-4 shadow-md col-span-2 sm:col-span-1">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-white/90 flex items-center gap-1"><Coins className="w-3.5 h-3.5" /> Tiền vật tư nhập {MONTHS[month - 1]}</div>
-          <div className="text-2xl font-black mt-1">{fmtM(totalAmount)}</div>
+      {/* Thẻ chỉ số */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="e-metric">
+          <div className="e-metric-icon"><Coins /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Tiền vật tư nhập {MONTHS[month - 1]}</div>
+            <div className="e-metric-value">{fmtM(totalAmount)}</div>
+          </div>
         </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <div className="text-xs text-slate-400 font-semibold uppercase">Số phiếu nhập</div>
-          <div className="text-2xl font-black text-slate-800 mt-1">{rows.length}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-info"><ReceiptText /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Số phiếu nhập</div>
+            <div className="e-metric-value">{rows.length}</div>
+          </div>
         </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <div className="text-xs text-slate-400 font-semibold uppercase">Danh mục trong kho</div>
-          <div className="text-2xl font-black text-indigo-600 mt-1">{items.length}</div>
+        <div className="e-metric">
+          <div className="e-metric-icon e-tone-lavender"><Boxes /></div>
+          <div className="min-w-0">
+            <div className="e-metric-label">Danh mục trong kho</div>
+            <div className="e-metric-value">{items.length}</div>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-100 font-bold text-slate-700 flex items-center gap-2"><Boxes className="w-4 h-4 text-teal-600" /> Phiếu nhập tháng {month}/{year}</div>
+      <div className="e-card overflow-hidden">
+        <div className="px-4 lg:px-5 py-4 border-b border-slate-100 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><PackagePlus className="w-5 h-5" /></div>
+          <div className="min-w-0">
+            <div className="e-card-title">Phiếu nhập tháng {month}/{year}</div>
+            <div className="e-card-sub">Vật tư nhập mới và chứng từ đi kèm</div>
+          </div>
+        </div>
         {/* Mobile: dạng thẻ */}
-        <div className="md:hidden divide-y divide-slate-100">
+        <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
           {loading ? (
-            <div className="text-center py-10 text-slate-400 text-sm">Đang tải...</div>
+            <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
           ) : rows.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 text-sm">Chưa có phiếu nhập nào trong tháng</div>
+            <div className="e-empty text-[13px] text-slate-400">Chưa có phiếu nhập nào trong tháng</div>
           ) : rows.map(r => (
-            <div key={r.id} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-bold text-slate-800 truncate">{r.inventory_items?.name || '—'}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{new Date(r.date).toLocaleDateString('vi-VN')} · {r.supplier || r.notes || 'Không rõ NCC'}</div>
+            <div key={r.id} className="e-card-flat p-4">
+              <div className="flex items-start gap-3">
+                <span className="e-avatar w-11 h-11 rounded-xl"><Boxes className="w-5 h-5" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-[15px] text-slate-900 truncate">{r.inventory_items?.name || '—'}</div>
+                  <div className="text-[12px] text-slate-500 mt-0.5 truncate">{new Date(r.date).toLocaleDateString('vi-VN')} · {r.supplier || r.notes || 'Không rõ NCC'}</div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="font-bold text-slate-800">{r.amount ? fmtM(r.amount) : '—'}</div>
-                  <div className="text-xs font-semibold text-teal-600">+{r.quantity} {r.inventory_items?.unit}</div>
-                </div>
+                <span className="e-badge e-badge-sm e-tone-success tabular-nums shrink-0">+{r.quantity} {r.inventory_items?.unit}</span>
               </div>
-              <div className="flex items-center justify-between mt-2 text-xs">
-                <span className="text-slate-400">{r.profiles?.full_name || '—'}</span>
-                {proofsOf(r).length ? <a href={proofsOf(r)[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 font-semibold"><ReceiptText className="w-3.5 h-3.5" /> {proofsOf(r).length} chứng từ</a> : <span className="text-slate-300">Không có chứng từ</span>}
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <div>
+                  <div className="e-kv-label">Số tiền</div>
+                  <div className="text-[17px] font-bold text-slate-900 tabular-nums">{r.amount ? fmtM(r.amount) : '—'}</div>
+                </div>
+                {proofsOf(r).length ? <a href={proofsOf(r)[0]} target="_blank" rel="noreferrer" className="e-badge e-badge-sm e-tone-brand"><ReceiptText className="w-3.5 h-3.5" /> {proofsOf(r).length} chứng từ</a> : <span className="text-[12px] text-slate-400">Không có chứng từ</span>}
+              </div>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-[12px] text-slate-500">
+                <UserRound className="w-3.5 h-3.5 text-slate-400" />
+                <span>{r.profiles?.full_name || '—'}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* Desktop: bảng */}
-        <div className="hidden md:block overflow-auto">
-          <table className="w-full text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-500 text-xs uppercase border-b">
+        <div className="hidden md:block e-table-wrap">
+          <table className="e-table whitespace-nowrap">
+            <thead>
               <tr>
-                <th className="text-left px-4 py-3 font-semibold">Ngày</th>
-                <th className="text-left px-4 py-3 font-semibold">Vật tư</th>
-                <th className="text-right px-4 py-3 font-semibold">SL nhập</th>
-                <th className="text-right px-4 py-3 font-semibold">Số tiền</th>
-                <th className="text-left px-4 py-3 font-semibold">Nhà cung cấp</th>
-                <th className="text-left px-4 py-3 font-semibold">Người nhập</th>
-                <th className="text-center px-4 py-3 font-semibold">Chứng từ</th>
+                <th>Ngày</th>
+                <th>Vật tư</th>
+                <th className="num">SL nhập</th>
+                <th className="num">Số tiền</th>
+                <th>Nhà cung cấp</th>
+                <th>Người nhập</th>
+                <th className="text-center">Chứng từ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {loading ? (
-                <tr><td colSpan="7" className="text-center py-10 text-slate-400">Đang tải...</td></tr>
+                <tr><td colSpan="7" className="text-center py-10 text-[13px] text-slate-400">Đang tải...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-10 text-slate-400">Chưa có phiếu nhập nào trong tháng</td></tr>
+                <tr><td colSpan="7" className="text-center py-10 text-[13px] text-slate-400">Chưa có phiếu nhập nào trong tháng</td></tr>
               ) : rows.map(r => (
-                <tr key={r.id} className="hover:bg-slate-50/50">
-                  <td className="px-4 py-3 text-slate-600">{new Date(r.date).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">{r.inventory_items?.name || '—'}</td>
-                  <td className="px-4 py-3 text-right font-bold text-teal-600">+{r.quantity} <span className="text-xs font-normal text-slate-400">{r.inventory_items?.unit}</span></td>
-                  <td className="px-4 py-3 text-right font-bold text-slate-800">{r.amount ? fmtM(r.amount) : '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.supplier || r.notes || '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.profiles?.full_name || '—'}</td>
-                  <td className="px-4 py-3 text-center">
+                <tr key={r.id} className="transition-colors">
+                  <td className="text-slate-600 tabular-nums">{new Date(r.date).toLocaleDateString('vi-VN')}</td>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <span className="e-avatar w-9 h-9 rounded-xl"><Boxes className="w-4 h-4" /></span>
+                      <span className="font-semibold text-slate-900">{r.inventory_items?.name || '—'}</span>
+                    </div>
+                  </td>
+                  <td className="text-right tabular-nums font-bold text-success-600">+{r.quantity} <span className="text-[12px] font-normal text-slate-400">{r.inventory_items?.unit}</span></td>
+                  <td className="text-right tabular-nums font-bold text-slate-900">{r.amount ? fmtM(r.amount) : '—'}</td>
+                  <td className="text-slate-500">{r.supplier || r.notes || '—'}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <span className="e-avatar w-8 h-8"><UserRound className="w-4 h-4" /></span>
+                      <span className="text-slate-700">{r.profiles?.full_name || '—'}</span>
+                    </div>
+                  </td>
+                  <td className="text-center">
                     {proofsOf(r).length ? (
                       <span className="inline-flex items-center gap-1.5">
                         {proofsOf(r).slice(0, 3).map((u, i) => (
-                          <a key={i} href={u} target="_blank" rel="noreferrer" className="w-8 h-8 rounded border border-slate-200 overflow-hidden inline-block hover:ring-2 hover:ring-teal-300"><img src={u} alt="" className="w-full h-full object-cover" /></a>
+                          <a key={i} href={u} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-lg border border-slate-200 overflow-hidden inline-block hover:ring-2 hover:ring-teal-300 transition"><img src={u} alt="" className="w-full h-full object-cover" /></a>
                         ))}
-                        {proofsOf(r).length > 3 && <span className="text-[11px] text-slate-400">+{proofsOf(r).length - 3}</span>}
+                        {proofsOf(r).length > 3 && <span className="text-[12px] font-semibold text-slate-500">+{proofsOf(r).length - 3}</span>}
                       </span>
                     ) : <span className="text-slate-300">—</span>}
                   </td>
@@ -215,68 +244,66 @@ export default function NhapVatTuMoiPage() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50 shrink-0">
-              <h3 className="font-bold text-teal-800 flex items-center gap-2"><PackagePlus className="w-5 h-5" /> Nhập vật tư mới</h3>
-              <button onClick={() => setModal(null)}><X className="w-5 h-5 text-teal-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title flex items-center gap-2"><PackagePlus className="w-5 h-5 text-teal-600" /> Nhập vật tư mới</h3>
+              <button onClick={() => setModal(null)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="e-modal-body overflow-y-auto space-y-4 flex-1">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tên vật tư *</label>
-                <input list="vattu-list" value={modal.name} onChange={e => onNameChange(e.target.value)} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Gõ tên — chưa có sẽ tự tạo mới trong kho" />
+                <label className="e-label">Tên vật tư *</label>
+                <input list="vattu-list" value={modal.name} onChange={e => onNameChange(e.target.value)} className="e-input" placeholder="Gõ tên — chưa có sẽ tự tạo mới trong kho" />
                 <datalist id="vattu-list">{items.map(i => <option key={i.id} value={i.name} />)}</datalist>
-                <p className="text-xs text-slate-400 mt-1">Nếu tên chưa có trong kho, hệ thống sẽ tự tạo danh mục mới và nhập vào.</p>
+                <p className="text-[12px] text-slate-400 mt-1.5">Nếu tên chưa có trong kho, hệ thống sẽ tự tạo danh mục mới và nhập vào.</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Đơn vị</label>
-                  <input value={modal.unit} onChange={e => setModal({ ...modal, unit: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Cái, Hộp..." />
+                  <label className="e-label">Số lượng *</label>
+                  <input inputMode="numeric" value={modal.quantity} onChange={e => setModal({ ...modal, quantity: e.target.value.replace(/\D/g, '') })} className="e-input font-bold text-slate-900 tabular-nums" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Số lượng *</label>
-                  <input inputMode="numeric" value={modal.quantity} onChange={e => setModal({ ...modal, quantity: e.target.value.replace(/\D/g, '') })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-teal-700" placeholder="0" />
+                  <label className="e-label">Đơn vị</label>
+                  <input value={modal.unit} onChange={e => setModal({ ...modal, unit: e.target.value })} className="e-input" placeholder="Cái, Hộp..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Ngày nhập</label>
-                  <input type="date" value={modal.date} onChange={e => setModal({ ...modal, date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Số tiền (VNĐ)</label>
-                  <input inputMode="numeric" value={modal.amount ? fmt(modal.amount) : ''} onChange={e => setModal({ ...modal, amount: e.target.value.replace(/\D/g, '') })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 font-bold text-slate-800" placeholder="0" />
+                  <label className="e-label">Số tiền (VNĐ)</label>
+                  <input inputMode="numeric" value={modal.amount ? fmt(modal.amount) : ''} onChange={e => setModal({ ...modal, amount: e.target.value.replace(/\D/g, '') })} className="e-input font-bold text-slate-900 tabular-nums" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Nhà cung cấp</label>
-                  <input value={modal.supplier} onChange={e => setModal({ ...modal, supplier: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Tên NCC" />
+                  <label className="e-label">Ngày nhập</label>
+                  <input type="date" value={modal.date} onChange={e => setModal({ ...modal, date: e.target.value })} className="e-input" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Hoá đơn / Chứng từ / Bill CK <span className="text-slate-400 font-normal">(nhiều ảnh)</span></label>
+                <label className="e-label">Nhà cung cấp</label>
+                <input value={modal.supplier} onChange={e => setModal({ ...modal, supplier: e.target.value })} className="e-input" placeholder="Tên NCC" />
+              </div>
+              <div>
+                <label className="e-label">Hoá đơn / Chứng từ / Bill CK <span className="text-slate-400 font-normal">(nhiều ảnh)</span></label>
                 {modal.proof_urls?.length > 0 && (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
                     {modal.proof_urls.map((u, i) => (
-                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 group">
+                      <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
                         <img src={u} alt={`chứng từ ${i + 1}`} className="w-full h-full object-cover" />
-                        <button type="button" onClick={() => removeProof(u)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500"><X className="w-3 h-3" /></button>
+                        <button type="button" onClick={() => removeProof(u)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-danger-500 transition"><X className="w-3 h-3" /></button>
                       </div>
                     ))}
                   </div>
                 )}
-                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="w-full border-2 border-dashed border-slate-200 p-4 rounded-xl text-center text-slate-400 hover:border-teal-400 transition-colors disabled:opacity-60">
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="w-full border-2 border-dashed border-slate-200 bg-slate-50 p-4 rounded-xl text-center text-slate-500 font-medium hover:border-teal-400 hover:bg-teal-50/40 transition disabled:opacity-60">
                   {uploading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : <span className="flex items-center justify-center gap-2 text-sm"><ImageIcon className="w-4 h-4" /> {modal.proof_urls?.length ? 'Thêm ảnh khác' : 'Tải ảnh hoá đơn / bill lên'}</span>}
                 </button>
                 <input type="file" accept="image/*" multiple className="hidden" ref={fileRef} onChange={handleUpload} />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Ghi chú</label>
-                <textarea rows={2} value={modal.notes} onChange={e => setModal({ ...modal, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none" />
+                <label className="e-label">Ghi chú</label>
+                <textarea rows={2} value={modal.notes} onChange={e => setModal({ ...modal, notes: e.target.value })} className="e-textarea resize-none" />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t shrink-0 flex justify-end gap-2">
-              <button onClick={() => setModal(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={save} disabled={saving || uploading} className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl disabled:opacity-50">{saving ? 'Đang lưu...' : 'Nhập kho'}</button>
+            <div className="e-modal-footer shrink-0">
+              <button onClick={() => setModal(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={save} disabled={saving || uploading} className="e-btn e-btn-primary min-w-[110px]">{saving ? 'Đang lưu...' : 'Nhập kho'}</button>
             </div>
           </div>
         </div>

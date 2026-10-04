@@ -39,7 +39,7 @@ const APPT_STAGE = (a) => {
   if (a.post_op_status) return { label: 'Hậu phẫu / CSKH', cls: 'bg-teal-100 text-teal-700' };
   return ({ scheduled: { label: 'Lịch hẹn', cls: 'bg-blue-100 text-blue-700' }, coc: { label: 'Cọc', cls: 'bg-violet-100 text-violet-700' }, bong: { label: 'Bong', cls: 'bg-rose-100 text-rose-700' }, phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-100 text-teal-700' }, cancelled: { label: 'Đã huỷ', cls: 'bg-slate-100 text-slate-400' } })[a.status] || { label: a.status, cls: 'bg-slate-100 text-slate-500' };
 };
-const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none';
+const inp = 'e-input h-auto min-h-[40px] py-2';
 // "19:30 - 01/08"
 const fmtDT = (s) => { if (!s) return ''; const d = new Date(s); return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`; };
 const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); return d; };
@@ -1164,7 +1164,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                       <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Nhắn tin hỏi thăm, gửi ưu đãi, tư vấn thêm…" className={inp} /></div>
                     <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Hẹn chăm sóc tiếp (nếu có)</label>
                       <input type="datetime-local" value={care.next} onChange={e => setCare({ ...care, next: e.target.value })} className={inp} /></div>
-                    <button onClick={addCare} disabled={savingCare} className="w-full h-10 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCare ? 'Đang lưu…' : 'Lưu chăm sóc'}</button>
+                    <button onClick={addCare} disabled={savingCare} className="e-btn e-btn-primary e-btn-block"><Save className="w-4 h-4" />{savingCare ? 'Đang lưu…' : 'Lưu chăm sóc'}</button>
                   </div>
                 )}
                 <Timeline items={cares} loading={loadingActs} me={me} onDelete={delAct} kind="care" />
@@ -1492,7 +1492,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
               <div className="text-[13px] font-bold text-teal-800 mb-2">Sếp quét QR hoặc mở link là xem được (không cần đăng nhập)</div>
               <img src={share.qr} alt="QR báo cáo" className="w-56 mx-auto rounded-xl border border-teal-100 bg-white shadow-sm" />
               <div className="grid grid-cols-2 gap-2 mt-3">
-                <button onClick={shareZalo} className="h-11 rounded-xl bg-blue-600 text-white text-[13px] font-bold hover:bg-blue-700 inline-flex items-center justify-center gap-1.5"><Send className="w-4 h-4" /> Gửi Zalo</button>
+                <button onClick={shareZalo} className="e-btn e-btn-outline h-11"><Send className="w-4 h-4" /> Gửi Zalo</button>
                 <button onClick={downloadQr} className="h-11 rounded-xl bg-teal-600 text-white text-[13px] font-bold hover:bg-teal-700 inline-flex items-center justify-center gap-1.5"><Download className="w-4 h-4" /> Tải ảnh QR</button>
               </div>
               <div className="flex gap-2 mt-2">
@@ -1549,7 +1549,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
                             <span className="text-slate-500 tabular-nums">{maskPhone(c.phone)}</span>
                             <span className="text-slate-400">· {new Date(c.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                             {c.st && STATUS[c.st] && <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: STATUS_COLORS[c.st] || '#94a3b8' }}>{STATUS[c.st].label}</span>}
-                            {c.gf && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500">GetFly</span>}
+                            {c.gf && <span className="e-badge e-badge-sm e-tone-neutral">GetFly</span>}
                             {who === 'all' && c.author && <span className="text-slate-400">· {c.author}</span>}
                           </div>
                           {c.content && <div className="text-slate-500 mt-0.5 line-clamp-2">{c.content}</div>}
@@ -1693,17 +1693,17 @@ const ImportModal = ({ me, onClose, onDone }) => {
 };
 
 // ---------- chung ----------
-const Field = ({ label, children }) => (<div className="mb-3"><label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>{children}</div>);
+const Field = ({ label, children }) => (<div className="mb-3"><label className="e-label">{label}</label>{children}</div>);
 const Modal = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-    <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-      <div className="px-5 py-3.5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl"><h3 className="font-bold text-slate-800">{title}</h3><button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button></div>
+  <div className="fixed inset-0 bg-slate-900/40 z-[80] flex items-center justify-center p-4 backdrop-blur-[1px]" onClick={onClose}>
+    <div className="e-modal max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="e-modal-header items-center sticky top-0 bg-white rounded-t-2xl z-10"><h3 className="e-modal-title">{title}</h3><button onClick={onClose} className="w-8 h-8 rounded-full grid place-items-center text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button></div>
       <div className="p-5">{children}</div>
     </div>
   </div>
 );
 const ModalActions = ({ onClose, onSave, saving }) => (
-  <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button><button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 text-sm">{saving ? 'Đang lưu…' : 'Lưu'}</button></div>
+  <div className="flex justify-end gap-2"><button onClick={onClose} className="e-btn e-btn-secondary">Hủy</button><button onClick={onSave} disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu…' : 'Lưu'}</button></div>
 );
 
 // ---------- Kéo dữ liệu từ GetFly CRM ----------
@@ -1752,7 +1752,7 @@ const GetflyModal = ({ onClose, onDone }) => {
       <p className="text-[12px] text-slate-500 mb-3">Kéo danh sách khách từ GetFly CRM về module này, hợp nhất theo <b>số điện thoại</b>. Khách đã có sẽ được cập nhật tên/mô tả nhưng <b>giữ nguyên trạng thái & người phụ trách</b>. Nên bấm <b>Kiểm tra kết nối</b> trước để soi dữ liệu.</p>
       <div className="flex gap-2 flex-wrap">
         <button type="button" onClick={doProbe} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">{busy === 'probe' ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}</button>
-        <button type="button" onClick={doSync} disabled={!!busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"><Download className="w-4 h-4" /> {busy === 'sync' ? 'Đang kéo…' : 'Kéo về'}</button>
+        <button type="button" onClick={doSync} disabled={!!busy} className="e-btn e-btn-primary"><Download className="w-4 h-4" /> {busy === 'sync' ? 'Đang kéo…' : 'Kéo về'}</button>
       </div>
 
       {probe && (
@@ -1917,7 +1917,7 @@ const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
         </div>
         <div className="shrink-0 flex justify-end gap-2 px-5 py-3 border-t bg-white">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-          <button onClick={save} disabled={saving} className="px-5 py-2 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:opacity-60 text-sm inline-flex items-center gap-1.5"><CalendarDays className="w-4 h-4" />{saving ? 'Đang tạo…' : 'Tạo lịch hẹn'}</button>
+          <button onClick={save} disabled={saving} className="e-btn e-btn-primary"><CalendarDays className="w-4 h-4" />{saving ? 'Đang tạo…' : 'Tạo lịch hẹn'}</button>
         </div>
       </div>
     </div>

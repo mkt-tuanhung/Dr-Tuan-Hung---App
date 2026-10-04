@@ -11,17 +11,17 @@ import WerewolfGame from '@/features/werewolf/WerewolfGame.jsx';
 // Đợt đầu: VÒNG QUAY MAY MẮN. Admin tạo game (giải thưởng, lượt, thời gian);
 // nhân sự quay — server chọn giải (RPC play_minigame), kết quả realtime.
 
-const inp = 'w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white';
+const inp = 'e-input';
 const PALETTE = ['#12A4A5', '#f59e0b', '#8b5cf6', '#f43f5e', '#3b82f6', '#10b981', '#f97316', '#ec4899', '#6366f1', '#84cc16'];
 const fmtDT = (s) => s ? new Date(s).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
 const toLocalInput = (iso) => { if (!iso) return ''; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 
 const gameState = (g) => {
   const now = new Date();
-  if (g.status !== 'active') return { label: 'Đã đóng', cls: 'bg-slate-100 text-slate-500' };
-  if (g.starts_at && now < new Date(g.starts_at)) return { label: 'Sắp mở', cls: 'bg-amber-100 text-amber-700' };
-  if (g.ends_at && now > new Date(g.ends_at)) return { label: 'Hết hạn', cls: 'bg-slate-100 text-slate-500' };
-  return { label: 'Đang mở', cls: 'bg-emerald-100 text-emerald-700' };
+  if (g.status !== 'active') return { label: 'Đã đóng', cls: 'e-tone-neutral' };
+  if (g.starts_at && now < new Date(g.starts_at)) return { label: 'Sắp mở', cls: 'e-tone-warning' };
+  if (g.ends_at && now > new Date(g.ends_at)) return { label: 'Hết hạn', cls: 'e-tone-danger' };
+  return { label: 'Đang mở', cls: 'e-tone-success' };
 };
 const isOpen = (g) => gameState(g).label === 'Đang mở';
 
@@ -57,7 +57,7 @@ const MinigamePage = () => {
     toast.success(status === 'closed' ? 'Đã đóng game' : 'Đã mở lại game');
   };
 
-  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>;
 
   if (current) {
     const g = games.find(x => x.id === current) || null;
@@ -68,27 +68,24 @@ const MinigamePage = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="relative overflow-hidden -mx-4 -mt-4 px-4 pt-5 pb-6 lg:mx-0 lg:mt-0 lg:rounded-3xl text-white shadow-lg" style={{ background: 'linear-gradient(135deg,#7c3aed 0%,#a855f7 55%,#ec4899 100%)' }}>
-        <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative flex items-center justify-between gap-3">
-          <p className="text-white/85 text-[13px]">Sân chơi nội bộ — quay là trúng, chơi là vui 🎉</p>
-          {isAdmin && (
-            <button onClick={() => setEditGame({})} className="shrink-0 inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm backdrop-blur">
-              <Plus className="w-4 h-4" /> Tạo game
-            </button>
-          )}
-        </div>
+      {/* Thanh công cụ */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="e-page-desc flex items-center gap-2"><Gamepad2 className="w-4 h-4 text-teal-600" /> Sân chơi nội bộ — quay là trúng, chơi là vui</p>
+        {isAdmin && (
+          <button onClick={() => setEditGame({})} className="e-btn e-btn-primary shrink-0">
+            <Plus className="w-4 h-4" /> Tạo game
+          </button>
+        )}
       </div>
 
       {/* Danh sách game */}
       {games.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400">
-          <Gamepad2 className="w-10 h-10 mx-auto mb-2 text-slate-200" />
+        <div className="e-card e-empty py-12 text-[14px] text-slate-500">
+          <Gamepad2 className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-600 mb-3" />
           Chưa có sân chơi nào{isAdmin ? ' — bấm "Tạo game" để mở màn!' : '. Chờ admin mở game nhé!'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {games.map(g => {
             const st = gameState(g);
             const isMatch = g.type === 'match';
@@ -99,17 +96,17 @@ const MinigamePage = () => {
             const prizes = g.config?.prizes || [];
             const A = g.config?.team_a, B = g.config?.team_b;
             return (
-              <div key={g.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-3">
+              <div key={g.id} className="e-card e-card-pad flex flex-col gap-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-bold text-slate-800 truncate">{g.title}</div>
-                    <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[11px] text-slate-400">
-                      <span className={`font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                    <div className="text-[15px] font-semibold text-slate-900 truncate">{g.title}</div>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[12px] text-slate-500">
+                      <span className={`e-badge e-badge-sm e-badge-dot ${st.cls}`}>{st.label}</span>
                       <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" />{gPlays.length} lượt</span>
                       {g.ends_at && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />đến {fmtDT(g.ends_at)}</span>}
                     </div>
                   </div>
-                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center overflow-hidden ${isMatch ? 'bg-emerald-50' : isWolf ? '' : 'bg-violet-50 text-violet-600'}`} style={isWolf ? { background: '#1E2A44' } : undefined}>{isMatch ? <span className="text-xl">⚽</span> : isWolf ? <img src="/masoi/mascot.png" alt="" className="w-9 h-10 object-contain object-top mt-1.5" /> : <Gift className="w-5 h-5" />}</span>
+                  <span className={`w-12 h-12 shrink-0 rounded-full grid place-items-center overflow-hidden ${isMatch ? 'bg-success-50' : isWolf ? '' : 'bg-teal-50 text-teal-700'}`} style={isWolf ? { background: '#1E2A44' } : undefined}>{isMatch ? <span className="text-xl">⚽</span> : isWolf ? <img src="/masoi/mascot.png" alt="" className="w-9 h-10 object-contain object-top mt-1.5" /> : <Gift className="w-5 h-5" />}</span>
                 </div>
                 {/* Werewolf: mô tả · Match: 2 đội · Wheel: giải thưởng */}
                 {isWolf ? (
@@ -118,20 +115,20 @@ const MinigamePage = () => {
                     <span>Trò chơi trí tuệ 4–20 người · Quét QR vào làng, nhận vai bí mật rồi chơi trực tiếp cùng nhau</span>
                   </div>
                 ) : isMatch ? (
-                  <div className="flex items-center justify-center gap-3 py-1 text-[15px] font-black text-slate-700">
-                    <span>{A?.flag} {A?.name}</span><span className="text-slate-300 text-xs">VS</span><span>{B?.flag} {B?.name}</span>
+                  <div className="e-subtle flex items-center justify-center gap-3 py-2.5 text-[15px] font-bold text-slate-800">
+                    <span>{A?.flag} {A?.name}</span><span className="text-slate-400 text-[12px] font-semibold">VS</span><span>{B?.flag} {B?.name}</span>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {prizes.slice(0, 5).map((p, i) => (
-                      <span key={i} className="text-[10.5px] font-bold px-2 py-1 rounded-full text-white" style={{ background: p.color || PALETTE[i % PALETTE.length] }}>{p.label}</span>
+                      <span key={i} className="text-[11px] font-semibold px-2.5 py-1 rounded-full text-white" style={{ background: p.color || PALETTE[i % PALETTE.length] }}>{p.label}</span>
                     ))}
-                    {prizes.length > 5 && <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-500">+{prizes.length - 5}</span>}
+                    {prizes.length > 5 && <span className="e-badge e-badge-sm e-tone-neutral">+{prizes.length - 5}</span>}
                   </div>
                 )}
-                <div className="mt-auto flex items-center gap-2">
+                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2">
                   <button onClick={() => setCurrent(g.id)} disabled={!isOpen(g) && !isAdmin && !isMatch && !isWolf}
-                    className={`flex-1 h-10 rounded-xl text-white font-bold text-sm disabled:opacity-40 inline-flex items-center justify-center gap-1.5 ${isMatch ? 'bg-emerald-600 hover:bg-emerald-700' : isWolf ? 'hover:opacity-90' : 'bg-violet-600 hover:bg-violet-700'}`}
+                    className={`e-btn flex-1 min-w-0 ${isWolf ? 'text-white hover:opacity-90' : 'e-btn-primary'}`}
                     style={isWolf ? { background: '#1E2A44' } : undefined}>
                     {isWolf ? <><Play className="w-4 h-4" /> Vào Làng Sói Tuấn Hùng</>
                       : isMatch ? <><Play className="w-4 h-4" /> {isOpen(g) ? 'Dự đoán ngay' : 'Xem kết quả'}</>
@@ -139,9 +136,9 @@ const MinigamePage = () => {
                   </button>
                   {isAdmin && (
                     <>
-                      {!isMatch && !isWolf && <button onClick={() => setEditGame(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">Sửa</button>}
-                      <button onClick={() => toggleClose(g)} className="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50">{g.status === 'active' ? 'Đóng' : 'Mở'}</button>
-                      <button onClick={() => del(g)} className="h-10 w-10 grid place-items-center rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
+                      {!isMatch && !isWolf && <button onClick={() => setEditGame(g)} className="e-btn e-btn-secondary px-3">Sửa</button>}
+                      <button onClick={() => toggleClose(g)} className="e-btn e-btn-secondary px-3">{g.status === 'active' ? 'Đóng' : 'Mở'}</button>
+                      <button onClick={() => del(g)} className="e-icon-btn shrink-0 hover:!text-danger-600 hover:!border-danger-200 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button>
                     </>
                   )}
                 </div>
@@ -153,15 +150,17 @@ const MinigamePage = () => {
 
       {/* Bảng vàng gần đây */}
       {plays.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <div className="text-[13px] font-bold text-slate-700 mb-2.5 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-500" /> Trúng thưởng gần đây</div>
-          <div className="divide-y divide-slate-50">
+        <div className="e-card e-card-pad">
+          <div className="e-card-header">
+            <h3 className="e-card-title flex items-center gap-2"><Trophy className="w-5 h-5 text-warning-500" /> Trúng thưởng gần đây</h3>
+          </div>
+          <div className="divide-y divide-slate-100">
             {plays.slice(0, 12).map(p => (
-              <div key={p.id} className="py-2 flex items-center gap-2 text-[13px] flex-wrap">
-                <b className="text-slate-800">{p.nguoi?.full_name || '—'}</b>
+              <div key={p.id} className="py-2.5 flex items-center gap-2 text-[14px] flex-wrap">
+                <b className="text-slate-900 font-semibold">{p.nguoi?.full_name || '—'}</b>
                 <span className="text-slate-400">trúng</span>
-                <span className="font-bold text-violet-600">{p.prize}</span>
-                <span className="ml-auto text-[11px] text-slate-300 tabular-nums">{fmtDT(p.created_at)}</span>
+                <span className="e-badge e-badge-sm e-tone-brand">{p.prize}</span>
+                <span className="ml-auto text-[12px] text-slate-400 tabular-nums">{fmtDT(p.created_at)}</span>
               </div>
             ))}
           </div>
@@ -211,14 +210,14 @@ const WheelPlay = ({ game, me, plays, onBack, onPlayed }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <button onClick={onBack} className="w-9 h-9 grid place-items-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50"><ChevronLeft className="w-5 h-5" /></button>
+        <button onClick={onBack} className="e-icon-btn" aria-label="Quay lại"><ChevronLeft className="w-5 h-5" /></button>
         <div className="min-w-0">
-          <div className="font-bold text-slate-800 truncate">{game.title}</div>
-          <div className="text-[12px] text-slate-400">{open ? `Bạn còn ${left} lượt quay` : 'Game đã đóng — xem kết quả'}</div>
+          <div className="text-[16px] font-semibold text-slate-900 truncate">{game.title}</div>
+          <div className="text-[12px] text-slate-500">{open ? `Bạn còn ${left} lượt quay` : 'Game đã đóng — xem kết quả'}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col items-center">
+      <div className="e-card p-6 flex flex-col items-center">
         {/* Kim chỉ */}
         <div className="relative">
           <div className="absolute left-1/2 -translate-x-1/2 -top-1 z-10 w-0 h-0" style={{ borderLeft: '14px solid transparent', borderRight: '14px solid transparent', borderTop: '22px solid #0f172a' }} />
@@ -242,27 +241,27 @@ const WheelPlay = ({ game, me, plays, onBack, onPlayed }) => {
         {won && (
           <div className="mt-6 text-center animate-bounce">
             <div className="text-[13px] text-slate-400">Chúc mừng! Bạn trúng</div>
-            <div className="text-2xl font-black text-violet-600 flex items-center gap-2 justify-center"><Sparkles className="w-6 h-6 text-amber-400" /> {won} <Sparkles className="w-6 h-6 text-amber-400" /></div>
+            <div className="text-2xl font-black text-teal-700 flex items-center gap-2 justify-center"><Sparkles className="w-6 h-6 text-warning-400" /> {won} <Sparkles className="w-6 h-6 text-warning-400" /></div>
           </div>
         )}
       </div>
 
       {/* Kết quả của tôi + bảng vàng game này */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <div className="text-[13px] font-bold text-slate-700 mb-2 flex items-center gap-1.5"><Gift className="w-4 h-4 text-violet-500" /> Lượt quay của tôi ({mine.length})</div>
-          {mine.length === 0 ? <div className="text-slate-300 text-sm py-3 text-center">Chưa quay lượt nào</div> :
-            mine.map(p => <div key={p.id} className="py-1.5 text-[13px] flex justify-between"><b className="text-violet-600">{p.prize}</b><span className="text-slate-300 text-[11px] tabular-nums">{fmtDT(p.created_at)}</span></div>)}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="e-card e-card-pad">
+          <div className="e-card-title text-[15px] lg:text-[16px] mb-3 flex items-center gap-2"><Gift className="w-5 h-5 text-teal-600" /> Lượt quay của tôi ({mine.length})</div>
+          {mine.length === 0 ? <div className="text-slate-400 text-[13px] py-3 text-center">Chưa quay lượt nào</div> :
+            mine.map(p => <div key={p.id} className="py-2 text-[14px] flex justify-between border-b border-slate-100 last:border-0"><b className="text-teal-700">{p.prize}</b><span className="text-slate-400 text-[12px] tabular-nums">{fmtDT(p.created_at)}</span></div>)}
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <div className="text-[13px] font-bold text-slate-700 mb-2 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-500" /> Bảng vàng ({plays.length} lượt)</div>
-          <div className="max-h-64 overflow-y-auto divide-y divide-slate-50">
-            {plays.length === 0 ? <div className="text-slate-300 text-sm py-3 text-center">Chưa ai quay</div> :
+        <div className="e-card e-card-pad">
+          <div className="e-card-title text-[15px] lg:text-[16px] mb-3 flex items-center gap-2"><Trophy className="w-5 h-5 text-warning-500" /> Bảng vàng ({plays.length} lượt)</div>
+          <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+            {plays.length === 0 ? <div className="text-slate-400 text-[13px] py-3 text-center">Chưa ai quay</div> :
               plays.map(p => (
-                <div key={p.id} className="py-1.5 text-[13px] flex items-center gap-2">
-                  <b className="text-slate-700">{p.nguoi?.full_name || '—'}</b>
-                  <span className="text-violet-600 font-bold">{p.prize}</span>
-                  <span className="ml-auto text-slate-300 text-[11px] tabular-nums">{fmtDT(p.created_at)}</span>
+                <div key={p.id} className="py-2 text-[14px] flex items-center gap-2">
+                  <b className="text-slate-800 font-semibold">{p.nguoi?.full_name || '—'}</b>
+                  <span className="text-teal-700 font-bold">{p.prize}</span>
+                  <span className="ml-auto text-slate-400 text-[12px] tabular-nums">{fmtDT(p.created_at)}</span>
                 </div>
               ))}
           </div>
@@ -311,35 +310,35 @@ const GameEditModal = ({ game, me, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="shrink-0 px-5 py-3.5 border-b flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Gamepad2 className="w-4 h-4 text-violet-600" /> {editing ? 'Sửa game' : 'Tạo minigame'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+    <div className="e-modal-backdrop z-[90] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="e-modal sm:max-w-lg rounded-b-none sm:rounded-2xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="e-modal-header items-center shrink-0">
+          <h3 className="e-modal-title flex items-center gap-2"><Gamepad2 className="w-5 h-5 text-teal-600" /> {editing ? 'Sửa game' : 'Tạo minigame'}</h3>
+          <button onClick={onClose} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto p-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
           <div className="mb-3">
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Tên game *</label>
+            <label className="e-label">Tên game *</label>
             <input value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="VD: Vòng quay sinh nhật công ty" className={inp} />
           </div>
           <div className="grid grid-cols-3 gap-2.5 mb-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Lượt / người</label>
+              <label className="e-label">Lượt / người</label>
               <input type="number" min="1" value={f.spins_per_user} onChange={e => setF({ ...f, spins_per_user: e.target.value })} className={inp} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Mở từ</label>
+              <label className="e-label">Mở từ</label>
               <input type="datetime-local" value={f.starts_at} onChange={e => setF({ ...f, starts_at: e.target.value })} className={`${inp} min-w-0`} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Đến</label>
+              <label className="e-label">Đến</label>
               <input type="datetime-local" value={f.ends_at} onChange={e => setF({ ...f, ends_at: e.target.value })} className={`${inp} min-w-0`} />
             </div>
           </div>
 
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-semibold text-slate-600">Giải thưởng (tên · số lượng · tỉ lệ)</label>
-            <button onClick={() => setF(s => ({ ...s, prizes: [...s.prizes, { label: '', qty: '', weight: 1 }] }))} className="text-violet-600 text-xs font-bold inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Thêm giải</button>
+            <label className="e-label mb-0">Giải thưởng (tên · số lượng · tỉ lệ)</label>
+            <button onClick={() => setF(s => ({ ...s, prizes: [...s.prizes, { label: '', qty: '', weight: 1 }] }))} className="e-btn e-btn-ghost e-btn-sm"><Plus className="w-3.5 h-3.5" /> Thêm giải</button>
           </div>
           <div className="space-y-2">
             {f.prizes.map((p, i) => (
@@ -348,15 +347,15 @@ const GameEditModal = ({ game, me, onClose, onSaved }) => {
                 <input value={p.label} onChange={e => setPrize(i, 'label', e.target.value)} placeholder="Tên giải" className={`${inp} flex-1 min-w-0`} />
                 <input type="number" min="0" value={p.qty} onChange={e => setPrize(i, 'qty', e.target.value)} placeholder="SL" title="Số lượng (bỏ trống = không giới hạn)" className={`${inp} w-16 shrink-0 px-2 text-center`} />
                 <input type="number" min="0" step="0.1" value={p.weight} onChange={e => setPrize(i, 'weight', e.target.value)} placeholder="Tỉ lệ" title="Tỉ lệ trúng (số càng lớn càng dễ trúng)" className={`${inp} w-16 shrink-0 px-2 text-center`} />
-                <button onClick={() => setF(s => ({ ...s, prizes: s.prizes.filter((_, j) => j !== i) }))} className="w-8 h-8 grid place-items-center rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 shrink-0"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={() => setF(s => ({ ...s, prizes: s.prizes.filter((_, j) => j !== i) }))} className="w-9 h-9 grid place-items-center rounded-xl text-slate-400 hover:text-danger-600 hover:bg-danger-50 shrink-0"><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">Số lượng bỏ trống = không giới hạn. Tỉ lệ là trọng số: giải tỉ lệ 10 dễ trúng gấp 10 lần giải tỉ lệ 1. Hết số lượng thì giải tự ngừng rơi.</p>
+          <p className="e-subtle text-[12px] text-slate-500 mt-3 px-3 py-2.5">Số lượng bỏ trống = không giới hạn. Tỉ lệ là trọng số: giải tỉ lệ 10 dễ trúng gấp 10 lần giải tỉ lệ 1. Hết số lượng thì giải tự ngừng rơi.</p>
         </div>
-        <div className="shrink-0 flex justify-end gap-2 px-5 py-3 border-t">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border font-semibold text-slate-600 hover:bg-slate-50 text-sm">Hủy</button>
-          <button onClick={save} disabled={saving} className="px-5 py-2 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:opacity-60 text-sm">{saving ? 'Đang lưu…' : (editing ? 'Lưu' : 'Tạo game')}</button>
+        <div className="e-modal-footer shrink-0 rounded-b-none sm:rounded-b-2xl">
+          <button onClick={onClose} className="e-btn e-btn-secondary">Hủy</button>
+          <button onClick={save} disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu…' : (editing ? 'Lưu' : 'Tạo game')}</button>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Handshake, Plus, Edit, Trash2, X, Calendar as CalendarIcon, Stethoscope, Search, CheckCircle } from 'lucide-react';
+import { Handshake, Plus, Edit, Trash2, X, Calendar as CalendarIcon, Stethoscope, Search, CheckCircle, Banknote } from 'lucide-react';
 import { PARTNER_BACSI_RATE } from '@/lib/kpiCalc';
 import { vnToday } from '@/lib/vnTime';
 
@@ -114,128 +114,145 @@ const MoDoiTacPage = () => {
   const nameOf = (r, key) => r[key]?.full_name;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Handshake className="w-5 h-5 text-amber-600" /> Mổ Đối Tác</h3>
-          <p className="text-slate-500 text-sm mt-0.5">Khách của đối tác thuê phòng khám mổ · BS nhận 50% tổng thu · phụ mổ tính như khách nội bộ</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm khách / đối tác..." className="bg-white border border-slate-200 pl-9 pr-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500 w-52" />
+        <p className="e-page-desc">Khách của đối tác thuê phòng khám mổ · BS nhận 50% tổng thu · phụ mổ tính như khách nội bộ</p>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="e-search flex-1 sm:w-60 sm:flex-none">
+            <Search />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm khách / đối tác..." className="w-full" />
           </div>
           {canWrite && (
-            <button onClick={openCreate} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm shadow-sm flex items-center gap-2 whitespace-nowrap"><Plus className="w-4 h-4" /> Thêm ca</button>
+            <button onClick={openCreate} className="e-btn e-btn-primary shrink-0"><Plus className="w-4 h-4" /> Thêm ca</button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-white border border-amber-100 rounded-2xl p-4 shadow-sm">
-          <div className="text-xs text-slate-400 font-semibold uppercase">Số ca</div>
-          <div className="text-2xl font-black text-slate-800 mt-1">{filtered.length}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="e-metric">
+          <span className="e-metric-icon"><Handshake /></span>
+          <div className="min-w-0">
+            <div className="e-metric-label">Số ca</div>
+            <div className="e-metric-value">{filtered.length}</div>
+          </div>
         </div>
-        <div className="bg-white border border-teal-100 rounded-2xl p-4 shadow-sm">
-          <div className="text-xs text-slate-400 font-semibold uppercase">Tổng thu đối tác</div>
-          <div className="text-2xl font-black text-teal-600 mt-1">{fmtM(totalFee)}</div>
+        <div className="e-metric">
+          <span className="e-metric-icon bg-success-50 text-success-600"><Banknote /></span>
+          <div className="min-w-0">
+            <div className="e-metric-label">Tổng thu đối tác</div>
+            <div className="e-metric-value">{fmtM(totalFee)}</div>
+          </div>
         </div>
         {canSeeDoctorPay && (
-          <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
-            <div className="text-xs text-slate-400 font-semibold uppercase">Công BS (đã TT)</div>
-            <div className="text-2xl font-black text-blue-600 mt-1">{fmtM(Math.round(paidTotal * PARTNER_BACSI_RATE))}</div>
-            {paidTotal < totalFee && <div className="text-[11px] text-amber-500 mt-0.5">Chưa TT: {fmtM(Math.round((totalFee - paidTotal) * PARTNER_BACSI_RATE))}</div>}
+          <div className="e-metric">
+            <span className="e-metric-icon bg-sky-50 text-sky-600"><Stethoscope /></span>
+            <div className="min-w-0">
+              <div className="e-metric-label">Công BS (đã TT)</div>
+              <div className="e-metric-value">{fmtM(Math.round(paidTotal * PARTNER_BACSI_RATE))}</div>
+              {paidTotal < totalFee && <div className="e-metric-hint text-warning-600">Chưa TT: {fmtM(Math.round((totalFee - paidTotal) * PARTNER_BACSI_RATE))}</div>}
+            </div>
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin" /></div>
+        <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-14 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">Chưa có ca mổ đối tác nào</div>
+        <div className="e-card py-14 text-center text-[13px] text-slate-400">Chưa có ca mổ đối tác nào</div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {Object.entries(grouped).map(([date, list]) => (
-            <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                <CalendarIcon className="w-4 h-4 text-amber-600" />
-                <h4 className="font-bold text-amber-800">Ngày mổ: {date}</h4>
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full ml-auto">{list.length} ca</span>
+            <section key={date} className="space-y-3">
+              {/* Tiêu đề nhóm ngày mổ */}
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 grid place-items-center shrink-0"><CalendarIcon className="w-[18px] h-[18px]" /></span>
+                <div className="min-w-0">
+                  <div className="e-caption">Ngày mổ</div>
+                  <h4 className="text-[15px] font-semibold text-slate-900 tabular-nums leading-tight">{date}</h4>
+                </div>
+                <span className="flex-1 h-px bg-slate-200" />
+                <span className="e-badge e-badge-sm e-tone-brand tabular-nums shrink-0">{list.length} ca</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {list.map(r => (
-                  <div key={r.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-                    <div className="flex justify-between items-start mb-2 pb-2 border-b border-slate-50">
-                      <div className="min-w-0">
-                        <div className="font-bold text-slate-800 truncate">{r.customer_name}</div>
-                        <div className="text-xs text-slate-500 truncate">{r.service || '—'} · {r.surgery_type}</div>
-                        {r.partner_name && <div className="text-[11px] text-amber-600 font-semibold mt-0.5">Đối tác: {r.partner_name}</div>}
+                  <div key={r.id} className="e-card p-4 flex flex-col gap-3.5 transition hover:border-teal-100 hover:shadow-float">
+                    {/* Đầu thẻ: avatar + tên + dịch vụ | thu đối tác */}
+                    <div className="flex items-start gap-3">
+                      <span className="e-avatar w-11 h-11 text-[15px] before:content-[attr(data-av)]" data-av={(r.customer_name || '?').trim().split(/\s+/).pop().charAt(0).toUpperCase()} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[15px] font-semibold text-slate-900 leading-snug truncate">{r.customer_name}</div>
+                        <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{r.service || '—'} · {r.surgery_type}</div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Thu đối tác</div>
-                        <div className="text-sm font-bold text-teal-600">{fmtM(r.partner_fee)}</div>
-                        {Number(r.material_fee || 0) > 0 && <div className="text-[10px] text-slate-400">PT {fmtM(r.surgery_fee)} · VT {fmtM(r.material_fee)}</div>}
+                        <div className="e-kv-label">Thu đối tác</div>
+                        <div className="text-[15px] font-bold text-slate-900 tabular-nums">{fmtM(r.partner_fee)}</div>
+                        {Number(r.material_fee || 0) > 0 && <div className="text-[11px] text-slate-400 tabular-nums mt-0.5">PT {fmtM(r.surgery_fee)} · VT {fmtM(r.material_fee)}</div>}
                       </div>
                     </div>
-                    <div className="text-xs space-y-1 text-slate-600">
-                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-blue-500" /> BS: <b className="text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="text-blue-600 ml-auto font-semibold">{fmtM(Math.round(rowTotal(r) * PARTNER_BACSI_RATE))}</span>}</div>
+
+                    {r.partner_name && <div className="e-badge e-badge-sm e-tone-neutral self-start max-w-full overflow-hidden"><Handshake className="w-3.5 h-3.5" /> Đối tác: {r.partner_name}</div>}
+
+                    {/* Ê-kíp */}
+                    <div className="e-subtle px-3 py-2.5 text-[12.5px] space-y-1.5 text-slate-600">
+                      <div className="flex items-center gap-1.5"><Stethoscope className="w-3.5 h-3.5 text-teal-600" /> BS: <b className="font-semibold text-slate-800">{nameOf(r, 'bac_si') || '—'}</b>{canSeeDoctorPay && <span className="ml-auto font-semibold text-teal-700 tabular-nums">{fmtM(Math.round(rowTotal(r) * PARTNER_BACSI_RATE))}</span>}</div>
                       <div className="text-slate-500">Phụ mổ: {[nameOf(r, 'p1'), nameOf(r, 'p2'), nameOf(r, 'p3')].filter(Boolean).join(', ') || '—'}</div>
                     </div>
 
-                    {/* Trạng thái thanh toán đối tác — bấm mới cộng dòng tiền & lương BS */}
-                    <div className="mt-3 pt-2 border-t border-slate-50">
-                      {r.partner_paid ? (
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1 text-teal-700 bg-teal-50 border border-teal-100 px-2 py-1 rounded-lg text-xs font-bold"><CheckCircle className="w-3.5 h-3.5" /> Đối tác đã thanh toán</span>
-                          {canSeeDoctorPay && <button onClick={() => togglePaid(r)} className="text-[11px] text-slate-400 hover:text-slate-600 underline shrink-0">Bỏ đánh dấu</button>}
+                    {/* Chân thẻ: thanh toán đối tác (nút chính) + sửa/xoá — bấm mới cộng dòng tiền & lương BS */}
+                    <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        {r.partner_paid ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="e-badge e-tone-success"><CheckCircle className="w-3.5 h-3.5" /> Đối tác đã thanh toán</span>
+                            {canSeeDoctorPay && <button onClick={() => togglePaid(r)} className="text-[12px] font-medium text-slate-400 hover:text-teal-700 hover:underline underline-offset-2 shrink-0">Bỏ đánh dấu</button>}
+                          </div>
+                        ) : canSeeDoctorPay ? (
+                          <button onClick={() => togglePaid(r)} className="e-btn e-btn-primary e-btn-sm e-btn-block"><CheckCircle className="w-4 h-4" /> Đối tác đã thanh toán</button>
+                        ) : (
+                          <span className="e-badge e-badge-dot e-tone-warning">Chưa thanh toán</span>
+                        )}
+                      </div>
+                      {canWrite && (
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => openEdit(r)} className="e-btn e-btn-secondary e-btn-sm px-2.5" title="Sửa"><Edit className="w-3.5 h-3.5" /> Sửa</button>
+                          <button onClick={() => remove(r)} className="e-btn e-btn-danger-soft e-btn-sm px-2.5" title="Xoá"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
-                      ) : canSeeDoctorPay ? (
-                        <button onClick={() => togglePaid(r)} className="w-full flex justify-center items-center gap-1.5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-sm"><CheckCircle className="w-4 h-4" /> Đối tác đã thanh toán</button>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg text-xs font-semibold">Chưa thanh toán</span>
                       )}
                     </div>
-
-                    {canWrite && (
-                      <div className="flex gap-2 mt-3 pt-2 border-t border-slate-50">
-                        <button onClick={() => openEdit(r)} className="flex-1 flex justify-center items-center gap-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg border border-slate-200"><Edit className="w-3.5 h-3.5" /> Sửa</button>
-                        <button onClick={() => remove(r)} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-lg border border-red-100"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
 
       {modal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50 shrink-0">
-              <h3 className="font-bold text-amber-800">{modal.id ? 'Sửa ca mổ đối tác' : 'Thêm ca mổ đối tác'}</h3>
-              <button onClick={() => setModal(null)}><X className="w-5 h-5 text-amber-400" /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">{modal.id ? 'Sửa ca mổ đối tác' : 'Thêm ca mổ đối tác'}</h3>
+              <button onClick={() => setModal(null)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="e-modal-body overflow-y-auto space-y-4 flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tên khách *</label>
-                  <input value={modal.customer_name} onChange={e => setModal({ ...modal, customer_name: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500" placeholder="Nguyễn Văn A" />
+                  <label className="e-label">Tên khách *</label>
+                  <input value={modal.customer_name} onChange={e => setModal({ ...modal, customer_name: e.target.value })} className="e-input" placeholder="Nguyễn Văn A" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Đối tác thuê mổ</label>
-                  <input value={modal.partner_name} onChange={e => setModal({ ...modal, partner_name: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500" placeholder="Tên phòng khám / đối tác" />
+                  <label className="e-label">Đối tác thuê mổ</label>
+                  <input value={modal.partner_name} onChange={e => setModal({ ...modal, partner_name: e.target.value })} className="e-input" placeholder="Tên phòng khám / đối tác" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Dịch vụ</label>
-                  <input value={modal.service} onChange={e => setModal({ ...modal, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500" placeholder="VD: Gọt hàm" />
+                  <label className="e-label">Dịch vụ</label>
+                  <input value={modal.service} onChange={e => setModal({ ...modal, service: e.target.value })} className="e-input" placeholder="VD: Gọt hàm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Loại phẫu thuật</label>
-                  <select value={modal.surgery_type} onChange={e => setModal({ ...modal, surgery_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500">
+                  <label className="e-label">Loại phẫu thuật</label>
+                  <select value={modal.surgery_type} onChange={e => setModal({ ...modal, surgery_type: e.target.value })} className="e-input">
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
                     <option value="Đại phẫu">Đại phẫu</option>
                   </select>
@@ -243,29 +260,29 @@ const MoDoiTacPage = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Ngày mổ</label>
-                  <input type="date" value={modal.surgery_date} onChange={e => setModal({ ...modal, surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500" />
+                  <label className="e-label">Ngày mổ</label>
+                  <input type="date" value={modal.surgery_date} onChange={e => setModal({ ...modal, surgery_date: e.target.value })} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền phẫu thuật (VNĐ)</label>
-                  <input inputMode="numeric" value={modal.surgery_fee} onChange={e => setModal({ ...modal, surgery_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-teal-700" placeholder="15.000.000" />
-                  {canSeeDoctorPay && <p className="text-xs text-blue-500 mt-1">Công BS (50% tổng thu đối tác): {fmtM(Math.round((num(modal.surgery_fee) + num(modal.material_fee)) * PARTNER_BACSI_RATE))}</p>}
+                  <label className="e-label">Tiền phẫu thuật (VNĐ)</label>
+                  <input inputMode="numeric" value={modal.surgery_fee} onChange={e => setModal({ ...modal, surgery_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="e-input font-semibold tabular-nums" placeholder="15.000.000" />
+                  {canSeeDoctorPay && <p className="text-[12px] text-teal-700 mt-1.5">Công BS (50% tổng thu đối tác): {fmtM(Math.round((num(modal.surgery_fee) + num(modal.material_fee)) * PARTNER_BACSI_RATE))}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tiền vật tư (VNĐ)</label>
-                  <input inputMode="numeric" value={modal.material_fee} onChange={e => setModal({ ...modal, material_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 font-bold text-slate-700" placeholder="0" />
-                  <p className="text-xs text-slate-400 mt-1">Đã gộp vào tổng thu đối tác (dùng tính công BS)</p>
+                  <label className="e-label">Tiền vật tư (VNĐ)</label>
+                  <input inputMode="numeric" value={modal.material_fee} onChange={e => setModal({ ...modal, material_fee: fmt(e.target.value.replace(/\D/g, '')) })} className="e-input font-semibold tabular-nums" placeholder="0" />
+                  <p className="text-[12px] text-slate-400 mt-1.5">Đã gộp vào tổng thu đối tác (dùng tính công BS)</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Tổng thu đối tác</label>
-                  <div className="w-full border bg-slate-50 p-2.5 rounded-xl font-bold text-teal-700">{fmtM(num(modal.surgery_fee) + num(modal.material_fee))}</div>
+                  <label className="e-label">Tổng thu đối tác</label>
+                  <div className="e-subtle h-10 px-3 flex items-center font-bold text-teal-800 tabular-nums">{fmtM(num(modal.surgery_fee) + num(modal.material_fee))}</div>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Bác sĩ mổ</label>
-                <select value={modal.bac_si_id} onChange={e => setModal({ ...modal, bac_si_id: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500">
+                <label className="e-label">Bác sĩ mổ</label>
+                <select value={modal.bac_si_id} onChange={e => setModal({ ...modal, bac_si_id: e.target.value })} className="e-input">
                   <option value="">-- Trống --</option>
                   {doctors.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                 </select>
@@ -273,8 +290,8 @@ const MoDoiTacPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {['phu_mo_1_id', 'phu_mo_2_id', 'phu_mo_3_id'].map((k, i) => (
                   <div key={k}>
-                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">Phụ mổ {i + 1}</label>
-                    <select value={modal[k]} onChange={e => setModal({ ...modal, [k]: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500">
+                    <label className="e-label">Phụ mổ {i + 1}</label>
+                    <select value={modal[k]} onChange={e => setModal({ ...modal, [k]: e.target.value })} className="e-input">
                       <option value="">-- Trống --</option>
                       {staff.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
@@ -282,13 +299,13 @@ const MoDoiTacPage = () => {
                 ))}
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Ghi chú</label>
-                <textarea rows={2} value={modal.notes} onChange={e => setModal({ ...modal, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-amber-500 resize-none" />
+                <label className="e-label">Ghi chú</label>
+                <textarea rows={2} value={modal.notes} onChange={e => setModal({ ...modal, notes: e.target.value })} className="e-textarea resize-none" />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t shrink-0 flex justify-end gap-2">
-              <button onClick={() => setModal(null)} className="px-5 py-2 border rounded-xl font-semibold text-slate-600 hover:bg-white">Hủy</button>
-              <button onClick={save} disabled={saving} className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl disabled:opacity-50">{saving ? 'Đang lưu...' : 'Lưu'}</button>
+            <div className="e-modal-footer shrink-0">
+              <button onClick={() => setModal(null)} className="e-btn e-btn-secondary">Hủy</button>
+              <button onClick={save} disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Lưu'}</button>
             </div>
           </div>
         </div>
