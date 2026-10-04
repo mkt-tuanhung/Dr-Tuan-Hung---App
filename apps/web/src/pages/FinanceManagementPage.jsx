@@ -642,7 +642,51 @@ const FinanceManagementPage = () => {
             ) : revenueData.length === 0 ? (
               <div className="e-empty"><div className="e-empty-icon"><ReceiptText /></div><div className="e-empty-title">Không có giao dịch nào trong tháng này.</div></div>
             ) : (
-              <div className="e-table-wrap">
+              <>
+              {/* Mobile: danh sách thẻ kiểu lead-card Ethics */}
+              <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
+                {revenueData.map(r => (
+                  <div key={r.id} className="e-card-flat p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="e-avatar w-11 h-11"><ReceiptText className="w-5 h-5" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[15px] font-semibold text-slate-900 truncate">{r.customer_name}</div>
+                        <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 tabular-nums">
+                          <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
+                        </div>
+                      </div>
+                      <span className="e-badge e-badge-sm e-tone-brand shrink-0">{r.service_group || 'Chưa rõ'}</span>
+                    </div>
+                    <div className="mt-3 text-[13px] text-slate-500 truncate">Dịch vụ: <span className="font-medium text-slate-800">{r.service || 'N/A'}</span></div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span className="e-badge e-badge-sm e-tone-neutral">{r.customer_source || 'Khác'}</span>
+                      <span className="e-badge e-badge-sm e-tone-neutral">{r.customer_type || 'Mới'}</span>
+                    </div>
+                    <div className="e-subtle mt-3 p-3 grid grid-cols-2 gap-3">
+                      <div className="min-w-0">
+                        <div className="e-kv-label">Doanh thu tổng</div>
+                        <div className="text-[15px] font-bold text-teal-700 tabular-nums truncate">{fmt(r.revenue || 0)}</div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="e-kv-label">Upsale</div>
+                        <div className="text-[14px] font-semibold text-slate-800 tabular-nums truncate">{fmt(r.upsale_revenue || 0)}</div>
+                      </div>
+                    </div>
+                    {(profile?.role === 'admin' || profile?.role === 'marketing') && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
+                        <button onClick={() => openEditRevenue(r)} className="e-btn e-btn-secondary e-btn-sm flex-1">
+                          <Pencil className="w-4 h-4" /> Sửa
+                        </button>
+                        <button onClick={() => handleDeleteRevenue(r)} title="Xóa" className="e-btn e-btn-danger-soft e-btn-sm w-[34px] px-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* ≥md: bảng e-table */}
+              <div className="e-table-wrap hidden md:block">
                 <table className="e-table">
                   <thead>
                     <tr>
@@ -689,6 +733,7 @@ const FinanceManagementPage = () => {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </div>
