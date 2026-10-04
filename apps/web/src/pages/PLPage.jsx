@@ -143,75 +143,91 @@ export default function PLPage() {
         <div className="e-card flex justify-center h-40 items-center"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : tab === 'pl' ? (
         <>
-          {/* Thẻ lợi nhuận — thẻ tổng kết trắng, số lớn đổi tông theo lãi/lỗ */}
-          <div className={`e-card e-card-pad relative overflow-hidden ${profit >= 0 ? 'text-teal-700' : 'text-danger-600'}`}>
-            <div className="hidden" />
-            <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Chỉ số tháng (MetricCard Ethics) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className={`e-metric ${profit >= 0 ? 'border-teal-300' : 'border-danger-200'}`}>
+              <span className={`e-metric-icon ${profit >= 0 ? 'e-tone-success' : 'e-tone-danger'}`}>{profit >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}</span>
               <div className="min-w-0">
-                <div className="text-[13px] font-medium text-slate-500 flex items-center gap-2">{profit >= 0 ? <TrendingUp className="w-4 h-4 text-success-600" /> : <TrendingDown className="w-4 h-4 text-danger-600" />} Lợi nhuận tháng {month}/{year}</div>
-                <div className="text-[30px] lg:text-[34px] font-bold leading-tight mt-1 tabular-nums">{fmt(profit)}</div>
-                <div className="text-[12.5px] text-slate-500 mt-1.5">Biên lợi nhuận <b className="text-slate-800">{margin.toFixed(1)}%</b> · {d.cases} ca mổ · TB <b className="text-slate-800">{fmt(perCase)}</b>/ca</div>
+                <div className="e-metric-label">Lợi nhuận tháng {month}/{year}</div>
+                <div className={`e-metric-value ${profit >= 0 ? '!text-teal-700' : '!text-danger-600'}`}>{fmt(profit)}</div>
+                <div className="e-metric-hint whitespace-normal leading-snug mt-0.5">Biên lợi nhuận <b className="text-slate-600">{margin.toFixed(1)}%</b> · {d.cases} ca mổ · TB <b className="text-slate-600">{fmt(perCase)}</b>/ca</div>
               </div>
-              <div className="e-subtle px-4 py-3 grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1.5 sm:grid-flow-col sm:grid-rows-2 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-0.5 lg:min-w-[520px]">
-                <div className="e-kv-label">Doanh thu</div>
-                <div className="text-[15px] lg:text-[16px] font-bold text-slate-900 tabular-nums text-right sm:text-left">{fmt(d.revenue)}</div>
-                <div className="e-kv-label">Tổng chi phí (gồm trích quỹ)</div>
-                <div className="text-[15px] lg:text-[16px] font-bold text-slate-900 tabular-nums text-right sm:text-left">{fmt(totalCost)}</div>
-                <div className="e-kv-label">Tiền thực về trong tháng</div>
-                <div className="text-[15px] lg:text-[16px] font-bold text-teal-700 tabular-nums text-right sm:text-left">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
+            </div>
+            <div className="e-metric">
+              <span className="e-metric-icon"><DollarSign /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">Doanh thu</div>
+                <div className="e-metric-value">{fmt(d.revenue)}</div>
+              </div>
+            </div>
+            <div className="e-metric">
+              <span className="e-metric-icon e-tone-peach"><Wallet /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">Tổng chi phí (gồm trích quỹ)</div>
+                <div className="e-metric-value">{fmt(totalCost)}</div>
+              </div>
+            </div>
+            <div className="e-metric">
+              <span className="e-metric-icon e-tone-info"><Banknote /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">Tiền thực về trong tháng</div>
+                <div className="e-metric-value">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
               </div>
             </div>
           </div>
 
-          {/* Dòng tiền tháng: sổ phép tính gọn (kiểu bảng P&L Ethics) */}
-          <div className="e-card overflow-hidden">
-            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex items-center gap-3">
-              <span className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Banknote className="w-[18px] h-[18px]" /></span>
-              <h3 className="e-card-title">Dòng tiền tháng {month}/{year}</h3>
-            </div>
-            <div className="divide-y divide-slate-100 text-[14px]">
-              <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-slate-300"> </span>
-                <div className="flex-1 min-w-0"><span className="font-semibold text-slate-800">Doanh thu ca mổ</span> <span className="text-[12px] text-slate-400">· {d.cases} ca</span></div>
-                <div className="font-semibold text-slate-900 tabular-nums">{fmt(d.revenue)}</div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+            {/* Dòng tiền tháng: sổ phép tính gọn (kiểu bảng P&L Ethics) */}
+            <div className="e-card overflow-hidden">
+              <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Banknote className="w-[18px] h-[18px]" /></span>
+                <h3 className="e-card-title">Dòng tiền tháng {month}/{year}</h3>
               </div>
-              <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-warning-600">−</span>
-                <div className="flex-1 min-w-0"><span className="text-slate-600 pl-0">Cọc đã thu trước</span> <span className="text-[12px] text-slate-400">· {d.cocOffsetCount} ca đã cọc (kể cả tháng trước)</span></div>
-                <div className="font-semibold text-warning-600 tabular-nums">− {fmt(d.cocOffset)}</div>
-              </div>
-              <div className="px-4 lg:px-5 py-3 flex items-center gap-3 bg-teal-50/70">
-                <span className="w-5 text-center font-bold text-teal-700">=</span>
-                <div className="flex-1 min-w-0"><span className="font-bold text-teal-800">Thực thu từ ca mổ</span></div>
-                <div className="font-bold text-teal-800 tabular-nums">{fmt(d.revenue - d.cocOffset)}</div>
-              </div>
-              <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-info-600">+</span>
-                <div className="flex-1 min-w-0"><span className="text-slate-600">Cọc thu trong tháng</span> <span className="text-[12px] text-slate-400">· {d.cocCount} khách — đối trừ khi lên ca mổ</span></div>
-                <div className="font-semibold text-info-600 tabular-nums">+ {fmt(d.cocRev)}</div>
-              </div>
-            </div>
-            <div className="px-4 lg:px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-              <div className="text-[13px] lg:text-[14px] font-bold text-teal-900">Tổng tiền thực về trong tháng</div>
-              <div className="text-[18px] lg:text-[20px] font-bold text-teal-900 tabular-nums">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
-            </div>
-          </div>
-
-          {/* Chi phí */}
-          <div className="e-card overflow-hidden">
-            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3"><h3 className="e-card-title">Chi phí</h3><span className="e-badge e-tone-danger tabular-nums">− {fmt(totalCost)}</span></div>
-            <div className="divide-y divide-slate-100">
-              {costRows.map(r => (
-                <div key={r.label} className="px-4 lg:px-5 py-3 min-h-[64px] flex items-center gap-3">
-                  <span className={`w-10 h-10 rounded-full grid place-items-center shrink-0 ${r.cls}`}><r.icon className="w-[18px] h-[18px]" /></span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[14px] font-medium text-slate-700">{r.label}</div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-600 to-teal-400" style={{ width: `${pct(r.value)}%` }} /></div>
-                  </div>
-                  <div className="text-right shrink-0 min-w-[96px]"><div className="text-[14px] font-semibold text-slate-900 tabular-nums">{fmt(r.value)}</div><div className="text-[12px] text-slate-400 tabular-nums">{pct(r.value)}%</div></div>
+              <div className="divide-y divide-slate-100 text-[14px]">
+                <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
+                  <span className="w-5 text-center font-bold text-slate-300"> </span>
+                  <div className="flex-1 min-w-0"><span className="font-semibold text-slate-800">Doanh thu ca mổ</span> <span className="text-[12px] text-slate-400">· {d.cases} ca</span></div>
+                  <div className="font-semibold text-slate-900 tabular-nums">{fmt(d.revenue)}</div>
                 </div>
-              ))}
+                <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
+                  <span className="w-5 text-center font-bold text-warning-600">−</span>
+                  <div className="flex-1 min-w-0"><span className="text-slate-600 pl-0">Cọc đã thu trước</span> <span className="text-[12px] text-slate-400">· {d.cocOffsetCount} ca đã cọc (kể cả tháng trước)</span></div>
+                  <div className="font-semibold text-warning-600 tabular-nums">− {fmt(d.cocOffset)}</div>
+                </div>
+                <div className="px-4 lg:px-5 py-3 flex items-center gap-3 bg-teal-50/70">
+                  <span className="w-5 text-center font-bold text-teal-700">=</span>
+                  <div className="flex-1 min-w-0"><span className="font-bold text-teal-800">Thực thu từ ca mổ</span></div>
+                  <div className="font-bold text-teal-800 tabular-nums">{fmt(d.revenue - d.cocOffset)}</div>
+                </div>
+                <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
+                  <span className="w-5 text-center font-bold text-info-600">+</span>
+                  <div className="flex-1 min-w-0"><span className="text-slate-600">Cọc thu trong tháng</span> <span className="text-[12px] text-slate-400">· {d.cocCount} khách — đối trừ khi lên ca mổ</span></div>
+                  <div className="font-semibold text-info-600 tabular-nums">+ {fmt(d.cocRev)}</div>
+                </div>
+              </div>
+              <div className="px-4 lg:px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                <div className="text-[13px] lg:text-[14px] font-bold text-teal-900">Tổng tiền thực về trong tháng</div>
+                <div className="text-[18px] lg:text-[20px] font-bold text-teal-900 tabular-nums">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
+              </div>
             </div>
+
+            {/* Chi phí */}
+            <div className="e-card overflow-hidden">
+              <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3"><h3 className="e-card-title">Chi phí</h3><span className="e-badge e-tone-danger tabular-nums">− {fmt(totalCost)}</span></div>
+              <div className="divide-y divide-slate-100">
+                {costRows.map(r => (
+                  <div key={r.label} className="px-4 lg:px-5 py-3 min-h-[64px] flex items-center gap-3">
+                    <span className={`w-10 h-10 rounded-full grid place-items-center shrink-0 ${r.cls}`}><r.icon className="w-[18px] h-[18px]" /></span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-medium text-slate-700">{r.label}</div>
+                      <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-600 to-teal-400" style={{ width: `${pct(r.value)}%` }} /></div>
+                    </div>
+                    <div className="text-right shrink-0 min-w-[96px]"><div className="text-[14px] font-semibold text-slate-900 tabular-nums">{fmt(r.value)}</div><div className="text-[12px] text-slate-400 tabular-nums">{pct(r.value)}%</div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
 
           <p className="e-subtle p-3.5 text-[12.5px] text-slate-500 leading-relaxed">
@@ -221,22 +237,30 @@ export default function PLPage() {
       ) : (
         <>
           {/* ===== TAB QUỸ RỦI RO ===== */}
-          <div className="e-card e-card-pad relative overflow-hidden">
-            <div className="hidden" />
-            <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="e-metric border-teal-300">
+              <span className="e-metric-icon"><Shield /></span>
               <div className="min-w-0">
-                <div className="text-[13px] font-medium text-slate-500 flex items-center gap-2"><Shield className="w-4 h-4 text-teal-600" /> Tổng quỹ rủi ro (tích lũy)</div>
-                <div className="text-[30px] lg:text-[34px] font-bold text-teal-700 leading-tight mt-1 tabular-nums">{fmt(risk.totalFund)}</div>
-                <div className="text-[12.5px] text-slate-500 mt-1.5">Tiền trích từ dòng tiền để dự phòng — lợi nhuận &amp; dòng tiền tự trừ khoản trích</div>
+                <div className="e-metric-label">Tổng quỹ rủi ro (tích lũy)</div>
+                <div className="e-metric-value !text-teal-700">{fmt(risk.totalFund)}</div>
               </div>
-              <div className="e-subtle px-4 py-3 grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1.5 sm:grid-flow-col sm:grid-rows-2 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-0.5 lg:min-w-[340px]">
-                <div className="e-kv-label">Trích tháng {month}</div>
-                <div className="text-[15px] lg:text-[16px] font-bold text-teal-700 tabular-nums text-right sm:text-left">+{fmt(risk.monthDep)}</div>
-                <div className="e-kv-label">Rút tháng {month}</div>
-                <div className="text-[15px] lg:text-[16px] font-bold text-peach-600 tabular-nums text-right sm:text-left">−{fmt(risk.monthWit)}</div>
+            </div>
+            <div className="e-metric">
+              <span className="e-metric-icon e-tone-brand"><ArrowDownLeft /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">Trích tháng {month}</div>
+                <div className="e-metric-value">+{fmt(risk.monthDep)}</div>
+              </div>
+            </div>
+            <div className="e-metric">
+              <span className="e-metric-icon e-tone-peach"><ArrowUpRight /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">Rút tháng {month}</div>
+                <div className="e-metric-value">−{fmt(risk.monthWit)}</div>
               </div>
             </div>
           </div>
+          <p className="e-page-desc -mt-1">Tiền trích từ dòng tiền để dự phòng — lợi nhuận &amp; dòng tiền tự trừ khoản trích</p>
 
           {/* Form trích / rút */}
           {canWrite && (

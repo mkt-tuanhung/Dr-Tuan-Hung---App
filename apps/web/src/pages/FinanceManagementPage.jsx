@@ -8,10 +8,10 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
-import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight, CircleDollarSign, Undo2, PiggyBank, ReceiptText } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
-const COLORS = ['#12A4A5', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#12A4A5'];
+const COLORS = ['#067B7F', '#3CA7A9', '#76C2C3', '#F4B183', '#A99BE0', '#B8C4CC'];
 
 // ===== Import doanh thu từ CSV =====
 // Thứ tự cột BẮT BUỘC (đúng theo header dưới):
@@ -412,32 +412,47 @@ const FinanceManagementPage = () => {
           {/* ===== DÒNG TIỀN THÁNG: phép tính trực quan 4 bước → tổng thực về ===== */}
           <div className="e-card e-card-pad">
             <div className="e-card-header flex-wrap">
-              <div className="e-card-title flex items-center gap-2.5"><Wallet className="w-5 h-5 text-teal-600 shrink-0" /> Dòng tiền tháng {month}/{year}</div>
+              <div className="min-w-0">
+                <div className="e-card-title">Dòng tiền tháng {month}/{year}</div>
+                <div className="e-card-sub">Doanh thu ca mổ − cọc đã thu trước + cọc thu trong tháng</div>
+              </div>
               <button type="button" onClick={() => setShowCocModal(true)} className="e-btn e-btn-outline e-btn-sm shrink-0">
                 <Search className="w-4 h-4" /> Chi tiết khách cọc
               </button>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-3.5 min-w-0">
-                <div className="text-[12.5px] font-medium text-slate-500 truncate">Doanh thu ca mổ</div>
-                <div className="text-[17px] md:text-[20px] font-bold text-slate-900 mt-1 truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
-                <div className="text-[12px] text-slate-400 mt-0.5 truncate">{stats.totalCustomers} ca mổ trong tháng</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3.5 flex items-center gap-3 min-w-0">
+                <span className="w-11 h-11 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><CircleDollarSign className="w-5 h-5" /></span>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-medium text-slate-500 truncate">Doanh thu ca mổ</div>
+                  <div className="text-[18px] lg:text-[20px] font-bold text-slate-900 leading-tight truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+                  <div className="text-[12px] text-slate-400 truncate">{stats.totalCustomers} ca mổ trong tháng</div>
+                </div>
               </div>
-              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl border border-slate-200 bg-white p-3.5 min-w-0 transition hover:border-teal-300 hover:shadow-soft cursor-pointer">
-                <div className="text-[12.5px] font-medium text-slate-500 truncate">− Cọc đã thu trước</div>
-                <div className="text-[17px] md:text-[20px] font-bold text-warning-600 mt-1 truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
-                <div className="text-[12px] text-teal-700 font-medium mt-0.5 truncate">{stats.depositOffsetCount || 0} ca đã cọc từ trước ▸</div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl border border-slate-200 bg-white p-3.5 flex items-center gap-3 min-w-0 transition hover:border-teal-300 hover:shadow-soft cursor-pointer">
+                <span className="w-11 h-11 rounded-full bg-warning-50 text-warning-600 grid place-items-center shrink-0"><Undo2 className="w-5 h-5" /></span>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-medium text-slate-500 truncate">− Cọc đã thu trước</div>
+                  <div className="text-[18px] lg:text-[20px] font-bold text-warning-600 leading-tight truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
+                  <div className="text-[12px] text-teal-700 font-medium truncate">{stats.depositOffsetCount || 0} ca đã cọc từ trước ▸</div>
+                </div>
               </button>
-              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 min-w-0">
-                <div className="text-[12.5px] font-semibold text-teal-800 truncate">= Thực thu ca mổ</div>
-                <div className="text-[17px] md:text-[20px] font-bold text-teal-800 mt-1 truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
-                <div className="text-[12px] text-teal-700/80 mt-0.5 truncate">tiền ca mổ thực về tháng này</div>
+              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 flex items-center gap-3 min-w-0">
+                <span className="w-11 h-11 rounded-full bg-white text-teal-700 grid place-items-center shrink-0"><Wallet className="w-5 h-5" /></span>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-semibold text-teal-800 truncate">= Thực thu ca mổ</div>
+                  <div className="text-[18px] lg:text-[20px] font-bold text-teal-800 leading-tight truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
+                  <div className="text-[12px] text-teal-700/80 truncate">tiền ca mổ thực về tháng này</div>
+                </div>
               </div>
-              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl border border-slate-200 bg-white p-3.5 min-w-0 transition hover:border-teal-300 hover:shadow-soft cursor-pointer">
-                <div className="text-[12.5px] font-medium text-slate-500 truncate">+ Cọc thu trong tháng</div>
-                <div className="text-[17px] md:text-[20px] font-bold text-info-600 mt-1 truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
-                <div className="text-[12px] text-teal-700 font-medium mt-0.5 truncate">{stats.totalCocCustomers || 0} khách cọc ▸</div>
+              <button type="button" onClick={() => setShowCocModal(true)} className="text-left rounded-xl border border-slate-200 bg-white p-3.5 flex items-center gap-3 min-w-0 transition hover:border-teal-300 hover:shadow-soft cursor-pointer">
+                <span className="w-11 h-11 rounded-full bg-info-50 text-info-600 grid place-items-center shrink-0"><PiggyBank className="w-5 h-5" /></span>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-medium text-slate-500 truncate">+ Cọc thu trong tháng</div>
+                  <div className="text-[18px] lg:text-[20px] font-bold text-info-600 leading-tight truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
+                  <div className="text-[12px] text-teal-700 font-medium truncate">{stats.totalCocCustomers || 0} khách cọc ▸</div>
+                </div>
               </button>
             </div>
 
@@ -447,19 +462,28 @@ const FinanceManagementPage = () => {
             </div>
           </div>
 
-          {/* Chỉ số phụ */}
+          {/* Chỉ số phụ (MetricCard Ethics) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="e-metric flex-col items-start gap-1">
-              <div className="e-metric-label flex items-center gap-2 w-full"><TrendingUp className="w-4 h-4 shrink-0 text-teal-600" /> <span className="truncate">DT UPSALE</span></div>
-              <div className="e-metric-value w-full" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
+            <div className="e-metric">
+              <span className="e-metric-icon"><TrendingUp /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">DT UPSALE</div>
+                <div className="e-metric-value" title={fmt(stats.totalUpsale)}>{fmt(stats.totalUpsale)}</div>
+              </div>
             </div>
-            <div className="e-metric flex-col items-start gap-1">
-              <div className="e-metric-label flex items-center gap-2 w-full"><Users className="w-4 h-4 shrink-0 text-teal-600" /> <span className="truncate">TỔNG KHÁCH</span></div>
-              <div className="e-metric-value w-full">{stats.totalCustomers} <span className="text-[13px] font-medium text-slate-500">khách</span></div>
+            <div className="e-metric">
+              <span className="e-metric-icon"><Users /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">TỔNG KHÁCH</div>
+                <div className="e-metric-value">{stats.totalCustomers} <span className="text-[13px] font-medium text-slate-500">khách</span></div>
+              </div>
             </div>
-            <div className="e-metric flex-col items-start gap-1">
-              <div className="e-metric-label flex items-center gap-2 w-full"><Filter className="w-4 h-4 shrink-0 text-teal-600" /> <span className="truncate">KHÁCH TỪ ADS</span></div>
-              <div className="e-metric-value w-full">{stats.adsCustomers} <span className="text-[13px] font-medium text-slate-500">khách</span></div>
+            <div className="e-metric">
+              <span className="e-metric-icon"><Filter /></span>
+              <div className="min-w-0">
+                <div className="e-metric-label">KHÁCH TỪ ADS</div>
+                <div className="e-metric-value">{stats.adsCustomers} <span className="text-[13px] font-medium text-slate-500">khách</span></div>
+              </div>
             </div>
           </div>
 
@@ -569,12 +593,12 @@ const FinanceManagementPage = () => {
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="e-card e-card-pad min-w-0">
-              <h3 className="e-card-title mb-4 flex items-center gap-2"><PieChart className="hidden" /> Tỷ trọng Nguồn Khách (VND)</h3>
-              <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
+              <div className="e-card-header"><h3 className="e-card-title">Tỷ trọng Nguồn Khách (VND)</h3></div>
+              <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={sourceData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
-                      {sourceData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#067B7F', '#3CA7A9', '#76C2C3', '#F4B183', '#A99BE0', '#B8C4CC'][index % COLORS.length]} />)}
+                      {sourceData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                     </Pie>
                     <RechartsTooltip formatter={(value) => fmt(value)} />
                     <Legend />
@@ -583,14 +607,14 @@ const FinanceManagementPage = () => {
               </div>
             </div>
             <div className="e-card e-card-pad min-w-0">
-              <h3 className="e-card-title mb-4 flex items-center gap-2"><BarChart className="hidden" /> Doanh thu theo Nhóm dịch vụ</h3>
-              <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
+              <div className="e-card-header"><h3 className="e-card-title">Doanh thu theo Nhóm dịch vụ</h3></div>
+              <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={serviceGroupData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(val) => (val/1000000) + 'M'} axisLine={false} tickLine={false} />
-                    <RechartsTooltip formatter={(value) => fmt(value)} cursor={{fill: '#f8fafc'}} />
+                    <RechartsTooltip formatter={(value) => fmt(value)} cursor={{fill: '#F3F9F9'}} />
                     <Bar dataKey="value" fill="#067B7F" radius={[4, 4, 0, 0]} barSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -598,81 +622,74 @@ const FinanceManagementPage = () => {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table — danh sách giao dịch kiểu DataTable Ethics */}
           <div className="e-card overflow-hidden">
-             <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
-               <h3 className="e-card-title">Danh sách Giao dịch Doanh Thu</h3>
-               {(profile?.role === 'admin' || profile?.role === 'marketing') && (
-                 <div className="flex items-center gap-2">
-                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="e-btn e-btn-secondary e-btn-sm">
-                     <Upload className="w-4 h-4" /> Import Excel/CSV
-                   </button>
-                   <button onClick={openCreateRevenue} className="e-btn e-btn-primary e-btn-sm">
-                     + Nhập trực tiếp
-                   </button>
-                 </div>
-               )}
-             </div>
-             {loading ? (
-                <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
-             ) : revenueData.length === 0 ? (
-                <div className="e-empty text-[13px] text-slate-400">Không có giao dịch nào trong tháng này.</div>
-             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 lg:p-5 bg-slate-50/60">
-                  {revenueData.map(r => (
-                    <div key={r.id} className="e-card-flat p-4 flex flex-col transition hover:border-teal-100 hover:shadow-card">
-                      <div className="flex justify-between items-start gap-3 mb-3">
-                        <div className="min-w-0">
-                          <h4 className="text-[15px] font-semibold text-slate-900 truncate">{r.customer_name}</h4>
-                          <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 tabular-nums">
-                             <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
-                          </div>
-                        </div>
-                        <div className="e-badge e-badge-sm e-tone-brand shrink-0">
-                          {r.service_group || 'Chưa rõ'}
-                        </div>
-                      </div>
-                      
-                      <div className="text-[13px] text-slate-500 mb-3 pb-3 border-b border-slate-100 truncate">
-                        Dịch vụ: <span className="font-medium text-slate-800">{r.service || 'N/A'}</span>
-                      </div>
-
-                      <div className="space-y-1.5 mb-3">
-                        <div className="flex justify-between text-[13px]">
-                          <span className="text-slate-500">Nguồn khách:</span>
-                          <span className="font-semibold text-slate-800">{r.customer_source || 'Khác'}</span>
-                        </div>
-                        <div className="flex justify-between text-[13px]">
-                          <span className="text-slate-500">Tệp khách:</span>
-                          <span className="font-semibold text-slate-800">{r.customer_type || 'Mới'}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="e-subtle p-3 space-y-1.5 mt-auto">
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500">Doanh thu tổng:</span>
-                          <span className="font-bold text-teal-700 text-[15px] tabular-nums">{fmt(r.revenue || 0)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500">Upsale:</span>
-                          <span className="font-semibold text-slate-800 text-[14px] tabular-nums">{fmt(r.upsale_revenue || 0)}</span>
-                        </div>
-                      </div>
-
-                      {(profile?.role === 'admin' || profile?.role === 'marketing') && (
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                          <button onClick={() => openEditRevenue(r)} className="e-btn e-btn-secondary e-btn-sm flex-1">
-                            <Pencil className="w-4 h-4" /> Sửa
-                          </button>
-                          <button onClick={() => handleDeleteRevenue(r)} title="Xóa" className="e-btn e-btn-danger-soft e-btn-sm w-[34px] px-0">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+              <h3 className="e-card-title">Danh sách Giao dịch Doanh Thu</h3>
+              {(profile?.role === 'admin' || profile?.role === 'marketing') && (
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="e-btn e-btn-secondary e-btn-sm">
+                    <Upload className="w-4 h-4" /> Import Excel/CSV
+                  </button>
+                  <button onClick={openCreateRevenue} className="e-btn e-btn-primary e-btn-sm">
+                    + Nhập trực tiếp
+                  </button>
                 </div>
-             )}
+              )}
+            </div>
+            {loading ? (
+              <div className="e-empty"><div className="w-7 h-7 mb-3 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /><div className="e-empty-desc mt-0">Đang tải...</div></div>
+            ) : revenueData.length === 0 ? (
+              <div className="e-empty"><div className="e-empty-icon"><ReceiptText /></div><div className="e-empty-title">Không có giao dịch nào trong tháng này.</div></div>
+            ) : (
+              <div className="e-table-wrap">
+                <table className="e-table">
+                  <thead>
+                    <tr>
+                      <th>Khách hàng</th>
+                      <th>Dịch vụ</th>
+                      <th>Nguồn khách</th>
+                      <th>Tệp khách</th>
+                      <th className="num">Doanh thu tổng</th>
+                      <th className="num">Upsale</th>
+                      <th className="w-px"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revenueData.map(r => (
+                      <tr key={r.id}>
+                        <td className="min-w-[180px]">
+                          <div className="text-[14px] font-semibold !text-slate-900 truncate max-w-[240px]">{r.customer_name}</div>
+                          <div className="text-[12px] text-slate-500 flex items-center gap-1 tabular-nums">
+                            <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
+                          </div>
+                        </td>
+                        <td className="min-w-[180px]">
+                          <div className="text-[14px] !text-slate-800 truncate max-w-[260px]">{r.service || 'N/A'}</div>
+                          <div className="e-badge e-badge-sm e-tone-brand mt-1">{r.service_group || 'Chưa rõ'}</div>
+                        </td>
+                        <td><span className="e-badge e-badge-sm e-tone-neutral">{r.customer_source || 'Khác'}</span></td>
+                        <td className="whitespace-nowrap">{r.customer_type || 'Mới'}</td>
+                        <td className="num whitespace-nowrap font-semibold !text-teal-700">{fmt(r.revenue || 0)}</td>
+                        <td className="num whitespace-nowrap">{fmt(r.upsale_revenue || 0)}</td>
+                        <td className="whitespace-nowrap">
+                          {(profile?.role === 'admin' || profile?.role === 'marketing') && (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button onClick={() => openEditRevenue(r)} className="e-btn e-btn-secondary e-btn-sm">
+                                <Pencil className="w-4 h-4" /> Sửa
+                              </button>
+                              <button onClick={() => handleDeleteRevenue(r)} title="Xóa" className="e-btn e-btn-danger-soft e-btn-sm w-[34px] px-0">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -786,107 +803,124 @@ const FinanceManagementPage = () => {
         <div className="e-modal-backdrop z-50 flex justify-center items-start py-10 px-4 overflow-y-auto">
           <div className="e-modal max-w-3xl overflow-hidden my-auto">
             <div className="e-modal-header items-center">
-              <h3 className="e-modal-title">{createForm.id ? 'Sửa doanh thu' : 'Nhập doanh thu trực tiếp'}</h3>
+              <div className="min-w-0">
+                <h3 className="e-modal-title">{createForm.id ? 'Sửa doanh thu' : 'Nhập doanh thu trực tiếp'}</h3>
+                <p className="e-card-sub">Các trường có dấu * là bắt buộc</p>
+              </div>
               <button onClick={() => setShowCreateModal(false)} title="Đóng" className="e-icon-btn w-8 h-8 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateSubmit} className="e-modal-body space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form onSubmit={handleCreateSubmit}>
+              <div className="e-modal-body space-y-5">
+                <section>
+                  <div className="e-caption mb-2.5">Thông tin khách</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
+                    <div>
+                      <label className="e-label">Ngày <span className="text-danger-500">*</span></label>
+                      <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="e-input" />
+                    </div>
+                    <div>
+                      <label className="e-label">Họ tên khách hàng <span className="text-danger-500">*</span></label>
+                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="e-input" placeholder="Nhập tên..." />
+                    </div>
+                    <div>
+                      <label className="e-label">Số điện thoại <span className="text-danger-500">*</span></label>
+                      <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="e-input" placeholder="Nhập SĐT..." />
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <div className="e-caption mb-2.5">Dịch vụ &amp; nguồn khách</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
+                    <div>
+                      <label className="e-label">Dịch vụ sử dụng <span className="text-danger-500">*</span></label>
+                      <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="e-input" placeholder="Ví dụ: Nâng mũi" />
+                    </div>
+                    <div>
+                      <label className="e-label">Nhóm dịch vụ <span className="text-danger-500">*</span></label>
+                      <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="e-input cursor-pointer">
+                        <option value="Hàm mặt">Hàm mặt</option>
+                        <option value="Body">Body</option>
+                        <option value="Tiểu phẫu">Tiểu phẫu</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="e-label">Nguồn khách <span className="text-danger-500">*</span></label>
+                      <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="e-input cursor-pointer">
+                        <option value="Ads">Ads</option>
+                        <option value="Seeding">Seeding</option>
+                        <option value="CTV">CTV</option>
+                        <option value="Người quen">Người quen</option>
+                        <option value="CSKH">CSKH</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="e-label">Tệp khách <span className="text-danger-500">*</span></label>
+                      <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="e-input cursor-pointer">
+                        <option value="Mới">Khách Mới</option>
+                        <option value="Cũ">Khách Cũ</option>
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <div className="e-caption mb-2.5">Doanh thu</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                    <div>
+                      <label className="e-label">Doanh thu tổng (VNĐ) <span className="text-danger-500">*</span></label>
+                      <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="e-input text-teal-700 font-bold tabular-nums" placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="e-label">Doanh thu Upsale (VNĐ)</label>
+                      <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="e-input font-bold tabular-nums" placeholder="0" />
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <div className="e-caption mb-2.5">Nhân sự phụ trách</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
+                    <div>
+                      <label className="e-label">Sale Offline phụ trách</label>
+                      <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="e-input cursor-pointer">
+                        <option value="">-- Không có --</option>
+                        {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline' || s.role === 'admin').map(s => (
+                          <option key={s.id} value={s.id}>{s.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="e-label">Telesale phụ trách</label>
+                      <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="e-input cursor-pointer">
+                        <option value="">-- Không có --</option>
+                        {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin').map(s => (
+                          <option key={s.id} value={s.id}>{s.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="e-label">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
+                      <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="e-input cursor-pointer">
+                        <option value="">-- Không có --</option>
+                        {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
+                          <option key={s.id} value={s.id}>{s.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
                 <div>
-                  <label className="e-label">Ngày <span className="text-danger-500">*</span></label>
-                  <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="e-input" />
-                </div>
-                <div>
-                  <label className="e-label">Họ tên khách hàng <span className="text-danger-500">*</span></label>
-                  <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="e-input" placeholder="Nhập tên..." />
-                </div>
-                <div>
-                  <label className="e-label">Số điện thoại <span className="text-danger-500">*</span></label>
-                  <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="e-input" placeholder="Nhập SĐT..." />
+                  <label className="e-label">Ghi chú thêm</label>
+                  <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="e-textarea resize-none" placeholder="Nhập ghi chú..."></textarea>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="e-label">Dịch vụ sử dụng <span className="text-danger-500">*</span></label>
-                  <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="e-input" placeholder="Ví dụ: Nâng mũi" />
-                </div>
-                <div>
-                  <label className="e-label">Nhóm dịch vụ <span className="text-danger-500">*</span></label>
-                  <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="e-input cursor-pointer">
-                    <option value="Hàm mặt">Hàm mặt</option>
-                    <option value="Body">Body</option>
-                    <option value="Tiểu phẫu">Tiểu phẫu</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="e-label">Nguồn khách <span className="text-danger-500">*</span></label>
-                  <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="e-input cursor-pointer">
-                    <option value="Ads">Ads</option>
-                    <option value="Seeding">Seeding</option>
-                    <option value="CTV">CTV</option>
-                    <option value="Người quen">Người quen</option>
-                    <option value="CSKH">CSKH</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="e-label">Tệp khách <span className="text-danger-500">*</span></label>
-                  <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="e-input cursor-pointer">
-                    <option value="Mới">Khách Mới</option>
-                    <option value="Cũ">Khách Cũ</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="e-label">Doanh thu tổng (VNĐ) <span className="text-danger-500">*</span></label>
-                  <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="e-input text-teal-700 font-bold tabular-nums" placeholder="0" />
-                </div>
-                <div>
-                  <label className="e-label">Doanh thu Upsale (VNĐ)</label>
-                  <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="e-input font-bold tabular-nums" placeholder="0" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="e-label">Sale Offline phụ trách</label>
-                  <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="e-input cursor-pointer">
-                    <option value="">-- Không có --</option>
-                    {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline' || s.role === 'admin').map(s => (
-                      <option key={s.id} value={s.id}>{s.full_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="e-label">Telesale phụ trách</label>
-                  <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="e-input cursor-pointer">
-                    <option value="">-- Không có --</option>
-                    {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin').map(s => (
-                      <option key={s.id} value={s.id}>{s.full_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="e-label">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
-                  <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="e-input cursor-pointer">
-                    <option value="">-- Không có --</option>
-                    {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
-                      <option key={s.id} value={s.id}>{s.full_name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="e-label">Ghi chú thêm</label>
-                <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="e-textarea resize-none" placeholder="Nhập ghi chú..."></textarea>
-              </div>
-
-              <div className="e-modal-footer -mx-5 -mb-4 mt-2">
+              <div className="e-modal-footer">
                 <button type="submit" disabled={saving} className="e-btn e-btn-primary">
                   {saving ? 'Đang lưu...' : (createForm.id ? 'Cập nhật' : 'Nhập Doanh Thu')}
                 </button>

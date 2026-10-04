@@ -55,9 +55,9 @@ export default function SeedingRevenuePage() {
   });
 
   const stats = [
-    { icon: DollarSign, color: '#12A4A5', label: `Doanh thu seeding Th${month}/${year}`, value: fmt(totalRev) },
-    { icon: Banknote, color: '#f59e0b', label: 'Viện phí', value: fmt(totalFee) },
-    { icon: Percent, color: '#8b5cf6', label: 'Hoa hồng (20%)', value: fmt(totalComm) },
+    { icon: DollarSign, color: '#067B7F', label: `Doanh thu seeding Th${month}/${year}`, value: fmt(totalRev) },
+    { icon: Banknote, color: '#3CA7A9', label: 'Viện phí', value: fmt(totalFee) },
+    { icon: Percent, color: '#06686C', label: 'Hoa hồng (20%)', value: fmt(totalComm) },
   ];
 
   return (
@@ -76,39 +76,29 @@ export default function SeedingRevenuePage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map((c, i) => (
           <div key={i} className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5">
-            <span className="e-metric-icon row-span-2"><c.icon /></span>
+            <span className="e-metric-icon row-span-2"><c.icon style={{ color: c.color }} /></span>
             <div className="e-metric-value col-start-2 row-start-2">{c.value}</div>
             <div className="e-metric-label col-start-2 row-start-1 self-end">{c.label}</div>
           </div>
         ))}
       </div>
 
-      {/* TỔNG hoa hồng — thẻ tổng kết kiểu Ethics (nền trắng, nhấn teal) */}
-      <div className="e-card e-card-pad flex items-center gap-4">
-        <span className="e-metric-icon e-tone-brand"><Percent /></span>
-        <div className="min-w-0 flex-1">
-          <div className="e-metric-label">Tổng hoa hồng Seeding Th{month}/{year}</div>
-          <div className="text-[26px] lg:text-[30px] font-bold text-teal-700 leading-tight tabular-nums truncate">{fmt(totalComm)}</div>
-          <div className="text-[12px] text-slate-500 mt-0.5 tabular-nums">{visible.length} ca · Doanh thu {fmt(totalRev)} − Viện phí {fmt(totalFee)}</div>
-        </div>
-      </div>
-
-      {/* Biểu đồ hoa hồng theo tháng */}
-      <div className="e-card e-card-pad">
-        <div className="e-card-header">
-          <div>
-            <h3 className="e-card-title">Hoa hồng Seeding theo tháng</h3>
-            <p className="e-card-sub">6 tháng gần nhất</p>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4 items-start">
+        {/* Biểu đồ hoa hồng theo tháng */}
+        <div className="e-card e-card-pad min-w-0">
+          <div className="e-card-header">
+            <div>
+              <h3 className="e-card-title">Hoa hồng Seeding theo tháng</h3>
+              <p className="e-card-sub">6 tháng gần nhất</p>
+            </div>
           </div>
-        </div>
-        <div className="[&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9]">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chart} margin={{ top: 10, right: 8, left: 4, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke="#EAF4F4" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={44} tickFormatter={axisFmt} />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3ABAA' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#A3ABAA' }} width={44} tickFormatter={axisFmt} />
               <Tooltip
-                cursor={{ fill: '#f1f5f9' }}
+                cursor={{ fill: '#F3F9F9' }}
                 contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }}
                 formatter={(v, name) => [fmt(v), name === 'hoahong' ? 'Hoa hồng' : 'Doanh thu']}
                 labelFormatter={(l, p) => `${l} · ${p?.[0]?.payload?.ca || 0} ca`}
@@ -119,12 +109,22 @@ export default function SeedingRevenuePage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      {/* Công thức */}
-      <div className="e-subtle p-3.5 text-[12.5px] leading-relaxed text-slate-500">
-        <b className="text-slate-700">Cách tính hoa hồng:</b> Hoa hồng = 20% × (Doanh thu − Viện phí) cho mỗi ca mổ nguồn Seeding.
-        VD: mổ 100.000.000đ, viện phí 21.000.000đ → hoa hồng = (100.000.000 − 21.000.000) × 20% = <b className="text-teal-700">15.800.000đ</b>.
+        <div className="space-y-4 min-w-0">
+          {/* TỔNG hoa hồng — thẻ tổng kết kiểu Ethics (nền trắng, nhấn teal) */}
+          <div className="e-card e-card-pad flex items-center gap-4">
+            <span className="e-metric-icon e-tone-brand"><Percent /></span>
+            <div className="min-w-0 flex-1">
+              <div className="e-metric-label">Tổng hoa hồng Seeding Th{month}/{year}</div>
+              <div className="text-[26px] lg:text-[30px] font-bold text-teal-700 leading-tight tabular-nums truncate">{fmt(totalComm)}</div>
+              <div className="text-[12px] text-slate-500 mt-0.5 tabular-nums">{visible.length} ca · Doanh thu {fmt(totalRev)} − Viện phí {fmt(totalFee)}</div>
+            </div>
+          </div>
+          {/* Công thức */}
+          <div className="e-subtle p-3.5 text-[12.5px] leading-relaxed text-slate-500">
+            <b className="text-slate-700">Cách tính hoa hồng:</b> Hoa hồng = 20% × (Doanh thu − Viện phí) cho mỗi ca mổ nguồn Seeding.
+            VD: mổ 100.000.000đ, viện phí 21.000.000đ → hoa hồng = (100.000.000 − 21.000.000) × 20% = <b className="text-teal-700">15.800.000đ</b>.
+          </div>
+        </div>
       </div>
 
       {/* Tìm kiếm */}
@@ -138,7 +138,7 @@ export default function SeedingRevenuePage() {
       {loading ? (
         <div className="e-card flex justify-center h-40 items-center"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : visible.length === 0 ? (
-        <div className="e-card e-empty text-[13px] text-slate-400">Chưa có khách nguồn Seeding mổ trong tháng này.</div>
+        <div className="e-card e-empty"><div className="e-empty-icon"><Percent /></div><div className="e-empty-title">Chưa có khách nguồn Seeding mổ trong tháng này.</div></div>
       ) : (
         <div className="e-card divide-y divide-slate-100 overflow-hidden">
           {visible.map(r => (

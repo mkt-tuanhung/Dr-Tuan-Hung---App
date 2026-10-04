@@ -210,9 +210,9 @@ export default function CashFlowPage() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan="8" className="!text-center !py-10 !text-slate-400">Đang tải...</td></tr>
+            <tr><td colSpan="8"><div className="e-empty py-8"><div className="w-7 h-7 mb-3 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /><div className="e-empty-desc mt-0">Đang tải...</div></div></td></tr>
           ) : list.length === 0 ? (
-            <tr><td colSpan="8" className="!text-center !py-10 !text-slate-400">Không có dữ liệu</td></tr>
+            <tr><td colSpan="8"><div className="e-empty"><div className="e-empty-icon"><Coins /></div><div className="e-empty-title">Không có dữ liệu</div></div></td></tr>
           ) : list.map((d, index) => (
             <tr key={d.id}>
               <td className="!text-slate-400 tabular-nums">{index + 1}</td>
@@ -389,7 +389,7 @@ export default function CashFlowPage() {
           <div className="p-4 lg:p-5">
             <div className="min-w-0">
               <h3 className="e-card-title mb-4">Biểu đồ Nhận / Chi theo ngày (Tháng {filterMonth})</h3>
-              <div className="h-80 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:stroke-[#EAF4F4] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-tooltip-cursor]:fill-[#F3F9F9] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
+              <div className="h-80 [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={(() => {
                     const days = new Date(filterYear, filterMonth, 0).getDate();
@@ -410,9 +410,9 @@ export default function CashFlowPage() {
                     return chartData;
                   })()} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EAF4F4" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#f1f5f9' }} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={(val) => (val / 1000000) + 'M'} width={45} tick={{ fontSize: 12, fill: '#A3ABAA' }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip formatter={(val) => fmt(val)} cursor={{ fill: '#F3F9F9' }} />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
                     <Bar name="Thu tiền (+)" dataKey="income" fill="#067B7F" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     <Bar name="Chi tiền (-)" dataKey="expense" fill="#F4B183" radius={[4, 4, 0, 0]} maxBarSize={40} />
