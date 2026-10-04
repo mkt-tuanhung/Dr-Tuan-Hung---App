@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
-import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft, ChevronRight, Users, Wallet, CalendarDays, Clock, Undo2 } from 'lucide-react';
+import { Calendar, ArrowUpCircle, X, MessageCircle, AlertCircle, Phone, Search, Plus, Upload, Loader2, ChevronLeft, ChevronRight, Users, Wallet, CalendarDays, Clock, Undo2, UserRound } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
@@ -29,10 +29,10 @@ const CARE_TABS = [
 ];
 
 const STATUS_STYLE = {
-  'Đang chăm sóc': 'bg-amber-100 text-amber-700 border-amber-200',
-  'Đã xét nghiệm xong': 'bg-teal-100 text-teal-700 border-teal-200',
-  'Chờ lịch bác sĩ': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Khách xin hoãn': 'bg-orange-100 text-orange-700 border-orange-200',
+  'Đang chăm sóc': 'e-tone-warning',
+  'Đã xét nghiệm xong': 'e-tone-success',
+  'Chờ lịch bác sĩ': 'e-tone-info',
+  'Khách xin hoãn': 'e-tone-rose',
 };
 
 const QUICK_NOTES = [
@@ -296,93 +296,107 @@ const KhachCocPage = ({ isNested = false }) => {
         if (date !== currentDate) {
           currentDate = date;
           elements.push(
-            <div key={`date-${index}`} className="font-extrabold text-blue-700 text-[13px] mt-3 mb-1 uppercase tracking-wide border-b border-blue-100 pb-0.5 inline-block">
+            <div key={`date-${index}`} className="e-caption text-teal-700 mt-4 mb-1.5 first:mt-0">
               CẬP NHẬT {date} :
             </div>
           );
         }
       }
-      elements.push(<div key={`line-${index}`} className="mb-0.5">{line}</div>);
+      elements.push(<div key={`line-${index}`} className="pl-3 ml-[3px] border-l-2 border-teal-100 py-0.5">{line}</div>);
     });
     return elements;
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {careApp ? (
         /* ===== TRANG CHĂM SÓC RIÊNG ===== */
         <form onSubmit={handleCareSubmit} className="max-w-3xl mx-auto space-y-4 pb-10">
-          <button type="button" onClick={() => setCareApp(null)} className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-semibold">
+          <button type="button" onClick={() => setCareApp(null)} className="e-btn e-btn-ghost e-btn-sm -ml-2">
             <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
           </button>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold text-slate-800">{careApp.customer_name}</h2>
-                <div className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
+          <div className="e-card e-card-pad">
+            {/* Hồ sơ khách (kiểu Customer 360) */}
+            <div className="flex items-center gap-4">
+              <span className="e-avatar w-14 h-14 ring-4 ring-teal-50/70"><UserRound className="w-6 h-6" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-[20px] font-bold text-slate-900 leading-tight truncate">{careApp.customer_name}</h2>
+                  <span className={`e-badge e-badge-sm ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
+                    {careApp.care_status || 'Đang chăm sóc'}
+                  </span>
+                </div>
+                <div className="text-[13px] text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
               </div>
-              <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
-                {careApp.care_status || 'Đang chăm sóc'}
-              </span>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm bg-slate-50 p-3 rounded-xl">
-              <div className="text-slate-500 text-xs">Dịch vụ</div>
-              <div className="font-semibold text-slate-800 text-right">{careApp.service || '—'}</div>
-              <div className="text-slate-500 text-xs">Đã cọc</div>
-              <div className="font-bold text-blue-600 text-right">{Number(careApp.deposit_amount || 0).toLocaleString('vi-VN')}đ</div>
-              <div className="text-slate-500 text-xs">PT dự kiến</div>
-              <div className="text-slate-700 text-right">{careApp.expected_surgery_date ? new Date(careApp.expected_surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
-              <div className="text-slate-500 text-xs">Telesale</div>
-              <div className="text-slate-700 text-right">{careApp.telesale?.full_name || 'N/A'}</div>
-              <div className="text-slate-500 text-xs">Sale</div>
-              <div className="text-slate-700 text-right">{careApp.sale?.full_name || 'N/A'}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-4">
+              <div className="e-subtle px-3 py-2.5 col-span-2 sm:col-span-1">
+                <div className="e-kv-label">Đã cọc</div>
+                <div className="text-[18px] font-bold text-slate-900 tabular-nums">{Number(careApp.deposit_amount || 0).toLocaleString('vi-VN')}đ</div>
+              </div>
+              <div className="e-subtle px-3 py-2.5 col-span-2 sm:col-span-2 min-w-0">
+                <div className="e-kv-label">Dịch vụ</div>
+                <div className="e-kv-value truncate">{careApp.service || '—'}</div>
+              </div>
+              <div className="e-subtle px-3 py-2.5 min-w-0">
+                <div className="e-kv-label">PT dự kiến</div>
+                <div className="e-kv-value tabular-nums">{careApp.expected_surgery_date ? new Date(careApp.expected_surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
+              </div>
+              <div className="e-subtle px-3 py-2.5 min-w-0">
+                <div className="e-kv-label">Telesale</div>
+                <div className="e-kv-value truncate">{careApp.telesale?.full_name || 'N/A'}</div>
+              </div>
+              <div className="e-subtle px-3 py-2.5 min-w-0">
+                <div className="e-kv-label">Sale</div>
+                <div className="e-kv-value truncate">{careApp.sale?.full_name || 'N/A'}</div>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
               <ConsultButton app={careApp} />
-              <button type="button" onClick={() => openSurgery(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200">
+              <button type="button" onClick={() => openSurgery(careApp)} className="e-btn e-btn-primary e-btn-sm">
                 <ArrowUpCircle className="w-4 h-4" /> Lên phẫu thuật
               </button>
-              <button type="button" onClick={() => openRefund(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
+              <button type="button" onClick={() => openRefund(careApp)} className="e-btn e-btn-secondary e-btn-sm">
                 <Undo2 className="w-4 h-4" /> Hoàn cọc
               </button>
-              <button type="button" onClick={() => openBong(careApp)} className="flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
+              <button type="button" onClick={() => openBong(careApp)} className="e-btn e-btn-danger-soft e-btn-sm">
                 <AlertCircle className="w-4 h-4" /> Hủy cọc
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-blue-600" /> Nhật ký chăm sóc</h3>
-            <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
-              {careApp.care_notes ? renderNotes(careApp.care_notes) : <div className="text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
+          <div className="e-card e-card-pad">
+            <h3 className="e-card-title mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký chăm sóc</h3>
+            <div className="text-[13.5px] leading-relaxed text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+              {careApp.care_notes ? renderNotes(careApp.care_notes) : <div className="text-[13px] text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-            <h3 className="font-bold text-slate-800">Thêm mốc chăm sóc</h3>
+          <div className="e-card e-card-pad space-y-4">
+            <h3 className="e-card-title">Thêm mốc chăm sóc</h3>
             <div>
-              <label className="block text-sm font-semibold mb-2 text-slate-600">Cập nhật trạng thái</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="e-label">Cập nhật trạng thái</label>
+              <div className="flex flex-wrap gap-1.5">
                 {CARE_TABS.filter(t => t.id !== 'all').map(t => (
                   <button key={t.id} type="button" onClick={() => setCareForm({ ...careForm, care_status: t.id })}
-                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${careForm.care_status === t.id ? STATUS_STYLE[t.id] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                    className={`inline-flex items-center h-9 px-3.5 rounded-full border text-[13px] font-medium transition ${careForm.care_status === t.id ? STATUS_STYLE[t.id] + ' border-current font-semibold' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300 hover:text-teal-800'}`}>
                     {t.label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {QUICK_NOTES.map(q => (
                 <button key={q} type="button" onClick={() => addQuickNote(q)}
-                  className="px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100 hover:bg-blue-100">
+                  className="e-chip h-8 px-3 text-[12.5px]">
                   + {q}
                 </button>
               ))}
             </div>
-            <textarea rows={3} value={careForm.care_notes} onChange={e => setCareForm({ ...careForm, care_notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-blue-500 resize-none text-sm" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
+            <textarea rows={3} value={careForm.care_notes} onChange={e => setCareForm({ ...careForm, care_notes: e.target.value })} className="e-textarea resize-none text-[14px] leading-relaxed" placeholder="Gõ ghi chú hoặc chạm thẻ nhanh phía trên..." />
             <div className="flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Lưu mốc'}</button>
             </div>
           </div>
         </form>
@@ -392,45 +406,47 @@ const KhachCocPage = ({ isNested = false }) => {
           {!isNested && (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-slate-500">Chăm sóc khách đã cọc chờ ngày phẫu thuật</p>
+                <p className="e-page-desc">Chăm sóc khách đã cọc chờ ngày phẫu thuật</p>
               </div>
-              <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold">{customers.length} Khách</div>
+              <div className="e-badge e-tone-brand">{customers.length} Khách</div>
             </div>
           )}
 
           {/* Thẻ số liệu */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
             {[
-              { icon: Users, color: '#12A4A5', label: 'Khách giữ cọc', value: cocStats.count },
-              { icon: Wallet, color: '#3b82f6', label: 'Tổng tiền cọc', value: fmtTy(cocStats.total) },
-              { icon: CalendarDays, color: '#8b5cf6', label: 'Chờ lịch bác sĩ', value: cocStats.waitDr },
-              { icon: Clock, color: '#f59e0b', label: 'Khách xin hoãn', value: cocStats.postpone },
+              { icon: Users, color: '#067B7F', label: 'Khách giữ cọc', value: cocStats.count },
+              { icon: Wallet, color: '#3CA7A9', label: 'Tổng tiền cọc', value: fmtTy(cocStats.total) },
+              { icon: CalendarDays, color: '#A99BE0', label: 'Chờ lịch bác sĩ', value: cocStats.waitDr },
+              { icon: Clock, color: '#F4B183', label: 'Khách xin hoãn', value: cocStats.postpone },
             ].map((c, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
-                <div className="text-xl font-bold text-slate-800">{c.value}</div>
-                <div className="text-xs text-slate-500 mt-0.5">{c.label}</div>
+              <div key={i} className="e-metric">
+                <span className={`e-metric-icon ${['e-tone-brand', 'e-tone-info', 'e-tone-lavender', 'e-tone-peach'][i]}`}><c.icon /></span>
+                <div className="min-w-0">
+                  <div className="e-metric-label">{c.label}</div>
+                  <div className="e-metric-value">{c.value}</div>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
+          <div className="e-toolbar justify-between">
+            <div className="flex flex-wrap gap-1.5">
               {CARE_TABS.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                  className={`e-chip ${activeTab === tab.id ? 'e-chip-active' : 'bg-white'}`}>
                   {tab.label}
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-72 shrink-0">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="e-search flex-1 sm:w-72 shrink-0">
+                <Search className="w-4 h-4" />
                 <input type="text" placeholder="Tìm tên KH hoặc số điện thoại..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                  className="min-w-0 focus:ring-[3px] focus:ring-teal-500/20" />
               </div>
               {canAdd && (
-                <button onClick={openCreate} className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-500 text-white text-sm font-semibold shadow-md shadow-teal-200 hover:from-teal-600 hover:to-teal-600">
+                <button onClick={openCreate} className="e-btn e-btn-primary shrink-0">
                   <Plus className="w-4 h-4" /> Thêm khách cọc
                 </button>
               )}
@@ -438,48 +454,53 @@ const KhachCocPage = ({ isNested = false }) => {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" /></div>
+            <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">Không có khách hàng nào trong mục này</div>
+            <div className="e-card e-empty py-16 text-[13px] font-medium text-slate-400">Không có khách hàng nào trong mục này</div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {Object.entries(groupedCustomers).map(([date, apps]) => (
-                <div key={date} className="bg-white/50 rounded-2xl p-4 border border-slate-100">
-                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-bold text-blue-800 text-lg">{date}</h3>
-                    <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full ml-auto">{apps.length} khách</span>
+                <section key={date}>
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <Calendar className="w-4 h-4 text-teal-600 shrink-0" />
+                    <h3 className="text-[14px] font-semibold text-slate-800 tabular-nums">{date}</h3>
+                    <span className="e-badge e-badge-sm e-tone-neutral">{apps.length} khách</span>
+                    <span className="flex-1 h-px bg-slate-200" />
                   </div>
 
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
                     {apps.map(app => {
                       const st = app.care_status || 'Đang chăm sóc';
                       const noteCount = app.care_notes ? app.care_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                       return (
                         <button key={app.id} type="button" onClick={() => openCare(app)}
-                          className="w-full text-left bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center gap-3 hover:border-teal-300 hover:shadow-md transition">
-                          <div className="relative shrink-0">
-                            <span className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center font-bold">{initials(app.customer_name)}</span>
-                            <span className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-bold text-slate-800 truncate">{app.customer_name}</h4>
-                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLE[st]}`}>{st}</span>
+                          className="w-full text-left rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex flex-col gap-2.5 transition hover:border-teal-100 hover:shadow-card focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-teal-500/25">
+                          {/* Đầu thẻ: avatar + tên + SĐT */}
+                          <div className="flex items-start gap-3 w-full">
+                            <span className="e-avatar w-12 h-12 text-[15px]">{initials(app.customer_name)}</span>
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <h4 className="text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</h4>
+                              <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 truncate"><Phone className="w-3.5 h-3.5 shrink-0" /> {phoneFor(app.phone, profile)}</div>
                             </div>
-                            <div className="text-slate-400 text-xs mt-1 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</div>
-                            <div className="text-xs text-slate-500 mt-1 truncate"><span className="text-slate-400">Dịch vụ:</span> <span className="text-slate-700 font-medium">{app.service || 'Chưa chọn'}</span></div>
-                            <div className="text-xs text-slate-500"><span className="text-slate-400">Đặt cọc:</span> <span className="text-teal-600 font-bold">{Number(app.deposit_amount || 0).toLocaleString('vi-VN')}đ</span></div>
+                            <ChevronRight className="w-5 h-5 text-slate-300 shrink-0 mt-1" />
                           </div>
-                          <div className="shrink-0 flex flex-col items-end justify-between self-stretch">
-                            <ChevronRight className="w-5 h-5 text-slate-300" />
-                            <span className="text-slate-400 text-[11px] flex items-center gap-1 whitespace-nowrap"><Clock className="w-3.5 h-3.5" /> {noteCount} mốc</span>
+                          {/* Dịch vụ */}
+                          <p className="text-[13px] text-slate-500 truncate w-full">{app.service || 'Chưa chọn'}</p>
+                          {/* Số tiền cọc + trạng thái */}
+                          <div className="flex items-center justify-between gap-2 w-full">
+                            <span className="text-[18px] font-bold text-slate-900 tabular-nums">{Number(app.deposit_amount || 0).toLocaleString('vi-VN')}đ</span>
+                            <span className={`e-badge e-badge-sm ${STATUS_STYLE[st]}`}>{st}</span>
+                          </div>
+                          {/* Chân thẻ */}
+                          <div className="flex items-center justify-between gap-2 w-full pt-2 border-t border-dashed border-slate-200 text-[11.5px] text-slate-400">
+                            <span>Tiền cọc</span>
+                            <span className="flex items-center gap-1 whitespace-nowrap"><Clock className="w-3 h-3" /> {noteCount} mốc</span>
                           </div>
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               ))}
             </div>
           )}
@@ -488,20 +509,20 @@ const KhachCocPage = ({ isNested = false }) => {
 
       {/* Modal: Hủy Cọc */}
       {showBongModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleBongSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-red-50">
-              <h3 className="font-bold text-red-800">Hủy cọc: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowBongModal(false)}><X className="w-5 h-5 text-red-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleBongSubmit} className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Hủy cọc: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowBongModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="e-modal-body space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Lý do khách hủy cọc / không làm</label>
-                <input required type="text" value={bongForm.notes} onChange={e => setBongForm({ ...bongForm, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-red-500" placeholder="Kẹt tiền, gia đình không cho..." />
+                <label className="e-label">Lý do khách hủy cọc / không làm</label>
+                <input required type="text" value={bongForm.notes} onChange={e => setBongForm({ ...bongForm, notes: e.target.value })} className="e-input" placeholder="Kẹt tiền, gia đình không cho..." />
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700">{saving ? 'Đang lưu...' : 'Xác nhận hủy cọc'}</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-danger">{saving ? 'Đang lưu...' : 'Xác nhận hủy cọc'}</button>
             </div>
           </form>
         </div>
@@ -509,34 +530,34 @@ const KhachCocPage = ({ isNested = false }) => {
 
       {/* Modal: Hoàn Cọc */}
       {showRefundModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleRefundSubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-orange-50">
-              <h3 className="font-bold text-orange-800 flex items-center gap-2"><Undo2 className="w-5 h-5" /> Hoàn cọc: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowRefundModal(false)}><X className="w-5 h-5 text-orange-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleRefundSubmit} className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title flex items-center gap-2"><Undo2 className="w-5 h-5 text-teal-600" /> Hoàn cọc: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowRefundModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="text-sm bg-slate-50 rounded-xl p-3 flex justify-between">
+            <div className="e-modal-body space-y-4">
+              <div className="e-subtle px-4 py-3 flex items-center justify-between text-[13px]">
                 <span className="text-slate-500">Đã cọc</span>
-                <span className="font-bold text-blue-600">{Number(selectedApp?.deposit_amount || 0).toLocaleString('vi-VN')}đ</span>
+                <span className="font-bold text-slate-900 tabular-nums">{Number(selectedApp?.deposit_amount || 0).toLocaleString('vi-VN')}đ</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Số tiền hoàn (VNĐ)</label>
-                  <MoneyInput required value={refundForm.refund_amount} onChange={v => setRefundForm({ ...refundForm, refund_amount: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500" placeholder="0" />
+                  <label className="e-label">Số tiền hoàn (VNĐ)</label>
+                  <MoneyInput required value={refundForm.refund_amount} onChange={v => setRefundForm({ ...refundForm, refund_amount: v })} className="e-input" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày hoàn cọc</label>
-                  <input required type="date" value={refundForm.refund_date} onChange={e => setRefundForm({ ...refundForm, refund_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500" />
+                  <label className="e-label">Ngày hoàn cọc</label>
+                  <input required type="date" value={refundForm.refund_date} onChange={e => setRefundForm({ ...refundForm, refund_date: e.target.value })} className="e-input" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2">Lý do hoàn cọc</label>
-                <input type="text" value={refundForm.notes} onChange={e => setRefundForm({ ...refundForm, notes: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500" placeholder="Khách đổi ý, kẹt lịch..." />
+                <label className="e-label">Lý do hoàn cọc</label>
+                <input type="text" value={refundForm.notes} onChange={e => setRefundForm({ ...refundForm, notes: e.target.value })} className="e-input" placeholder="Khách đổi ý, kẹt lịch..." />
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700">{saving ? 'Đang lưu...' : 'Hoàn cọc & chuyển sang Bong'}</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Hoàn cọc & chuyển sang Bong'}</button>
             </div>
           </form>
         </div>
@@ -544,46 +565,46 @@ const KhachCocPage = ({ isNested = false }) => {
 
       {/* Modal: Lên Phẫu Thuật */}
       {showSurgeryModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSurgerySubmit} className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50">
-              <h3 className="font-bold text-teal-800">Lên Phẫu Thuật: {selectedApp?.customer_name}</h3>
-              <button type="button" onClick={() => setShowSurgeryModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSurgerySubmit} className="e-modal max-w-md overflow-hidden">
+            <div className="e-modal-header items-center">
+              <h3 className="e-modal-title">Lên Phẫu Thuật: {selectedApp?.customer_name}</h3>
+              <button type="button" onClick={() => setShowSurgeryModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Ngày phẫu thuật</label>
-                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Ngày phẫu thuật</label>
+                  <input required type="date" value={surgeryForm.expected_surgery_date} onChange={e => setSurgeryForm({ ...surgeryForm, expected_surgery_date: e.target.value })} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Giờ phẫu thuật <span className="text-slate-400 font-normal">(nếu có)</span></label>
-                  <input type="time" value={surgeryForm.surgery_time} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_time: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Giờ phẫu thuật <span className="text-slate-400 font-normal">(nếu có)</span></label>
+                  <input type="time" value={surgeryForm.surgery_time} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_time: e.target.value })} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Dịch vụ thực tế làm</label>
-                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({ ...surgeryForm, service: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="Nâng mũi..." />
+                  <label className="e-label">Dịch vụ thực tế làm</label>
+                  <input required type="text" value={surgeryForm.service} onChange={e => setSurgeryForm({ ...surgeryForm, service: e.target.value })} className="e-input" placeholder="Nâng mũi..." />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Nhóm dịch vụ</label>
-                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({ ...surgeryForm, service_group: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Nhóm dịch vụ</label>
+                  <select value={surgeryForm.service_group} onChange={e => setSurgeryForm({ ...surgeryForm, service_group: e.target.value })} className="e-input">
                     <option value="Hàm mặt">Hàm mặt</option>
                     <option value="Body">Body</option>
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Loại phẫu thuật</label>
-                  <select value={surgeryForm.surgery_type} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-emerald-500">
+                  <label className="e-label">Loại phẫu thuật</label>
+                  <select value={surgeryForm.surgery_type} onChange={e => setSurgeryForm({ ...surgeryForm, surgery_type: e.target.value })} className="e-input">
                     <option value="Tiểu phẫu">Tiểu phẫu</option>
                     <option value="Đại phẫu">Đại phẫu</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Nguồn khách</label>
-                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Nguồn khách</label>
+                  <select value={surgeryForm.customer_source} onChange={e => setSurgeryForm({ ...surgeryForm, customer_source: e.target.value })} className="e-input">
                     <option value="Ads">Ads</option>
                     <option value="Seeding">Seeding</option>
                     <option value="CTV">CTV</option>
@@ -592,8 +613,8 @@ const KhachCocPage = ({ isNested = false }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Tệp khách</label>
-                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({ ...surgeryForm, customer_type: e.target.value })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                  <label className="e-label">Tệp khách</label>
+                  <select value={surgeryForm.customer_type} onChange={e => setSurgeryForm({ ...surgeryForm, customer_type: e.target.value })} className="e-input">
                     <option value="Mới">Khách Mới</option>
                     <option value="Cũ">Khách Cũ</option>
                   </select>
@@ -601,17 +622,17 @@ const KhachCocPage = ({ isNested = false }) => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Doanh thu (VNĐ)</label>
-                  <MoneyInput required value={surgeryForm.revenue} onChange={v => setSurgeryForm({ ...surgeryForm, revenue: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
+                  <label className="e-label">Doanh thu (VNĐ)</label>
+                  <MoneyInput required value={surgeryForm.revenue} onChange={v => setSurgeryForm({ ...surgeryForm, revenue: v })} className="e-input" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Upsale (VNĐ)</label>
-                  <MoneyInput value={surgeryForm.upsale_revenue} onChange={v => setSurgeryForm({ ...surgeryForm, upsale_revenue: v })} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" placeholder="0" />
+                  <label className="e-label">Upsale (VNĐ)</label>
+                  <MoneyInput value={surgeryForm.upsale_revenue} onChange={v => setSurgeryForm({ ...surgeryForm, upsale_revenue: v })} className="e-input" placeholder="0" />
                 </div>
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end">
-              <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
+            <div className="e-modal-footer">
+              <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
             </div>
           </form>
         </div>
@@ -619,55 +640,55 @@ const KhachCocPage = ({ isNested = false }) => {
 
       {/* Modal: Thêm khách cọc */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form onSubmit={handleCreateCoc} className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-teal-50 shrink-0">
-              <h3 className="font-bold text-teal-800">Thêm khách cọc</h3>
-              <button type="button" onClick={() => setShowCreateModal(false)}><X className="w-5 h-5 text-teal-400" /></button>
+        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleCreateCoc} className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="e-modal-header items-center shrink-0">
+              <h3 className="e-modal-title">Thêm khách cọc</h3>
+              <button type="button" onClick={() => setShowCreateModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="e-modal-body space-y-4 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Tên khách hàng *</label>
-                  <input value={createForm.customer_name} onChange={e => setCreateForm(f => ({ ...f, customer_name: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Tên khách hàng *</label>
+                  <input value={createForm.customer_name} onChange={e => setCreateForm(f => ({ ...f, customer_name: e.target.value }))} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Số điện thoại *</label>
-                  <input value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Số điện thoại *</label>
+                  <input value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Số tiền cọc</label>
-                  <input inputMode="numeric" value={fmtInput(createForm.deposit_amount)} onChange={e => setCreateForm(f => ({ ...f, deposit_amount: e.target.value.replace(/\D/g, '') }))} placeholder="VD: 5.000.000" className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Số tiền cọc</label>
+                  <input inputMode="numeric" value={fmtInput(createForm.deposit_amount)} onChange={e => setCreateForm(f => ({ ...f, deposit_amount: e.target.value.replace(/\D/g, '') }))} placeholder="VD: 5.000.000" className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Ngày cọc *</label>
-                  <input type="date" value={createForm.deposit_date} onChange={e => setCreateForm(f => ({ ...f, deposit_date: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Ngày cọc *</label>
+                  <input type="date" value={createForm.deposit_date} onChange={e => setCreateForm(f => ({ ...f, deposit_date: e.target.value }))} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Lịch hẹn / PT dự kiến</label>
-                  <input type="date" value={createForm.expected_surgery_date} onChange={e => setCreateForm(f => ({ ...f, expected_surgery_date: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Lịch hẹn / PT dự kiến</label>
+                  <input type="date" value={createForm.expected_surgery_date} onChange={e => setCreateForm(f => ({ ...f, expected_surgery_date: e.target.value }))} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Dịch vụ dự kiến</label>
-                  <input value={createForm.service} onChange={e => setCreateForm(f => ({ ...f, service: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500" />
+                  <label className="e-label">Dịch vụ dự kiến</label>
+                  <input value={createForm.service} onChange={e => setCreateForm(f => ({ ...f, service: e.target.value }))} className="e-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Telesale phụ trách</label>
+                  <label className="e-label">Telesale phụ trách</label>
                   {profile?.role === 'telesale' ? (
-                    <input disabled value={profile.full_name} className="w-full border p-2.5 rounded-xl bg-slate-50 text-slate-500" />
+                    <input disabled value={profile.full_name} className="e-input bg-slate-50 text-slate-500" />
                   ) : (
-                    <select value={createForm.telesale_id} onChange={e => setCreateForm(f => ({ ...f, telesale_id: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                    <select value={createForm.telesale_id} onChange={e => setCreateForm(f => ({ ...f, telesale_id: e.target.value }))} className="e-input">
                       <option value="">— Chọn telesale —</option>
                       {telesales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                     </select>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Sale Offline phụ trách</label>
+                  <label className="e-label">Sale Offline phụ trách</label>
                   {profile?.role === 'sale_offline' ? (
-                    <input disabled value={profile.full_name} className="w-full border p-2.5 rounded-xl bg-slate-50 text-slate-500" />
+                    <input disabled value={profile.full_name} className="e-input bg-slate-50 text-slate-500" />
                   ) : (
-                    <select value={createForm.sale_id} onChange={e => setCreateForm(f => ({ ...f, sale_id: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500">
+                    <select value={createForm.sale_id} onChange={e => setCreateForm(f => ({ ...f, sale_id: e.target.value }))} className="e-input">
                       <option value="">— Chọn sale offline —</option>
                       {sales.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                     </select>
@@ -676,25 +697,25 @@ const KhachCocPage = ({ isNested = false }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Bill / Hoá đơn cọc</label>
-                <label className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 text-sm text-slate-500">
+                <label className="e-label">Bill / Hoá đơn cọc</label>
+                <label className="flex items-center gap-2 h-10 px-3 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-teal-300 hover:bg-teal-50/40 text-[13px] text-slate-500">
                   <Upload className="w-4 h-4" /> {billFile ? billFile.name : 'Chọn ảnh bill...'}
                   <input type="file" accept="image/*" className="hidden" onChange={e => setBillFile(e.target.files[0] || null)} />
                 </label>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Note tình trạng</label>
-                <textarea rows={2} value={createForm.notes} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} className="w-full border p-2.5 rounded-xl outline-none focus:border-teal-500 resize-none" />
-                <label className="mt-2 flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 text-sm text-slate-500">
+                <label className="e-label">Note tình trạng</label>
+                <textarea rows={2} value={createForm.notes} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} className="e-textarea resize-none text-[14px] leading-relaxed" />
+                <label className="mt-2 flex items-center gap-2 h-10 px-3 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-teal-300 hover:bg-teal-50/40 text-[13px] text-slate-500">
                   <Upload className="w-4 h-4" /> {noteFiles.length ? `${noteFiles.length} ảnh đã chọn` : 'Thêm ảnh ghi chú...'}
                   <input type="file" accept="image/*" multiple className="hidden" onChange={e => setNoteFiles(Array.from(e.target.files || []))} />
                 </label>
               </div>
             </div>
-            <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
-              <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-white">Hủy</button>
-              <button type="submit" disabled={creating} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50 flex items-center gap-2">
+            <div className="e-modal-footer shrink-0">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="e-btn e-btn-secondary">Hủy</button>
+              <button type="submit" disabled={creating} className="e-btn e-btn-primary">
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />} Lưu khách cọc
               </button>
             </div>
