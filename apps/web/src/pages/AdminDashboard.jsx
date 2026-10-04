@@ -48,7 +48,7 @@ const MENU_GROUPS = [
     { id: 'overview', label: 'Tổng quan', shortLabel: 'Tổng quan', icon: LayoutDashboard },
   ]},
   { title: 'KHÁCH HÀNG', color: 'blue', items: [
-    { id: 'data_kh', label: 'Data khách hàng', icon: Database },
+    { id: 'data_kh', label: 'Khách hàng (CRM)', icon: Database },
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
     { id: 'appointments', label: 'Lịch hẹn', shortLabel: 'Lịch hẹn', icon: CalendarDays },
     { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },

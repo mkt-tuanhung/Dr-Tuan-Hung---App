@@ -65,7 +65,7 @@ const FULL_MENU = [
   { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
 
   // MKT / Finance / Sales
-  { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
+  { id: 'data_kh',    label: 'Khách hàng (CRM)',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
   { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
     { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },

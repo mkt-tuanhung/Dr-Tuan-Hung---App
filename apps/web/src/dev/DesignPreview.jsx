@@ -13,13 +13,15 @@ import AppShell from '@/components/shell/AppShell.jsx';
 import ResourceCalendar from '@/features/appointments/ResourceCalendar.jsx';
 import AppointmentDrawer from '@/features/appointments/AppointmentDrawer.jsx';
 import { toYMD, addDays } from '@/features/appointments/calendarUtils';
+import { AuthContext } from '@/contexts/AuthContext.jsx';
+import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
 
 export const DEMO_PROFILE = { id: 'demo', full_name: 'Nguyễn Văn Dũng', role: 'admin', avatar_url: null };
 
 const ADMIN_GROUPS = [
   { title: null, items: [{ id: 'overview', label: 'Tổng quan', icon: LayoutDashboard }] },
   { title: 'KHÁCH HÀNG', items: [
-    { id: 'data_kh', label: 'Data khách hàng', icon: Database },
+    { id: 'data_kh', label: 'Khách hàng (CRM)', icon: Database },
     { id: 'deposit_management', label: 'Quản lý Đặt cọc', icon: ClipboardList },
     { id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays },
     { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
@@ -135,6 +137,19 @@ export default function DesignPreview() {
   }
   if (screen === 'calendar') {
     return <CalendarDemo tab={tab} setTab={setTab} />;
+  }
+  if (screen === 'customers') {
+    // Supabase được giả lập ở tầng mạng (script chụp ảnh) — ở đây chỉ giả phiên đăng nhập
+    const flat = ADMIN_GROUPS.flatMap(g => g.items);
+    return (
+      <AuthContext.Provider value={{ user: { id: 'demo' }, profile: DEMO_PROFILE, loading: false, isLoggedIn: true, isAdmin: true }}>
+        <AppShell groups={ADMIN_GROUPS} activeTab="data_kh" onSelect={() => {}} profile={DEMO_PROFILE} roleLabel="Quản trị viên"
+          bottomItems={flat.filter(m => ['overview', 'hr', 'kpi'].includes(m.id))}
+          centerAction={{ id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays }}>
+          <MarketingDataPage />
+        </AppShell>
+      </AuthContext.Provider>
+    );
   }
   return <div className="p-8">Không có màn xem thử: {screen}</div>;
 }

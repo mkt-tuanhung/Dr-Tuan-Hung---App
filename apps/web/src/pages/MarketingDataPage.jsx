@@ -7,7 +7,7 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil } from 'lucide-react';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -150,11 +150,13 @@ const MarketingDataPage = () => {
     if (fTele === 'none') return !r.telesale_id;
     return r.telesale_id === fTele;
   };
-  const visible = rows.filter(r =>
+  // Lọc theo mọi điều kiện TRỪ trạng thái -> dùng để đếm số khách ở từng giai đoạn (kiểu Getfly)
+  const baseVisible = rows.filter(r =>
     (!q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q)) &&
-    (!fStatus || r.status === fStatus) &&
     (!fTruc || r.truc_page_id === fTruc) &&
     (!fDay || dayKey(arrivedAt(r)) === fDay) && matchTele(r) && matchChip(r));
+  const visible = baseVisible.filter(r => !fStatus || r.status === fStatus);
+  const stageCount = baseVisible.reduce((m, r) => { const k = r.status || 'tiep_can'; m[k] = (m[k] || 0) + 1; return m; }, {});
 
   // Đổi trạng thái nhanh ngay trên dòng
   const quickStatus = async (r, status) => {
@@ -211,9 +213,10 @@ const MarketingDataPage = () => {
     daDV: rows.filter(r => r.status === 'da_lam_dv' || apptOf(r)?.status === 'phau_thuat' || apptOf(r)?.post_op_status).length,
     mat: rows.filter(r => r.status === 'mat').length,
   };
-  const totalPages = Math.max(1, Math.ceil(visible.length / 10));
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const curPage = Math.min(page, totalPages);
-  const paged = visible.slice((curPage - 1) * 10, curPage * 10);
+  const paged = visible.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
   const CHIPS = [{ k: 'all', label: 'Tất cả' }, { k: 'can_goi', label: 'Cần gọi' }, { k: 'nong', label: 'Nóng' }, { k: 'mat', label: 'Mất' }, { k: 'da_lam_dv', label: 'Đã làm DV' }, { k: 'cskh', label: 'CSKH' }];
   const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
@@ -233,239 +236,258 @@ const MarketingDataPage = () => {
   ];
   const activeFilters = [fStatus, fTruc, fDay, (fTele && fTele !== (isTele ? 'mine' : '')) ? fTele : ''].filter(Boolean).length;
 
+  // Mở hồ sơ khách -> hiện TRANG hồ sơ 360° (kiểu Getfly) thay cho danh sách
+  if (detail) {
+    return (
+      <CustomerProfile row={detail} me={me} staff={staff} teleStaff={teleStaff} canWrite={canWrite} canAssign={canAssign}
+        queuePos={queue ? { i: queue.pos + 1, n: queue.ids.length } : null} onNext={queue ? queueNext : null}
+        onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />
+    );
+  }
+
+  const kpiCards = [
+    { icon: Users, tone: 'bg-teal-50 text-teal-700', label: 'Tổng khách hàng', value: stat.total, onClick: () => { setChip('all'); setFStatus(''); setPage(1); }, active: chip === 'all' && !fStatus },
+    { icon: CalendarClock, tone: 'bg-rose-50 text-rose-600', label: 'Cần gọi hôm nay', value: stat.due, onClick: () => { setChip('can_goi'); setFStatus(''); setPage(1); }, active: chip === 'can_goi' },
+    { icon: Flame, tone: 'bg-orange-50 text-orange-600', label: 'Khách nóng', value: stat.nong, onClick: () => { setChip('all'); setFStatus('nong'); setPage(1); }, active: fStatus === 'nong' },
+    { icon: CheckCircle2, tone: 'bg-sky-50 text-sky-600', label: 'Đã làm dịch vụ', value: stat.daDV, onClick: () => { setChip('da_lam_dv'); setFStatus(''); setPage(1); }, active: chip === 'da_lam_dv' },
+    { icon: UserX, tone: 'bg-slate-100 text-slate-500', label: 'Khách mất', value: stat.mat, onClick: () => { setChip('all'); setFStatus('mat'); setPage(1); }, active: fStatus === 'mat' },
+  ];
+  const moreActions = [
+    { show: canWrite, label: 'Báo cáo ngày', icon: FileText, run: () => setReportOpen(true) },
+    { show: canAssign, label: dividing ? 'Đang chia…' : 'Chia đều cho telesale', icon: Users, run: divideTele },
+    { show: roles.includes('admin'), label: 'Kéo từ GetFly', icon: Download, run: () => setGetflyOpen(true) },
+    { show: ['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)), label: 'Import CSV', icon: Upload, run: () => setImportOpen(true) },
+  ].filter(x => x.show);
+
   return (
-    <div className={`space-y-4 transition-[padding] duration-200 ${detail ? 'lg:pr-[520px] xl:pr-[620px]' : ''}`}>
-      {/* Header — MOBILE */}
-      <div className="lg:hidden relative overflow-hidden -mx-4 -mt-4 px-4 pt-4 pb-6 rounded-b-[28px] text-white shadow-lg" style={{ background: 'linear-gradient(160deg,#0b3b34 0%,#0f5148 55%,#136b5e 100%)' }}>
-        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
-        <div className="relative">
-          <h2 className="text-2xl font-bold text-white">Data khách hàng</h2>
-          <p className="text-white/70 text-[13px] mt-0.5">Gọi · cập nhật · nhật ký gọi & chăm sóc</p>
-          <div className="relative mt-3">
-            <Search className="w-4 h-4 text-white/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm khách hàng, SĐT…" className="w-full pl-10 pr-3 h-12 rounded-2xl bg-white/15 border border-white/20 text-white placeholder-white/60 text-sm outline-none focus:bg-white/20 transition" />
-          </div>
-        </div>
-      </div>
-
-      {/* Header — DESKTOP */}
-      <div className="hidden lg:flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Database className="w-6 h-6 text-teal-600" /> Data khách hàng</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Telesale gọi · cập nhật thông tin · ghi nhật ký gọi & nhật ký chăm sóc (hợp nhất theo SĐT)</p>
-        </div>
-        {canWrite && (
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={buildQueue} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 shadow-sm"><PhoneCall className="w-4 h-4" /> Bắt đầu gọi{dueCount > 0 && <span className="bg-white/25 rounded-full px-2 text-xs">{dueCount}</span>}</button>
-            <button onClick={() => setReportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-amber-300 text-amber-700 font-semibold text-sm hover:bg-amber-50"><FileText className="w-4 h-4" /> Báo cáo ngày</button>
-            {canAssign && <button onClick={divideTele} disabled={dividing} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 disabled:opacity-50"><Users className="w-4 h-4" /> {dividing ? 'Đang chia…' : 'Chia đều'}</button>}
-            {roles.includes('admin') && <button onClick={() => setGetflyOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-indigo-200 text-indigo-700 font-semibold text-sm hover:bg-indigo-50"><Download className="w-4 h-4" /> Kéo từ GetFly</button>}
-            {['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)) && <button onClick={() => setImportOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-teal-200 text-teal-700 font-semibold text-sm hover:bg-teal-50"><Upload className="w-4 h-4" /> Import CSV</button>}
-            <button onClick={() => setEdit({})} className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700"><Plus className="w-4 h-4" /> Thêm khách</button>
-          </div>
-        )}
-      </div>
-
-      {/* Thẻ số liệu — desktop */}
-      <div className="hidden lg:grid lg:grid-cols-5 gap-3">
-        {statCards.map((c, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-5 h-5" style={{ color: c.color }} /></span>
-            <div className="text-xl font-bold text-slate-800">{c.value.toLocaleString('vi-VN')}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{c.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Số liệu — mobile: dải pill cuộn ngang, gọn 1 hàng */}
-      <div className="lg:hidden -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
-        {statCards.map((c, i) => (
-          <div key={i} className="shrink-0 flex items-center gap-2 bg-white border border-slate-100 shadow-sm rounded-2xl pl-2 pr-3.5 py-2">
-            <span className="w-8 h-8 rounded-xl grid place-items-center" style={{ backgroundColor: c.color + '1a' }}><c.icon className="w-4 h-4" style={{ color: c.color }} /></span>
-            <div>
-              <div className="text-[15px] font-bold text-slate-800 leading-none tabular-nums">{c.value.toLocaleString('vi-VN')}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">{c.label}</div>
+    <div className="space-y-4">
+      {/* ===== Chỉ số (bấm để lọc nhanh) ===== */}
+      <div className="flex lg:grid lg:grid-cols-5 gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
+        {kpiCards.map((c, i) => (
+          <button key={i} onClick={c.onClick}
+            className={`text-left rounded-2xl bg-white p-4 shadow-card transition-all border ${c.active ? 'border-teal-500 ring-2 ring-teal-100' : 'border-transparent hover:border-slate-200'} shrink-0 min-w-[148px] lg:min-w-0`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-slate-500 font-medium">{c.label}</span>
+              <span className={`w-9 h-9 rounded-xl grid place-items-center ${c.tone}`}><c.icon className="w-[18px] h-[18px]" /></span>
             </div>
-          </div>
+            <div className="text-[22px] lg:text-[26px] font-bold text-slate-900 mt-1 tabular-nums leading-tight">{c.value.toLocaleString('vi-VN')}</div>
+          </button>
         ))}
       </div>
 
-      <div className="hidden lg:flex gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên / SĐT…" className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-teal-400 outline-none bg-white" />
-        </div>
-        <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none">
-          <option value="">Mọi trạng thái</option>
-          {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <select value={fTruc} onChange={e => setFTruc(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none">
-          <option value="">Mọi trực page</option>
-          {staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-        </select>
-        <select value={fTele} onChange={e => setFTele(e.target.value)} className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none">
-          <option value="">Mọi telesale</option>
-          <option value="mine">Của tôi</option>
-          <option value="none">Chưa phân công</option>
-          {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-        </select>
-        <div className="flex items-center gap-1">
-          <input type="date" value={fDay} onChange={e => { setFDay(e.target.value); setPage(1); }} title="Lọc theo ngày data về" className="px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
-          <button onClick={() => { setFDay(fDay === todayKey() ? '' : todayKey()); setPage(1); }} className={`px-3 py-2 text-sm font-semibold rounded-xl border ${fDay === todayKey() ? 'bg-teal-600 text-white border-teal-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50 bg-white'}`}>Hôm nay</button>
-          {fDay && <button onClick={() => setFDay('')} className="w-8 h-8 grid place-items-center rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>}
-        </div>
+      {/* ===== Giai đoạn khách hàng (kiểu Getfly) ===== */}
+      <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-1.5 flex gap-1 overflow-x-auto scrollbar-hide">
+        {[{ k: '', label: 'Tất cả', n: baseVisible.length }, ...Object.entries(STATUS).map(([k, v]) => ({ k, label: v.label, n: stageCount[k] || 0 }))].map(t => (
+          <button key={t.k || 'all'} onClick={() => { setFStatus(t.k); setPage(1); }}
+            className={`shrink-0 inline-flex items-center gap-2 px-3.5 h-9 rounded-xl text-[13.5px] font-semibold transition-colors ${
+              fStatus === t.k ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}>
+            {t.k && <span className="w-2 h-2 rounded-full" style={{ background: STATUS_COLORS[t.k] || '#cbd5e1' }} />}
+            {t.label}
+            <span className={`text-[11.5px] tabular-nums px-1.5 rounded-full ${fStatus === t.k ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}`}>{t.n.toLocaleString('vi-VN')}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Mobile: Bắt đầu gọi (chính) · Báo cáo · Bộ lọc */}
-      <div className="lg:hidden flex gap-2">
-        {canWrite && (
-          <button onClick={buildQueue} className="flex-1 h-12 rounded-2xl bg-emerald-600 text-white font-bold text-[15px] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.99]">
-            <PhoneCall className="w-5 h-5" /> Bắt đầu gọi{dueCount > 0 && <span className="bg-white/25 rounded-full px-2.5 py-0.5 text-sm">{dueCount}</span>}
-          </button>
-        )}
-        {canWrite && <button onClick={() => setReportOpen(true)} className="shrink-0 h-12 w-12 rounded-2xl border border-amber-300 text-amber-600 bg-white grid place-items-center active:scale-95"><FileText className="w-5 h-5" /></button>}
-        <button onClick={() => setFilterOpen(true)} className="relative shrink-0 h-12 w-12 rounded-2xl border border-slate-200 text-slate-600 bg-white grid place-items-center active:scale-95">
-          <SlidersHorizontal className="w-5 h-5" />
+      {/* ===== Thanh công cụ ===== */}
+      <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên khách hàng, số điện thoại…"
+            className="w-full pl-10 pr-3 h-10 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-400 outline-none transition" />
+        </div>
+        {/* Bộ lọc — mobile */}
+        <button onClick={() => setFilterOpen(true)} className="lg:hidden relative h-10 w-10 rounded-xl border border-slate-200 text-slate-600 bg-white grid place-items-center">
+          <SlidersHorizontal className="w-[18px] h-[18px]" />
           {activeFilters > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] font-bold grid place-items-center">{activeFilters}</span>}
         </button>
-      </div>
-
-      {/* Chips lọc nhanh */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {CHIPS.map(c => (
-            <button key={c.k} onClick={() => { setChip(c.k); setPage(1); }} className={`shrink-0 px-4 h-9 rounded-full text-sm font-semibold border transition ${chip === c.k ? 'bg-teal-600 text-white border-teal-600 shadow' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{c.label}{c.k === 'can_goi' && stat.due > 0 && <span className={`ml-1.5 ${chip === c.k ? 'text-white/90' : 'text-rose-500'}`}>{stat.due}</span>}</button>
+        {/* Thao tác */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {canWrite && (
+            <button onClick={buildQueue} className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-10 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 shadow-sm whitespace-nowrap">
+              <PhoneCall className="w-4 h-4" /><span className="hidden sm:inline">Bắt đầu gọi</span>{dueCount > 0 && <span className="bg-white/25 rounded-full px-1.5 text-xs">{dueCount}</span>}
+            </button>
+          )}
+          {canWrite && (
+            <button onClick={() => setEdit({})} className="hidden sm:inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white font-semibold text-sm hover:bg-teal-700 whitespace-nowrap">
+              <Plus className="w-4 h-4" /> Thêm khách
+            </button>
+          )}
+          {moreActions.length > 0 && <MoreMenu actions={moreActions} />}
+        </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+        {/* Lọc nhanh */}
+        <div className="flex items-center gap-1.5">
+          {[{ k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
+            <button key={c.k} onClick={() => { setChip(chip === c.k ? 'all' : c.k); setPage(1); }}
+              className={`px-3 h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+              {c.label}{c.n > 0 && <span className="ml-1 text-rose-500">{c.n}</span>}
+            </button>
           ))}
         </div>
-        <span className="text-xs text-slate-400 shrink-0">{visible.length} khách</span>
+        {/* Bộ lọc chi tiết — desktop */}
+        <div className="hidden lg:flex items-center gap-1.5">
+          <select value={fTele} onChange={e => { setFTele(e.target.value); setPage(1); }} className="h-10 px-3 text-sm rounded-xl border border-slate-200 bg-white outline-none">
+            <option value="">Mọi telesale</option>
+            <option value="mine">Của tôi</option>
+            <option value="none">Chưa phân công</option>
+            {teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+          </select>
+          <select value={fTruc} onChange={e => { setFTruc(e.target.value); setPage(1); }} className="h-10 px-3 text-sm rounded-xl border border-slate-200 bg-white outline-none">
+            <option value="">Mọi trực page</option>
+            {staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+          </select>
+          <input type="date" value={fDay} onChange={e => { setFDay(e.target.value); setPage(1); }} title="Lọc theo ngày data về" className="h-10 px-3 text-sm rounded-xl border border-slate-200 bg-white outline-none" />
+          <button onClick={() => { setFDay(fDay === todayKey() ? '' : todayKey()); setPage(1); }} className={`h-10 px-3 text-sm font-semibold rounded-xl border ${fDay === todayKey() ? 'bg-teal-600 text-white border-teal-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50 bg-white'}`}>Về hôm nay</button>
+          {activeFilters > 0 && <button onClick={() => { setFStatus(''); setFTruc(''); setFDay(''); setFTele(isTele ? 'mine' : ''); setPage(1); }} className="h-10 px-3 text-sm font-semibold text-rose-500 hover:bg-rose-50 rounded-xl">Xoá lọc</button>}
+        </div>
+        </div>
       </div>
 
+      {/* ===== Danh sách ===== */}
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          {/* Desktop — bảng đầy đủ; khi mở panel khách thì ẩn, nhường chỗ danh sách gọn */}
-          <div className={`hidden md:block overflow-auto ${detail ? 'lg:hidden' : ''}`}>
+        <div className="bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+            <div className="text-[14px] font-bold text-slate-800">{fStatus ? STATUS[fStatus]?.label : 'Tất cả khách hàng'}</div>
+            <div className="text-[12.5px] text-slate-500 tabular-nums">{visible.length.toLocaleString('vi-VN')} khách</div>
+          </div>
+          {/* Desktop — bảng gọn */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+              <thead className="bg-slate-50/80 text-slate-500 text-[12px]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Khách hàng</th>
-                  <th className="px-4 py-3 font-semibold">SĐT</th>
-                  <th className="px-4 py-3 font-semibold">Ngày về</th>
+                  <th className="px-4 py-3 font-semibold">Liên hệ</th>
+                  <th className="px-4 py-3 font-semibold">Giai đoạn</th>
                   <th className="px-4 py-3 font-semibold">Telesale</th>
-                  <th className="px-4 py-3 font-semibold">Phụ trách</th>
-                  <th className="px-4 py-3 font-semibold">Mô tả</th>
-                  <th className="px-4 py-3 font-semibold">Nguồn · Nhóm</th>
-                  <th className="px-4 py-3 font-semibold">Trạng thái</th>
-                  <th className="px-4 py-3 font-semibold">Nhắc gọi lại</th>
-                  <th className="px-4 py-3 font-semibold">Trao đổi gần nhất</th>
-                  <th className="px-4 py-3 font-semibold">Đã tiếp cận</th>
-                  <th className="px-4 py-3 font-semibold">Liên kết</th>
-                  {canWrite && <th className="px-4 py-3 font-semibold text-right">Thao tác</th>}
+                  <th className="px-4 py-3 font-semibold">Nguồn</th>
+                  <th className="px-4 py-3 font-semibold">Tương tác gần nhất</th>
+                  <th className="px-4 py-3 font-semibold w-10"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
-                {paged.length === 0 ? <tr><td colSpan={canWrite ? 13 : 12} className="text-center py-10 text-slate-400">Chưa có data</td></tr> :
-                  paged.map(r => { const appt = apptMap[phoneKey(r.phone)]; const st = APPT_STAGE(appt); return (
-                    <tr key={r.id} className={`cursor-pointer ${detail?.id === r.id ? 'bg-teal-50 ring-1 ring-inset ring-teal-300' : 'hover:bg-teal-50/40'}`} onClick={() => setDetail(r)}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-[11px] font-bold shrink-0">{initials(r.customer_name)}</span>
-                          <div className="min-w-0"><div className="font-semibold text-slate-800 truncate max-w-[140px]">{r.customer_name || '—'}</div>{r.getfly_code && <div className="text-[10px] text-slate-300 truncate">{r.getfly_code}</div>}</div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 tabular-nums whitespace-nowrap">{phoneView(r.phone, me)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`text-xs font-semibold tabular-nums ${dayKey(arrivedAt(r)) === todayKey() ? 'text-emerald-600' : 'text-slate-500'}`} title={arrivedAt(r) ? new Date(arrivedAt(r)).toLocaleString('vi-VN') : ''}>
-                          {dayKey(arrivedAt(r)) === todayKey() ? <span className="inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />Hôm nay</span> : fmtD(arrivedAt(r))}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        {canAssign
-                          ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-xs font-semibold rounded-lg border border-slate-200 px-1.5 py-1 bg-white outline-none max-w-[110px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
-                          : <span className="text-xs text-slate-500 whitespace-nowrap">{r.telesale?.full_name || '—'}</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap max-w-[110px] truncate" title={r.manager_name}>{r.manager_name || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500 max-w-[160px] truncate" title={r.description}>{r.description || '—'}</td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        <div className="text-slate-600 font-semibold">{r.source || '—'}</div>
-                        {r.customer_group && <div className="text-slate-400 text-[11px]">{r.customer_group}</div>}
-                      </td>
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        {canWrite
-                          ? <select value={r.status || 'tiep_can'} onChange={e => quickStatus(r, e.target.value)} className={`text-[11px] font-bold rounded-full px-2 py-1 outline-none border-0 cursor-pointer ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
-                          : <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>}
-                      </td>
-                      <td className="px-4 py-3"><DueBadge r={r} /></td>
-                      <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.last_exchange}>{r.last_exchange || '—'}</td>
-                      <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate" title={r.reached_info}>{r.reached_info || '—'}</td>
-                      <td className="px-4 py-3">{st ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span> : <span className="text-[11px] text-slate-300">—</span>}</td>
-                      {canWrite && <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}><div className="flex justify-end gap-1.5"><a href={`tel:${r.phone}`} className="px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 border border-emerald-200 hover:bg-emerald-50 inline-flex items-center gap-1"><PhoneCall className="w-3.5 h-3.5" />Gọi</a><a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded-lg text-xs font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50">Zalo</a><button onClick={() => setDetail(r)} className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50">Mở</button><button onClick={() => del(r)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></div></td>}
-                    </tr>); })}
+              <tbody className="divide-y divide-slate-100">
+                {paged.length === 0 ? <tr><td colSpan={7} className="text-center py-12 text-slate-400">Không có khách hàng phù hợp</td></tr> :
+                  paged.map(r => {
+                    const st = APPT_STAGE(apptMap[phoneKey(r.phone)]);
+                    const isToday = dayKey(arrivedAt(r)) === todayKey();
+                    return (
+                      <tr key={r.id} className="cursor-pointer hover:bg-teal-50/40 transition-colors" onClick={() => setDetail(r)}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className="w-10 h-10 rounded-full bg-teal-600 text-white grid place-items-center text-[12px] font-bold shrink-0">{initials(r.customer_name)}</span>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-900 truncate max-w-[200px]">{r.customer_name || '(Chưa có tên)'}</div>
+                              <div className="text-[11.5px] text-slate-400 flex items-center gap-1.5">
+                                {isToday ? <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold whitespace-nowrap"><Sparkles className="w-3 h-3" />Mới hôm nay</span> : <span className="whitespace-nowrap">Về {fmtD(arrivedAt(r))}</span>}
+                                {r.getfly_code && <><span>·</span><span className="truncate max-w-[90px]">{r.getfly_code}</span></>}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-700 tabular-nums whitespace-nowrap">{phoneView(r.phone, me)}</span>
+                            <a href={`tel:${r.phone}`} title="Gọi" className="w-7 h-7 rounded-lg grid place-items-center text-emerald-600 hover:bg-emerald-50"><PhoneCall className="w-3.5 h-3.5" /></a>
+                            <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" title="Zalo" className="px-1.5 h-7 rounded-lg grid place-items-center text-[11px] font-bold text-blue-600 hover:bg-blue-50">Zalo</a>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          {canWrite
+                            ? <select value={r.status || 'tiep_can'} onChange={e => quickStatus(r, e.target.value)} className={`text-[11.5px] font-bold rounded-full px-2.5 py-1 outline-none border-0 cursor-pointer ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+                            : <span className={`text-[11.5px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>}
+                          {st && <div className="mt-1"><span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap ${st.cls}`} title="Hành trình theo lịch hẹn"><Link2 className="w-3 h-3" />{st.label}</span></div>}
+                        </td>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          {canAssign
+                            ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-[12.5px] font-medium rounded-lg border border-slate-200 px-2 py-1 bg-white outline-none max-w-[130px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
+                            : <span className="text-[13px] text-slate-600 whitespace-nowrap">{r.telesale?.full_name || '—'}</span>}
+                        </td>
+                        <td className="px-4 py-3 text-[12.5px] whitespace-nowrap">
+                          <div className="text-slate-700 font-medium">{r.source || '—'}</div>
+                          {r.customer_group && <div className="text-slate-400 text-[11.5px]">{r.customer_group}</div>}
+                        </td>
+                        <td className="px-4 py-3 max-w-[240px]">
+                          <div className="text-[12.5px] text-slate-600 truncate" title={r.last_exchange}>{r.last_exchange || <span className="text-slate-300">Chưa liên hệ</span>}</div>
+                          <div className="mt-0.5 flex items-center gap-1.5">
+                            {r.last_contact_at && <span className="text-[11px] text-slate-400">{fmtDT(r.last_contact_at)}</span>}
+                            <DueBadge r={r} />
+                          </div>
+                        </td>
+                        <td className="px-2 py-3 text-right"><ChevronRight className="w-4 h-4 text-slate-300 inline" /></td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
-          {/* Thẻ khách gọn: mobile luôn hiện; desktop hiện khi mở panel khách (danh sách bên trái) */}
-          <div className={`md:hidden divide-y divide-slate-50 ${detail ? 'lg:block' : ''}`}>
+          {/* Mobile — thẻ gọn */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {paged.length === 0 && <div className="text-center py-12 text-slate-400 text-sm">Không có khách hàng phù hợp</div>}
             {paged.map(r => { const st = APPT_STAGE(apptMap[phoneKey(r.phone)]); const isToday = dayKey(arrivedAt(r)) === todayKey(); return (
-              <div key={r.id} className={`relative flex gap-3 pl-4 pr-3 py-3 ${detail?.id === r.id ? 'bg-teal-50' : 'active:bg-slate-50'}`} onClick={() => setDetail(r)}>
-                <span className="absolute left-1 top-3 bottom-3 w-1 rounded-full" style={{ background: STATUS_COLORS[r.status] || '#cbd5e1' }} />
+              <div key={r.id} className="flex gap-3 px-4 py-3 active:bg-slate-50" onClick={() => setDetail(r)}>
+                <span className="w-11 h-11 rounded-full bg-teal-600 text-white grid place-items-center text-[12px] font-bold shrink-0">{initials(r.customer_name)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <div className="font-bold text-slate-800 text-[14.5px] truncate">{r.customer_name || '—'}</div>
-                    {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
+                    <div className="font-bold text-slate-900 text-[14.5px] truncate">{r.customer_name || '(Chưa có tên)'}</div>
+                    {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
                   </div>
-                  <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                  <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5">
                     <span className="font-semibold text-slate-600 tabular-nums">{phoneView(r.phone, me)}</span>
-                    <span className="text-slate-300">·</span><span>{isToday ? 'Hôm nay' : fmtD(arrivedAt(r))}</span>
-                    {r.source && <><span className="text-slate-300">·</span><span className="truncate max-w-[110px]">{r.source}</span></>}
+                    {r.source && <><span className="text-slate-300">·</span><span className="truncate">{r.source}</span></>}
                   </div>
-                  {r.last_exchange && <div className="text-[11.5px] text-slate-400 mt-1 line-clamp-1">{r.last_exchange}</div>}
+                  {r.last_exchange && <div className="text-[12px] text-slate-400 mt-1 line-clamp-1">{r.last_exchange}</div>}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>
+                    <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>
+                    {st && <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
                     <DueBadge r={r} />
-                    {st && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
-                    {r.telesale?.full_name && <span className="text-[10px] text-slate-400">{r.telesale.full_name}</span>}
                   </div>
                 </div>
-                <div className="shrink-0 flex flex-col items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
-                  <a href={`tel:${r.phone}`} className="w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center shadow-sm active:scale-95"><PhoneCall style={{ width: 18, height: 18 }} /></a>
-                  <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 border border-blue-100 grid place-items-center text-[10.5px] font-bold active:scale-95">Zalo</a>
+                <div className="shrink-0 flex flex-col gap-1.5" onClick={e => e.stopPropagation()}>
+                  <a href={`tel:${r.phone}`} className="w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center shadow-sm active:scale-95"><PhoneCall className="w-[18px] h-[18px]" /></a>
+                  <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 grid place-items-center text-[10.5px] font-bold active:scale-95">Zalo</a>
                 </div>
               </div>); })}
           </div>
           {/* Phân trang */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-              <span className="text-slate-400 text-xs">Trang {curPage}/{totalPages} · {visible.length} khách</span>
+              <span className="text-slate-500 text-[12.5px]">Trang {curPage}/{totalPages}</span>
               <div className="flex items-center gap-1">
-                <button disabled={curPage <= 1} onClick={() => setPage(curPage - 1)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 disabled:opacity-40 hover:bg-slate-50"><ChevronLeft className="w-4 h-4" /></button>
-                <button disabled={curPage >= totalPages} onClick={() => setPage(curPage + 1)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 disabled:opacity-40 hover:bg-slate-50"><ChevronRight className="w-4 h-4" /></button>
+                <button disabled={curPage <= 1} onClick={() => setPage(curPage - 1)} className="w-9 h-9 rounded-xl border border-slate-200 grid place-items-center text-slate-600 disabled:opacity-40 hover:bg-slate-50"><ChevronLeft className="w-4 h-4" /></button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).filter(n => n === 1 || n === totalPages || Math.abs(n - curPage) <= 1).map((n, i, arr) => (
+                  <React.Fragment key={n}>
+                    {i > 0 && n - arr[i - 1] > 1 && <span className="px-1 text-slate-300">…</span>}
+                    <button onClick={() => setPage(n)} className={`min-w-9 h-9 px-2 rounded-xl text-sm font-semibold tabular-nums ${n === curPage ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{n}</button>
+                  </React.Fragment>
+                ))}
+                <button disabled={curPage >= totalPages} onClick={() => setPage(curPage + 1)} className="w-9 h-9 rounded-xl border border-slate-200 grid place-items-center text-slate-600 disabled:opacity-40 hover:bg-slate-50"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {canWrite && !detail && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
-        <button onClick={() => setEdit({})} title="Thêm khách" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-2xl shadow-teal-900/40 ring-4 ring-teal-500/20 flex items-center justify-center"><Plus className="w-7 h-7" strokeWidth={2.5} /></button>
+      {canWrite && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
+        <button onClick={() => setEdit({})} title="Thêm khách" className="sm:hidden fixed z-[25] bottom-24 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-float ring-4 ring-white flex items-center justify-center"><UserPlus className="w-6 h-6" /></button>
       )}
 
-      {detail && <CustomerConsole row={detail} me={me} staff={staff} teleStaff={teleStaff} canWrite={canWrite} canAssign={canAssign} appt={apptOf(detail)}
-        queuePos={queue ? { i: queue.pos + 1, n: queue.ids.length } : null} onNext={queue ? queueNext : null}
-        onClose={() => { setDetail(null); setQueue(null); }} onChanged={loadData} onDelete={() => { setDetail(null); del(detail); }} />}
       {/* Bottom-sheet BỘ LỌC (mobile) */}
       {filterOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end justify-center backdrop-blur-sm" onClick={() => setFilterOpen(false)}>
+        <div className="fixed inset-0 bg-slate-900/40 z-[80] flex items-end justify-center backdrop-blur-[2px]" onClick={() => setFilterOpen(false)}>
           <div className="bg-white w-full rounded-t-3xl shadow-xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="shrink-0 px-5 py-3.5 border-b flex justify-between items-center bg-white">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-teal-600" /> Bộ lọc</h3>
+            <div className="pt-2.5 pb-1 grid place-items-center"><span className="w-10 h-1.5 rounded-full bg-slate-200" /></div>
+            <div className="shrink-0 px-5 py-3 border-b flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-teal-600" /> Bộ lọc</h3>
               <button onClick={() => setFilterOpen(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-5">
-              <Field label="Trạng thái">
+              <Field label="Giai đoạn">
                 <select value={fStatus} onChange={e => { setFStatus(e.target.value); setPage(1); }} className={inp}>
-                  <option value="">Mọi trạng thái</option>
+                  <option value="">Tất cả giai đoạn</option>
                   {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </Field>
@@ -489,9 +511,16 @@ const MarketingDataPage = () => {
                   <button onClick={() => { setFDay(fDay === todayKey() ? '' : todayKey()); setPage(1); }} className={`shrink-0 px-4 rounded-xl text-sm font-semibold border ${fDay === todayKey() ? 'bg-teal-600 text-white border-teal-600' : 'border-slate-200 text-slate-500 bg-white'}`}>Hôm nay</button>
                 </div>
               </Field>
-              <div className="flex gap-2 mt-1">
+              {moreActions.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
+                  {moreActions.map(a => (
+                    <button key={a.label} onClick={() => { setFilterOpen(false); a.run(); }} className="h-11 rounded-xl border border-slate-200 text-slate-700 text-[13px] font-semibold inline-flex items-center justify-center gap-1.5"><a.icon className="w-4 h-4 text-teal-600" />{a.label}</button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 mt-4">
                 <button onClick={() => { setFStatus(''); setFTruc(''); setFDay(''); setFTele(isTele ? 'mine' : ''); setPage(1); }} className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-500 font-semibold text-sm">Xoá lọc</button>
-                <button onClick={() => setFilterOpen(false)} className="flex-1 h-11 rounded-xl bg-teal-600 text-white font-bold text-sm">Xong · {visible.length.toLocaleString('vi-VN')} khách</button>
+                <button onClick={() => setFilterOpen(false)} className="flex-1 h-11 rounded-xl bg-teal-600 text-white font-bold text-sm">Xem {visible.length.toLocaleString('vi-VN')} khách</button>
               </div>
             </div>
           </div>
@@ -506,12 +535,90 @@ const MarketingDataPage = () => {
   );
 };
 
-// ================= Console gọi & chăm sóc 1 khách =================
-const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, appt, queuePos, onNext, onClose, onChanged, onDelete }) => {
-  const [tab, setTab] = useState('call');   // 'call' | 'care' | 'info'
+// Menu "⋯" gom các thao tác phụ (Báo cáo ngày, Chia đều, Kéo GetFly, Import)
+const MoreMenu = ({ actions }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  return (
+    <div ref={ref} className="relative hidden lg:block">
+      <button onClick={() => setOpen(o => !o)} className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-600 grid place-items-center hover:bg-slate-50" aria-label="Thao tác khác">
+        <MoreHorizontal className="w-5 h-5" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-12 z-30 w-56 rounded-2xl bg-white border border-slate-200 shadow-float p-1.5">
+          {actions.map(a => (
+            <button key={a.label} onClick={() => { setOpen(false); a.run(); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13.5px] font-medium text-slate-700 hover:bg-slate-50 text-left">
+              <a.icon className="w-4 h-4 text-teal-600" />{a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ================= HỒ SƠ KHÁCH HÀNG 360° (kiểu Getfly / Ethics BOS) =================
+// Gom MỌI thông tin của 1 khách theo SĐT: data marketing + nhật ký gọi/chăm sóc +
+// toàn bộ lịch hẹn (tư vấn, cọc, phẫu thuật, tái khám, hậu phẫu).
+// Thông minh: điểm tiềm năng, gợi ý việc cần làm tiếp, đồng bộ giai đoạn theo lịch hẹn.
+const JOURNEY_STEPS = ['Tiếp cận', 'Hẹn tư vấn', 'Đặt cọc', 'Phẫu thuật', 'Hậu phẫu'];
+const journeyIndex = (row, appts) => {
+  if (appts.some(a => a.post_op_status)) return 4;
+  if (appts.some(a => a.status === 'phau_thuat') || row.status === 'da_lam_dv') return 3;
+  if (appts.some(a => a.status === 'coc') || row.status === 'coc') return 2;
+  if (appts.length || row.status === 'da_hen_lich') return 1;
+  return 0;
+};
+const STATUS_BASE_SCORE = { tiep_can: 25, nong: 70, tiem_nang: 55, da_hen_lich: 75, coc: 85, da_lam_dv: 95, sai_gon: 30, chot_fail: 15, mat: 5 };
+const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : null);
+const fmtMoney = (n) => `${Number(n || 0).toLocaleString('vi-VN')}đ`;
+const fmtDay = (s) => (s ? new Date(String(s).length <= 10 ? `${s}T00:00:00` : s).toLocaleDateString('vi-VN') : '—');
+const isRecheckAppt = (a) => String(a?.service || '').startsWith('[Tái khám]');
+const APPT_PILL = {
+  scheduled: { label: 'Chờ tư vấn', cls: 'bg-amber-50 text-amber-700' },
+  coc: { label: 'Đã cọc', cls: 'bg-blue-50 text-blue-700' },
+  phau_thuat: { label: 'Phẫu thuật', cls: 'bg-teal-50 text-teal-700' },
+  bong: { label: 'Khách bong', cls: 'bg-rose-50 text-rose-700' },
+  cancelled: { label: 'Đã huỷ', cls: 'bg-slate-100 text-slate-500' },
+};
+
+const ScoreRing = ({ value, size = 76 }) => {
+  const r = (size - 9) / 2; const c = 2 * Math.PI * r;
+  const color = value >= 75 ? '#468A86' : value >= 50 ? '#E5A13C' : value >= 25 ? '#5B8DD6' : '#97A4A5';
+  return (
+    <div className="relative grid place-items-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EEF2F2" strokeWidth={9} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={9} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} style={{ transition: 'stroke-dashoffset .6s ease' }} />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center"><span className="text-[20px] font-bold text-slate-900 tabular-nums">{value}</span></div>
+    </div>
+  );
+};
+
+const InfoLine = ({ icon: Icon, label, value }) => (
+  <div className="flex items-start gap-3 py-2">
+    <Icon className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+    <div className="min-w-0">
+      <div className="text-[11.5px] text-slate-400">{label}</div>
+      <div className="text-[13.5px] text-slate-800 font-medium break-words">{value || '—'}</div>
+    </div>
+  </div>
+);
+
+const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, queuePos, onNext, onClose, onChanged, onDelete }) => {
+  const [tab, setTab] = useState('activity'); // activity | call | care | appts | info
   const [acts, setActs] = useState([]);
   const [loadingActs, setLoadingActs] = useState(true);
-  const [apptOpen, setApptOpen] = useState(false);   // modal tạo lịch hẹn
+  const [appts, setAppts] = useState([]);
+  const [apptOpen, setApptOpen] = useState(false);
 
   const loadActs = useCallback(async () => {
     setLoadingActs(true);
@@ -519,12 +626,22 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
       .select('*, author:profiles!created_by(full_name)').eq('data_id', row.id).order('created_at', { ascending: false });
     setActs(data || []); setLoadingActs(false);
   }, [row.id]);
-  useEffect(() => { loadActs(); }, [loadActs]);
+  // Toàn bộ lịch hẹn của khách — khớp theo 9 số cuối SĐT (bỏ qua +84/84/0)
+  const loadAppts = useCallback(async () => {
+    const key = phoneKey(row.phone);
+    if (!key || key.length < 8) { setAppts([]); return; }
+    const { data } = await supabase.from('customer_appointments')
+      .select('*, telesale:telesale_id(full_name), sale:sale_id(full_name)')
+      .like('phone', `%${key}`).order('appointment_date', { ascending: false });
+    setAppts((data || []).filter(a => phoneKey(a.phone) === key));
+  }, [row.phone]);
+  useEffect(() => { loadActs(); loadAppts(); }, [loadActs, loadAppts]);
+  useEffect(() => { setTab('activity'); }, [row.id]);
 
   const calls = acts.filter(a => a.type === 'call');
   const cares = acts.filter(a => a.type === 'care');
 
-  // Gom "Nhật ký tư vấn" (nhật ký gọi + chăm sóc) thành 1 đoạn -> điền sẵn ô "tình trạng khách hàng" khi tạo lịch hẹn
+  // Gom "Nhật ký tư vấn" -> điền sẵn ô tình trạng khách khi tạo lịch hẹn
   const consultSummary = (() => {
     const lines = [];
     if (row.description) lines.push(row.description.trim());
@@ -543,6 +660,9 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     reached_info: row.reached_info || '', truc_page_id: row.truc_page_id || '',
     telesale_id: row.telesale_id || '',
   });
+  useEffect(() => {
+    setInfo({ customer_name: row.customer_name || '', description: row.description || '', reached_info: row.reached_info || '', truc_page_id: row.truc_page_id || '', telesale_id: row.telesale_id || '' });
+  }, [row.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [savingInfo, setSavingInfo] = useState(false);
   const saveInfo = async () => {
     setSavingInfo(true);
@@ -554,11 +674,12 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const changeStatus = async (status) => {
     const { error } = await supabase.from('marketing_data').update({ status }).eq('id', row.id);
     if (error) return toast.error('Lỗi: ' + error.message);
-    toast.success('Đã đổi trạng thái'); onChanged?.();
+    toast.success(`Đã chuyển giai đoạn: ${STATUS[status]?.label || status}`); onChanged?.();
   };
 
   // ----- nhật ký gọi -----
   const [call, setCall] = useState({ outcome: 'nghe_may', content: '', next: '', status: row.status || 'tiep_can' });
+  useEffect(() => { setCall(c => ({ ...c, status: row.status || 'tiep_can' })); }, [row.status]);
   const [savingCall, setSavingCall] = useState(false);
   const addCall = async () => {
     if (!canWrite) return;
@@ -609,136 +730,392 @@ const CustomerConsole = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     await supabase.from('marketing_activities').delete().eq('id', a.id);
   };
 
-  const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
-  const st = APPT_STAGE(appt);
-  const TABS = [{ k: 'call', label: 'Nhật ký gọi', icon: PhoneCall, n: calls.length }, { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length }, { k: 'info', label: 'Thông tin', icon: Database }];
+  // ===== Chỉ số 360° =====
+  const mainAppts = appts.filter(a => !isRecheckAppt(a));
+  const revenue = appts.filter(a => a.status === 'phau_thuat').reduce((s, a) => s + Number(a.revenue || 0) + Number(a.upsale_revenue || 0), 0);
+  const deposit = appts.filter(a => ['coc', 'phau_thuat'].includes(a.status)).reduce((s, a) => s + Number(a.deposit_amount || 0), 0);
+  const surgeries = appts.filter(a => a.status === 'phau_thuat').length;
+  const contactDays = daysSince(row.last_contact_at);
+  const jIdx = journeyIndex(row, appts);
+  const lost = ['mat', 'chot_fail'].includes(row.status) || (appts.length > 0 && appts.every(a => a.status === 'bong'));
+
+  // Điểm tiềm năng (0–100): giai đoạn + độ "nóng" liên hệ + mức tương tác
+  const score = (() => {
+    let sc = STATUS_BASE_SCORE[row.status] ?? 25;
+    if (contactDays != null) { if (contactDays <= 3) sc += 10; else if (contactDays > 30) sc -= 20; else if (contactDays > 14) sc -= 10; }
+    sc += Math.min(15, calls.filter(c => ['nghe_may', 'can_nhac', 'hen_goi_lai'].includes(c.outcome)).length * 3);
+    if (mainAppts.length) sc += 8;
+    return Math.max(0, Math.min(100, Math.round(sc)));
+  })();
+  const scoreLabel = score >= 75 ? 'Rất tiềm năng' : score >= 50 ? 'Tiềm năng' : score >= 25 ? 'Cần nuôi dưỡng' : 'Lạnh';
+
+  // Gợi ý việc cần làm tiếp (thông minh)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const suggestions = (() => {
+    const out = [];
+    if (isDue(row.next_call_at)) out.push({ tone: 'rose', icon: PhoneCall, text: `Đã tới hạn gọi lại (${fmtDT(row.next_call_at)})`, cta: 'Ghi cuộc gọi', run: () => setTab('call') });
+    else if (row.next_call_at) out.push({ tone: 'blue', icon: CalendarClock, text: `Hẹn gọi lại lúc ${fmtDT(row.next_call_at)}` });
+    if (!row.last_contact_at && !['mat', 'da_lam_dv'].includes(row.status)) out.push({ tone: 'amber', icon: AlertTriangle, text: 'Khách chưa được liên hệ lần nào', cta: 'Gọi ngay', href: `tel:${row.phone}` });
+    else if (contactDays != null && contactDays > 7 && ['tiep_can', 'nong', 'tiem_nang', 'da_hen_lich', 'coc'].includes(row.status)) out.push({ tone: 'amber', icon: Clock, text: `${contactDays} ngày chưa liên hệ — nên chăm sóc lại`, cta: 'Ghi chăm sóc', run: () => setTab('care') });
+    if (['nong', 'tiem_nang'].includes(row.status) && !mainAppts.some(a => a.status === 'scheduled' && a.appointment_date >= todayStr) && canWrite)
+      out.push({ tone: 'teal', icon: CalendarDays, text: 'Khách đang quan tâm nhưng chưa có lịch hẹn sắp tới', cta: 'Tạo lịch hẹn', run: () => setApptOpen(true) });
+    const upcoming = mainAppts.filter(a => a.status === 'scheduled' && a.appointment_date >= todayStr).sort((x, y) => x.appointment_date.localeCompare(y.appointment_date))[0];
+    if (upcoming) out.push({ tone: 'blue', icon: CalendarDays, text: `Lịch tư vấn ${fmtDay(upcoming.appointment_date)} ${String(upcoming.appointment_time || '').slice(0, 5)}${upcoming.sale?.full_name ? ' với ' + upcoming.sale.full_name : ''} — nhắc khách trước 1 ngày` });
+    const cocAppt = appts.find(a => a.status === 'coc');
+    if (cocAppt) out.push({ tone: 'blue', icon: Wallet, text: `Đã cọc ${fmtMoney(cocAppt.deposit_amount)}${cocAppt.expected_surgery_date ? ` — mổ dự kiến ${fmtDay(cocAppt.expected_surgery_date)}` : ' — chưa chốt ngày mổ'}` });
+    const ptNoCare = appts.find(a => a.status === 'phau_thuat' && !a.post_op_status);
+    if (ptNoCare) out.push({ tone: 'teal', icon: Stethoscope, text: `Đã phẫu thuật ${fmtDay(ptNoCare.surgery_date)} — theo dõi hậu phẫu & xin đánh giá` });
+    // Đồng bộ giai đoạn theo lịch hẹn thực tế
+    if (canWrite) {
+      if (appts.some(a => a.status === 'phau_thuat') && row.status !== 'da_lam_dv') out.push({ tone: 'teal', icon: CheckCircle2, text: 'Khách đã phẫu thuật nhưng giai đoạn chưa cập nhật', cta: 'Chuyển "Đã làm DV"', run: () => changeStatus('da_lam_dv') });
+      else if (appts.some(a => a.status === 'coc') && !['coc', 'da_lam_dv'].includes(row.status)) out.push({ tone: 'teal', icon: CheckCircle2, text: 'Khách đã cọc nhưng giai đoạn chưa cập nhật', cta: 'Chuyển "Cọc"', run: () => changeStatus('coc') });
+      else if (mainAppts.length && ['tiep_can', 'nong', 'tiem_nang'].includes(row.status)) out.push({ tone: 'teal', icon: CheckCircle2, text: 'Khách đã có lịch hẹn nhưng giai đoạn chưa cập nhật', cta: 'Chuyển "Đã hẹn lịch"', run: () => changeStatus('da_hen_lich') });
+    }
+    const bong = appts.find(a => a.status === 'bong');
+    if (bong && !appts.some(a => ['coc', 'phau_thuat'].includes(a.status))) out.push({ tone: 'rose', icon: AlertTriangle, text: `Khách bong lịch${bong.bong_date ? ' ngày ' + fmtDay(bong.bong_date) : ''} — chăm sóc lại để hẹn lịch mới`, cta: 'Ghi chăm sóc', run: () => setTab('care') });
+    return out.slice(0, 5);
+  })();
+  const TONE = {
+    rose: 'bg-rose-50 text-rose-700 border-rose-100', amber: 'bg-amber-50 text-amber-800 border-amber-100',
+    blue: 'bg-blue-50 text-blue-700 border-blue-100', teal: 'bg-teal-50 text-teal-800 border-teal-100',
+  };
+
+  // Dòng thời gian hợp nhất mọi tương tác
+  const events = (() => {
+    const ev = [];
+    const arr = arrivedAt(row);
+    if (arr) ev.push({ at: arr, icon: Sparkles, color: '#3FA7A2', title: 'Khách về hệ thống', desc: [row.source, row.customer_group].filter(Boolean).join(' · ') });
+    acts.forEach(a => ev.push({
+      at: a.created_at, icon: a.type === 'call' ? PhoneCall : HeartHandshake, color: a.type === 'call' ? '#5BAE7B' : '#8B7BD8',
+      title: a.type === 'call' ? `Cuộc gọi · ${OUTCOMES[a.outcome]?.label || 'Gọi'}` : 'Chăm sóc', desc: a.content, by: a.author?.full_name, next: a.next_at,
+    }));
+    appts.forEach(a => {
+      const re = isRecheckAppt(a);
+      ev.push({ at: `${a.appointment_date}T${String(a.appointment_time || '09:00').slice(0, 5)}:00`, icon: re ? Stethoscope : CalendarDays, color: re ? '#8B7BD8' : '#5B8DD6',
+        title: re ? 'Lịch tái khám' : 'Lịch hẹn tư vấn', desc: [String(a.service || '').replace('[Tái khám] ', ''), a.sale?.full_name && `Sale: ${a.sale.full_name}`].filter(Boolean).join(' · '), pill: APPT_PILL[a.status] });
+      if (a.deposit_date && Number(a.deposit_amount) > 0) ev.push({ at: `${a.deposit_date}T12:00:00`, icon: Wallet, color: '#5B8DD6', title: `Đặt cọc ${fmtMoney(a.deposit_amount)}`, desc: a.service });
+      if (a.status === 'phau_thuat' && a.surgery_date) ev.push({ at: `${a.surgery_date}T12:00:00`, icon: Activity, color: '#468A86', title: 'Phẫu thuật', desc: [a.service, Number(a.revenue) > 0 && `Doanh thu ${fmtMoney(Number(a.revenue) + Number(a.upsale_revenue || 0))}`].filter(Boolean).join(' · ') });
+      if (a.post_op_status) ev.push({ at: `${a.surgery_date || a.appointment_date}T13:00:00`, icon: HeartHandshake, color: '#3FA7A2', title: 'Hậu phẫu / CSKH', desc: a.post_op_status });
+      if (a.bong_date) ev.push({ at: `${a.bong_date}T12:00:00`, icon: UserX, color: '#D9635C', title: 'Khách bong lịch', desc: a.service });
+    });
+    return ev.filter(e => e.at).sort((x, y) => new Date(y.at) - new Date(x.at));
+  })();
+
+  const initialsOf = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+  const st = APPT_STAGE(appts[0]);
+  const TABS = [
+    { k: 'activity', label: 'Hoạt động', icon: Activity, n: events.length },
+    { k: 'call', label: 'Gọi điện', icon: PhoneCall, n: calls.length },
+    { k: 'care', label: 'Chăm sóc', icon: HeartHandshake, n: cares.length },
+    { k: 'appts', label: 'Lịch hẹn', icon: CalendarDays, n: appts.length },
+    { k: 'info', label: 'Thông tin', icon: Pencil },
+  ];
 
   return (
-    <>
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4 lg:top-[57px] lg:items-stretch lg:justify-end lg:p-0 lg:bg-transparent lg:backdrop-blur-none lg:pointer-events-none" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden lg:w-[500px] xl:w-[600px] lg:max-w-none lg:max-h-none lg:h-full lg:rounded-none lg:rounded-l-2xl lg:border-l lg:border-slate-200 lg:shadow-2xl lg:pointer-events-auto" onClick={e => e.stopPropagation()}>
-        {/* Header khách */}
-        <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b flex items-start gap-3 bg-white">
-          <span className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white grid place-items-center text-sm font-bold shrink-0">{initials(row.customer_name)}</span>
-          <div className="min-w-0 flex-1">
-            <div className="font-bold text-slate-800 truncate">{row.customer_name || '(Chưa có tên)'}</div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm text-slate-500 tabular-nums">{phoneView(row.phone, me)}</span>
-              <button onClick={() => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); }} className="text-slate-400 hover:text-slate-600"><Copy className="w-3.5 h-3.5" /></button>
-              {st && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span>}
-            </div>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <select value={row.status} onChange={e => changeStatus(e.target.value)} disabled={!canWrite} className="text-[12px] font-semibold rounded-lg border border-slate-200 px-2 py-1 bg-white outline-none disabled:opacity-60">
-                {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-              {row.next_call_at && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isDue(row.next_call_at) ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3 h-3" />{fmtDT(row.next_call_at)}</span>}
-            </div>
+    <div className="space-y-4">
+      {/* Điều hướng */}
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={onClose} className="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-[14px] font-semibold text-slate-600 hover:bg-white hover:shadow-soft transition">
+          <ArrowLeft className="w-4 h-4" /> Danh sách khách hàng
+        </button>
+        {queuePos && (
+          <div className="flex items-center gap-2">
+            <span className="text-[12.5px] font-semibold text-slate-500 tabular-nums">Đang gọi {queuePos.i}/{queuePos.n}</span>
+            {onNext && <button onClick={onNext} className="inline-flex items-center gap-1 px-4 h-10 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800">Khách tiếp <ChevronRight className="w-4 h-4" /></button>}
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {queuePos && <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap hidden sm:inline">{queuePos.i}/{queuePos.n}</span>}
-            <a href={`tel:${row.phone}`} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"><PhoneCall className="w-4 h-4" /><span className="hidden sm:inline">Gọi</span></a>
-            <a href={zaloLink(row.phone)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 h-9 rounded-xl border border-blue-200 text-blue-600 text-sm font-bold hover:bg-blue-50">Zalo</a>
-            {canWrite && <button onClick={() => setApptOpen(true)} title="Tạo lịch hẹn" className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 whitespace-nowrap"><CalendarDays className="w-4 h-4" /><span className="hidden sm:inline">Lịch hẹn</span></button>}
-            {onNext && <button onClick={onNext} className="inline-flex items-center gap-1 px-3 h-9 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-700 whitespace-nowrap">Tiếp <ChevronRight className="w-4 h-4" /></button>}
-            <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded-xl text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button>
-          </div>
-        </div>
+        )}
+      </div>
 
-        {/* Tabs */}
-        <div className="shrink-0 flex gap-1 px-3 sm:px-4 pt-2 border-b bg-white">
-          {TABS.map(t => (
-            <button key={t.k} onClick={() => setTab(t.k)} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold border-b-2 -mb-px transition ${tab === t.k ? 'border-teal-500 text-teal-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-              <t.icon className="w-4 h-4" />{t.label}{t.n != null && <span className={`text-[10px] px-1.5 rounded-full ${tab === t.k ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-400'}`}>{t.n}</span>}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto">
-          {/* ---- NHẬT KÝ GỌI ---- */}
-          {tab === 'call' && (
-            <div className="space-y-4">
-              {canWrite && (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-2.5">
-                  <div className="text-[13px] font-bold text-slate-600">Ghi cuộc gọi mới</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Kết quả gọi</label>
-                      <select value={call.outcome} onChange={e => setCall({ ...call, outcome: e.target.value })} className={inp}>{Object.entries(OUTCOMES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-                    <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Chuyển trạng thái</label>
-                      <select value={call.status} onChange={e => setCall({ ...call, status: e.target.value })} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-                  </div>
-                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Nội dung trao đổi</label>
-                    <textarea value={call.content} onChange={e => setCall({ ...call, content: e.target.value })} rows={2} placeholder="Khách quan tâm gì, báo giá, phản hồi…" className={inp} /></div>
-                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Hẹn gọi lại (nếu có)</label>
-                    <input type="datetime-local" value={call.next} onChange={e => setCall({ ...call, next: e.target.value })} className={inp} /></div>
-                  <button onClick={addCall} disabled={savingCall} className="w-full h-10 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCall ? 'Đang lưu…' : 'Lưu cuộc gọi'}</button>
-                </div>
-              )}
-              <Timeline items={calls} loading={loadingActs} me={me} onDelete={delAct} kind="call" />
-            </div>
-          )}
-
-          {/* ---- NHẬT KÝ CHĂM SÓC ---- */}
-          {tab === 'care' && (
-            <div className="space-y-4">
-              {canWrite && (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-2.5">
-                  <div className="text-[13px] font-bold text-slate-600">Ghi chăm sóc mới</div>
-                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Nội dung chăm sóc</label>
-                    <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Nhắn tin hỏi thăm, gửi ưu đãi, tư vấn thêm…" className={inp} /></div>
-                  <div><label className="block text-[11px] font-semibold text-slate-500 mb-1">Hẹn chăm sóc tiếp (nếu có)</label>
-                    <input type="datetime-local" value={care.next} onChange={e => setCare({ ...care, next: e.target.value })} className={inp} /></div>
-                  <button onClick={addCare} disabled={savingCare} className="w-full h-10 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCare ? 'Đang lưu…' : 'Lưu chăm sóc'}</button>
-                </div>
-              )}
-              <Timeline items={cares} loading={loadingActs} me={me} onDelete={delAct} kind="care" />
-            </div>
-          )}
-
-          {/* ---- THÔNG TIN ---- */}
-          {tab === 'info' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Field label="Tên khách hàng"><input value={info.customer_name} onChange={e => setInfo({ ...info, customer_name: e.target.value })} disabled={!canWrite} className={inp} /></Field>
-                <Field label="Telesale phụ trách"><select value={info.telesale_id} onChange={e => setInfo({ ...info, telesale_id: e.target.value })} disabled={!canAssign} className={inp}><option value="">— Chưa phân công —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
-                <Field label="Trực page phụ trách"><select value={info.truc_page_id} onChange={e => setInfo({ ...info, truc_page_id: e.target.value })} disabled={!canWrite} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
+      {/* ===== Thẻ đầu hồ sơ ===== */}
+      <div className="rounded-2xl bg-white shadow-card border border-slate-200 p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-5">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <span className="w-16 h-16 rounded-2xl bg-teal-600 text-white grid place-items-center text-[20px] font-bold shrink-0 shadow-soft">{initialsOf(row.customer_name)}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-[22px] font-bold text-slate-900 leading-tight truncate">{row.customer_name || '(Chưa có tên)'}</h2>
+                {row.getfly_code && <span className="text-[11.5px] font-semibold text-slate-400 bg-slate-100 rounded-md px-1.5 py-0.5">{row.getfly_code}</span>}
               </div>
-              <Field label="Mô tả / nhu cầu"><textarea value={info.description} onChange={e => setInfo({ ...info, description: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
-              <Field label="Thông tin đã tiếp cận"><textarea value={info.reached_info} onChange={e => setInfo({ ...info, reached_info: e.target.value })} disabled={!canWrite} rows={3} className={inp} /></Field>
-              {/* Thông tin đồng bộ từ GetFly (chỉ xem) */}
-              {(row.getfly_id || row.source || row.customer_group || row.manager_name) && (
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3">
-                  <div className="text-[12px] font-bold text-indigo-700 mb-2">Thông tin GetFly (tự đồng bộ)</div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12.5px]">
-                    {row.customer_group && <div><span className="text-slate-400">Nhóm KH:</span> <b className="text-slate-700">{row.customer_group}</b></div>}
-                    {row.source && <div><span className="text-slate-400">Nguồn:</span> <b className="text-slate-700">{row.source}</b></div>}
-                    {row.manager_name && <div><span className="text-slate-400">Phụ trách:</span> <b className="text-slate-700">{row.manager_name}</b></div>}
-                    {row.relation_name && <div><span className="text-slate-400">Mối quan hệ:</span> <b className="text-slate-700">{row.relation_name}</b></div>}
-                    {row.email && <div className="col-span-2 truncate"><span className="text-slate-400">Email:</span> <b className="text-slate-700">{row.email}</b></div>}
-                    {row.gender && <div><span className="text-slate-400">Giới tính:</span> <b className="text-slate-700">{row.gender}</b></div>}
-                    {row.birthday && <div><span className="text-slate-400">Sinh nhật:</span> <b className="text-slate-700">{row.birthday}</b></div>}
-                    {row.address && <div className="col-span-2 truncate"><span className="text-slate-400">Địa chỉ:</span> <b className="text-slate-700">{row.address}</b></div>}
-                    {row.website && <div className="col-span-2 truncate"><span className="text-slate-400">Website:</span> <b className="text-slate-700">{row.website}</b></div>}
-                    {Number(row.total_revenue) > 0 && <div><span className="text-slate-400">Doanh thu:</span> <b className="text-teal-700">{Number(row.total_revenue).toLocaleString('vi-VN')}đ</b></div>}
-                    {row.getfly_code && <div><span className="text-slate-400">Mã KH:</span> <b className="text-slate-700">{row.getfly_code}</b></div>}
-                    {row.getfly_synced_at && <div className="col-span-2 text-[11px] text-slate-400">Đồng bộ GetFly lúc {fmtDT(row.getfly_synced_at)}</div>}
-                  </div>
-                </div>
-              )}
-              {canWrite && (
-                <div className="flex justify-between items-center">
-                  <button onClick={onDelete} className="text-sm font-semibold text-rose-500 hover:text-rose-600 inline-flex items-center gap-1"><Trash2 className="w-4 h-4" />Xoá khách</button>
-                  <button onClick={saveInfo} disabled={savingInfo} className="px-5 h-10 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 disabled:opacity-60 inline-flex items-center gap-1.5"><Save className="w-4 h-4" />{savingInfo ? 'Đang lưu…' : 'Lưu thông tin'}</button>
-                </div>
-              )}
+              <div className="flex items-center gap-2 mt-1 text-[14px] text-slate-600">
+                <span className="tabular-nums font-semibold">{phoneView(row.phone, me)}</span>
+                <button onClick={() => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); }} className="text-slate-400 hover:text-slate-600" title="Copy SĐT"><Copy className="w-3.5 h-3.5" /></button>
+                {row.source && <><span className="text-slate-300">·</span><span className="truncate">{row.source}</span></>}
+              </div>
+              <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                <select value={row.status || 'tiep_can'} onChange={e => changeStatus(e.target.value)} disabled={!canWrite}
+                  className={`text-[12px] font-bold rounded-full px-3 py-1.5 outline-none border-0 cursor-pointer disabled:cursor-default ${STATUS[row.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
+                  {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+                {st && <span className={`text-[11.5px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span>}
+                {row.next_call_at && <span className={`text-[11.5px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${isDue(row.next_call_at) ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="w-3.5 h-3.5" />Gọi lại {fmtDT(row.next_call_at)}</span>}
+              </div>
             </div>
-          )}
+          </div>
+          {/* Điểm tiềm năng */}
+          <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 lg:w-[250px]">
+            <ScoreRing value={score} />
+            <div>
+              <div className="text-[11.5px] text-slate-500 flex items-center gap-1"><Gauge className="w-3.5 h-3.5" />Điểm tiềm năng</div>
+              <div className="text-[15px] font-bold text-slate-900">{scoreLabel}</div>
+              <div className="text-[11.5px] text-slate-400 mt-0.5">{contactDays == null ? 'Chưa liên hệ' : contactDays === 0 ? 'Liên hệ hôm nay' : `Liên hệ ${contactDays} ngày trước`}</div>
+            </div>
+          </div>
+        </div>
+        {/* Thao tác nhanh — mobile: lưới icon, desktop: hàng nút */}
+        <div className="grid grid-cols-5 gap-2 sm:flex sm:flex-wrap mt-4 pt-4 border-t border-slate-100">
+          {[
+            { show: true, href: `tel:${row.phone}`, icon: PhoneCall, label: 'Gọi', cls: 'bg-emerald-600 text-white hover:bg-emerald-700' },
+            { show: true, href: zaloLink(row.phone), ext: true, icon: MessageSquare, label: 'Zalo', cls: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+            { show: canWrite, run: () => setTab('call'), icon: Save, label: 'Ghi cuộc gọi', short: 'Ghi gọi', cls: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50', ic: 'text-teal-600' },
+            { show: canWrite, run: () => setTab('care'), icon: HeartHandshake, label: 'Ghi chăm sóc', short: 'Chăm sóc', cls: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50', ic: 'text-violet-500' },
+            { show: canWrite, run: () => setApptOpen(true), icon: CalendarDays, label: 'Tạo lịch hẹn', short: 'Lịch hẹn', cls: 'bg-teal-600 text-white hover:bg-teal-700' },
+          ].filter(a => a.show).map(a => {
+            const inner = <><a.icon className={`w-5 h-5 sm:w-4 sm:h-4 ${a.ic || ''}`} /><span className="sm:hidden">{a.short || a.label}</span><span className="hidden sm:inline">{a.label}</span></>;
+            const cls = `inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-4 py-2.5 sm:py-0 sm:h-10 rounded-xl text-[11.5px] sm:text-sm font-semibold whitespace-nowrap ${a.cls}`;
+            return a.href
+              ? <a key={a.label} href={a.href} {...(a.ext ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={cls}>{inner}</a>
+              : <button key={a.label} onClick={a.run} className={cls}>{inner}</button>;
+          })}
         </div>
       </div>
+
+      {/* ===== Hành trình khách hàng ===== */}
+      <div className="rounded-2xl bg-white shadow-soft border border-slate-200 px-5 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[14px] font-bold text-slate-800">Hành trình khách hàng</div>
+          {lost && <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-600">{row.status === 'mat' ? 'Khách đã mất' : row.status === 'chot_fail' ? 'Chốt fail' : 'Khách bong'}</span>}
+        </div>
+        <div className="flex items-center">
+          {JOURNEY_STEPS.map((label, i) => {
+            const done = i < jIdx; const cur = i === jIdx;
+            return (
+              <React.Fragment key={label}>
+                <div className="flex flex-col items-center gap-1.5 min-w-0 shrink-0 w-[54px] sm:w-[72px]">
+                  <span className={`w-8 h-8 rounded-full grid place-items-center text-[12px] font-bold transition ${
+                    done ? 'bg-teal-600 text-white' : cur ? (lost ? 'bg-rose-500 text-white ring-4 ring-rose-100' : 'bg-teal-600 text-white ring-4 ring-teal-100') : 'bg-slate-100 text-slate-400'
+                  }`}>{done ? <CheckCircle2 className="w-4 h-4" /> : i + 1}</span>
+                  <span className={`text-[10.5px] sm:text-[11.5px] text-center leading-tight ${done || cur ? 'text-slate-800 font-semibold' : 'text-slate-400'}`}>{label}</span>
+                </div>
+                {i < JOURNEY_STEPS.length - 1 && <div className={`flex-1 h-[3px] rounded-full -mt-5 ${i < jIdx ? 'bg-teal-500' : 'bg-slate-100'}`} />}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ===== Chỉ số ===== */}
+      <div className="flex lg:grid lg:grid-cols-5 gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
+        {[
+          { icon: Receipt, label: 'Tổng chi tiêu', value: fmtMoney(revenue || row.total_revenue), sub: revenue ? `${surgeries} ca phẫu thuật` : (Number(row.total_revenue) > 0 ? 'Theo GetFly' : 'Chưa phát sinh'), tone: 'bg-teal-50 text-teal-700' },
+          { icon: CalendarDays, label: 'Lịch hẹn', value: mainAppts.length, sub: `${appts.length - mainAppts.length} tái khám`, tone: 'bg-blue-50 text-blue-600' },
+          { icon: Activity, label: 'Ca phẫu thuật', value: surgeries, sub: surgeries ? `Gần nhất ${fmtDay(appts.find(a => a.status === 'phau_thuat')?.surgery_date)}` : '—', tone: 'bg-emerald-50 text-emerald-600' },
+          { icon: Wallet, label: 'Đã cọc', value: fmtMoney(deposit), sub: appts.some(a => a.status === 'coc') ? 'Đang giữ cọc' : '—', tone: 'bg-violet-50 text-violet-600' },
+          { icon: PhoneCall, label: 'Lần liên hệ', value: acts.length, sub: `${calls.length} gọi · ${cares.length} chăm sóc`, tone: 'bg-amber-50 text-amber-600' },
+        ].map((k, i) => (
+          <div key={i} className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4 shrink-0 min-w-[150px] lg:min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[12.5px] text-slate-500 font-medium">{k.label}</span>
+              <span className={`w-8 h-8 rounded-lg grid place-items-center ${k.tone}`}><k.icon className="w-4 h-4" /></span>
+            </div>
+            <div className="text-[20px] font-bold text-slate-900 mt-1 tabular-nums truncate">{typeof k.value === 'number' ? k.value.toLocaleString('vi-VN') : k.value}</div>
+            <div className="text-[11.5px] text-slate-400 mt-0.5 truncate">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ===== Nội dung 2 cột ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 items-start">
+        <div className="space-y-4">
+          {/* Gợi ý thông minh */}
+          <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4">
+            <div className="text-[14px] font-bold text-slate-800 flex items-center gap-1.5 mb-3"><Lightbulb className="w-4 h-4 text-amber-500" />Gợi ý việc cần làm</div>
+            {suggestions.length === 0
+              ? <div className="text-[13px] text-slate-400">Mọi thứ đều ổn — chưa có việc cần làm ngay.</div>
+              : <div className="space-y-2">
+                  {suggestions.map((sg, i) => (
+                    <div key={i} className={`rounded-xl border px-3 py-2.5 ${TONE[sg.tone]}`}>
+                      <div className="flex items-start gap-2 text-[13px] leading-snug"><sg.icon className="w-4 h-4 mt-0.5 shrink-0" /><span>{sg.text}</span></div>
+                      {sg.cta && (sg.href
+                        ? <a href={sg.href} className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold underline-offset-2 hover:underline">{sg.cta} <ChevronRight className="w-3.5 h-3.5" /></a>
+                        : <button onClick={sg.run} className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold underline-offset-2 hover:underline">{sg.cta} <ChevronRight className="w-3.5 h-3.5" /></button>)}
+                    </div>
+                  ))}
+                </div>}
+          </div>
+          {/* Thông tin khách */}
+          <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-[14px] font-bold text-slate-800">Thông tin khách hàng</div>
+              {canWrite && <button onClick={() => setTab('info')} className="text-[12px] font-semibold text-teal-700 hover:underline">Sửa</button>}
+            </div>
+            <div className="divide-y divide-slate-100">
+              <InfoLine icon={Phone} label="Số điện thoại" value={phoneView(row.phone, me)} />
+              {row.email && <InfoLine icon={Mail} label="Email" value={row.email} />}
+              {(row.gender || row.birthday) && <InfoLine icon={Cake} label="Giới tính · Sinh nhật" value={[row.gender, row.birthday].filter(Boolean).join(' · ')} />}
+              {row.address && <InfoLine icon={MapPin} label="Địa chỉ" value={row.address} />}
+              <InfoLine icon={Tag} label="Nguồn · Nhóm khách" value={[row.source, row.customer_group].filter(Boolean).join(' · ')} />
+              {row.relation_name && <InfoLine icon={Link2} label="Mối quan hệ (GetFly)" value={row.relation_name} />}
+              <InfoLine icon={Sparkles} label="Ngày về hệ thống" value={arrivedAt(row) ? new Date(arrivedAt(row)).toLocaleDateString('vi-VN') : null} />
+              {row.description && <InfoLine icon={FileText} label="Mô tả / nhu cầu" value={row.description} />}
+              {row.reached_info && <InfoLine icon={MessageSquare} label="Đã tiếp cận" value={row.reached_info} />}
+            </div>
+          </div>
+          {/* Phụ trách */}
+          <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-4">
+            <div className="text-[14px] font-bold text-slate-800 mb-2">Người phụ trách</div>
+            {[['Telesale', row.telesale?.full_name], ['Trực page', row.truc_page?.full_name], ['Quản lý (GetFly)', row.manager_name], ['Sale tư vấn gần nhất', appts.find(a => a.sale?.full_name)?.sale?.full_name]].map(([k, v]) => (
+              <div key={k} className="flex items-center justify-between py-1.5 text-[13px]">
+                <span className="text-slate-500">{k}</span><span className="font-semibold text-slate-800 truncate ml-3">{v || '—'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs nội dung */}
+        <div className="rounded-2xl bg-white shadow-card border border-slate-200 overflow-hidden">
+          <div className="flex gap-1 px-3 pt-2 border-b border-slate-100 overflow-x-auto scrollbar-hide">
+            {TABS.map(t => (
+              <button key={t.k} onClick={() => setTab(t.k)} className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 text-[13.5px] font-semibold border-b-2 -mb-px transition ${tab === t.k ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+                <t.icon className="w-4 h-4" />{t.label}{t.n != null && <span className={`text-[11px] px-1.5 rounded-full ${tab === t.k ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>{t.n}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="p-4 sm:p-5">
+            {/* ---- HOẠT ĐỘNG (dòng thời gian hợp nhất) ---- */}
+            {tab === 'activity' && (
+              loadingActs ? <div className="text-center py-10 text-slate-300 text-sm">Đang tải…</div> :
+              events.length === 0 ? <div className="text-center py-10 text-slate-400 text-sm">Chưa có hoạt động nào</div> : (
+                <ol className="relative">
+                  {events.map((e, i) => (
+                    <li key={i} className="relative pl-11 pb-5 last:pb-0">
+                      {i < events.length - 1 && <span className="absolute left-[15px] top-8 bottom-0 w-px bg-slate-200" />}
+                      <span className="absolute left-0 top-0 w-8 h-8 rounded-full grid place-items-center text-white shadow-soft" style={{ background: e.color }}><e.icon className="w-4 h-4" /></span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[13.5px] font-semibold text-slate-900">{e.title}</span>
+                        {e.pill && <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${e.pill.cls}`}>{e.pill.label}</span>}
+                        <span className="text-[11.5px] text-slate-400">{new Date(e.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                      </div>
+                      {e.desc && <div className="text-[13px] text-slate-600 mt-0.5 whitespace-pre-wrap break-words">{e.desc}</div>}
+                      {(e.by || e.next) && (
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {e.by && <span className="text-[11.5px] text-slate-400">{e.by}</span>}
+                          {e.next && <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(e.next)}</span>}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              )
+            )}
+
+            {/* ---- GỌI ĐIỆN ---- */}
+            {tab === 'call' && (
+              <div className="space-y-4">
+                {canWrite && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-2.5">
+                    <div className="text-[13.5px] font-bold text-slate-700">Ghi cuộc gọi mới</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Kết quả gọi</label>
+                        <select value={call.outcome} onChange={e => setCall({ ...call, outcome: e.target.value })} className={inp}>{Object.entries(OUTCOMES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+                      <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Chuyển giai đoạn</label>
+                        <select value={call.status} onChange={e => setCall({ ...call, status: e.target.value })} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+                    </div>
+                    <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Nội dung trao đổi</label>
+                      <textarea value={call.content} onChange={e => setCall({ ...call, content: e.target.value })} rows={3} placeholder="Khách quan tâm gì, báo giá, phản hồi…" className={inp} /></div>
+                    <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Hẹn gọi lại (nếu có)</label>
+                      <div className="flex flex-wrap gap-1.5 mb-1.5">
+                        {[['Chiều nay', 0, 15], ['Sáng mai', 1, 9], ['3 ngày nữa', 3, 9], ['1 tuần nữa', 7, 9]].map(([lb, d, h]) => (
+                          <button key={lb} type="button" onClick={() => { const t = new Date(); t.setDate(t.getDate() + d); t.setHours(h, 0, 0, 0); setCall({ ...call, next: toLocalInput(t.toISOString()) }); }}
+                            className="px-2.5 h-7 rounded-lg border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 hover:border-teal-400 hover:text-teal-700">{lb}</button>
+                        ))}
+                      </div>
+                      <input type="datetime-local" value={call.next} onChange={e => setCall({ ...call, next: e.target.value })} className={inp} /></div>
+                    <button onClick={addCall} disabled={savingCall} className="w-full h-10 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCall ? 'Đang lưu…' : 'Lưu cuộc gọi'}</button>
+                  </div>
+                )}
+                <Timeline items={calls} loading={loadingActs} me={me} onDelete={delAct} kind="call" />
+              </div>
+            )}
+
+            {/* ---- CHĂM SÓC ---- */}
+            {tab === 'care' && (
+              <div className="space-y-4">
+                {canWrite && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-2.5">
+                    <div className="text-[13.5px] font-bold text-slate-700">Ghi chăm sóc mới</div>
+                    <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Nội dung chăm sóc</label>
+                      <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Nhắn tin hỏi thăm, gửi ưu đãi, tư vấn thêm…" className={inp} /></div>
+                    <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Hẹn chăm sóc tiếp (nếu có)</label>
+                      <input type="datetime-local" value={care.next} onChange={e => setCare({ ...care, next: e.target.value })} className={inp} /></div>
+                    <button onClick={addCare} disabled={savingCare} className="w-full h-10 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"><Save className="w-4 h-4" />{savingCare ? 'Đang lưu…' : 'Lưu chăm sóc'}</button>
+                  </div>
+                )}
+                <Timeline items={cares} loading={loadingActs} me={me} onDelete={delAct} kind="care" />
+              </div>
+            )}
+
+            {/* ---- LỊCH HẸN ---- */}
+            {tab === 'appts' && (
+              <div className="space-y-3">
+                {canWrite && <button onClick={() => setApptOpen(true)} className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700"><Plus className="w-4 h-4" />Tạo lịch hẹn</button>}
+                {appts.length === 0 && <div className="text-center py-10 text-slate-400 text-sm">Khách chưa có lịch hẹn nào</div>}
+                {appts.map(a => {
+                  const pill = isRecheckAppt(a) ? { label: 'Tái khám', cls: 'bg-violet-50 text-violet-700' } : (APPT_PILL[a.status] || APPT_PILL.scheduled);
+                  return (
+                    <div key={a.id} className="rounded-2xl border border-slate-200 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900">{String(a.service || 'Chưa chọn dịch vụ').replace('[Tái khám] ', '')}</div>
+                          <div className="text-[12.5px] text-slate-500 mt-0.5">{fmtDay(a.appointment_date)} · {String(a.appointment_time || '').slice(0, 5) || '--:--'}{a.sale?.full_name ? ` · Sale: ${a.sale.full_name}` : ''}{a.telesale?.full_name ? ` · Tele: ${a.telesale.full_name}` : ''}</div>
+                        </div>
+                        <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${pill.cls}`}>{pill.label}</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                        {[['Bill dự kiến', fmtMoney(a.expected_bill)], ['Đã cọc', fmtMoney(a.deposit_amount)], ['Doanh thu', fmtMoney(Number(a.revenue || 0) + Number(a.upsale_revenue || 0))], ['Ngày mổ', fmtDay(a.surgery_date || a.expected_surgery_date)]].map(([k, v]) => (
+                          <div key={k} className="rounded-xl bg-slate-50 px-3 py-2"><div className="text-[11px] text-slate-400">{k}</div><div className="text-[13px] font-semibold text-slate-800 tabular-nums">{v}</div></div>
+                        ))}
+                      </div>
+                      {a.post_op_status && <div className="mt-2 text-[12.5px] font-semibold text-teal-700 bg-teal-50 rounded-lg px-3 py-1.5">Hậu phẫu: {a.post_op_status}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ---- THÔNG TIN (sửa) ---- */}
+            {tab === 'info' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
+                  <Field label="Tên khách hàng"><input value={info.customer_name} onChange={e => setInfo({ ...info, customer_name: e.target.value })} disabled={!canWrite} className={inp} /></Field>
+                  <Field label="Telesale phụ trách"><select value={info.telesale_id} onChange={e => setInfo({ ...info, telesale_id: e.target.value })} disabled={!canAssign} className={inp}><option value="">— Chưa phân công —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
+                  <Field label="Trực page phụ trách"><select value={info.truc_page_id} onChange={e => setInfo({ ...info, truc_page_id: e.target.value })} disabled={!canWrite} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
+                </div>
+                <Field label="Mô tả / nhu cầu"><textarea value={info.description} onChange={e => setInfo({ ...info, description: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
+                <Field label="Thông tin đã tiếp cận"><textarea value={info.reached_info} onChange={e => setInfo({ ...info, reached_info: e.target.value })} disabled={!canWrite} rows={3} className={inp} /></Field>
+                {(row.getfly_id || row.website || row.getfly_synced_at) && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3 text-[12.5px] text-slate-600 space-y-1">
+                    <div className="font-bold text-slate-700">Đồng bộ GetFly</div>
+                    {row.website && <div className="truncate">Website: <b>{row.website}</b></div>}
+                    {row.getfly_synced_at && <div className="text-slate-400">Cập nhật lúc {fmtDT(row.getfly_synced_at)}</div>}
+                  </div>
+                )}
+                {canWrite && (
+                  <div className="flex justify-between items-center pt-1">
+                    <button onClick={onDelete} className="text-sm font-semibold text-rose-500 hover:text-rose-600 inline-flex items-center gap-1"><Trash2 className="w-4 h-4" />Xoá khách</button>
+                    <button onClick={saveInfo} disabled={savingInfo} className="px-5 h-10 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 disabled:opacity-60 inline-flex items-center gap-1.5"><Save className="w-4 h-4" />{savingInfo ? 'Đang lưu…' : 'Lưu thông tin'}</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {apptOpen && <CreateApptModal row={row} me={me} teleStaff={teleStaff} defaultNotes={consultSummary} onClose={() => { setApptOpen(false); loadAppts(); }} />}
     </div>
-    {apptOpen && <CreateApptModal row={row} me={me} teleStaff={teleStaff} defaultNotes={consultSummary} onClose={() => setApptOpen(false)} />}
-    </>
   );
 };
+
 
 // Dòng thời gian nhật ký (gọi / chăm sóc)
 const Timeline = ({ items, loading, me, onDelete, kind }) => {
