@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, CheckCheck, ChevronLeft } from 'lucide-react';
 import { NOTIF_ICON, NOTIF_FALLBACK, resolveNotifLink } from '@/lib/notif';
 
 // Chống hiện toast trùng khi có nhiều instance bell (header desktop + mobile)
@@ -102,7 +102,7 @@ export default function NotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={toggleBell} className="relative w-10 h-10 rounded-full hover:bg-white hover:shadow-soft flex items-center justify-center text-slate-600 transition">
+      <button onClick={toggleBell} aria-label="Thông báo" className="relative w-10 h-10 rounded-full hover:bg-white hover:shadow-soft flex items-center justify-center text-slate-600 transition">
         <Bell className="w-5 h-5" />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">
@@ -112,7 +112,52 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[360px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+        <>
+        {/* Điện thoại (< lg): màn "Thông báo" toàn màn theo Ethics M14.
+            Header mobile có backdrop-blur (tạo khối chứa cho fixed) và luôn dính ở đỉnh màn hình,
+            nên dùng top-0/left-0 + w-screen/h-[100dvh] để phủ đúng toàn màn trong cả hai trường hợp.
+            Thanh điều hướng dưới vẫn nổi bên trên (bấm vào đó = bấm ra ngoài → tự đóng như cũ). */}
+        <div className="lg:hidden fixed left-0 top-0 w-screen h-[100dvh] z-50 flex flex-col bg-[#F3F9F9] text-left text-slate-900">
+          <div className="grid grid-cols-[56px_minmax(0,1fr)_56px] items-center h-14 px-2 shrink-0 bg-white/95 border-b border-slate-100">
+            <button onClick={toggleBell} aria-label="Đóng thông báo" className="w-11 h-11 grid place-items-center rounded-xl text-slate-900 active:bg-teal-50">
+              <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2} />
+            </button>
+            <h3 className="font-bold text-slate-900 text-[18px] text-center truncate">Thông báo</h3>
+            <div className="flex justify-end">
+              {unread > 0 && (
+                <button onClick={markAllRead} aria-label="Đánh dấu đã đọc" className="w-11 h-11 grid place-items-center rounded-xl text-teal-700 active:bg-teal-50">
+                  <CheckCheck className="w-[22px] h-[22px]" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-28">
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-2 py-1 divide-y divide-slate-100">
+              {items.length === 0 ? (
+                <div className="py-14 px-6 flex flex-col items-center text-center">
+                  <span className="w-14 h-14 rounded-full bg-teal-50 text-teal-600 grid place-items-center mb-3"><Bell className="w-7 h-7" /></span>
+                  <div className="text-[14.5px] font-semibold text-slate-700">Chưa có thông báo nào</div>
+                </div>
+              ) : items.map(n => (
+                  <button key={n.id} onClick={() => openItem(n)}
+                    className={`w-full text-left flex items-start gap-3 px-2 py-3.5 min-h-[72px] transition-colors active:bg-teal-50/60 ${n.is_read ? '' : 'bg-teal-50/40'}`}>
+                    <Avatar n={n} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14.5px] font-semibold text-slate-900 leading-snug">{n.title}</div>
+                      {n.body && <div className="text-[13px] text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-1.5 pt-0.5">
+                      <span className="text-[12px] text-slate-400 whitespace-nowrap tabular-nums">{timeAgo(n.created_at)}</span>
+                      {!n.is_read && <span className="w-2 h-2 rounded-full bg-teal-600" />}
+                    </div>
+                  </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Máy tính (lg): dropdown như cũ */}
+        <div className="hidden lg:block absolute right-0 mt-2 w-[360px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-bold text-slate-800">Thông báo</h3>
             {unread > 0 && (
@@ -138,6 +183,7 @@ export default function NotificationBell() {
             ))}
           </div>
         </div>
+        </>
       )}
     </div>
   );

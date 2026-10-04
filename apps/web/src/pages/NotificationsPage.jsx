@@ -40,17 +40,27 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
+    <div className="max-w-3xl mx-auto space-y-4 group/nf nf-root">
       <div className="e-toolbar justify-between pl-4">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="e-metric-icon w-9 h-9 lg:w-9 lg:h-9"><Bell className="!w-[18px] !h-[18px]" /></span>
-          <p className="text-[14px] font-semibold text-slate-700">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
+          <p className="text-[14px] font-semibold text-slate-700 truncate">{unread > 0 ? `${unread} thông báo chưa đọc` : 'Đã đọc tất cả'}</p>
         </div>
         {unread > 0 && (
-          <button onClick={markAllRead} className="e-btn e-btn-outline e-btn-sm">
+          <button onClick={markAllRead} className="e-btn e-btn-outline e-btn-sm shrink-0">
             <Check className="w-4 h-4" /> Đánh dấu đã đọc hết
           </button>
         )}
+      </div>
+
+      {/* Điện thoại: bộ lọc "Tất cả / Chưa đọc" (Ethics M14) — chỉ lọc hiển thị bằng CSS trên danh sách đang có, không gọi server */}
+      <div className="lg:hidden grid grid-cols-2 p-1 rounded-xl bg-white border border-slate-200 shadow-soft" role="radiogroup" aria-label="Lọc thông báo">
+        <label className="h-10 rounded-[9px] grid place-items-center text-[14px] font-medium text-slate-500 cursor-pointer select-none transition has-[:checked]:bg-teal-50 has-[:checked]:text-teal-800 has-[:checked]:font-semibold">
+          <input type="radio" name="notif-filter" defaultChecked className="sr-only" />Tất cả
+        </label>
+        <label className="h-10 rounded-[9px] grid place-items-center text-[14px] font-medium text-slate-500 cursor-pointer select-none transition has-[:checked]:bg-teal-50 has-[:checked]:text-teal-800 has-[:checked]:font-semibold">
+          <input type="radio" name="notif-filter" className="sr-only nf-unread" /><span>Chưa đọc ({unread})</span>
+        </label>
       </div>
 
       <div className="e-card overflow-hidden">
@@ -68,7 +78,7 @@ export default function NotificationsPage() {
               const { Icon } = conf;
               return (
                 <button key={n.id} onClick={() => openItem(n)}
-                  className={`w-full text-left flex items-start gap-3.5 px-3 sm:px-4 py-3.5 rounded-xl hover:bg-teal-50/40 transition-colors ${n.is_read ? '' : 'bg-teal-50/50'}`}>
+                  className={`w-full text-left flex items-start gap-3.5 px-3 sm:px-4 py-3.5 rounded-xl hover:bg-teal-50/40 transition-colors ${n.is_read ? 'max-lg:group-has-[.nf-unread:checked]/nf:hidden' : 'bg-teal-50/50 nf-u'}`}>
                   {n.actor?.avatar_url ? (
                     <div className="relative shrink-0">
                       <img src={n.actor.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-soft" />
@@ -86,6 +96,7 @@ export default function NotificationsPage() {
                 </button>
               );
             })}
+            <div className="hidden max-lg:[.nf-root:has(.nf-unread:checked):not(:has(.nf-u))_&]:block py-12 text-center text-[14px] font-medium text-slate-400">Không có thông báo chưa đọc</div>
           </div>
         )}
       </div>
