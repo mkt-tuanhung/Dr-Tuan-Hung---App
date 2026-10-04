@@ -41,6 +41,7 @@ import {
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2
 } from 'lucide-react';
+import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import { HeroCard, QuickActions, StatCard, Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell } from 'recharts';
 
@@ -561,6 +562,7 @@ const AdminDashboard = () => {
       case 'cashflow': return <CashFlowPage />;
       case 'seeding_rev': return <SeedingRevenuePage />;
       case 'service_quality': return <ServiceQualityPage />;
+      case 'permissions': return <PermissionsPage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
   };
