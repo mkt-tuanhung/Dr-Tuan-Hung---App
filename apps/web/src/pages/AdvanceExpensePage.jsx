@@ -296,64 +296,64 @@ export default function AdvanceExpensePage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Thanh công cụ: mô tả + hành động (nút chính bên phải) */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+    <div className="space-y-4 max-lg:pb-16">
+      {/* Thanh công cụ: mô tả + hành động (nút chính bên phải; điện thoại: nút nổi) */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
         <p className="e-page-desc">Nhân sự chi hộ công ty và gửi đề nghị kế toán hoàn tiền</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={loadData} className="e-btn e-btn-secondary" title="Làm mới">
+        <div className="flex items-center gap-2 max-lg:w-[calc(100%+2rem)] max-lg:-mx-4 max-lg:px-4 max-lg:overflow-x-auto max-lg:[scrollbar-width:none] lg:flex-wrap">
+          <button onClick={loadData} className="e-btn e-btn-secondary shrink-0 max-lg:h-10 max-lg:rounded-full max-lg:bg-white" title="Làm mới">
             <RefreshCw /> Làm mới
           </button>
           {isAdminOrAccountant && (
-            <button onClick={openRepayFast} className="e-btn e-btn-outline">
+            <button onClick={openRepayFast} className="e-btn e-btn-outline shrink-0 max-lg:h-10 max-lg:rounded-full max-lg:bg-white">
               <ArrowDownLeft className="w-4 h-4" /> Ghi nhận hoàn ứng
             </button>
           )}
           {isAdminOrAccountant && (
-            <button onClick={() => { setShowTrash(true); loadTrash(); }} className="e-btn e-btn-secondary">
+            <button onClick={() => { setShowTrash(true); loadTrash(); }} className="e-btn e-btn-secondary shrink-0 max-lg:h-10 max-lg:rounded-full max-lg:bg-white">
               <Trash2 className="w-4 h-4" /> Lịch sử xoá
             </button>
           )}
-          <button onClick={() => setShowCreateModal(true)} className="e-btn e-btn-primary">
-            <Plus /> Tạo phiếu tạm ứng chi
+          <button onClick={() => setShowCreateModal(true)} className="e-btn e-btn-primary max-lg:fixed max-lg:right-4 max-lg:bottom-[calc(88px+env(safe-area-inset-bottom))] max-lg:z-20 max-lg:h-12 max-lg:px-5 max-lg:rounded-full max-lg:bg-gradient-to-br max-lg:from-[#067B7F] max-lg:to-[#3CA7A9] max-lg:shadow-nav">
+            <Plus /> <span className="lg:hidden">Tạo phiếu</span><span className="hidden lg:inline">Tạo phiếu tạm ứng chi</span>
           </button>
         </div>
       </div>
 
-      {/* Thẻ chỉ số */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="e-metric">
-          <div className="e-metric-icon e-tone-peach"><HandCoins /></div>
-          <div className="min-w-0">
-            <div className="e-metric-label">{isAdminOrAccountant ? 'Tổng đã chi' : 'Tổng đã chi của tôi'}</div>
-            <div className="e-metric-value">{fmt(totalSpent)}</div>
+      {/* Thẻ chỉ số (điện thoại: lưới 2 cột gọn) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5 max-lg:shadow-soft max-lg:[&:last-child:nth-child(odd)]:col-span-2">
+          <div className="e-metric-icon e-tone-peach max-lg:w-10 max-lg:h-10 max-lg:[&>svg]:w-5 max-lg:[&>svg]:h-5"><HandCoins /></div>
+          <div className="min-w-0 max-lg:w-full">
+            <div className="e-metric-label max-lg:text-[12.5px]">{isAdminOrAccountant ? 'Tổng đã chi' : 'Tổng đã chi của tôi'}</div>
+            <div className="e-metric-value max-lg:text-[18px]">{fmt(totalSpent)}</div>
           </div>
         </div>
-        <div className="e-metric">
-          <div className="e-metric-icon e-tone-success"><ArrowDownLeft /></div>
-          <div className="min-w-0">
-            <div className="e-metric-label">{isAdminOrAccountant ? 'Tổng đã hoàn ứng' : 'Đã được hoàn ứng'}</div>
-            <div className="e-metric-value">{fmt(totalRepaid)}</div>
+        <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5 max-lg:shadow-soft max-lg:[&:last-child:nth-child(odd)]:col-span-2">
+          <div className="e-metric-icon e-tone-success max-lg:w-10 max-lg:h-10 max-lg:[&>svg]:w-5 max-lg:[&>svg]:h-5"><ArrowDownLeft /></div>
+          <div className="min-w-0 max-lg:w-full">
+            <div className="e-metric-label max-lg:text-[12.5px]">{isAdminOrAccountant ? 'Tổng đã hoàn ứng' : 'Đã được hoàn ứng'}</div>
+            <div className="e-metric-value max-lg:text-[18px]">{fmt(totalRepaid)}</div>
           </div>
         </div>
-        <div className="e-metric">
-          <div className="e-metric-icon e-tone-danger"><Wallet /></div>
-          <div className="min-w-0">
-            <div className="e-metric-label">Còn thiếu</div>
-            <div className="e-metric-value text-danger-600">{fmt(totalMissing)}</div>
+        <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5 max-lg:shadow-soft max-lg:[&:last-child:nth-child(odd)]:col-span-2">
+          <div className="e-metric-icon e-tone-danger max-lg:w-10 max-lg:h-10 max-lg:[&>svg]:w-5 max-lg:[&>svg]:h-5"><Wallet /></div>
+          <div className="min-w-0 max-lg:w-full">
+            <div className="e-metric-label max-lg:text-[12.5px]">Còn thiếu</div>
+            <div className="e-metric-value text-danger-600 max-lg:text-[18px]">{fmt(totalMissing)}</div>
           </div>
         </div>
         {isAdminOrAccountant && (
-          <div className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-y-0">
-            <div className="contents e-metric-label"><BarChart2 className="row-span-2 w-12 h-12 lg:w-14 lg:h-14 p-3 lg:p-4 rounded-full bg-info-50 text-info-600" /> Tổng giao dịch hợp lệ</div>
-            <div className="e-metric-value">{validTx}</div>
+          <div className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-y-0 max-lg:grid-cols-1 max-lg:gap-y-2 max-lg:p-3.5 max-lg:shadow-soft">
+            <div className="contents e-metric-label max-lg:text-[12.5px]"><BarChart2 className="row-span-2 max-lg:row-span-1 w-10 h-10 lg:w-14 lg:h-14 p-2.5 lg:p-4 rounded-full bg-info-50 text-info-600" /> Tổng giao dịch hợp lệ</div>
+            <div className="e-metric-value max-lg:text-[18px] max-lg:-mt-1">{validTx}</div>
           </div>
         )}
       </div>
 
-      {/* Tab + bộ lọc */}
-      <div className="e-card overflow-hidden flex flex-col">
-        <div className="e-tabs px-2 lg:px-3">
+      {/* Tab + bộ lọc (điện thoại: bỏ khung thẻ, danh sách thẻ trên nền trang) */}
+      <div className="e-card overflow-hidden flex flex-col max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none max-lg:overflow-visible">
+        <div className="e-tabs px-2 lg:px-3 max-lg:px-0">
           <button onClick={() => setActiveTab('list')} className={`e-tab shrink-0 ${activeTab === 'list' ? 'e-tab-active' : 'text-slate-500'}`}>
             Danh sách phiếu
           </button>
@@ -367,37 +367,37 @@ export default function AdvanceExpensePage() {
 
         {activeTab === 'list' && (
           <>
-            <div className="px-4 lg:px-5 py-3 border-b border-slate-100 flex flex-wrap gap-2 items-center">
-              <div className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 mr-1"><Filter className="w-4 h-4" /> Bộ lọc:</div>
-              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
+            <div className="px-4 lg:px-5 py-3 border-b border-slate-100 flex flex-wrap gap-2 items-center max-lg:grid max-lg:grid-cols-2 max-lg:px-0 max-lg:pt-3 max-lg:pb-1 max-lg:border-0">
+              <div className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 mr-1 max-lg:hidden"><Filter className="w-4 h-4" /> Bộ lọc:</div>
+              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition max-lg:col-span-2 max-lg:h-11 max-lg:rounded-2xl max-lg:shadow-soft">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
+                <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer max-lg:flex-1 max-lg:text-[14px] max-lg:font-semibold">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
                 </select>
                 <span className="text-slate-300">/</span>
-                <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
+                <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer max-lg:flex-1 max-lg:text-[14px] max-lg:font-semibold">
                   {Array.from({ length: 4 }, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               {isAdminOrAccountant && (
-                <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
-                  <Users className="w-4 h-4 text-slate-400" />
-                  <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
+                <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition max-lg:min-w-0 max-lg:h-11 max-lg:rounded-2xl max-lg:shadow-soft">
+                  <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                  <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer max-lg:flex-1 max-lg:min-w-0 max-lg:w-full">
                     <option value="all">Tất cả nhân sự</option>
                     {staffList.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                   </select>
                 </div>
               )}
-              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
-                <Filter className="w-4 h-4 text-slate-400" />
-                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
+              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition max-lg:min-w-0 max-lg:h-11 max-lg:rounded-2xl max-lg:shadow-soft">
+                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer max-lg:flex-1 max-lg:min-w-0 max-lg:w-full">
                   <option value="all">Tất cả danh mục</option>
                   {Object.entries(CATEGORIES).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
-              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition">
-                <CheckCircle className="w-4 h-4 text-slate-400" />
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer">
+              <div className="flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 hover:border-teal-300 focus-within:border-teal-400 transition max-lg:min-w-0 max-lg:h-11 max-lg:rounded-2xl max-lg:shadow-soft max-lg:[&:nth-child(odd)]:col-span-2">
+                <CheckCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-transparent text-[13px] font-medium outline-none text-slate-700 cursor-pointer max-lg:flex-1 max-lg:min-w-0 max-lg:w-full">
                   <option value="all">Tất cả trạng thái</option>
                   <option value="pending">Chờ duyệt</option>
                   <option value="approved">Đã duyệt (Chờ hoàn)</option>
@@ -407,46 +407,48 @@ export default function AdvanceExpensePage() {
               </div>
             </div>
 
-            {/* Mobile: dạng thẻ */}
-            <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
+            {/* Điện thoại: thẻ yêu cầu kiểu Ethics (avatar · danh mục · số tiền · lý do · Từ chối | Duyệt) */}
+            <div className="lg:hidden pt-2 space-y-3">
               {loading ? (
                 <div className="e-empty text-[13px] text-slate-400">Đang tải...</div>
               ) : data.length === 0 ? (
                 <div className="e-empty text-[13px] text-slate-400">Không có dữ liệu</div>
               ) : data.map(d => (
-                <div key={d.id} className="e-card-flat p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="e-avatar w-11 h-11"><UserRound className="w-5 h-5" /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[15px] text-slate-900 truncate">{d.profiles?.full_name}</div>
-                      <div className="text-[12px] text-slate-500">{new Date(d.date).toLocaleDateString('vi-VN')} · {CATEGORIES[d.category] || d.category}</div>
+                <div key={d.id} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="e-avatar w-11 h-11 bg-gradient-to-br from-teal-50 to-teal-100"><UserRound className="w-5 h-5" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-[15px] leading-tight text-slate-900 truncate">{d.profiles?.full_name}</div>
+                        <div className="mt-1 flex items-center gap-1.5 min-w-0">
+                          <span className="e-badge e-badge-sm e-tone-brand min-w-0 max-w-full"><span className="truncate">{CATEGORIES[d.category] || d.category}</span></span>
+                          <span className="text-[12px] text-slate-400 tabular-nums shrink-0">{new Date(d.date).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                      </div>
+                      <div className="shrink-0">{renderStatus(d)}</div>
                     </div>
-                    <div className="shrink-0">{renderStatus(d)}</div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <div className="text-[20px] font-bold text-slate-900 tabular-nums leading-tight">{fmt(d.amount)}</div>
+                      <div className="flex items-center gap-1.5">
+                        {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="e-icon-btn inline-flex items-center justify-center gap-1 w-auto min-w-[40px] h-10 px-2.5 rounded-xl" title="Bill chi"><ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-[12px] font-semibold">{d.proof_image_urls.length}</span>}</button>}
+                        {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="e-icon-btn w-10 h-10 rounded-xl text-success-600" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
+                      </div>
+                    </div>
+                    {d.description && <div className="text-[13.5px] leading-[1.45] text-slate-600 mt-1.5 whitespace-pre-line break-words">{d.description}</div>}
+                    {d.status === 'rejected' && <div className="text-[12.5px] text-danger-600 italic mt-1.5">"{d.reject_reason}"</div>}
                   </div>
-                  {d.description && <div className="text-[13px] text-slate-600 mt-2.5">{d.description}</div>}
-                  {d.status === 'rejected' && <div className="text-[12px] text-danger-600 italic mt-1">"{d.reject_reason}"</div>}
-                  <div className="mt-3 flex items-end justify-between gap-3">
-                    <div>
-                      <div className="e-kv-label">Số tiền</div>
-                      <div className="text-[17px] font-bold text-slate-900 tabular-nums">{fmt(d.amount)}</div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {d.proof_image_urls?.length > 0 && <button onClick={() => setViewImage(d.proof_image_urls)} className="e-icon-btn inline-flex items-center justify-center gap-1 w-auto min-w-[34px] h-[34px] px-2 rounded-[10px]" title="Bill chi"><ImageIcon className="w-4 h-4" />{d.proof_image_urls.length > 1 && <span className="text-[12px] font-semibold">{d.proof_image_urls.length}</span>}</button>}
-                      {d.advance_repaid_proof && <button onClick={() => setViewImage(d.advance_repaid_proof)} className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-success-600" title="Bill hoàn"><CheckCircle className="w-4 h-4" /></button>}
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 empty:hidden">
+                  <div className="px-4 pb-4 flex items-center gap-2.5 empty:hidden">
                     {isAdminOrAccountant && d.status === 'pending' && (
                       <>
-                        <button onClick={() => handleApprove(d.id)} className="e-btn e-btn-primary e-btn-sm flex-1">Duyệt</button>
-                        <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="e-btn e-btn-danger-soft e-btn-sm flex-1">Từ chối</button>
+                        <button onClick={() => { setSelectedExpense(d); setShowRejectModal(true); }} className="e-btn e-btn-danger-soft h-11 flex-1">Từ chối</button>
+                        <button onClick={() => handleApprove(d.id)} className="e-btn e-btn-primary h-11 flex-1">Duyệt</button>
                       </>
                     )}
                     {isAdminOrAccountant && d.status === 'approved' && (
-                      <button onClick={() => { setSelectedExpense(d); setRepayForm(prev => ({ ...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount) })); setShowRepayModal(true); }} className="e-btn e-btn-primary e-btn-sm flex-1">Hoàn ứng</button>
+                      <button onClick={() => { setSelectedExpense(d); setRepayForm(prev => ({ ...prev, amount: new Intl.NumberFormat('vi-VN').format(d.amount) })); setShowRepayModal(true); }} className="e-btn e-btn-primary h-11 flex-1">Hoàn ứng</button>
                     )}
                     {isAdminOrAccountant && (
-                      <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="e-icon-btn w-[34px] h-[34px] rounded-[10px] text-slate-400 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50 ml-auto"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleSoftDelete(d)} title="Xoá giao dịch" className="e-icon-btn w-11 h-11 rounded-xl shrink-0 text-slate-400 hover:text-danger-600 hover:border-danger-200 hover:bg-danger-50 ml-auto"><Trash2 className="w-4 h-4" /></button>
                     )}
                   </div>
                 </div>
@@ -454,7 +456,7 @@ export default function AdvanceExpensePage() {
             </div>
 
             {/* Desktop: bảng */}
-            <div className="hidden md:block e-table-wrap">
+            <div className="hidden lg:block e-table-wrap">
               <table className="e-table">
                 <thead>
                   <tr className="text-left">
@@ -567,11 +569,11 @@ export default function AdvanceExpensePage() {
             );
           };
           return (
-            <div className="p-4 lg:p-5">
+            <div className="p-4 lg:p-5 max-lg:px-0">
               <h3 className="e-card-title mb-4">Tổng hợp công nợ theo nhân sự (Tháng {filterMonth})</h3>
 
               {/* Mobile: thẻ */}
-              <div className="md:hidden space-y-3">
+              <div className="lg:hidden space-y-3">
                 {rows.length === 0 ? <div className="e-empty text-[13px] text-slate-400">Chưa có dữ liệu</div> : rows.map((s, i) => (
                   <div key={i} className="e-card-flat p-4">
                     <button onClick={() => setExpandedStaff(expandedStaff === s.staff_id ? null : s.staff_id)} className="w-full flex items-center justify-between gap-2 text-left">
@@ -595,7 +597,7 @@ export default function AdvanceExpensePage() {
               </div>
 
               {/* Desktop: bảng */}
-              <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200">
+              <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-200">
                 <table className="e-table">
                   <thead>
                     <tr className="text-left">
@@ -640,7 +642,7 @@ export default function AdvanceExpensePage() {
         })()}
 
         {isAdminOrAccountant && activeTab === 'stats' && (
-          <div className="p-4 lg:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="p-4 lg:p-5 max-lg:px-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="e-card-flat e-card-pad">
               <h3 className="e-card-title mb-4">Tỷ trọng chi tiêu theo danh mục</h3>
               <div className="h-64">
@@ -740,14 +742,15 @@ export default function AdvanceExpensePage() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleCreateSubmit} className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="e-modal-header items-center shrink-0">
+        <div className="e-modal-backdrop z-50 flex items-end lg:items-center justify-center lg:p-4">
+          <form onSubmit={handleCreateSubmit} className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[88vh] lg:max-h-[90vh] max-lg:rounded-b-none max-lg:rounded-t-3xl">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
+            <div className="e-modal-header items-center shrink-0 max-lg:pt-3 max-lg:px-4">
               <h3 className="e-modal-title">Tạo phiếu tạm ứng chi</h3>
               <button type="button" onClick={() => setShowCreateModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
             
-            <div className="e-modal-body overflow-y-auto space-y-4">
+            <div className="e-modal-body overflow-y-auto space-y-4 max-lg:px-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {isAdminOrAccountant && (
                   <div>
@@ -817,9 +820,9 @@ export default function AdvanceExpensePage() {
               </div>
             </div>
 
-            <div className="e-modal-footer shrink-0">
-              <button type="button" onClick={() => setShowCreateModal(false)} className="e-btn e-btn-secondary">Hủy</button>
-              <button type="submit" disabled={saving || uploadingImage} className="e-btn e-btn-primary">Gửi yêu cầu</button>
+            <div className="e-modal-footer shrink-0 max-lg:rounded-none max-lg:px-4 max-lg:pb-[calc(16px+env(safe-area-inset-bottom))] max-lg:bg-white">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="e-btn e-btn-secondary max-lg:h-12 max-lg:flex-1">Hủy</button>
+              <button type="submit" disabled={saving || uploadingImage} className="e-btn e-btn-primary max-lg:h-12 max-lg:flex-[2]">Gửi yêu cầu</button>
             </div>
           </form>
         </div>
@@ -827,21 +830,23 @@ export default function AdvanceExpensePage() {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="e-modal-backdrop z-[60] flex items-center justify-center p-4">
-          <form onSubmit={handleRejectSubmit} className="e-modal max-w-sm overflow-hidden">
-            <div className="e-modal-header items-center">
+        <div className="e-modal-backdrop z-[60] flex items-end lg:items-center justify-center lg:p-4">
+          <form onSubmit={handleRejectSubmit} className="e-modal max-w-sm overflow-hidden max-lg:max-w-none max-lg:max-h-[88vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-3xl">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2" />
+            <div className="e-modal-header items-center max-lg:pt-3 max-lg:px-4">
               <h3 className="e-modal-title">Từ chối phiếu tạm ứng</h3>
               <button type="button" onClick={() => setShowRejectModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="e-modal-body space-y-4">
+            <div className="e-modal-body space-y-4 max-lg:px-4">
               <p className="text-[13px] text-slate-600">Bạn đang từ chối phiếu trị giá <b>{fmt(selectedExpense?.amount)}</b> của <b>{selectedExpense?.profiles?.full_name}</b>.</p>
               <div>
                 <label className="e-label">Lý do từ chối *</label>
                 <textarea required value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="e-textarea h-24 resize-none" placeholder="Nhập lý do..." />
               </div>
             </div>
-            <div className="e-modal-footer">
-              <button type="submit" disabled={saving} className="e-btn e-btn-danger">Xác nhận Từ chối</button>
+            <div className="e-modal-footer max-lg:rounded-none max-lg:px-4 max-lg:pb-[calc(16px+env(safe-area-inset-bottom))] max-lg:bg-white">
+              <button type="button" onClick={() => setShowRejectModal(false)} className="e-btn e-btn-secondary max-lg:h-12 max-lg:flex-1">Huỷ</button>
+              <button type="submit" disabled={saving} className="e-btn e-btn-danger max-lg:h-12 max-lg:flex-1">Xác nhận Từ chối</button>
             </div>
           </form>
         </div>
@@ -849,13 +854,14 @@ export default function AdvanceExpensePage() {
 
       {/* Repay Modal */}
       {showRepayModal && (
-        <div className="e-modal-backdrop z-[60] flex items-center justify-center p-4">
-          <form onSubmit={handleRepaySubmit} className="e-modal max-w-lg overflow-hidden flex flex-col">
-            <div className="e-modal-header items-center">
+        <div className="e-modal-backdrop z-[60] flex items-end lg:items-center justify-center lg:p-4">
+          <form onSubmit={handleRepaySubmit} className="e-modal max-w-lg overflow-hidden flex flex-col max-lg:max-w-none max-lg:max-h-[88vh] max-lg:rounded-b-none max-lg:rounded-t-3xl">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
+            <div className="e-modal-header items-center shrink-0 max-lg:pt-3 max-lg:px-4">
               <h3 className="e-modal-title">Ghi nhận hoàn ứng (Thanh toán)</h3>
               <button type="button" onClick={() => setShowRepayModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="e-modal-body space-y-4 overflow-y-auto max-h-[70vh]">
+            <div className="e-modal-body space-y-4 overflow-y-auto max-h-[70vh] max-lg:max-h-none max-lg:flex-1 max-lg:px-4">
               <div>
                 <label className="e-label">Chọn phiếu tạm ứng cần hoàn *</label>
                 <select 
@@ -905,9 +911,9 @@ export default function AdvanceExpensePage() {
                 </div>
               </div>
             </div>
-            <div className="e-modal-footer shrink-0">
-              <button type="button" onClick={() => setShowRepayModal(false)} className="e-btn e-btn-secondary">Hủy</button>
-              <button type="submit" disabled={saving || uploadingImage} className="e-btn e-btn-primary">Xác nhận hoàn ứng</button>
+            <div className="e-modal-footer shrink-0 max-lg:rounded-none max-lg:px-4 max-lg:pb-[calc(16px+env(safe-area-inset-bottom))] max-lg:bg-white">
+              <button type="button" onClick={() => setShowRepayModal(false)} className="e-btn e-btn-secondary max-lg:h-12 max-lg:flex-1">Hủy</button>
+              <button type="submit" disabled={saving || uploadingImage} className="e-btn e-btn-primary max-lg:h-12 max-lg:flex-[2]">Xác nhận hoàn ứng</button>
             </div>
           </form>
         </div>
