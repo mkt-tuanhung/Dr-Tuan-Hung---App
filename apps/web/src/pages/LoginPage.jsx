@@ -77,27 +77,50 @@ const LoginPage = ({ adminMode = false }) => {
   const cancelMfa = async () => { setMfaCode(''); setErrorMsg(''); await logout(); };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%)' }}>
+    <div className="min-h-screen flex bg-background">
+      {/* Bảng thương hiệu (desktop) */}
+      <aside className="hidden lg:flex relative w-[46%] max-w-[640px] overflow-hidden bg-teal-800 text-white">
+        <div className="absolute inset-0 bg-cover bg-center opacity-35" style={{ backgroundImage: "url('/clinic-hero.png')" }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/40 via-teal-800/70 to-teal-900/95" />
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="" className="w-12 h-12 rounded-xl object-contain bg-white/10" />
+            <div className="leading-tight">
+              <div className="text-[17px] font-extrabold tracking-wide">DR TUẤN HÙNG</div>
+              <div className="text-[11px] tracking-[0.25em] text-white/70">INTERNAL SYSTEM</div>
+            </div>
+          </div>
+          <div>
+            <div className="text-[13px] font-semibold text-teal-100/90 tracking-wide uppercase">Hệ điều hành phòng khám</div>
+            <h1 className="text-[40px] font-extrabold leading-[1.15] mt-3 text-white">Vận hành hiệu quả.<br />Kiến tạo giá trị bền vững.</h1>
+            <div className="mt-8 space-y-3 text-[14.5px] text-white/85">
+              {['Khách hàng 360° — từ tiếp cận tới hậu phẫu', 'Lịch hẹn trực quan theo từng nhân sự', 'Chấm công khuôn mặt, KPI & lương minh bạch'].map(t => (
+                <div key={t} className="flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-white/15 grid place-items-center"><ShieldCheck className="w-3.5 h-3.5" /></span>{t}</div>
+              ))}
+            </div>
+          </div>
+          <div className="text-[12px] text-white/50">© {new Date().getFullYear()} Dr Tuấn Hùng · Bảo mật thiết bị & xác thực 2 lớp</div>
+        </div>
+      </aside>
 
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-200/40 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-200/30 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="w-full max-w-md bg-white/80 backdrop-blur-sm border border-teal-100 shadow-xl shadow-teal-100/50 rounded-3xl p-8 relative z-10">
+      {/* Biểu mẫu */}
+      <main className="flex-1 flex flex-col items-center justify-center p-5">
+      <div className="w-full max-w-[420px] bg-white border border-slate-200/70 shadow-card rounded-3xl p-7 sm:p-9">
         {/* Logo + heading */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-24 h-24 flex items-center justify-center mb-2">
-            <img src="/logo.png" alt="Dr Tuan Hung Logo" className="w-full h-full object-contain rounded-xl shadow-lg" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-            <div className="w-full h-full bg-gradient-to-br from-teal-400 to-teal-500 rounded-2xl hidden items-center justify-center shadow-lg shadow-teal-200">
+        <div className="flex flex-col items-center mb-7 text-center">
+          <div className="w-20 h-20 flex items-center justify-center mb-3 lg:hidden">
+            <img src="/logo.png" alt="Dr Tuan Hung Logo" className="w-full h-full object-contain rounded-2xl shadow-soft" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+            <div className="w-full h-full bg-teal-600 rounded-2xl hidden items-center justify-center">
               <Stethoscope className="w-10 h-10 text-white" />
             </div>
           </div>
+          <h2 className="text-[24px] font-bold text-slate-900">{adminMode ? 'Đăng nhập Quản trị' : 'Chào mừng trở lại'}</h2>
           {adminMode ? (
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 mt-1 font-bold tracking-widest uppercase">
+            <div className="flex items-center gap-1.5 text-xs text-amber-600 mt-1.5 font-bold tracking-widest uppercase">
               <ShieldAlert className="w-3.5 h-3.5" /> Cổng Quản trị
             </div>
           ) : (
-            <p className="text-xs text-teal-600 mt-1 font-bold tracking-widest uppercase">Internal System</p>
+            <p className="text-[13.5px] text-slate-500 mt-1">Đăng nhập bằng ID nhân sự để bắt đầu ca làm việc</p>
           )}
         </div>
 
@@ -152,12 +175,12 @@ const LoginPage = ({ adminMode = false }) => {
               type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
               value={mfaCode}
               onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-              className="h-12 rounded-2xl border-teal-100 bg-teal-50/50 text-center text-2xl tracking-[0.4em] font-bold"
+              className="h-12 rounded-xl border-slate-200 bg-slate-50 text-center text-2xl tracking-[0.4em] font-bold"
               placeholder="••••••" autoFocus
             />
             {errorMsg && <p className="text-sm text-red-500 font-medium text-center">{errorMsg}</p>}
             <Button type="submit" disabled={isSubmitting}
-              className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-teal-500 to-teal-500 hover:from-teal-600 hover:to-teal-600 shadow-md shadow-teal-200 border-0">
+              className="w-full h-12 rounded-xl text-base font-semibold bg-teal-600 hover:bg-teal-700 shadow-soft border-0">
               {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
               Xác nhận
             </Button>
@@ -169,30 +192,32 @@ const LoginPage = ({ adminMode = false }) => {
           /* ----- Bước nhập mật khẩu ----- */
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-600">ID nhân sự</label>
+              <label className="text-[13px] font-semibold text-slate-700">ID nhân sự</label>
               <Input
                 type="text" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}
-                className="h-12 rounded-2xl border-teal-100 bg-teal-50/50 focus:border-teal-400 focus:ring-teal-400"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-400 focus:ring-teal-400"
                 placeholder="Nhập ID nhân sự" autoComplete="username" autoFocus
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-600">Mật khẩu</label>
+              <label className="text-[13px] font-semibold text-slate-700">Mật khẩu</label>
               <Input
                 type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="h-12 rounded-2xl border-teal-100 bg-teal-50/50 focus:border-teal-400 focus:ring-teal-400"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-400 focus:ring-teal-400"
                 placeholder="Nhập mật khẩu" autoComplete="current-password"
               />
             </div>
             {errorMsg && <p className="text-sm text-red-500 font-medium text-center">{errorMsg}</p>}
             <Button type="submit" disabled={isSubmitting}
-              className="w-full h-12 rounded-2xl text-base font-semibold bg-gradient-to-r from-teal-500 to-teal-500 hover:from-teal-600 hover:to-teal-600 shadow-md shadow-teal-200 border-0">
+              className="w-full h-12 rounded-xl text-base font-semibold bg-teal-600 hover:bg-teal-700 shadow-soft border-0">
               {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
               {adminMode ? 'Đăng nhập Quản trị' : 'Đăng nhập'}
             </Button>
           </form>
         )}
       </div>
+      <p className="mt-6 text-[12px] text-slate-400 text-center">Quên mật khẩu? Liên hệ Admin <a href={`tel:${ADMIN_PHONE}`} className="font-semibold text-teal-700">{ADMIN_PHONE}</a></p>
+      </main>
     </div>
   );
 };
