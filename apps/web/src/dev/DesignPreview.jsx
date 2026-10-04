@@ -143,7 +143,7 @@ export default function DesignPreview() {
   if (screen === 'admin' || screen === 'staff') {
     // Toàn bộ dashboard thật; Supabase giả lập ở tầng mạng
     const prof = screen === 'admin' ? DEMO_PROFILE
-      : { id: 'demo-staff', full_name: 'Trần Mai Anh', role: 'telesale', position: 'Telesale', base_salary: 8000000, employment_status: 'official', is_active: true };
+      : { id: 'demo-staff', full_name: 'Trần Mai Anh', role: q.get('role') || 'telesale', role_2: q.get('role2') || null, position: 'Telesale', base_salary: 8000000, employment_status: 'official', is_active: true };
     try { localStorage.setItem('staff_active_tab', 'overview'); localStorage.setItem('admin_active_tab', 'overview'); } catch { /* ignore */ }
     return (
       <AuthContext.Provider value={{ user: { id: prof.id }, profile: prof, loading: false, isLoggedIn: true, isAdmin: screen === 'admin', logout: () => {} }}>

@@ -48,7 +48,7 @@ const rangeHours = (from, to) => {
 };
 const sumRanges = (ranges) => (ranges || []).reduce((s, r) => s + rangeHours(r.from, r.to), 0);
 
-const AttendancePage = () => {
+const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
   const { profile } = useAuth();
   const today = new Date();
   const [anomalyAlert, setAnomalyAlert] = useState(null);
@@ -114,6 +114,16 @@ const AttendancePage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('attendance,leave_requests', loadData);
+
+  // Bấm nút Face ID giữa thanh dưới → mở camera ngay (giống bấm nút Check-in/Check-out trên trang).
+  // Chưa đăng ký Face ID hoặc đã chấm đủ vào/ra → chỉ mở trang, không tự làm gì thêm.
+  useEffect(() => {
+    if (!autoScan || loading || saving || faceStatus === undefined || faceMode || showEnroll) return;
+    if (faceReady && !todayRecord) setFaceMode('CHECK_IN');
+    else if (faceReady && !todayRecord.check_out) setFaceMode('CHECK_OUT');
+    else if (faceReady) toast.info('Hôm nay bạn đã chấm công vào và ra');
+    onAutoScanDone?.();
+  }, [autoScan, loading, saving, faceStatus, faceReady, todayRecord, faceMode, showEnroll, onAutoScanDone]);
 
   const handleCheckIn = async () => {
     setSaving(true);

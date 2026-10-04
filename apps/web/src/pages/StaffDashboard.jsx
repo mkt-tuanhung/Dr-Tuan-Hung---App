@@ -289,6 +289,9 @@ const StaffDashboard = () => {
 
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
+  // Nút Face ID giữa thanh dưới: mở Chấm công và bật camera ngay (chỉ khi bấm nút này)
+  const [scanReq, setScanReq] = useState(0);
+  useEffect(() => { if (activeTab !== 'attendance') setScanReq(0); }, [activeTab]);
 
   const handleLogout = async () => {
     await logout();
@@ -330,7 +333,7 @@ const StaffDashboard = () => {
 
   const renderContent = () => {
     if (activeTab === 'overview') return <Overview profile={profile} setActiveTab={setActiveTab} available={flatMenu.map(m => m.id)} />;
-    if (activeTab === 'attendance') return <AttendancePage />;
+    if (activeTab === 'attendance') return <AttendancePage autoScan={scanReq} onAutoScanDone={() => setScanReq(0)} />;
     if (activeTab === 'my_schedule') return <MySchedulePage />;
     if (activeTab === 'kpi') {
       const KPI_VIEWS = {
@@ -390,7 +393,7 @@ const StaffDashboard = () => {
   const groups = buildMenuGroups(allowedMenu);
 
   const canCheckIn = flatMenu.some(m => m.id === 'attendance');
-  const centerAction = canCheckIn ? { id: 'attendance', label: 'Chấm công', icon: ScanFace } : null;
+  const centerAction = canCheckIn ? { id: 'attendance', label: 'Chấm công', icon: ScanFace, onPress: () => setScanReq(n => n + 1) } : null;
   const sideIds = [
     ...BOTTOM_PREF.filter(id => flatMenu.some(m => m.id === id)),
     ...flatMenu.map(m => m.id).filter(id => !BOTTOM_PREF.includes(id)),
