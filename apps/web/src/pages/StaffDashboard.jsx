@@ -7,7 +7,7 @@ import {
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
   CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
   Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile,
-  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search
+  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search, ScanFace
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import KPIPage from '@/pages/KPIPage.jsx';
@@ -40,6 +40,7 @@ import HospitalFeeAndInventoryPage from '@/pages/HospitalFeeAndInventoryPage.jsx
 import AdvanceExpensePage from '@/pages/AdvanceExpensePage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
+import AppShell from '@/components/shell/AppShell.jsx';
 import { parseNav, setPendingFocus } from '@/lib/notif';
 
 const ROLE_LABELS = {
@@ -47,6 +48,7 @@ const ROLE_LABELS = {
   truc_page: 'Trực Page', media: 'Media', marketing: 'Marketing', editor: 'Editor',
   seeding: 'Seeding',
   dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin',
+  bac_si: 'Bác sĩ', designer: 'Designer',
 };
 
 // Chức vụ Outsource (field position) bị ẩn các module này
@@ -91,10 +93,20 @@ const FULL_MENU = [
   { id: 'hau_phau',      label: 'Hậu phẫu / CSKH', icon: ClipboardList, roles: ['dieu_duong', 'cskh', 'bac_si'] },
 ];
 
+// Nhóm menu hiển thị trên sidebar (Ethics BOS). Mục nào chưa có nhóm -> nhóm "KHÁC".
+const STAFF_GROUPS = [
+  { title: null, ids: ['overview'] },
+  { title: 'CÁ NHÂN', ids: ['attendance', 'kpi', 'my_payroll', 'advances'] },
+  { title: 'KHÁCH HÀNG', ids: ['appointments', 'data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'khach_phau_thuat', 'mo_doi_tac', 'hau_phau', 'service_quality'] },
+  { title: 'TÀI CHÍNH', ids: ['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev'] },
+  { title: 'MARKETING', ids: ['marketing'] },
+  { title: 'KẾT NỐI', ids: ['community', 'meetings', 'minigame'] },
+];
+// Ưu tiên các mục trên thanh dưới (mobile) — nút giữa là Chấm công
+const BOTTOM_PREF = ['overview', 'appointments', 'kpi', 'my_payroll'];
+
 const pctOf = (actual, target) => target > 0 ? Math.min(Math.round((Number(actual || 0) / target) * 100), 100) : 0;
 
-// Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("luong" -> "Lương của tôi")
-const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 
 // Tổng quan dành cho Editor: clip Win / đang xử lý / đã duyệt + tổng lương tháng
 const EditorOverview = ({ profile, setActiveTab }) => {
@@ -324,9 +336,6 @@ const StaffDashboard = () => {
 
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState({});
-  const [navQ, setNavQ] = useState(''); // tìm nhanh menu (không cần gõ dấu)
 
   const handleLogout = async () => {
     await logout();
@@ -359,8 +368,6 @@ const StaffDashboard = () => {
   }).filter(Boolean);
   // Danh sách phẳng (gồm cả mục con) để kiểm tra quyền & tra cứu tab đang mở
   const flatMenu = allowedMenu.flatMap(m => (m.children ? m.children : [m]));
-  // Kết quả tìm nhanh menu (đã lọc theo quyền)
-  const navResults = navQ.trim() ? flatMenu.filter(m => deAccent(m.label).includes(deAccent(navQ))) : null;
 
   // Nếu tab hiện tại không thuộc quyền của nhân sự → về mục đầu tiên được phép
   useEffect(() => {
@@ -427,228 +434,35 @@ const StaffDashboard = () => {
     return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 
-  const activeMenu = flatMenu.find(m => m.id === activeTab);
+  // ===== Khung app dùng chung (Ethics BOS) =====
+  const grouped = new Set(STAFF_GROUPS.flatMap(g => g.ids));
+  const groups = [
+    ...STAFF_GROUPS.map(g => ({ title: g.title, items: g.ids.map(id => allowedMenu.find(m => m.id === id)).filter(Boolean) })),
+    { title: 'KHÁC', items: allowedMenu.filter(m => !grouped.has(m.id)) },
+  ].filter(g => g.items.length);
+
+  const canCheckIn = flatMenu.some(m => m.id === 'attendance');
+  const centerAction = canCheckIn ? { id: 'attendance', label: 'Chấm công', icon: ScanFace } : null;
+  const sideIds = [
+    ...BOTTOM_PREF.filter(id => flatMenu.some(m => m.id === id)),
+    ...flatMenu.map(m => m.id).filter(id => !BOTTOM_PREF.includes(id)),
+  ].filter(id => id !== centerAction?.id);
+  const bottomItems = sideIds.slice(0, centerAction ? 3 : 4).map(id => flatMenu.find(m => m.id === id));
+
+  const roleLabel = [profile?.role, profile?.role_2].filter(Boolean).map(r => ROLE_LABELS[r] || r).join(' · ');
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-
-      {/* Overlay mobile */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-20 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`
-        fixed top-0 left-0 h-full w-60 z-30 flex flex-col bg-white border-r border-teal-100
-        transform transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:relative lg:translate-x-0
-      `}>
-        {/* Logo */}
-        <div className="p-4 border-b border-teal-50 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-md overflow-hidden p-1">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <div className="font-bold text-slate-800 text-sm">Dr Tuấn Hùng</div>
-              <div className="text-xs text-teal-500">Internal System</div>
-            </div>
-          </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 p-1">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Tìm nhanh menu */}
-        <div className="px-3 pt-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              value={navQ}
-              onChange={e => setNavQ(e.target.value)}
-              placeholder="Tìm chức năng…"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white transition"
-            />
-            {navQ && (
-              <button onClick={() => setNavQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"><X className="w-4 h-4" /></button>
-            )}
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {navResults && (
-            <div className="space-y-0.5">
-              {navResults.length === 0 && <div className="px-3 py-2 text-[13px] text-slate-400">Không tìm thấy chức năng nào</div>}
-              {navResults.map(item => {
-                const Icon = item.icon;
-                const active = activeTab === item.id;
-                return (
-                  <button key={item.id}
-                    onClick={() => { setActiveTab(item.id); setSidebarOpen(false); setNavQ(''); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      active ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200' : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
-                    }`}>
-                    <Icon className="w-4 h-4 shrink-0" />{item.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {!navResults && allowedMenu.map(item => {
-            const Icon = item.icon;
-            // Mục có nhóm con (dropdown)
-            if (item.children) {
-              const childActive = item.children.some(c => c.id === activeTab);
-              const open = openGroups[item.id] ?? childActive;
-              return (
-                <div key={item.id}>
-                  <button
-                    onClick={() => setOpenGroups(g => ({ ...g, [item.id]: !(g[item.id] ?? childActive) }))}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      childActive ? 'text-teal-700 bg-teal-50/70' : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-                  </button>
-                  {open && (
-                    <div className="mt-0.5 ml-3.5 pl-3 border-l border-teal-100 space-y-0.5">
-                      {item.children.map(c => {
-                        const CIcon = c.icon;
-                        const active = activeTab === c.id;
-                        return (
-                          <button
-                            key={c.id}
-                            onClick={() => { setActiveTab(c.id); setSidebarOpen(false); }}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
-                              active
-                                ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-sm shadow-teal-200'
-                                : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
-                            }`}
-                          >
-                            <CIcon className="w-4 h-4 shrink-0" />
-                            {c.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-gradient-to-r from-teal-500 to-teal-500 text-white shadow-md shadow-teal-200'
-                    : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-        {/* Top bar desktop */}
-        <header className="hidden lg:flex items-center justify-between bg-white border-b border-teal-100 px-6 py-3 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
-            <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <ProfileMenu mobile={false}>
-              <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-                  ) : (
-                    profile?.full_name?.charAt(0) || 'U'
-                  )}
-                </div>
-                <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
-              </div>
-            </ProfileMenu>
-          </div>
-        </header>
-
-        {/* Top bar mobile */}
-        <header className="lg:hidden flex items-center justify-between bg-white border-b border-teal-100 px-4 py-3 sticky top-0 z-10">
-          <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1">
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            {activeMenu && <activeMenu.icon className="w-4 h-4 text-teal-600" />}
-            <span className="font-semibold text-slate-700 text-sm">{activeMenu?.label}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <NotificationBell />
-            <ProfileMenu mobile={true}>
-              <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-teal-400 flex items-center justify-center text-white text-xs font-bold hover:shadow-md transition-shadow cursor-pointer">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-                ) : (
-                  profile?.full_name?.charAt(0) || 'U'
-                )}
-              </div>
-            </ProfileMenu>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
-          <div key={activeTab} className="animate-page">{renderContent()}</div>
-        </main>
-      </div>
-
-      {/* Bottom nav mobile */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-teal-100 shadow-lg">
-        <div className="flex items-stretch">
-          {allowedMenu.slice(0, 4).map(item => {
-            const Icon = item.icon;
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-all relative"
-              >
-                {active && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-teal-500" />}
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${active ? 'bg-teal-500 shadow-md shadow-teal-200' : ''}`}>
-                  <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
-                </div>
-                <span className={`text-[10px] font-medium leading-none max-w-full truncate ${active ? 'text-teal-600' : 'text-slate-400'}`}>
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1"
-          >
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center">
-              <Menu className="w-4 h-4 text-slate-400" />
-            </div>
-            <span className="text-[10px] font-medium leading-none text-slate-400">Thêm</span>
-          </button>
-        </div>
-      </nav>
-
-    </div>
+    <AppShell
+      groups={groups}
+      activeTab={activeTab}
+      onSelect={setActiveTab}
+      profile={profile}
+      roleLabel={profile?.position || roleLabel}
+      bottomItems={bottomItems}
+      centerAction={centerAction}
+    >
+      {renderContent()}
+    </AppShell>
   );
 };
 

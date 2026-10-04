@@ -15,6 +15,12 @@ import WerewolfGame from '@/features/werewolf/WerewolfGame.jsx';
 import WerewolfGuest from '@/features/werewolf/WerewolfGuest.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 
+// Trang xem thử thiết kế: CHỈ có khi build với VITE_DESIGN_PREVIEW=1.
+// Bản production: điều kiện là hằng false -> Vite loại bỏ cả route lẫn chunk.
+const DesignPreview = import.meta.env.VITE_DESIGN_PREVIEW === '1'
+  ? React.lazy(() => import('@/dev/DesignPreview.jsx'))
+  : null;
+
 // Vào phòng Ma Sói qua QR/link: /ma-soi/:code
 // Đăng nhập -> bản nhân sự; KHÁCH vãng lai (chưa đăng nhập) -> nhập tên & chơi.
 const WerewolfEntry = () => {
@@ -40,6 +46,9 @@ function App() {
           <Route path="/bao-cao/:slug" element={<DailyReportPublicPage />} />
           <Route path="/du-doan/:id" element={<ProtectedRoute><MatchPredictPage standalone /></ProtectedRoute>} />
           <Route path="/ma-soi/:code" element={<WerewolfEntry />} />
+          {DesignPreview && (
+            <Route path="/__preview" element={<React.Suspense fallback={null}><DesignPreview /></React.Suspense>} />
+          )}
 
           <Route
             path="/admin-dashboard"

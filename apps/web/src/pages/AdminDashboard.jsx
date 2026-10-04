@@ -32,6 +32,7 @@ import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
 import MeetingPage from '@/pages/MeetingPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
+import AppShell from '@/components/shell/AppShell.jsx';
 import { parseNav, setPendingFocus } from '@/lib/notif';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
@@ -84,19 +85,6 @@ const MENU_GROUPS = [
   ]},
 ];
 const MENU = MENU_GROUPS.flatMap(g => g.items).flatMap(m => m.children ? [m, ...m.children] : [m]);
-
-// Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("lai lo" -> "Lãi / Lỗ")
-const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-
-// Màu nền/nhãn nhẹ theo nhóm (class tĩnh để Tailwind không purge)
-const GROUP_STYLE = {
-  blue:   { box: 'bg-blue-50/50',   label: 'text-blue-500',   bar: 'bg-blue-400' },
-  violet: { box: 'bg-violet-50/50', label: 'text-violet-500', bar: 'bg-violet-400' },
-  amber:  { box: 'bg-amber-50/50',  label: 'text-amber-600',  bar: 'bg-amber-400' },
-  rose:   { box: 'bg-rose-50/50',   label: 'text-rose-500',   bar: 'bg-rose-400' },
-};
-
-const BOTTOM_NAV = ['overview', 'hr', 'appointments', 'kpi'];
 
 // Bảng màu cho donut cơ cấu dịch vụ (xanh → xanh dương → tím, giống mockup)
 const PIE_COLORS = ['#22c55e', '#10b981', '#529c96', '#3b82f6', '#8b5cf6', '#cbd5e1'];
@@ -623,14 +611,7 @@ const AdminDashboard = () => {
   const [hrInitialTab, setHrInitialTab] = useState('staff');
 
   useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState({});
   const [pendingLeaves, setPendingLeaves] = useState(0);
-  const [navQ, setNavQ] = useState(''); // tìm nhanh menu (không cần gõ dấu)
-  // Kết quả tìm menu: mọi mục bấm được (bỏ mục cha chỉ để mở nhóm)
-  const navResults = navQ.trim()
-    ? MENU.filter(m => !m.children && deAccent(m.label).includes(deAccent(navQ)))
-    : null;
 
   useEffect(() => {
     // Fetch initial count
@@ -702,249 +683,25 @@ const AdminDashboard = () => {
     }
   };
 
-  const activeMenu = MENU.find(m => m.id === activeTab);
-  const activeGroup = MENU_GROUPS.find(g => g.items.some(i => i.id === activeTab || (i.children || []).some(c => c.id === activeTab)));
+  // Khung app dùng chung (Ethics BOS): menu nhóm + badge đơn nghỉ chờ duyệt
+  const groups = MENU_GROUPS.map(g => ({
+    title: g.title,
+    items: g.items.map(i => (i.id === 'hr' ? { ...i, badge: pendingLeaves } : i)),
+  }));
+  const bottomItems = MENU.filter(m => ['overview', 'hr', 'kpi'].includes(m.id));
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#f3f6f5' }}>
-
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-20 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar desktop */}
-      <aside className={`
-        fixed top-0 left-0 h-full w-64 z-30 flex flex-col
-        bg-slate-900 border-r border-slate-800 shadow-2xl
-        transform transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:relative lg:translate-x-0
-      `}>
-        <div className="p-5 border-b border-slate-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shadow-md overflow-hidden p-1">
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <div className="font-bold text-white text-sm">Dr Tuấn Hùng</div>
-                <div className="text-xs text-teal-400">Internal System</div>
-              </div>
-            </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white p-1">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Tìm nhanh menu */}
-        <div className="px-3 pt-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              value={navQ}
-              onChange={e => setNavQ(e.target.value)}
-              placeholder="Tìm chức năng…"
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-8 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/60 focus:bg-white/10 transition"
-            />
-            {navQ && (
-              <button onClick={() => setNavQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-0.5"><X className="w-4 h-4" /></button>
-            )}
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto p-3 space-y-2">
-          {navResults && (
-            <div className="space-y-0.5">
-              {navResults.length === 0 && <div className="px-3 py-2 text-[13px] text-slate-500">Không tìm thấy chức năng nào</div>}
-              {navResults.map(item => {
-                const Icon = item.icon;
-                const active = activeTab === item.id;
-                return (
-                  <button key={item.id}
-                    onClick={() => { setActiveTab(item.id); setSidebarOpen(false); setNavQ(''); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                      active ? 'bg-teal-500 text-white shadow-lg shadow-teal-900/40' : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                    }`}>
-                    <Icon className="w-4 h-4 shrink-0" />{item.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {!navResults && MENU_GROUPS.map((group, gi) => {
-            const gs = GROUP_STYLE[group.color] || {};
-            return (
-            <div key={group.title || `g${gi}`} className={group.title ? 'pt-3' : ''}>
-              {group.title && (
-                <div className="flex items-center gap-2 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  <span className={`w-1.5 h-1.5 rounded-full ${gs.bar}`} />
-                  {group.title}
-                </div>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  // Mục có nhóm con (dropdown)
-                  if (item.children) {
-                    const childActive = item.children.some(c => c.id === activeTab);
-                    const open = openGroups[item.id] ?? childActive;
-                    return (
-                      <div key={item.id}>
-                        <button
-                          onClick={() => setOpenGroups(g => ({ ...g, [item.id]: !(g[item.id] ?? childActive) }))}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                            childActive ? 'text-white bg-white/10' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3"><Icon className="w-4 h-4 shrink-0" />{item.label}</div>
-                          <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-                        </button>
-                        {open && (
-                          <div className="mt-0.5 ml-4 pl-3 border-l border-white/10 space-y-0.5">
-                            {item.children.map(c => {
-                              const CIcon = c.icon;
-                              const active = activeTab === c.id;
-                              return (
-                                <button
-                                  key={c.id}
-                                  onClick={() => { setActiveTab(c.id); setSidebarOpen(false); }}
-                                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
-                                    active ? 'bg-teal-500 text-white shadow-lg shadow-teal-900/40' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                                  }`}
-                                >
-                                  <CIcon className="w-4 h-4 shrink-0" />{c.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  const active = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-                      className={`
-                        w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium transition-all
-                        ${active
-                          ? 'bg-teal-500 text-white shadow-lg shadow-teal-900/40'
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {item.label}
-                      </div>
-                      {item.id === 'hr' && pendingLeaves > 0 && (
-                        <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                          {pendingLeaves}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            );
-          })}
-        </nav>
-
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-        {/* Top bar - chỉ desktop */}
-        <header className="hidden lg:flex items-center justify-between bg-white/85 backdrop-blur border-b border-slate-100 px-6 py-3.5 sticky top-0 z-10">
-          <div className="flex items-center gap-2.5">
-            {activeMenu && <span className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center"><activeMenu.icon className="w-4 h-4 text-teal-600" /></span>}
-            {activeGroup?.title && (
-              <>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{activeGroup.title}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-              </>
-            )}
-            <span className="font-bold text-slate-800 text-[15px]">{activeMenu?.label}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <ProfileMenu mobile={false}>
-              <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 pr-3 rounded-full transition-colors border border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                  {profile?.full_name?.charAt(0) || 'A'}
-                </div>
-                <span className="text-sm font-semibold text-slate-700">{profile?.full_name}</span>
-              </div>
-            </ProfileMenu>
-          </div>
-        </header>
-
-        {/* Mobile top bar */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 sticky top-0 z-10 text-white" style={{ background: 'linear-gradient(120deg,#0b3b34 0%,#0f5148 60%,#136b5e 100%)' }}>
-          <button onClick={() => setSidebarOpen(true)} className="text-white/80 p-1">
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 grid place-items-center text-[9px] font-bold">DT</span>
-            <div className="leading-tight text-left"><div className="text-[13px] font-bold">DR TUẤN HÙNG</div><div className="text-[7px] tracking-[0.22em] text-white/60">INTERNAL SYSTEM</div></div>
-          </div>
-          <div className="flex items-center gap-1">
-            <NotificationBell />
-            <ProfileMenu mobile={true}>
-              <div className="w-7 h-7 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white text-xs font-bold cursor-pointer">
-                {profile?.full_name?.charAt(0) || 'A'}
-              </div>
-            </ProfileMenu>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6">
-          <div key={activeTab} className="animate-page">{renderContent()}</div>
-        </main>
-      </div>
-
-      {/* Bottom nav mobile */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-teal-100 shadow-lg">
-        <div className="flex items-stretch safe-pb">
-          {MENU.filter(m => BOTTOM_NAV.includes(m.id)).map(item => {
-            const Icon = item.icon;
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-all relative"
-              >
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                  active ? 'bg-teal-500 shadow-md shadow-teal-200' : ''
-                }`}>
-                  <Icon className={`w-4 h-4 transition-colors ${active ? 'text-white' : 'text-slate-400'}`} />
-                </div>
-                <span className={`text-[10px] font-medium leading-none transition-colors max-w-full truncate ${active ? 'text-teal-600' : 'text-slate-400'}`}>
-                  {item.shortLabel || item.label}
-                </span>
-              </button>
-            );
-          })}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1"
-          >
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center">
-              <Menu className="w-4 h-4 text-slate-400" />
-            </div>
-            <span className="text-[10px] font-medium leading-none text-slate-400">Thêm</span>
-          </button>
-        </div>
-      </nav>
-
-    </div>
+    <AppShell
+      groups={groups}
+      activeTab={activeTab}
+      onSelect={setActiveTab}
+      profile={profile}
+      roleLabel="Quản trị viên"
+      bottomItems={bottomItems}
+      centerAction={{ id: 'appointments', label: 'Lịch hẹn', icon: CalendarDays }}
+    >
+      {renderContent()}
+    </AppShell>
   );
 };
 
