@@ -43,6 +43,7 @@ export default function CashFlowPage() {
   // Điện thoại: lọc nhanh Thu/Chi + tìm + bảng chi tiết 1 giao dịch (chỉ hiển thị)
   const [mFlow, setMFlow] = useState('all');
   const [mQ, setMQ] = useState('');
+  const [mSearchOpen, setMSearchOpen] = useState(false);
   const [sheet, setSheet] = useState(null);
   const [form, setForm] = useState({
     date: vnToday(),
@@ -211,23 +212,35 @@ export default function CashFlowPage() {
     const groups = [];
     shown.forEach(d => { const g = groups[groups.length - 1]; if (g && g.date === d.date) g.items.push(d); else groups.push({ date: d.date, items: [d] }); });
     return (
-      <div className="lg:hidden p-3 space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { id: 'all', label: 'Tất cả', sub: `${list.length} GD` },
-            { id: 'in', label: 'Thu', sub: `+${short(sumIn)}` },
-            { id: 'out', label: 'Chi', sub: `-${short(sumOut)}` },
-          ].map(c => (
-            <button key={c.id} onClick={() => setMFlow(c.id)}
-              className={`min-w-0 flex flex-col items-start px-3 py-2 rounded-2xl border text-left transition ${mFlow === c.id ? 'bg-teal-700 border-teal-700 text-white' : 'bg-white border-slate-200 text-slate-700 shadow-soft'}`}>
-              <span className="text-[13px] font-semibold">{c.label}</span>
-              <span className={`max-w-full truncate text-[12px] font-semibold tabular-nums ${mFlow === c.id ? 'text-white/85' : c.id === 'in' ? 'text-success-600' : c.id === 'out' ? 'text-danger-600' : 'text-slate-400'}`}>{c.sub}</span>
-            </button>
-          ))}
+      <div className="lg:hidden pt-3 space-y-3">
+        {/* Cấp 3: lọc gọn 1 dòng + tìm (bấm kính lúp) */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex gap-1.5 min-w-0">
+            {[
+              { id: 'all', label: 'Tất cả', n: list.length },
+              { id: 'in', label: 'Thu', n: list.filter(d => d.flow_type === 'in').length },
+              { id: 'out', label: 'Chi', n: list.filter(d => d.flow_type === 'out').length },
+            ].map(c => (
+              <button key={c.id} onClick={() => setMFlow(c.id)}
+                className={`h-8 px-3 rounded-full text-[13px] font-semibold border transition whitespace-nowrap ${mFlow === c.id ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
+                {c.label} <span className={mFlow === c.id ? 'text-white/60' : 'text-slate-400'}>{c.n}</span>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => { setMSearchOpen(o => !o); if (mSearchOpen) setMQ(''); }} aria-label="Tìm giao dịch"
+            className={`w-8 h-8 rounded-full grid place-items-center border shrink-0 ${mSearchOpen || mQ ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-slate-200 text-slate-500'}`}>
+            {mSearchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+          </button>
         </div>
-        <div className="e-search">
-          <Search />
-          <input value={mQ} onChange={e => setMQ(e.target.value)} placeholder="Tìm ghi chú, người bàn giao, số tiền…" className="!h-11 !text-[16px]" />
+        {mSearchOpen && (
+          <div className="e-search">
+            <Search />
+            <input autoFocus value={mQ} onChange={e => setMQ(e.target.value)} placeholder="Tìm ghi chú, người bàn giao, số tiền…" className="!h-11 !text-[16px] !bg-white" />
+          </div>
+        )}
+        <div className="flex items-center justify-between text-[12.5px] px-1">
+          <span className="text-slate-500">{shown.length} giao dịch</span>
+          <span className="tabular-nums"><span className="text-success-600 font-semibold">+{short(sumIn)}</span><span className="text-slate-300 mx-1.5">|</span><span className="text-danger-600 font-semibold">−{short(sumOut)}</span></span>
         </div>
         {loading ? (
           <div className="e-empty py-8"><div className="w-7 h-7 mb-3 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /><div className="e-empty-desc mt-0">Đang tải...</div></div>
@@ -237,21 +250,21 @@ export default function CashFlowPage() {
           const net = g.items.reduce((t, d) => t + (d.flow_type === 'in' ? 1 : -1) * Number(d.amount || 0), 0);
           return (
             <section key={g.date}>
-              <div className="flex items-center justify-between px-1 mb-1.5">
-                <span className="text-[13px] font-bold text-slate-700">{dayLabel(g.date)}</span>
-                <span className={`text-[12.5px] font-semibold tabular-nums ${net >= 0 ? 'text-success-600' : 'text-danger-600'}`}>{net >= 0 ? '+' : '-'}{fmt(Math.abs(net))}</span>
+              <div className="flex items-baseline justify-between px-1 mb-1.5">
+                <span className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">{dayLabel(g.date)}</span>
+                <span className="text-[12px] text-slate-400 tabular-nums">Ròng <b className={`font-semibold ${net >= 0 ? 'text-success-600' : 'text-danger-600'}`}>{net >= 0 ? '+' : '−'}{short(Math.abs(net))}</b></span>
               </div>
               <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100 overflow-hidden">
                 {g.items.map(d => (
-                  <button key={d.id} onClick={() => setSheet(d)} className="w-full flex items-start gap-3 px-3.5 py-3 text-left active:bg-teal-50/50 transition">
-                    <span className={`w-10 h-10 rounded-full grid place-items-center shrink-0 mt-0.5 ${d.flow_type === 'in' ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'}`}>
-                      {d.flow_type === 'in' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                  <button key={d.id} onClick={() => setSheet(d)} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-teal-50/50 transition">
+                    <span className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${d.flow_type === 'in' ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'}`}>
+                      {d.flow_type === 'in' ? <ArrowDownLeft className="w-[18px] h-[18px]" /> : <ArrowUpRight className="w-[18px] h-[18px]" />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-[14.5px] font-semibold text-slate-900 leading-snug line-clamp-2 break-words">{d.notes || (d.flow_type === 'in' ? 'Thu tiền' : 'Chi tiền')}</span>
-                      <span className="block text-[12.5px] text-slate-500 mt-0.5 truncate">{[d.handover_person, d.method === 'transfer' ? 'Chuyển khoản' : 'Tiền mặt'].filter(Boolean).join(' · ')}</span>
+                      <span className="block text-[14.5px] font-semibold text-slate-900 truncate">{d.notes || (d.flow_type === 'in' ? 'Thu tiền' : 'Chi tiền')}</span>
+                      <span className="block text-[12px] text-slate-400 mt-0.5 truncate">{d.handover_person || (d.method === 'transfer' ? 'Chuyển khoản' : 'Tiền mặt')}</span>
                     </span>
-                    <span className={`shrink-0 text-[15px] font-bold tabular-nums whitespace-nowrap mt-0.5 ${d.flow_type === 'in' ? 'text-success-600' : 'text-danger-600'}`}>{d.flow_type === 'in' ? '+' : '-'}{fmt(d.amount)}</span>
+                    <span className={`shrink-0 text-[15px] font-bold tabular-nums whitespace-nowrap ${d.flow_type === 'in' ? 'text-success-600' : 'text-slate-900'}`}>{d.flow_type === 'in' ? '+' : '−'}{fmt(d.amount)}</span>
                   </button>
                 ))}
               </div>
@@ -324,10 +337,40 @@ export default function CashFlowPage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Thanh công cụ: mô tả + kỳ + hành động */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      {/* Cấp 1 (điện thoại): thẻ Vốn lưu động gộp kỳ + Thu/Chi */}
+      <div className="lg:hidden rounded-3xl p-4 pt-3.5 text-white bg-gradient-to-br from-[#067B7F] to-[#3CA7A9] shadow-[0_12px_28px_rgba(6,123,127,0.28)]">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 h-9 pl-3 pr-2 rounded-full bg-white/15">
+            <Calendar className="w-4 h-4 text-white/80" />
+            <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold outline-none text-white cursor-pointer [&>option]:text-slate-900">
+              {Array.from({length:12}, (_,i) => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
+            </select>
+            <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold outline-none text-white cursor-pointer [&>option]:text-slate-900">
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+          <button onClick={loadData} aria-label="Làm mới" className="w-9 h-9 rounded-full bg-white/15 grid place-items-center active:bg-white/25"><RefreshCw className="w-4 h-4" /></button>
+        </div>
+        <div className="mt-4 text-[13px] text-white/80">Vốn lưu động</div>
+        <div className="text-[32px] font-bold tabular-nums leading-tight">{fmt(workingCapital)}</div>
+        {riskNet !== 0 && <div className="text-[12px] text-white/70 mt-0.5">đã trừ trích quỹ rủi ro {short(riskNet)}</div>}
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <div className="rounded-2xl bg-white/15 px-3 py-2.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[12px] text-white/80"><ArrowDownLeft className="w-3.5 h-3.5" />Tổng thu</div>
+            <div className="text-[17px] font-bold tabular-nums truncate">{short(totalIn)}</div>
+          </div>
+          <div className="rounded-2xl bg-white/15 px-3 py-2.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[12px] text-white/80"><ArrowUpRight className="w-3.5 h-3.5" />Tổng chi</div>
+            <div className="text-[17px] font-bold tabular-nums truncate">{short(totalOut)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 max-lg:contents">
         <p className="e-page-desc hidden md:block">Quản lý nhận/chi tiền mặt và chuyển khoản theo ngày</p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-slate-200 bg-white">
+        <div className="flex items-center gap-2 flex-wrap max-lg:contents">
+          <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-slate-200 bg-white max-lg:hidden">
             <Calendar className="w-4 h-4 text-teal-600" />
             <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold outline-none text-slate-800 cursor-pointer">
               {Array.from({length:12}, (_,i) => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
@@ -337,20 +380,21 @@ export default function CashFlowPage() {
               <option value="2027">2027</option>
             </select>
           </div>
-          <button onClick={loadData} className="e-btn e-btn-secondary max-lg:w-10 max-lg:px-0" title="Làm mới">
+          <button onClick={loadData} className="e-btn e-btn-secondary max-lg:hidden" title="Làm mới">
             <RefreshCw className="w-4 h-4" /> <span className="hidden lg:inline">Làm mới</span>
           </button>
           {canWrite && (
             <button onClick={() => { setEditId(null); setForm({ date: vnToday(), flow_type: 'in', amount: '', method: 'transfer', handover_person: '', notes: '' }); setShowCreateModal(true); }}
-              className="e-btn e-btn-primary max-lg:fixed max-lg:right-4 max-lg:bottom-[calc(88px+env(safe-area-inset-bottom))] max-lg:z-20 max-lg:h-12 max-lg:px-5 max-lg:rounded-full max-lg:shadow-nav">
-              <Plus className="w-4 h-4" /> Tạo giao dịch
+              aria-label="Tạo giao dịch"
+              className="e-btn e-btn-primary max-lg:fixed max-lg:right-4 max-lg:bottom-[calc(88px+env(safe-area-inset-bottom))] max-lg:z-20 max-lg:w-14 max-lg:h-14 max-lg:p-0 max-lg:rounded-full max-lg:shadow-nav">
+              <Plus className="w-4 h-4 max-lg:w-6 max-lg:h-6" /> <span className="hidden lg:inline">Tạo giao dịch</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Chỉ số chính (MetricCard Ethics) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 lg:gap-4">
+      <div className="hidden lg:grid grid-cols-2 md:grid-cols-3 gap-3 lg:gap-4">
         <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5">
           <span className="e-metric-icon e-tone-success max-lg:w-10 max-lg:h-10"><ArrowDownLeft /></span>
           <div className="min-w-0">
@@ -443,14 +487,14 @@ export default function CashFlowPage() {
 
       {/* Sổ & thống kê — tab gạch chân teal, bảng e-table */}
       <div className="e-card overflow-hidden flex flex-col max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none max-lg:overflow-visible">
-        <div className="e-tabs px-1 lg:px-3">
-          <button onClick={() => setActiveTab('transfer')} className={`e-tab max-lg:flex-1 max-lg:justify-center max-lg:px-1.5 max-lg:text-[13.5px] max-lg:[&>svg]:hidden ${activeTab === 'transfer' ? 'e-tab-active' : ''}`}>
+        <div className="e-tabs px-1 lg:px-3 max-lg:border-0 max-lg:bg-slate-200/60 max-lg:rounded-xl max-lg:p-1 max-lg:gap-1">
+          <button onClick={() => setActiveTab('transfer')} className={`e-tab max-lg:flex-1 max-lg:justify-center max-lg:px-1.5 max-lg:h-9 max-lg:rounded-lg max-lg:text-[13.5px] max-lg:[&>svg]:hidden max-lg:after:hidden ${activeTab === 'transfer' ? 'e-tab-active max-lg:bg-white max-lg:shadow-soft' : ''}`}>
             <Banknote /> <span className="lg:hidden">Chuyển khoản</span><span className="hidden lg:inline">Sổ Chuyển Khoản</span>
           </button>
-          <button onClick={() => setActiveTab('cash')} className={`e-tab max-lg:flex-1 max-lg:justify-center max-lg:px-1.5 max-lg:text-[13.5px] max-lg:[&>svg]:hidden ${activeTab === 'cash' ? 'e-tab-active' : ''}`}>
+          <button onClick={() => setActiveTab('cash')} className={`e-tab max-lg:flex-1 max-lg:justify-center max-lg:px-1.5 max-lg:h-9 max-lg:rounded-lg max-lg:text-[13.5px] max-lg:[&>svg]:hidden max-lg:after:hidden ${activeTab === 'cash' ? 'e-tab-active max-lg:bg-white max-lg:shadow-soft' : ''}`}>
             <Coins /> <span className="lg:hidden">Tiền mặt</span><span className="hidden lg:inline">Sổ Tiền Mặt</span>
           </button>
-          <button onClick={() => setActiveTab('stats')} className={`e-tab max-lg:flex-1 max-lg:justify-center max-lg:px-1.5 max-lg:text-[13.5px] max-lg:[&>svg]:hidden ${activeTab === 'stats' ? 'e-tab-active' : ''}`}>
+          <button onClick={() => setActiveTab('stats')} className={`e-tab max-lg:flex-1 max-lg:justify-center max-lg:px-1.5 max-lg:h-9 max-lg:rounded-lg max-lg:text-[13.5px] max-lg:[&>svg]:hidden max-lg:after:hidden ${activeTab === 'stats' ? 'e-tab-active max-lg:bg-white max-lg:shadow-soft' : ''}`}>
             <LineChartIcon /> <span className="lg:hidden">Thống kê</span><span className="hidden lg:inline">Thống kê dòng tiền</span>
           </button>
         </div>
