@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảng chấm công</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.pg{width:794px;height:1123px;box-sizing:border-box;padding:48px 56px 36px;background:#F7FBFB;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1B2020;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4A5A59}
+.top img{width:30px;height:30px;border-radius:50%;background:#0F1A1A;object-fit:contain}
+.sp{flex:1;height:1px;background:#C3D3D2}
+.hd{display:flex;align-items:flex-end;gap:18px}
+.no{font-size:84px;line-height:.78;font-weight:800;color:#067B7F;letter-spacing:-.04em}
+h1{margin:0;font-size:32px;line-height:1.15;font-weight:800;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:#3D4D4C}
+h2{margin:0 0 10px;font-size:16px;font-weight:800;color:#06686C}
+.phone{position:relative;width:200px;border:7px solid #1B2020;border-radius:30px;overflow:hidden;box-shadow:0 16px 36px rgba(6,95,99,.18);background:#fff;flex-shrink:0}
+.phone img{display:block;width:100%}
+.pin{position:absolute;width:26px;height:26px;border-radius:50%;background:#067B7F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.cap{font-size:12px;color:#4A5A59;text-align:center;margin-top:8px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;font-size:13.5px;line-height:1.45}
+.n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#067B7F;color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.box{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:14px 16px;font-size:14px;line-height:1.5}
+.tip{background:#FFF4EA;border:1px solid #F2D2B4;border-radius:16px;padding:12px 16px;font-size:14px;line-height:1.5}
+.ft{margin-top:auto;display:flex;justify-content:space-between;font-size:12px;color:#5B6B6A;border-top:1px solid #DCEEED;padding-top:10px}
+.lg{display:flex;flex-wrap:wrap;gap:8px}
+.lg span{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:700}
+.dot{width:9px;height:9px;border-radius:50%}
+</style>
+</helmet>
+<div class="pg">
+  <div class="top"><img src="/_blob/dcbbfdd90e3d4f4acd3dc70b28ef4ae6" alt=""><span>Cẩm nang nhân viên · App Dr Tuấn Hùng</span><span class="sp"></span><span>Phần 06</span></div>
+  <div class="hd"><span class="no">06</span><div><h1>Bảng chấm công</h1><p class="lead">Kéo xuống màn Chấm công để xem cả tháng của bạn, tạo đơn và ghi tăng ca.</p></div></div>
+
+  <div style="display: flex; gap: 20px; align-items: flex-start">
+    <div>
+      <div class="phone">
+        <img src="/_blob/1e6fd93eef214f124b3fe8c4a8ffc748" alt="Bảng chấm công tháng">
+        <span class="pin" style="left: 39px; top: 41px">1</span>
+        <span class="pin" style="left: 131px; top: 41px">2</span>
+        <span class="pin" style="left: 38px; top: 169px">3</span>
+      </div>
+      <div class="cap">Bảng chấm công tháng</div>
+    </div>
+    <div>
+      <div class="phone">
+        <img src="/_blob/27039ef6a602e82be610da0ab3659838" alt="Lịch sử chấm công chi tiết">
+        <span class="pin" style="left: 87px; top: 169px">4</span>
+      </div>
+      <div class="cap">Lịch sử chi tiết</div>
+    </div>
+    <ol class="steps" style="flex: 1; min-width: 0">
+      <li><span class="n">1</span><span><b>Tạo đơn</b>: xin nghỉ, đi muộn, về sớm, nghỉ nửa ngày (trang 7).</span></li>
+      <li><span class="n">2</span><span><b>Ghi tăng ca</b> khi làm thêm giờ (trang 7).</span></li>
+      <li><span class="n">3</span><span><b>Bảng chấm công</b>: mỗi ngày tô một màu theo trạng thái. Dùng ‹ › để đổi tháng.</span></li>
+      <li><span class="n">4</span><span><b>Lịch sử chi tiết</b>: giờ Vào / Ra từng ngày, nhãn <b>Face AI</b> cho lượt quét khuôn mặt.</span></li>
+    </ol>
+  </div>
+
+  <div class="box">
+    <h2>Ý nghĩa màu trên bảng chấm công</h2>
+    <div class="lg">
+      <span style="background: #E5F7EE; color: #1E7F53"><i class="dot" style="background: #1E9E62"></i>Có mặt</span>
+      <span style="background: #FDECEC; color: #B42318"><i class="dot" style="background: #D92D20"></i>Đi trễ</span>
+      <span style="background: #FCE8EE; color: #A3214D"><i class="dot" style="background: #D6336C"></i>Vắng mặt</span>
+      <span style="background: #E8F0FB; color: #2457A6"><i class="dot" style="background: #3A72C9"></i>Nửa ngày</span>
+      <span style="background: #EFEAFB; color: #5B3FA8"><i class="dot" style="background: #7B5FD0"></i>Nghỉ phép</span>
+    </div>
+    <p style="margin: 10px 0 0">Ba ô đếm phía trên bảng cho biết số ngày <b>Có mặt</b>, <b>Đi trễ</b>, <b>Vắng mặt</b> trong tháng.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+    <div class="box"><h2>Bấm vào một ngày</h2>Chọn <b>hôm nay hoặc ngày sắp tới</b> để tạo nhanh: Xin nghỉ phép cả ngày, Nghỉ nửa ngày (0,5 công, sáng hoặc chiều), Xin đi muộn, Xin về sớm.</div>
+    <div class="box"><h2>Ngày đã qua</h2>Nhân sự không sửa được ngày trong quá khứ. Thấy sai giờ công, hãy báo quản lý hoặc phòng nhân sự để kiểm tra.</div>
+  </div>
+  <div class="tip"><b>Tăng ca tháng:</b> thẻ "Tăng ca Tháng X" liệt kê ngày đã ghi và tổng giờ.</div>
+
+  <div class="ft"><span>Dr Tuấn Hùng · Lưu hành nội bộ</span><span>Trang 6/18</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
