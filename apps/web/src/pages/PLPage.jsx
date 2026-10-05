@@ -121,10 +121,10 @@ export default function PLPage() {
     <div className="space-y-4">
       {/* Thanh công cụ: mô tả + chọn kỳ */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="e-page-desc">Lợi nhuận thực theo tháng · doanh thu trừ mọi chi phí &amp; quỹ rủi ro</p>
-        <div className="flex items-center gap-1.5">
+        <p className="e-page-desc hidden md:block">Lợi nhuận thực theo tháng · doanh thu trừ mọi chi phí &amp; quỹ rủi ro</p>
+        <div className="flex items-center gap-1.5 max-md:w-full">
           <button type="button" onClick={() => shiftMonth(-1)} title="Tháng trước" className="e-icon-btn"><ChevronLeft className="w-5 h-5" /></button>
-          <div className="flex items-center gap-1 h-10 px-3 rounded-xl border border-slate-200 bg-white">
+          <div className="flex items-center justify-center gap-1 h-10 px-3 rounded-xl border border-slate-200 bg-white max-md:flex-1">
             <select value={month} onChange={e => setMonth(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold text-slate-800 outline-none cursor-pointer">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}</select>
             <span className="text-slate-300">/</span>
             <select value={year} onChange={e => setYear(Number(e.target.value))} className="bg-transparent text-[14px] font-semibold text-slate-800 outline-none cursor-pointer">{[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}</select>
@@ -135,17 +135,28 @@ export default function PLPage() {
 
       {/* Tab: Lãi/Lỗ · Quỹ rủi ro (gạch chân teal kiểu Ethics) */}
       <div className="e-tabs">
-        <button onClick={() => setTab('pl')} className={`e-tab ${tab === 'pl' ? 'e-tab-active' : ''}`}><PieChart />Lãi / Lỗ</button>
-        <button onClick={() => setTab('risk')} className={`e-tab ${tab === 'risk' ? 'e-tab-active' : ''}`}><Shield />Quỹ rủi ro<span className="e-tab-count tabular-nums">{fmt(risk.totalFund)}</span></button>
+        <button onClick={() => setTab('pl')} className={`e-tab max-lg:flex-1 max-lg:justify-center ${tab === 'pl' ? 'e-tab-active' : ''}`}><PieChart />Lãi / Lỗ</button>
+        <button onClick={() => setTab('risk')} className={`e-tab max-lg:flex-1 max-lg:justify-center ${tab === 'risk' ? 'e-tab-active' : ''}`}><Shield />Quỹ rủi ro<span className="e-tab-count tabular-nums">{fmt(risk.totalFund)}</span></button>
       </div>
 
       {loading ? (
         <div className="e-card flex justify-center h-40 items-center"><div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : tab === 'pl' ? (
         <>
+          {/* Điện thoại: thẻ Lợi nhuận nổi bật (Ethics) */}
+          <div className={`lg:hidden rounded-3xl p-5 text-white ${profit >= 0 ? 'bg-gradient-to-br from-[#067B7F] to-[#3CA7A9] shadow-[0_12px_28px_rgba(6,123,127,0.28)]' : 'bg-gradient-to-br from-danger-600 to-danger-500 shadow-[0_12px_28px_rgba(233,87,87,0.28)]'}`}>
+            <div className="flex items-center gap-2 text-[13px] text-white/85">{profit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}Lợi nhuận tháng {month}/{year}</div>
+            <div className="text-[30px] font-bold tabular-nums leading-tight mt-1 break-all">{fmt(profit)}</div>
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="rounded-xl bg-white/15 px-2.5 py-2 min-w-0"><div className="text-[11px] text-white/75">Biên LN</div><div className="text-[15px] font-bold tabular-nums">{margin.toFixed(1)}%</div></div>
+              <div className="rounded-xl bg-white/15 px-2.5 py-2 min-w-0"><div className="text-[11px] text-white/75">Ca mổ</div><div className="text-[15px] font-bold tabular-nums">{d.cases}</div></div>
+              <div className="rounded-xl bg-white/15 px-2.5 py-2 min-w-0"><div className="text-[11px] text-white/75">TB / ca</div><div className="text-[15px] font-bold tabular-nums truncate">{perCase >= 1e6 ? `${(perCase / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} Tr` : fmt(perCase)}</div></div>
+            </div>
+          </div>
+
           {/* Chỉ số tháng (MetricCard Ethics) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className={`e-metric ${profit >= 0 ? 'border-teal-300' : 'border-danger-200'}`}>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
+            <div className={`e-metric hidden lg:flex ${profit >= 0 ? 'border-teal-300' : 'border-danger-200'}`}>
               <span className={`e-metric-icon ${profit >= 0 ? 'e-tone-success' : 'e-tone-danger'}`}>{profit >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}</span>
               <div className="min-w-0">
                 <div className="e-metric-label">Lợi nhuận tháng {month}/{year}</div>
@@ -153,21 +164,21 @@ export default function PLPage() {
                 <div className="e-metric-hint whitespace-normal leading-snug mt-0.5">Biên lợi nhuận <b className="text-slate-600">{margin.toFixed(1)}%</b> · {d.cases} ca mổ · TB <b className="text-slate-600">{fmt(perCase)}</b>/ca</div>
               </div>
             </div>
-            <div className="e-metric">
-              <span className="e-metric-icon"><DollarSign /></span>
+            <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5">
+              <span className="e-metric-icon max-lg:w-10 max-lg:h-10"><DollarSign /></span>
               <div className="min-w-0">
                 <div className="e-metric-label">Doanh thu</div>
-                <div className="e-metric-value">{fmt(d.revenue)}</div>
+                <div className="e-metric-value max-lg:text-[17px]">{fmt(d.revenue)}</div>
               </div>
             </div>
-            <div className="e-metric">
-              <span className="e-metric-icon e-tone-peach"><Wallet /></span>
-              <div className="min-w-0">
-                <div className="e-metric-label">Tổng chi phí (gồm trích quỹ)</div>
-                <div className="e-metric-value">{fmt(totalCost)}</div>
+            <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5">
+              <span className="e-metric-icon e-tone-peach max-lg:w-10 max-lg:h-10"><Wallet /></span>
+              <div className="min-w-0 max-w-full">
+                <div className="e-metric-label"><span className="lg:hidden">Tổng chi phí</span><span className="hidden lg:inline">Tổng chi phí (gồm trích quỹ)</span></div>
+                <div className="e-metric-value max-lg:text-[17px]">{fmt(totalCost)}</div>
               </div>
             </div>
-            <div className="e-metric">
+            <div className="e-metric hidden lg:flex">
               <span className="e-metric-icon e-tone-info"><Banknote /></span>
               <div className="min-w-0">
                 <div className="e-metric-label">Tiền thực về trong tháng</div>
@@ -186,12 +197,12 @@ export default function PLPage() {
               <div className="divide-y divide-slate-100 text-[14px]">
                 <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
                   <span className="w-5 text-center font-bold text-slate-300"> </span>
-                  <div className="flex-1 min-w-0"><span className="font-semibold text-slate-800">Doanh thu ca mổ</span> <span className="text-[12px] text-slate-400">· {d.cases} ca</span></div>
+                  <div className="flex-1 min-w-0"><span className="font-semibold text-slate-800">Doanh thu ca mổ</span> <span className="text-[12px] text-slate-400 max-lg:block">· {d.cases} ca</span></div>
                   <div className="font-semibold text-slate-900 tabular-nums">{fmt(d.revenue)}</div>
                 </div>
                 <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
                   <span className="w-5 text-center font-bold text-warning-600">−</span>
-                  <div className="flex-1 min-w-0"><span className="text-slate-600 pl-0">Cọc đã thu trước</span> <span className="text-[12px] text-slate-400">· {d.cocOffsetCount} ca đã cọc (kể cả tháng trước)</span></div>
+                  <div className="flex-1 min-w-0"><span className="text-slate-600 pl-0">Cọc đã thu trước</span> <span className="text-[12px] text-slate-400 max-lg:block">· {d.cocOffsetCount} ca đã cọc (kể cả tháng trước)</span></div>
                   <div className="font-semibold text-warning-600 tabular-nums">− {fmt(d.cocOffset)}</div>
                 </div>
                 <div className="px-4 lg:px-5 py-3 flex items-center gap-3 bg-teal-50/70">
@@ -201,12 +212,12 @@ export default function PLPage() {
                 </div>
                 <div className="px-4 lg:px-5 py-3 flex items-center gap-3">
                   <span className="w-5 text-center font-bold text-info-600">+</span>
-                  <div className="flex-1 min-w-0"><span className="text-slate-600">Cọc thu trong tháng</span> <span className="text-[12px] text-slate-400">· {d.cocCount} khách — đối trừ khi lên ca mổ</span></div>
+                  <div className="flex-1 min-w-0"><span className="text-slate-600">Cọc thu trong tháng</span> <span className="text-[12px] text-slate-400 max-lg:block">· {d.cocCount} khách — đối trừ khi lên ca mổ</span></div>
                   <div className="font-semibold text-info-600 tabular-nums">+ {fmt(d.cocRev)}</div>
                 </div>
               </div>
               <div className="px-4 lg:px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-                <div className="text-[13px] lg:text-[14px] font-bold text-teal-900">Tổng tiền thực về trong tháng</div>
+                <div className="text-[13px] lg:text-[14px] font-bold text-teal-900"><span className="lg:hidden">Tổng thực về</span><span className="hidden lg:inline">Tổng tiền thực về trong tháng</span></div>
                 <div className="text-[18px] lg:text-[20px] font-bold text-teal-900 tabular-nums">{fmt(d.revenue - d.cocOffset + d.cocRev)}</div>
               </div>
             </div>
@@ -222,7 +233,7 @@ export default function PLPage() {
                       <div className="text-[14px] font-medium text-slate-700">{r.label}</div>
                       <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-teal-600 to-teal-400" style={{ width: `${pct(r.value)}%` }} /></div>
                     </div>
-                    <div className="text-right shrink-0 min-w-[96px]"><div className="text-[14px] font-semibold text-slate-900 tabular-nums">{fmt(r.value)}</div><div className="text-[12px] text-slate-400 tabular-nums">{pct(r.value)}%</div></div>
+                    <div className="text-right shrink-0 lg:min-w-[96px]"><div className="text-[14px] font-semibold text-slate-900 tabular-nums">{fmt(r.value)}</div><div className="text-[12px] text-slate-400 tabular-nums">{pct(r.value)}%</div></div>
                   </div>
                 ))}
               </div>
@@ -230,33 +241,37 @@ export default function PLPage() {
 
           </div>
 
-          <p className="e-subtle p-3.5 text-[12.5px] text-slate-500 leading-relaxed">
+          <details className="lg:hidden e-subtle px-3.5 py-3 text-[13px] text-slate-500 leading-relaxed group">
+            <summary className="list-none flex items-center justify-between font-semibold text-slate-700 cursor-pointer">Cách tính lợi nhuận &amp; dòng tiền <ChevronRight className="w-4 h-4 text-slate-400 transition group-open:rotate-90" /></summary>
+            <div className="mt-2">Doanh thu = tổng doanh thu các ca đã mổ trong tháng (đã gồm upsale). Chi phí = quảng cáo + viện phí + vật tư nhập kho + chi khác (phiếu chi đã duyệt) + lương &amp; hoa hồng + trích quỹ rủi ro. <b>Lợi nhuận = Doanh thu − Tổng chi phí.</b> Tạm ứng chi hộ &amp; ứng lương không tính là chi phí. Thực thu ca mổ = Doanh thu ca mổ − cọc đã thu trước của chính các ca đó; lợi nhuận vẫn tính trên doanh thu ca mổ.</div>
+          </details>
+          <p className="hidden lg:block e-subtle p-3.5 text-[12.5px] text-slate-500 leading-relaxed">
             <b>Cách tính:</b> Doanh thu = tổng doanh thu các ca đã mổ trong tháng (đã gồm upsale). Chi phí gồm: quảng cáo (đã tiêu) + viện phí + <b>vật tư nhập kho</b> + chi khác (phiếu chi đã duyệt) + lương &amp; hoa hồng + <b>trích quỹ rủi ro</b> (trích − rút trong tháng). <b>Lợi nhuận = Doanh thu − Tổng chi phí.</b> Tạm ứng chi hộ &amp; ứng lương (khoản cho vay) không tính là chi phí. <b>Tiền cọc (dòng tiền):</b> DT cọc thu trong tháng = mọi khoản cọc thu về theo ngày cọc (kể cả khách sau này đã mổ). Khi khách lên ca mổ, doanh thu ca mổ ghi ĐỦ giá dịch vụ, nên <b>Thực thu ca mổ = Doanh thu ca mổ − phần cọc đã thu trước của chính các ca đó</b> (VD: cọc 20tr tháng 6, mổ 80tr tháng 7 → tháng 6 thực về 20tr, tháng 7 thực về 60tr). Lợi nhuận vẫn tính trên Doanh thu ca mổ (giá trị dịch vụ), không tính trên dòng tiền.
           </p>
         </>
       ) : (
         <>
           {/* ===== TAB QUỸ RỦI RO ===== */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="e-metric border-teal-300">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4">
+            <div className="e-metric border-teal-300 col-span-2 sm:col-span-1">
               <span className="e-metric-icon"><Shield /></span>
               <div className="min-w-0">
                 <div className="e-metric-label">Tổng quỹ rủi ro (tích lũy)</div>
                 <div className="e-metric-value !text-teal-700">{fmt(risk.totalFund)}</div>
               </div>
             </div>
-            <div className="e-metric">
-              <span className="e-metric-icon e-tone-brand"><ArrowDownLeft /></span>
+            <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5">
+              <span className="e-metric-icon e-tone-brand max-lg:w-10 max-lg:h-10"><ArrowDownLeft /></span>
               <div className="min-w-0">
                 <div className="e-metric-label">Trích tháng {month}</div>
-                <div className="e-metric-value">+{fmt(risk.monthDep)}</div>
+                <div className="e-metric-value max-lg:text-[17px]">+{fmt(risk.monthDep)}</div>
               </div>
             </div>
-            <div className="e-metric">
-              <span className="e-metric-icon e-tone-peach"><ArrowUpRight /></span>
+            <div className="e-metric max-lg:flex-col max-lg:items-start max-lg:gap-2 max-lg:p-3.5">
+              <span className="e-metric-icon e-tone-peach max-lg:w-10 max-lg:h-10"><ArrowUpRight /></span>
               <div className="min-w-0">
                 <div className="e-metric-label">Rút tháng {month}</div>
-                <div className="e-metric-value">−{fmt(risk.monthWit)}</div>
+                <div className="e-metric-value max-lg:text-[17px]">−{fmt(risk.monthWit)}</div>
               </div>
             </div>
           </div>
@@ -265,11 +280,16 @@ export default function PLPage() {
           {/* Form trích / rút */}
           {canWrite && (
             <form onSubmit={addRisk} className="e-card e-card-pad grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+              <div className="lg:hidden col-span-full text-[16px] font-bold text-slate-900">Ghi bút toán quỹ</div>
               <div>
                 <label className="e-label">Ngày</label>
-                <input type="date" value={rf.date} onChange={e => setRf({ ...rf, date: e.target.value })} className="e-input" />
+                <input type="date" value={rf.date} onChange={e => setRf({ ...rf, date: e.target.value })} className="e-input max-lg:h-12 max-lg:text-[16px]" />
               </div>
-              <div>
+              <div className="lg:hidden col-span-full grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setRf({ ...rf, kind: 'deposit' })} className={`h-12 rounded-xl border text-[14.5px] font-bold inline-flex items-center justify-center gap-2 ${rf.kind === 'deposit' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'bg-white border-slate-200 text-slate-500'}`}><ArrowDownLeft className="w-5 h-5" />Trích vào quỹ</button>
+                <button type="button" onClick={() => setRf({ ...rf, kind: 'withdraw' })} className={`h-12 rounded-xl border text-[14.5px] font-bold inline-flex items-center justify-center gap-2 ${rf.kind === 'withdraw' ? 'bg-peach-50 border-peach-500 text-peach-600' : 'bg-white border-slate-200 text-slate-500'}`}><ArrowUpRight className="w-5 h-5" />Rút khỏi quỹ</button>
+              </div>
+              <div className="hidden lg:block">
                 <label className="e-label">Loại</label>
                 <select value={rf.kind} onChange={e => setRf({ ...rf, kind: e.target.value })} className="e-input cursor-pointer">
                   <option value="deposit">Trích vào quỹ (dòng tiền −)</option>
@@ -278,13 +298,13 @@ export default function PLPage() {
               </div>
               <div>
                 <label className="e-label">Số tiền (VND)</label>
-                <input inputMode="numeric" value={fmtInput(rf.amount)} onChange={e => setRf({ ...rf, amount: e.target.value.replace(/\D/g, '') })} placeholder="VD: 50.000.000" className="e-input font-semibold tabular-nums" />
+                <input inputMode="numeric" value={fmtInput(rf.amount)} onChange={e => setRf({ ...rf, amount: e.target.value.replace(/\D/g, '') })} placeholder="VD: 50.000.000" className="e-input font-semibold tabular-nums max-lg:h-12 max-lg:text-[16px]" />
               </div>
               <div>
                 <label className="e-label">Ghi chú</label>
-                <input value={rf.note} onChange={e => setRf({ ...rf, note: e.target.value })} placeholder="VD: trích quỹ tháng 8" className="e-input" />
+                <input value={rf.note} onChange={e => setRf({ ...rf, note: e.target.value })} placeholder="VD: trích quỹ tháng 8" className="e-input max-lg:h-12 max-lg:text-[16px]" />
               </div>
-              <button type="submit" disabled={savingRf} className="e-btn e-btn-primary w-full"><Plus className="w-4 h-4" />{rf.kind === 'withdraw' ? 'Rút quỹ' : 'Trích quỹ'}</button>
+              <button type="submit" disabled={savingRf} className="e-btn e-btn-primary w-full max-lg:h-12 max-lg:col-span-full"><Plus className="w-4 h-4" />{rf.kind === 'withdraw' ? 'Rút quỹ' : 'Trích quỹ'}</button>
             </form>
           )}
 
@@ -305,7 +325,7 @@ export default function PLPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="text-[14px] font-semibold text-slate-800">{r.kind === 'withdraw' ? 'Rút khỏi quỹ' : 'Trích vào quỹ'}</div>
-                      <div className="text-[12px] text-slate-500 truncate">{new Date(r.date).toLocaleDateString('vi-VN')}{r.note ? ` · ${r.note}` : ''}</div>
+                      <div className="text-[12px] text-slate-500 truncate max-lg:whitespace-normal max-lg:line-clamp-2">{new Date(r.date).toLocaleDateString('vi-VN')}{r.note ? ` · ${r.note}` : ''}</div>
                     </div>
                     <div className={`text-[14px] font-bold tabular-nums shrink-0 ${r.kind === 'withdraw' ? 'text-peach-600' : 'text-teal-700'}`}>{r.kind === 'withdraw' ? '−' : '+'}{fmt(r.amount)}</div>
                     {canWrite && <button onClick={() => delRisk(r.id)} title="Xoá" className="e-icon-btn w-9 h-9 shrink-0 hover:!text-danger-600 hover:!border-danger-200 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button>}
