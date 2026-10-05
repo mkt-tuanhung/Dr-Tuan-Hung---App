@@ -8,7 +8,7 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import FinanceRevenueSummary from '@/components/FinanceRevenueSummary.jsx';
 import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
-import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight, CircleDollarSign, Undo2, PiggyBank, ReceiptText } from 'lucide-react';
+import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight, CircleDollarSign, Undo2, PiggyBank, ReceiptText, Plus, Phone, StickyNote } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 const COLORS = ['#067B7F', '#3CA7A9', '#76C2C3', '#F4B183', '#A99BE0', '#B8C4CC'];
@@ -88,6 +88,10 @@ const FinanceManagementPage = () => {
   const [offsetList, setOffsetList] = useState([]); // ca mổ tháng này có cọc từ trước -> đối trừ
   const [cocByMonth, setCocByMonth] = useState([]); // [{m, total, count}] cả năm
   const [showCocModal, setShowCocModal] = useState(false);
+  // Điện thoại: lọc nhóm dịch vụ + tìm + bảng chi tiết 1 giao dịch (chỉ hiển thị)
+  const [mGroup, setMGroup] = useState('all');
+  const [mQ, setMQ] = useState('');
+  const [sheet, setSheet] = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -392,7 +396,7 @@ const FinanceManagementPage = () => {
       </div>
 
       {activeTab === 'revenue' && (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {/* Controls */}
           <div className="e-toolbar justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -411,22 +415,22 @@ const FinanceManagementPage = () => {
 
           {/* ===== DÒNG TIỀN THÁNG: phép tính trực quan 4 bước → tổng thực về ===== */}
           <div className="e-card e-card-pad">
-            <div className="e-card-header flex-wrap">
+            <div className="e-card-header flex-wrap max-lg:mb-3">
               <div className="min-w-0">
                 <div className="e-card-title">Dòng tiền tháng {month}/{year}</div>
                 <div className="e-card-sub">Doanh thu ca mổ − cọc đã thu trước + cọc thu trong tháng</div>
               </div>
-              <button type="button" onClick={() => setShowCocModal(true)} className="e-btn e-btn-outline e-btn-sm shrink-0">
+              <button type="button" onClick={() => setShowCocModal(true)} className="e-btn e-btn-outline e-btn-sm shrink-0 max-lg:w-full">
                 <Search className="w-4 h-4" /> Chi tiết khách cọc
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 lg:gap-3 [&>*]:max-lg:p-3 [&>*>span:first-child]:max-lg:hidden">
               <div className="rounded-xl border border-slate-200 bg-white p-3.5 flex items-center gap-3 min-w-0">
                 <span className="w-11 h-11 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><CircleDollarSign className="w-5 h-5" /></span>
                 <div className="min-w-0">
                   <div className="text-[12.5px] font-medium text-slate-500 truncate">Doanh thu ca mổ</div>
-                  <div className="text-[18px] lg:text-[20px] font-bold text-slate-900 leading-tight truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
+                  <div className="text-[16px] sm:text-[18px] lg:text-[20px] font-bold text-slate-900 leading-tight truncate tabular-nums" title={fmt(stats.totalRev)}>{fmt(stats.totalRev)}</div>
                   <div className="text-[12px] text-slate-400 truncate">{stats.totalCustomers} ca mổ trong tháng</div>
                 </div>
               </div>
@@ -434,7 +438,7 @@ const FinanceManagementPage = () => {
                 <span className="w-11 h-11 rounded-full bg-warning-50 text-warning-600 grid place-items-center shrink-0"><Undo2 className="w-5 h-5" /></span>
                 <div className="min-w-0">
                   <div className="text-[12.5px] font-medium text-slate-500 truncate">− Cọc đã thu trước</div>
-                  <div className="text-[18px] lg:text-[20px] font-bold text-warning-600 leading-tight truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
+                  <div className="text-[16px] sm:text-[18px] lg:text-[20px] font-bold text-warning-600 leading-tight truncate tabular-nums" title={fmt(stats.depositOffset || 0)}>− {fmt(stats.depositOffset || 0)}</div>
                   <div className="text-[12px] text-teal-700 font-medium truncate">{stats.depositOffsetCount || 0} ca đã cọc từ trước ▸</div>
                 </div>
               </button>
@@ -442,7 +446,7 @@ const FinanceManagementPage = () => {
                 <span className="w-11 h-11 rounded-full bg-white text-teal-700 grid place-items-center shrink-0"><Wallet className="w-5 h-5" /></span>
                 <div className="min-w-0">
                   <div className="text-[12.5px] font-semibold text-teal-800 truncate">= Thực thu ca mổ</div>
-                  <div className="text-[18px] lg:text-[20px] font-bold text-teal-800 leading-tight truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
+                  <div className="text-[16px] sm:text-[18px] lg:text-[20px] font-bold text-teal-800 leading-tight truncate tabular-nums" title={fmt(netSurgery)}>{fmt(netSurgery)}</div>
                   <div className="text-[12px] text-teal-700/80 truncate">tiền ca mổ thực về tháng này</div>
                 </div>
               </div>
@@ -450,20 +454,20 @@ const FinanceManagementPage = () => {
                 <span className="w-11 h-11 rounded-full bg-info-50 text-info-600 grid place-items-center shrink-0"><PiggyBank className="w-5 h-5" /></span>
                 <div className="min-w-0">
                   <div className="text-[12.5px] font-medium text-slate-500 truncate">+ Cọc thu trong tháng</div>
-                  <div className="text-[18px] lg:text-[20px] font-bold text-info-600 leading-tight truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
+                  <div className="text-[16px] sm:text-[18px] lg:text-[20px] font-bold text-info-600 leading-tight truncate tabular-nums" title={fmt(stats.totalCocRev || 0)}>+ {fmt(stats.totalCocRev || 0)}</div>
                   <div className="text-[12px] text-teal-700 font-medium truncate">{stats.totalCocCustomers || 0} khách cọc ▸</div>
                 </div>
               </button>
             </div>
 
             <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5 flex items-center justify-between gap-3">
-              <div className="text-[13px] md:text-[14px] font-bold text-teal-900 flex items-center gap-2 min-w-0"><Banknote className="w-[18px] h-[18px] text-teal-600 shrink-0" /> <span className="truncate">Tổng tiền thực về trong tháng</span></div>
+              <div className="text-[13px] md:text-[14px] font-bold text-teal-900 flex items-center gap-2 min-w-0"><Banknote className="w-[18px] h-[18px] text-teal-600 shrink-0" /> <span className="truncate"><span className="lg:hidden">Tổng thực về</span><span className="hidden lg:inline">Tổng tiền thực về trong tháng</span></span></div>
               <div className="text-[19px] md:text-[24px] font-bold text-teal-900 tabular-nums shrink-0" title={fmt(totalCashIn)}>{fmt(totalCashIn)}</div>
             </div>
           </div>
 
           {/* Chỉ số phụ (MetricCard Ethics) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2.5 lg:gap-4 [&>.e-metric]:max-lg:flex-col [&>.e-metric]:max-lg:items-start [&>.e-metric]:max-lg:gap-1.5 [&>.e-metric]:max-lg:p-3 [&_.e-metric-icon]:max-lg:w-9 [&_.e-metric-icon]:max-lg:h-9 [&_.e-metric-icon_svg]:max-lg:w-[18px] [&_.e-metric-icon_svg]:max-lg:h-[18px] [&_.e-metric-value]:max-lg:text-[16px] [&_.e-metric-label]:max-lg:text-[11.5px]">
             <div className="e-metric">
               <span className="e-metric-icon"><TrendingUp /></span>
               <div className="min-w-0">
@@ -490,7 +494,8 @@ const FinanceManagementPage = () => {
           {/* ===== Modal chi tiết tiền cọc ===== */}
           {showCocModal && (
             <div className="e-modal-backdrop z-[80] flex items-end md:items-center justify-center p-0 md:p-6" onClick={() => setShowCocModal(false)}>
-              <div className="e-modal md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-b-none md:rounded-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="e-modal md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-b-none rounded-t-3xl md:rounded-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="md:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
                 <div className="e-modal-header items-center shrink-0">
                   <div className="min-w-0">
                     <div className="e-modal-title truncate">Chi tiết tiền cọc — Tháng {month}/{year}</div>
@@ -530,8 +535,8 @@ const FinanceManagementPage = () => {
                     ) : (
                       <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                         {cocList.map(c => (
-                          <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
-                            <div className="flex-1 min-w-0">
+                          <div key={c.id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 px-4 py-3 bg-white">
+                            <div className="flex-1 min-w-0 max-sm:basis-full">
                               <div className="text-[14px] font-semibold text-slate-900 truncate">{c.customer_name} <span className="font-normal text-slate-400 text-[12px]">· {c.phone}</span></div>
                               <div className="text-[12px] text-slate-500 truncate">Cọc ngày {String(c.deposit_date).slice(0,10).split('-').reverse().join('/')}{c.service ? ` · ${c.service}` : ''}</div>
                             </div>
@@ -540,7 +545,7 @@ const FinanceManagementPage = () => {
                               : c.status === 'bong' || c.bong_date
                                 ? <span className="e-badge e-badge-sm e-tone-danger shrink-0">Bong</span>
                                 : <span className="e-badge e-badge-sm e-tone-info shrink-0">Đang cọc</span>}
-                            <div className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">{fmt(Number(c.deposit_amount || 0))}</div>
+                            <div className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums max-sm:ml-auto">{fmt(Number(c.deposit_amount || 0))}</div>
                           </div>
                         ))}
                       </div>
@@ -559,12 +564,12 @@ const FinanceManagementPage = () => {
                       <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                         {offsetList.map(r => (
                           <div key={r.id} className="px-4 py-3 bg-white">
-                            <div className="flex items-center gap-3">
+                            <div className="flex max-sm:flex-col sm:items-center gap-1.5 sm:gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="text-[14px] font-semibold text-slate-900 truncate">{r.customer_name} <span className="font-normal text-slate-400 text-[12px]">· {r.phone}</span></div>
                                 <div className="text-[12px] text-slate-500 truncate">Mổ {String(r.surgery_date || '').slice(0,10).split('-').reverse().join('/')} · Cọc {r.deposit_date ? String(r.deposit_date).slice(0,10).split('-').reverse().join('/') : '?'}{r.service ? ` · ${r.service}` : ''}</div>
                               </div>
-                              <div className="shrink-0 text-right">
+                              <div className="shrink-0 sm:text-right">
                                 <div className="text-[12px] text-slate-500 tabular-nums">DT {fmt(r.revenue)} − cọc <span className="text-warning-600 font-semibold">{fmt(r.deposit_amount)}</span></div>
                                 <div className="text-[14px] font-bold text-teal-700 tabular-nums">Thực thu {fmt(r.revenue - r.deposit_amount)}</div>
                               </div>
@@ -590,8 +595,8 @@ const FinanceManagementPage = () => {
 
 
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Charts — trên điện thoại xếp sau danh sách giao dịch */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-lg:order-last">
             <div className="e-card e-card-pad min-w-0">
               <div className="e-card-header"><h3 className="e-card-title">Tỷ trọng Nguồn Khách (VND)</h3></div>
               <div className="h-64 [&_.recharts-cartesian-axis-tick_text]:fill-[#A3ABAA] [&_.recharts-cartesian-grid_line]:[stroke-dasharray:0] [&_.recharts-default-tooltip]:!rounded-xl [&_.recharts-default-tooltip]:!border-slate-200 [&_.recharts-legend-item-text]:!text-slate-600">
@@ -623,16 +628,17 @@ const FinanceManagementPage = () => {
           </div>
 
           {/* Table — danh sách giao dịch kiểu DataTable Ethics */}
-          <div className="e-card overflow-hidden">
-            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
-              <h3 className="e-card-title">Danh sách Giao dịch Doanh Thu</h3>
+          <div className="e-card overflow-hidden max-lg:overflow-visible max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none">
+            <div className="px-4 lg:px-5 py-3.5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3 max-lg:px-1 max-lg:py-1 max-lg:border-0">
+              <h3 className="e-card-title"><span className="lg:hidden">Giao dịch doanh thu</span><span className="hidden lg:inline">Danh sách Giao dịch Doanh Thu</span></h3>
               {(profile?.role === 'admin' || profile?.role === 'marketing') && (
                 <div className="flex items-center gap-2">
                   <button onClick={() => { setImportPreview(null); setShowImportModal(true); }} className="e-btn e-btn-secondary e-btn-sm">
-                    <Upload className="w-4 h-4" /> Import Excel/CSV
+                    <Upload className="w-4 h-4" /> <span className="lg:hidden">Import</span><span className="hidden lg:inline">Import Excel/CSV</span>
                   </button>
-                  <button onClick={openCreateRevenue} className="e-btn e-btn-primary e-btn-sm">
-                    + Nhập trực tiếp
+                  <button onClick={openCreateRevenue}
+                    className="e-btn e-btn-primary e-btn-sm max-lg:fixed max-lg:right-4 max-lg:bottom-[calc(88px+env(safe-area-inset-bottom))] max-lg:z-20 max-lg:h-12 max-lg:px-5 max-lg:rounded-full max-lg:text-[14.5px] max-lg:shadow-nav">
+                    <span className="lg:hidden inline-flex items-center gap-2"><Plus className="w-5 h-5" /> Nhập doanh thu</span><span className="hidden lg:inline">+ Nhập trực tiếp</span>
                   </button>
                 </div>
               )}
@@ -643,50 +649,64 @@ const FinanceManagementPage = () => {
               <div className="e-empty"><div className="e-empty-icon"><ReceiptText /></div><div className="e-empty-title">Không có giao dịch nào trong tháng này.</div></div>
             ) : (
               <>
-              {/* Mobile: danh sách thẻ kiểu lead-card Ethics */}
-              <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
-                {revenueData.map(r => (
-                  <div key={r.id} className="e-card-flat p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="e-avatar w-11 h-11"><ReceiptText className="w-5 h-5" /></span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[15px] font-semibold text-slate-900 truncate">{r.customer_name}</div>
-                        <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 tabular-nums">
-                          <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
+              {/* Điện thoại: danh sách gom theo ngày — không trượt ngang, bấm 1 dòng để xem chi tiết */}
+              {(() => {
+                const groupsOf = [...new Set(revenueData.map(r => r.service_group || 'Chưa rõ'))];
+                const nq = mQ.trim().toLowerCase();
+                const shown = revenueData.filter(r => (mGroup === 'all' || (r.service_group || 'Chưa rõ') === mGroup)
+                  && (!nq || `${r.customer_name || ''} ${r.phone || ''} ${r.service || ''} ${r.customer_source || ''}`.toLowerCase().includes(nq)));
+                const sumOf = (list) => list.reduce((t, r) => t + Number(r.revenue || 0), 0);
+                const days = [];
+                shown.forEach(r => { const g = days[days.length - 1]; if (g && g.date === r.surgery_date) g.items.push(r); else days.push({ date: r.surgery_date, items: [r] }); });
+                const WD = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+                const dayLabel = (ds) => { const x = new Date(ds); return isNaN(x) ? 'Chưa có ngày' : `${WD[x.getDay()]}, ${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}`; };
+                const ini = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+                return (
+                  <div className="lg:hidden space-y-3 pt-2">
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+                      {[{ id: 'all', label: 'Tất cả', list: revenueData }, ...groupsOf.map(g => ({ id: g, label: g, list: revenueData.filter(r => (r.service_group || 'Chưa rõ') === g) }))].map(c => (
+                        <button key={c.id} onClick={() => setMGroup(c.id)}
+                          className={`shrink-0 flex flex-col items-start px-3.5 py-2 rounded-2xl border text-left transition ${mGroup === c.id ? 'bg-teal-700 border-teal-700 text-white' : 'bg-white border-slate-200 text-slate-700 shadow-soft'}`}>
+                          <span className="text-[13px] font-semibold whitespace-nowrap">{c.label} <span className={mGroup === c.id ? 'text-white/75' : 'text-slate-400'}>{c.list.length}</span></span>
+                          <span className={`text-[12px] font-semibold tabular-nums whitespace-nowrap ${mGroup === c.id ? 'text-white/85' : 'text-teal-700'}`}>{fmt(sumOf(c.list))}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="e-search">
+                      <Search />
+                      <input value={mQ} onChange={e => setMQ(e.target.value)} placeholder="Tìm khách, SĐT, dịch vụ, nguồn…" className="!h-11 !text-[16px] !bg-white" />
+                    </div>
+                    {days.length === 0 ? (
+                      <div className="e-empty"><div className="e-empty-icon"><ReceiptText /></div><div className="e-empty-title">Không có giao dịch phù hợp</div></div>
+                    ) : days.map(g => (
+                      <section key={g.date || 'none'}>
+                        <div className="flex items-center justify-between px-1 mb-1.5">
+                          <span className="text-[13px] font-bold text-slate-700">{dayLabel(g.date)} <span className="font-medium text-slate-400">· {g.items.length} ca</span></span>
+                          <span className="text-[12.5px] font-semibold text-teal-700 tabular-nums">{fmt(sumOf(g.items))}</span>
                         </div>
-                      </div>
-                      <span className="e-badge e-badge-sm e-tone-brand shrink-0">{r.service_group || 'Chưa rõ'}</span>
-                    </div>
-                    <div className="mt-3 text-[13px] text-slate-500 truncate">Dịch vụ: <span className="font-medium text-slate-800">{r.service || 'N/A'}</span></div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                      <span className="e-badge e-badge-sm e-tone-neutral">{r.customer_source || 'Khác'}</span>
-                      <span className="e-badge e-badge-sm e-tone-neutral">{r.customer_type || 'Mới'}</span>
-                    </div>
-                    <div className="e-subtle mt-3 p-3 grid grid-cols-2 gap-3">
-                      <div className="min-w-0">
-                        <div className="e-kv-label">Doanh thu tổng</div>
-                        <div className="text-[15px] font-bold text-teal-700 tabular-nums truncate">{fmt(r.revenue || 0)}</div>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="e-kv-label">Upsale</div>
-                        <div className="text-[14px] font-semibold text-slate-800 tabular-nums truncate">{fmt(r.upsale_revenue || 0)}</div>
-                      </div>
-                    </div>
-                    {(profile?.role === 'admin' || profile?.role === 'marketing') && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                        <button onClick={() => openEditRevenue(r)} className="e-btn e-btn-secondary e-btn-sm flex-1">
-                          <Pencil className="w-4 h-4" /> Sửa
-                        </button>
-                        <button onClick={() => handleDeleteRevenue(r)} title="Xóa" className="e-btn e-btn-danger-soft e-btn-sm w-[34px] px-0">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100 overflow-hidden">
+                          {g.items.map(r => (
+                            <button key={r.id} onClick={() => setSheet(r)} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-teal-50/50 transition">
+                              <span className="w-11 h-11 rounded-full grid place-items-center shrink-0 text-[14px] font-bold bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700">{ini(r.customer_name)}</span>
+                              <span className="flex-1 min-w-0">
+                                <span className="block text-[14.5px] font-semibold text-slate-900 truncate">{r.customer_name}</span>
+                                <span className="block text-[12.5px] text-slate-500 truncate">{r.service || 'N/A'}</span>
+                                <span className="block text-[11.5px] text-slate-400 truncate">{[r.service_group || 'Chưa rõ', r.customer_source || 'Khác', r.customer_type || 'Mới'].join(' · ')}</span>
+                              </span>
+                              <span className="shrink-0 text-right">
+                                <span className="block text-[15px] font-bold text-teal-700 tabular-nums whitespace-nowrap">{fmt(r.revenue || 0)}</span>
+                                {Number(r.upsale_revenue || 0) > 0 && <span className="block text-[11.5px] text-slate-500 tabular-nums whitespace-nowrap">Upsale {fmt(r.upsale_revenue)}</span>}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {/* ≥md: bảng e-table */}
-              <div className="e-table-wrap hidden md:block">
+                );
+              })()}
+              {/* Máy tính: bảng e-table */}
+              <div className="e-table-wrap hidden lg:block">
                 <table className="e-table">
                   <thead>
                     <tr>
@@ -762,6 +782,39 @@ const FinanceManagementPage = () => {
                 window.dispatchEvent(new CustomEvent('NAVIGATE', { detail: 'vien_phi', bubbles: true }));
               }}
           />
+        </div>
+      )}
+
+      {/* Điện thoại: chi tiết 1 giao dịch doanh thu + Sửa / Xoá */}
+      {sheet && (
+        <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+          <div className="e-modal-backdrop" onClick={() => setSheet(null)} />
+          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[88vh] overflow-y-auto animate-page">
+            <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-[17px] font-bold text-slate-900 break-words">{sheet.customer_name}</div>
+                <div className="text-[13px] text-slate-500 mt-0.5">{sheet.surgery_date ? new Date(sheet.surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
+              </div>
+              <button onClick={() => setSheet(null)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="mt-3 rounded-2xl bg-teal-50 p-4 grid grid-cols-2 gap-3">
+              <div className="min-w-0"><div className="text-[12px] text-teal-800/70">Doanh thu tổng</div><div className="text-[20px] font-bold text-teal-800 tabular-nums truncate">{fmt(sheet.revenue || 0)}</div></div>
+              <div className="min-w-0"><div className="text-[12px] text-teal-800/70">Upsale</div><div className="text-[17px] font-bold text-slate-800 tabular-nums truncate">{fmt(sheet.upsale_revenue || 0)}</div></div>
+            </div>
+            <div className="e-subtle mt-3 divide-y divide-slate-100">
+              <div className="flex items-start gap-3 px-3.5 py-3"><ReceiptText className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" /><span className="text-[13px] text-slate-500 w-24 shrink-0">Dịch vụ</span><span className="text-[14px] font-semibold text-slate-800 min-w-0 break-words">{sheet.service || 'N/A'}</span></div>
+              <div className="flex items-start gap-3 px-3.5 py-3"><Filter className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" /><span className="text-[13px] text-slate-500 w-24 shrink-0">Phân loại</span><span className="flex flex-wrap gap-1.5"><span className="e-badge e-badge-sm e-tone-brand">{sheet.service_group || 'Chưa rõ'}</span><span className="e-badge e-badge-sm e-tone-neutral">{sheet.customer_source || 'Khác'}</span><span className="e-badge e-badge-sm e-tone-neutral">{sheet.customer_type || 'Mới'}</span></span></div>
+              {sheet.phone && <a href={`tel:${sheet.phone}`} className="flex items-center gap-3 px-3.5 py-3"><Phone className="w-4 h-4 text-teal-600 shrink-0" /><span className="text-[13px] text-slate-500 w-24 shrink-0">Điện thoại</span><span className="text-[14px] font-semibold text-teal-700 tabular-nums">{sheet.phone}</span></a>}
+              {sheet.notes && <div className="flex items-start gap-3 px-3.5 py-3"><StickyNote className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" /><span className="text-[13px] text-slate-500 w-24 shrink-0">Ghi chú</span><span className="text-[14px] text-slate-800 min-w-0 whitespace-pre-line break-words">{sheet.notes}</span></div>}
+            </div>
+            {(profile?.role === 'admin' || profile?.role === 'marketing') && (
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <button onClick={() => { const r = sheet; setSheet(null); openEditRevenue(r); }} className="e-btn e-btn-outline h-12"><Pencil className="w-4 h-4" /> Sửa</button>
+                <button onClick={() => { const r = sheet; setSheet(null); handleDeleteRevenue(r); }} className="e-btn e-btn-danger-soft h-12"><Trash2 className="w-4 h-4" /> Xoá</button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -845,8 +898,9 @@ const FinanceManagementPage = () => {
       )}
 
       {showCreateModal && (
-        <div className="e-modal-backdrop z-50 flex justify-center items-start py-10 px-4 overflow-y-auto">
-          <div className="e-modal max-w-3xl overflow-hidden my-auto">
+        <div className="e-modal-backdrop z-50 flex justify-center items-end lg:items-start lg:py-10 lg:px-4 overflow-y-auto">
+          <div className="e-modal max-w-3xl overflow-hidden lg:my-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[92vh] max-lg:flex max-lg:flex-col">
+            <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
             <div className="e-modal-header items-center">
               <div className="min-w-0">
                 <h3 className="e-modal-title">{createForm.id ? 'Sửa doanh thu' : 'Nhập doanh thu trực tiếp'}</h3>
@@ -857,22 +911,22 @@ const FinanceManagementPage = () => {
               </button>
             </div>
             
-            <form onSubmit={handleCreateSubmit}>
-              <div className="e-modal-body space-y-5">
+            <form onSubmit={handleCreateSubmit} className="max-lg:flex max-lg:flex-col max-lg:min-h-0">
+              <div className="e-modal-body space-y-5 max-lg:overflow-y-auto">
                 <section>
                   <div className="e-caption mb-2.5">Thông tin khách</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
                     <div>
                       <label className="e-label">Ngày <span className="text-danger-500">*</span></label>
-                      <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="e-input" />
+                      <input required type="date" value={createForm.surgery_date} onChange={e => setCreateForm({...createForm, surgery_date: e.target.value})} className="e-input max-lg:h-12 max-lg:text-[16px]" />
                     </div>
                     <div>
                       <label className="e-label">Họ tên khách hàng <span className="text-danger-500">*</span></label>
-                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="e-input" placeholder="Nhập tên..." />
+                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="e-input max-lg:h-12 max-lg:text-[16px]" placeholder="Nhập tên..." />
                     </div>
                     <div>
                       <label className="e-label">Số điện thoại <span className="text-danger-500">*</span></label>
-                      <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="e-input" placeholder="Nhập SĐT..." />
+                      <input required value={createForm.phone} onChange={e => setCreateForm({...createForm, phone: e.target.value})} className="e-input max-lg:h-12 max-lg:text-[16px]" placeholder="Nhập SĐT..." />
                     </div>
                   </div>
                 </section>
@@ -882,11 +936,11 @@ const FinanceManagementPage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
                     <div>
                       <label className="e-label">Dịch vụ sử dụng <span className="text-danger-500">*</span></label>
-                      <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="e-input" placeholder="Ví dụ: Nâng mũi" />
+                      <input required value={createForm.service} onChange={e => setCreateForm({...createForm, service: e.target.value})} className="e-input max-lg:h-12 max-lg:text-[16px]" placeholder="Ví dụ: Nâng mũi" />
                     </div>
                     <div>
                       <label className="e-label">Nhóm dịch vụ <span className="text-danger-500">*</span></label>
-                      <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="e-input cursor-pointer">
+                      <select value={createForm.service_group} onChange={e => setCreateForm({...createForm, service_group: e.target.value})} className="e-input cursor-pointer max-lg:h-12 max-lg:text-[16px]">
                         <option value="Hàm mặt">Hàm mặt</option>
                         <option value="Body">Body</option>
                         <option value="Tiểu phẫu">Tiểu phẫu</option>
@@ -894,7 +948,7 @@ const FinanceManagementPage = () => {
                     </div>
                     <div>
                       <label className="e-label">Nguồn khách <span className="text-danger-500">*</span></label>
-                      <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="e-input cursor-pointer">
+                      <select value={createForm.customer_source} onChange={e => setCreateForm({...createForm, customer_source: e.target.value})} className="e-input cursor-pointer max-lg:h-12 max-lg:text-[16px]">
                         <option value="Ads">Ads</option>
                         <option value="Seeding">Seeding</option>
                         <option value="CTV">CTV</option>
@@ -904,7 +958,7 @@ const FinanceManagementPage = () => {
                     </div>
                     <div>
                       <label className="e-label">Tệp khách <span className="text-danger-500">*</span></label>
-                      <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="e-input cursor-pointer">
+                      <select value={createForm.customer_type} onChange={e => setCreateForm({...createForm, customer_type: e.target.value})} className="e-input cursor-pointer max-lg:h-12 max-lg:text-[16px]">
                         <option value="Mới">Khách Mới</option>
                         <option value="Cũ">Khách Cũ</option>
                       </select>
@@ -917,11 +971,11 @@ const FinanceManagementPage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                     <div>
                       <label className="e-label">Doanh thu tổng (VNĐ) <span className="text-danger-500">*</span></label>
-                      <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="e-input text-teal-700 font-bold tabular-nums" placeholder="0" />
+                      <MoneyInput required value={createForm.revenue} onChange={v => setCreateForm({...createForm, revenue: v})} className="e-input text-teal-700 font-bold tabular-nums max-lg:h-12 max-lg:text-[16px]" placeholder="0" />
                     </div>
                     <div>
                       <label className="e-label">Doanh thu Upsale (VNĐ)</label>
-                      <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="e-input font-bold tabular-nums" placeholder="0" />
+                      <MoneyInput value={createForm.upsale_revenue} onChange={v => setCreateForm({...createForm, upsale_revenue: v})} className="e-input font-bold tabular-nums max-lg:h-12 max-lg:text-[16px]" placeholder="0" />
                     </div>
                   </div>
                 </section>
@@ -931,7 +985,7 @@ const FinanceManagementPage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
                     <div>
                       <label className="e-label">Sale Offline phụ trách</label>
-                      <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="e-input cursor-pointer">
+                      <select value={createForm.sale_id} onChange={e => setCreateForm({...createForm, sale_id: e.target.value})} className="e-input cursor-pointer max-lg:h-12 max-lg:text-[16px]">
                         <option value="">-- Không có --</option>
                         {staffList.filter(s => s.role === 'sale_offline' || s.role_2 === 'sale_offline' || s.role === 'admin').map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -940,7 +994,7 @@ const FinanceManagementPage = () => {
                     </div>
                     <div>
                       <label className="e-label">Telesale phụ trách</label>
-                      <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="e-input cursor-pointer">
+                      <select value={createForm.telesale_id} onChange={e => setCreateForm({...createForm, telesale_id: e.target.value})} className="e-input cursor-pointer max-lg:h-12 max-lg:text-[16px]">
                         <option value="">-- Không có --</option>
                         {staffList.filter(s => s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin').map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -949,7 +1003,7 @@ const FinanceManagementPage = () => {
                     </div>
                     <div>
                       <label className="e-label">Telesale phụ trách 2 <span className="text-slate-400 font-normal">(chia đôi HH)</span></label>
-                      <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="e-input cursor-pointer">
+                      <select value={createForm.telesale_id_2} onChange={e => setCreateForm({...createForm, telesale_id_2: e.target.value})} className="e-input cursor-pointer max-lg:h-12 max-lg:text-[16px]">
                         <option value="">-- Không có --</option>
                         {staffList.filter(s => (s.role === 'telesale' || s.role_2 === 'telesale' || s.role === 'admin') && s.id !== createForm.telesale_id).map(s => (
                           <option key={s.id} value={s.id}>{s.full_name}</option>
@@ -961,12 +1015,13 @@ const FinanceManagementPage = () => {
 
                 <div>
                   <label className="e-label">Ghi chú thêm</label>
-                  <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="e-textarea resize-none" placeholder="Nhập ghi chú..."></textarea>
+                  <textarea rows={3} value={createForm.notes} onChange={e => setCreateForm({...createForm, notes: e.target.value})} className="e-textarea resize-none max-lg:text-[16px]" placeholder="Nhập ghi chú..."></textarea>
                 </div>
               </div>
 
-              <div className="e-modal-footer">
-                <button type="submit" disabled={saving} className="e-btn e-btn-primary">
+              <div className="e-modal-footer max-lg:rounded-none max-lg:bg-white max-lg:pb-[calc(16px+env(safe-area-inset-bottom))]">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="e-btn e-btn-secondary lg:hidden h-12 flex-1">Huỷ</button>
+                <button type="submit" disabled={saving} className="e-btn e-btn-primary max-lg:h-12 max-lg:flex-1">
                   {saving ? 'Đang lưu...' : (createForm.id ? 'Cập nhật' : 'Nhập Doanh Thu')}
                 </button>
               </div>
