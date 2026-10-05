@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Lương của tôi</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.pg{width:794px;height:1123px;box-sizing:border-box;padding:48px 56px 36px;background:#F7FBFB;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1B2020;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4A5A59}
+.top img{width:30px;height:30px;border-radius:50%;background:#0F1A1A;object-fit:contain}
+.sp{flex:1;height:1px;background:#C3D3D2}
+.hd{display:flex;align-items:flex-end;gap:18px}
+.no{font-size:84px;line-height:.78;font-weight:800;color:#067B7F;letter-spacing:-.04em}
+h1{margin:0;font-size:32px;line-height:1.15;font-weight:800;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:#3D4D4C}
+h2{margin:0 0 10px;font-size:16px;font-weight:800;color:#06686C}
+.phone{position:relative;width:200px;border:7px solid #1B2020;border-radius:30px;overflow:hidden;box-shadow:0 16px 36px rgba(6,95,99,.18);background:#fff;flex-shrink:0}
+.phone img{display:block;width:100%}
+.pin{position:absolute;width:26px;height:26px;border-radius:50%;background:#067B7F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.cap{font-size:12px;color:#4A5A59;text-align:center;margin-top:8px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;font-size:13.5px;line-height:1.45}
+.n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#067B7F;color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.box{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:14px 16px;font-size:14px;line-height:1.5}
+.tip{background:#FFF4EA;border:1px solid #F2D2B4;border-radius:16px;padding:12px 16px;font-size:14px;line-height:1.5}
+.ft{margin-top:auto;display:flex;justify-content:space-between;font-size:12px;color:#5B6B6A;border-top:1px solid #DCEEED;padding-top:10px}
+.line{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #EEF5F5;font-size:13.5px}
+.line:last-child{border-bottom:0}
+</style>
+</helmet>
+<div class="pg">
+  <div class="top"><img src="/_blob/dcbbfdd90e3d4f4acd3dc70b28ef4ae6" alt=""><span>Cẩm nang nhân viên · App Dr Tuấn Hùng</span><span class="sp"></span><span>Phần 10</span></div>
+  <div class="hd"><span class="no">10</span><div><h1>Lương của tôi</h1><p class="lead">Phiếu lương từng tháng — chỉ riêng bạn xem được, cập nhật tự động.</p></div></div>
+
+  <div style="display: flex; gap: 20px; align-items: flex-start">
+    <div>
+      <div class="phone">
+        <img src="/_blob/c09965759d120cb0f164283212c4195a" alt="Tổng quan phiếu lương">
+        <span class="pin" style="left: 87px; top: 73px">1</span>
+        <span class="pin" style="left: 140px; top: 118px">2</span>
+        <span class="pin" style="left: 81px; top: 168px">3</span>
+        <span class="pin" style="left: 87px; top: 245px">4</span>
+      </div>
+      <div class="cap">Tổng quan</div>
+    </div>
+    <div>
+      <div class="phone">
+        <img src="/_blob/06fd05c8d0696428056340c810a36667" alt="Chi tiết thu nhập và khấu trừ">
+        <span class="pin" style="left: 87px; top: 64px">5</span>
+        <span class="pin" style="left: 87px; top: 169px">6</span>
+      </div>
+      <div class="cap">Chi tiết</div>
+    </div>
+    <ol class="steps" style="flex: 1; min-width: 0">
+      <li><span class="n">1</span><span><b>Kỳ lương</b>: bấm ‹ › để xem tháng khác.</span></li>
+      <li><span class="n">2</span><span>Nhãn <b>Đã chốt</b>: số chính thức. Chưa chốt thì là <b>Tạm tính</b>, thay đổi theo thời gian thực.</span></li>
+      <li><span class="n">3</span><span><b>Thực nhận</b>: số tiền bạn nhận trong tháng.</span></li>
+      <li><span class="n">4</span><span>Ô số: tổng thu nhập, ngày công, hoa hồng, tăng ca, khấu trừ, lương cơ bản.</span></li>
+      <li><span class="n">5</span><span><b>Thu nhập</b> từng dòng (bảng dưới).</span></li>
+      <li><span class="n">6</span><span><b>Khấu trừ</b> từng dòng. Cuối trang có biểu đồ thực nhận theo tháng.</span></li>
+    </ol>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+    <div class="box"><h2>Thu nhập gồm</h2>
+      <div class="line"><span>Lương theo công</span><span>số công × đơn giá</span></div>
+      <div class="line"><span>Phụ cấp</span><span></span></div>
+      <div class="line"><span>Hoa hồng / thưởng</span><span>theo KPI</span></div>
+      <div class="line"><span>Lương tăng ca</span><span>150% / 200%</span></div>
+      <div class="line"><span>Hoàn tạm ứng chi (đã chi hộ)</span><span>+</span></div>
+      <div class="line"><span>Thưởng khác</span><span></span></div>
+    </div>
+    <div class="box"><h2>Khấu trừ gồm</h2>
+      <div class="line"><span>Ứng lương</span><span>tiền đã ứng trước</span></div>
+      <div class="line"><span>Khấu trừ khác</span><span></span></div>
+      <p style="margin: 10px 0 0"><b>Thực nhận</b> = Tổng thu nhập − Tổng khấu trừ.</p>
+      <p style="margin: 8px 0 0">Đang thử việc: nhãn <b>Thử việc (85%)</b> hiện cạnh tên.</p>
+    </div>
+  </div>
+  <div class="tip"><b>Thấy số chưa đúng?</b> Đối chiếu bảng chấm công (trang 6), tăng ca và KPI trước; nếu vẫn lệch, báo kế toán trước ngày chốt lương.</div>
+
+  <div class="ft"><span>Dr Tuấn Hùng · Lưu hành nội bộ</span><span>Trang 10/18</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hỏi đáp và Hỗ trợ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.pg{width:794px;height:1123px;box-sizing:border-box;padding:48px 56px 36px;background:#F7FBFB;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1B2020;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4A5A59}
+.top img{width:30px;height:30px;border-radius:50%;background:#0F1A1A;object-fit:contain}
+.sp{flex:1;height:1px;background:#C3D3D2}
+.hd{display:flex;align-items:flex-end;gap:18px}
+.no{font-size:84px;line-height:.78;font-weight:800;color:#067B7F;letter-spacing:-.04em}
+h1{margin:0;font-size:32px;line-height:1.15;font-weight:800;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:#3D4D4C}
+h2{margin:0 0 8px;font-size:15px;font-weight:800;color:#06686C}
+.phone{position:relative;width:200px;border:7px solid #1B2020;border-radius:30px;overflow:hidden;box-shadow:0 16px 36px rgba(6,95,99,.18);background:#fff;flex-shrink:0}
+.phone img{display:block;width:100%}
+.pin{position:absolute;width:26px;height:26px;border-radius:50%;background:#067B7F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.cap{font-size:12px;color:#4A5A59;text-align:center;margin-top:8px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;font-size:13.5px;line-height:1.45}
+.n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#067B7F;color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.box{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5}
+.box p{margin:0 0 5px}.box p:last-child{margin:0}
+.tip{background:#FFF4EA;border:1px solid #F2D2B4;border-radius:16px;padding:11px 16px;font-size:13.5px;line-height:1.5}
+.warn{background:#FDECEC;border:1px solid #F4C4BF;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5;color:#7A1C14}
+.warn h2{color:#B42318}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#EEF5F5;color:#33504F}
+.ft{margin-top:auto;display:flex;justify-content:space-between;font-size:12px;color:#5B6B6A;border-top:1px solid #DCEEED;padding-top:10px}
+.qa{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:4px}
+.qa b{font-size:14px;color:#06686C}
+.contact{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;background:#06686C;border-radius:18px;padding:16px 18px;color:#fff}
+.contact small{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.8;margin-bottom:3px}
+.contact b{font-size:16px}
+</style>
+</helmet>
+<div class="pg">
+  <div class="top"><img src="/_blob/dcbbfdd90e3d4f4acd3dc70b28ef4ae6" alt=""><span>Cẩm nang nhân viên · App Dr Tuấn Hùng</span><span class="sp"></span><span>Phần 18</span></div>
+  <div class="hd"><span class="no">18</span><div><h1>Hỏi đáp &amp; Hỗ trợ</h1><p class="lead">Những câu hỏi nhân viên hay gặp nhất, và nên liên hệ ai khi cần.</p></div></div>
+  <div class="g2">
+    <div class="qa"><b>Quên mật khẩu?</b><span>Liên hệ Admin <b>0879232666</b> để được cấp lại, rồi tự đổi mật khẩu riêng (trang 12).</span></div>
+    <div class="qa"><b>Đăng nhập máy mới báo chờ duyệt?</b><span>Thiết bị mới cần <b>Admin duyệt</b>. Báo Admin, sau đó đăng nhập lại.</span></div>
+    <div class="qa"><b>Face ID không nhận ra?</b><span>Đứng chỗ đủ sáng, nhìn thẳng, bỏ khẩu trang / kính râm, giữ máy ngang mặt. Vẫn lỗi: báo Admin kiểm tra Face ID.</span></div>
+    <div class="qa"><b>Quên chấm công / sai giờ?</b><span>Ngày đã qua bạn không tự sửa được. Báo quản lý để kiểm tra và điều chỉnh bảng công.</span></div>
+    <div class="qa"><b>Bị muộn bất ngờ?</b><span>Tạo ngay đơn <b>Xin đi muộn</b>, ghi rõ lý do — đơn gửi trước vẫn tốt hơn giải thích sau.</span></div>
+    <div class="qa"><b>Lương Tạm tính khác lương Đã chốt?</b><span>Tạm tính thay đổi theo dữ liệu mới. Số chính thức là phiếu <b>Đã chốt</b>.</span></div>
+    <div class="qa"><b>KPI chưa có chỉ tiêu?</b><span>Chỉ tiêu do quản lý giao theo tháng. Liên hệ quản lý để được thiết lập.</span></div>
+    <div class="qa"><b>Không thấy một mục trong menu?</b><span>Menu hiện theo vai trò của bạn. Cần thêm quyền, hỏi quản lý hoặc Admin.</span></div>
+    <div class="qa"><b>Không nhận được thông báo?</b><span>Bật <b>thông báo về máy</b> và liên kết <b>Telegram</b>. iPhone: Thêm app vào Màn hình chính trước.</span></div>
+    <div class="qa"><b>Gửi nhầm phiếu tạm ứng chi?</b><span>Phiếu đã gửi không tự xoá được. Báo kế toán để xử lý.</span></div>
+    <div class="qa"><b>Mất điện thoại?</b><span>Báo Admin ngay. Đăng nhập máy khác và <b>đổi mật khẩu</b> — mọi thiết bị cũ sẽ bị đăng xuất.</span></div>
+    <div class="qa"><b>Thấy lỗi trên app?</b><span>Chụp màn hình, ghi thời điểm và thao tác vừa làm, gửi Admin để sửa nhanh.</span></div>
+  </div>
+  <div class="contact">
+    <div><small>Admin hệ thống</small><b>0879232666</b></div>
+    <div><small>Bot thông báo</small><b>t.me/TH_app_Bot</b></div>
+    <div><small>Công việc hằng ngày</small><b>Quản lý trực tiếp</b></div>
+  </div>
+  <div class="ft"><span>Dr Tuấn Hùng · Lưu hành nội bộ</span><span>Trang 18/18</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

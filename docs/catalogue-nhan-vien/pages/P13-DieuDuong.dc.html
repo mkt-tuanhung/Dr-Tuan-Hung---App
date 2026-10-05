@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Dành cho Điều dưỡng</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.pg{width:794px;height:1123px;box-sizing:border-box;padding:48px 56px 36px;background:#F7FBFB;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1B2020;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4A5A59}
+.top img{width:30px;height:30px;border-radius:50%;background:#0F1A1A;object-fit:contain}
+.sp{flex:1;height:1px;background:#C3D3D2}
+.hd{display:flex;align-items:flex-end;gap:18px}
+.no{font-size:84px;line-height:.78;font-weight:800;color:#067B7F;letter-spacing:-.04em}
+h1{margin:0;font-size:32px;line-height:1.15;font-weight:800;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:#3D4D4C}
+h2{margin:0 0 8px;font-size:15px;font-weight:800;color:#06686C}
+.phone{position:relative;width:200px;border:7px solid #1B2020;border-radius:30px;overflow:hidden;box-shadow:0 16px 36px rgba(6,95,99,.18);background:#fff;flex-shrink:0}
+.phone img{display:block;width:100%}
+.pin{position:absolute;width:26px;height:26px;border-radius:50%;background:#067B7F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.cap{font-size:12px;color:#4A5A59;text-align:center;margin-top:8px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;font-size:13.5px;line-height:1.45}
+.n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#067B7F;color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.box{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5}
+.box p{margin:0 0 5px}.box p:last-child{margin:0}
+.tip{background:#FFF4EA;border:1px solid #F2D2B4;border-radius:16px;padding:11px 16px;font-size:13.5px;line-height:1.5}
+.warn{background:#FDECEC;border:1px solid #F4C4BF;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5;color:#7A1C14}
+.warn h2{color:#B42318}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#EEF5F5;color:#33504F}
+.ft{margin-top:auto;display:flex;justify-content:space-between;font-size:12px;color:#5B6B6A;border-top:1px solid #DCEEED;padding-top:10px}
+</style>
+</helmet>
+<div class="pg">
+  <div class="top"><img src="/_blob/dcbbfdd90e3d4f4acd3dc70b28ef4ae6" alt=""><span>Cẩm nang nhân viên · App Dr Tuấn Hùng</span><span class="sp"></span><span>Phần 13</span></div>
+  <div class="hd"><span class="no">13</span><div><h1>Dành cho Điều dưỡng</h1><p class="lead">Lịch mổ, phân công, vật tư và chăm sóc hậu phẫu — tất cả trong 2 màn.</p></div></div>
+  <div style="display: flex; gap: 18px; align-items: flex-start">
+    <div>
+      <div class="phone">
+        <img src="/_blob/2d9aa658f759f4ffef77a2cf3863c158" alt="Màn Khách Phẫu thuật">
+        <span class="pin" style="left: 87px; top: 35px">1</span>
+        <span class="pin" style="left: 87px; top: 81px">2</span>
+        <span class="pin" style="left: 87px; top: 199px">3</span>
+        <span class="pin" style="left: 87px; top: 241px">4</span>
+      </div>
+      <div class="cap">Khách Phẫu thuật</div>
+    </div>
+    <div>
+      <div class="phone">
+        <img src="/_blob/040c0d743ac77d3be6e60272cd4bd2ee" alt="Màn Hậu phẫu / CSKH">
+        <span class="pin" style="left: 87px; top: 76px">5</span>
+        <span class="pin" style="left: 87px; top: 122px">6</span>
+        <span class="pin" style="left: 92px; top: 299px">7</span>
+        <span class="pin" style="left: 139px; top: 299px">8</span>
+      </div>
+      <div class="cap">Hậu phẫu / CSKH</div>
+    </div>
+    <ol class="steps" style="flex: 1; min-width: 0">
+      <li><span class="n">1</span><span>Thẻ <b>Khách phòng khám</b> / <b>Mổ Đối Tác</b>; ca mổ xếp theo ngày.</span></li>
+      <li><span class="n">2</span><span>Tìm khách theo tên hoặc số điện thoại.</span></li>
+      <li><span class="n">3</span><span>Mỗi ca: dịch vụ, <b>Phụ mổ</b>, <b>Trực đêm</b>, Telesale / Sale phụ trách. Chỉ <b>Trưởng bộ phận</b> phân công.</span></li>
+      <li><span class="n">4</span><span><b>Báo cáo Vật tư</b> đã dùng cho ca.</span></li>
+      <li><span class="n">5</span><span>Thẻ <b>Hậu phẫu</b> và <b>CSKH</b>.</span></li>
+      <li><span class="n">6</span><span>Ô đếm: Tổng ca · Theo dõi · Tái khám · Ổn định · Biến chứng.</span></li>
+      <li><span class="n">7</span><span><b>Gọi</b> khách ngay từ thẻ.</span></li>
+      <li><span class="n">8</span><span><b>Mở nhật ký</b> để ghi chăm sóc, đổi trạng thái.</span></li>
+    </ol>
+  </div>
+  <div class="g2">
+    <div class="box"><h2>Mốc chăm sóc hậu phẫu</h2>
+      <div class="chips"><span>Ngày 1</span><span>Ngày 2</span><span>Ngày 7</span><span>Ngày 14</span><span>Ngày 30</span></div>
+      <p style="margin-top: 8px">Trạng thái: <b>Đang theo dõi</b> · <b>Tái khám</b> (tự tạo lịch tái khám) · <b>Đã ổn định</b> · <b>Có biến chứng</b>.</p>
+    </div>
+    <div class="warn"><h2>Dấu hiệu cảnh báo — báo bác sĩ ngay</h2>
+      Sốt ≥ 38°C · Chảy máu kéo dài · Sưng đau tăng dần · Chảy dịch / mủ · Tê bì kéo dài. Chuyển trạng thái <b>Có biến chứng</b>.
+    </div>
+    <div class="box"><h2>CSKH</h2><p>Phân loại khách: Hài lòng · Không hài lòng · Bình thường · Tiềm năng · Gặp vấn đề. Gửi mã QR <b>Phiếu đánh giá dịch vụ</b> để khách góp ý.</p></div>
+    <div class="box"><h2>Đánh giá dịch vụ</h2><p>Góp ý của khách thành phiếu có <b>trạng thái</b> và <b>mức ưu tiên</b>; theo dõi đến khi xử lý xong.</p></div>
+  </div>
+  <div class="ft"><span>Dr Tuấn Hùng · Lưu hành nội bộ</span><span>Trang 13/18</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

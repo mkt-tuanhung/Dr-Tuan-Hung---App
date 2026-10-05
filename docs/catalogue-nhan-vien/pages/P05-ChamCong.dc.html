@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chấm công vào và ra</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.pg{width:794px;height:1123px;box-sizing:border-box;padding:48px 56px 36px;background:#F7FBFB;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1B2020;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4A5A59}
+.top img{width:30px;height:30px;border-radius:50%;background:#0F1A1A;object-fit:contain}
+.sp{flex:1;height:1px;background:#C3D3D2}
+.hd{display:flex;align-items:flex-end;gap:18px}
+.no{font-size:84px;line-height:.78;font-weight:800;color:#067B7F;letter-spacing:-.04em}
+h1{margin:0;font-size:32px;line-height:1.15;font-weight:800;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:#3D4D4C}
+h2{margin:0 0 8px;font-size:16px;font-weight:800;color:#06686C}
+.phone{position:relative;width:200px;border:7px solid #1B2020;border-radius:30px;overflow:hidden;box-shadow:0 16px 36px rgba(6,95,99,.18);background:#fff;flex-shrink:0}
+.phone img{display:block;width:100%}
+.pin{position:absolute;width:26px;height:26px;border-radius:50%;background:#067B7F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.cap{font-size:12px;color:#4A5A59;text-align:center;margin-top:8px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;font-size:13.5px;line-height:1.45}
+.n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#067B7F;color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.box{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:12px 15px;font-size:13.5px;line-height:1.5}
+.box ul{margin:0;padding-left:18px}
+.tip{background:#FFF4EA;border:1px solid #F2D2B4;border-radius:16px;padding:12px 16px;font-size:13.5px;line-height:1.5}
+.ft{margin-top:auto;display:flex;justify-content:space-between;font-size:12px;color:#5B6B6A;border-top:1px solid #DCEEED;padding-top:10px}
+</style>
+</helmet>
+<div class="pg">
+  <div class="top"><img src="/_blob/dcbbfdd90e3d4f4acd3dc70b28ef4ae6" alt=""><span>Cẩm nang nhân viên · App Dr Tuấn Hùng</span><span class="sp"></span><span>Phần 05</span></div>
+  <div class="hd"><span class="no">05</span><div><h1>Chấm công vào / ra</h1><p class="lead">Chỉ dùng Face ID. Bấm nút tròn giữa thanh dưới — camera mở ngay.</p></div></div>
+
+  <div style="display: flex; gap: 20px; align-items: flex-start">
+    <div>
+      <div class="phone">
+        <img src="/_blob/28e552ffa673c662993dac5614663422" alt="Chấm công thành công">
+        <span class="pin" style="left: 87px; top: 92px">1</span>
+        <span class="pin" style="left: 87px; top: 330px">2</span>
+      </div>
+      <div class="cap">Quét khuôn mặt</div>
+    </div>
+    <div>
+      <div class="phone">
+        <img src="/_blob/3d30d61f07173f1dc43ae8172115c2ec" alt="Màn chấm công sau khi vào ca">
+        <span class="pin" style="left: 87px; top: 191px">3</span>
+        <span class="pin" style="left: 84px; top: 334px">4</span>
+      </div>
+      <div class="cap">Màn Chấm công</div>
+    </div>
+    <ol class="steps" style="flex: 1; min-width: 0">
+      <li><span class="n">1</span><span>Nhìn thẳng vào camera. Khi được yêu cầu, <b>chớp mắt</b> để xác minh người thật. Báo lỗi thì đổi chỗ sáng hơn, bấm <b>Thử lại</b>.</span></li>
+      <li><span class="n">2</span><span>Kết quả hiện ngay: <b>Đúng giờ</b> hoặc <b>Đi muộn X phút</b>, kèm trạng thái Wi‑Fi và GPS. Bấm <b>Hoàn tất</b>.</span></li>
+      <li><span class="n">3</span><span>Cuối ca, bấm <b>Check-out bằng khuôn mặt</b> (hoặc nút tròn giữa).</span></li>
+      <li><span class="n">4</span><span>Thẻ <b>Wi‑Fi văn phòng</b> và <b>Vị trí GPS</b> cho biết lượt chấm hợp lệ hay cần kiểm tra.</span></li>
+    </ol>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+    <div class="box"><h2>Quy tắc giờ</h2><ul>
+      <li>Giờ làm mặc định <b>09:00</b> — chấm từ <b>09:01</b> tính là đi muộn.</li>
+      <li>Chấm vào nhiều lần: <b>giữ giờ vào lần đầu</b>.</li>
+      <li>Chấm ra nhiều lần: <b>lấy giờ ra lần cuối</b> — về muộn hơn thì quét lại để cập nhật.</li>
+      <li>Chưa chấm vào thì không chấm ra được.</li></ul></div>
+    <div class="box"><h2>Vị trí &amp; mạng</h2><ul>
+      <li>Hợp lệ khi ở trong bán kính <b>200 m</b> quanh văn phòng và/hoặc dùng <b>Wi‑Fi phòng khám</b>.</li>
+      <li>Bật <b>định vị</b> cho trình duyệt khi được hỏi.</li>
+      <li>Sai vị trí vẫn ghi nhận nhưng kèm <b>cảnh báo</b> gửi quản lý.</li></ul></div>
+  </div>
+  <div class="box"><h2>Sau mỗi lượt chấm</h2>Bạn nhận thông báo trong app. Ảnh chụp lượt chấm được gửi vào <b>nhóm Telegram chấm công</b>, kèm tên, giờ, cảnh báo vị trí (nếu có) và một câu nhận xét tác phong ngắn — gọn gàng thì được khen, tóc hay trang phục chưa chỉnh tề thì được nhắc nhẹ.</div>
+
+  <div class="ft"><span>Dr Tuấn Hùng · Lưu hành nội bộ</span><span>Trang 5/18</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

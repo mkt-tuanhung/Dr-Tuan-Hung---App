@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thông báo và Tài khoản</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.pg{width:794px;height:1123px;box-sizing:border-box;padding:48px 56px 36px;background:#F7FBFB;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1B2020;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4A5A59}
+.top img{width:30px;height:30px;border-radius:50%;background:#0F1A1A;object-fit:contain}
+.sp{flex:1;height:1px;background:#C3D3D2}
+.hd{display:flex;align-items:flex-end;gap:18px}
+.no{font-size:84px;line-height:.78;font-weight:800;color:#067B7F;letter-spacing:-.04em}
+h1{margin:0;font-size:32px;line-height:1.15;font-weight:800;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:#3D4D4C}
+h2{margin:0 0 8px;font-size:15px;font-weight:800;color:#06686C}
+.phone{position:relative;width:200px;border:7px solid #1B2020;border-radius:30px;overflow:hidden;box-shadow:0 16px 36px rgba(6,95,99,.18);background:#fff;flex-shrink:0}
+.phone img{display:block;width:100%}
+.pin{position:absolute;width:26px;height:26px;border-radius:50%;background:#067B7F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.cap{font-size:12px;color:#4A5A59;text-align:center;margin-top:8px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;font-size:13.5px;line-height:1.45}
+.n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#067B7F;color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.box{background:#fff;border:1px solid #DCEEED;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5}
+.box p{margin:0 0 5px}.box p:last-child{margin:0}
+.tip{background:#FFF4EA;border:1px solid #F2D2B4;border-radius:16px;padding:11px 16px;font-size:13.5px;line-height:1.5}
+.warn{background:#FDECEC;border:1px solid #F4C4BF;border-radius:16px;padding:12px 15px;font-size:13px;line-height:1.5;color:#7A1C14}
+.warn h2{color:#B42318}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#EEF5F5;color:#33504F}
+.ft{margin-top:auto;display:flex;justify-content:space-between;font-size:12px;color:#5B6B6A;border-top:1px solid #DCEEED;padding-top:10px}
+</style>
+</helmet>
+<div class="pg">
+  <div class="top"><img src="/_blob/dcbbfdd90e3d4f4acd3dc70b28ef4ae6" alt=""><span>Cẩm nang nhân viên · App Dr Tuấn Hùng</span><span class="sp"></span><span>Phần 12</span></div>
+  <div class="hd"><span class="no">12</span><div><h1>Thông báo &amp; Tài khoản</h1><p class="lead">Bấm chuông để xem tin mới, bấm ảnh đại diện (góc trên phải) để mở Tài khoản.</p></div></div>
+  <div style="display: flex; gap: 18px; align-items: flex-start">
+    <div>
+      <div class="phone">
+        <img src="/_blob/8cb0c2a5f87f444e98d19cf61f8de05d" alt="Danh sách thông báo">
+        <span class="pin" style="left: 87px; top: 38px">1</span>
+      </div>
+      <div class="cap">Thông báo</div>
+    </div>
+    <div>
+      <div class="phone">
+        <img src="/_blob/7720768ae657e2dc281234e0ffa85475" alt="Màn Tài khoản">
+        <span class="pin" style="left: 140px; top: 205px">2</span>
+        <span class="pin" style="left: 140px; top: 263px">3</span>
+        <span class="pin" style="left: 140px; top: 311px">4</span>
+        <span class="pin" style="left: 140px; top: 343px">5</span>
+        <span class="pin" style="left: 140px; top: 381px">6</span>
+      </div>
+      <div class="cap">Tài khoản</div>
+    </div>
+    <ol class="steps" style="flex: 1; min-width: 0">
+      <li><span class="n">1</span><span><b>Thông báo</b>: đơn được duyệt, tạm ứng, lịch làm việc mới, bài viết, clip được chấm điểm… Mở chuông là đánh dấu <b>đã đọc tất cả</b>.</span></li>
+      <li><span class="n">2</span><span><b>Tài khoản nhận lương</b>: cập nhật ngân hàng + số tài khoản để nhận lương đúng.</span></li>
+      <li><span class="n">3</span><span><b>Hồ sơ cá nhân</b>: 3 thẻ <b>Cá nhân</b> · <b>Mật khẩu</b> · <b>Bảo mật</b>.</span></li>
+      <li><span class="n">4</span><span><b>Đổi mật khẩu</b>: tối thiểu 6 ký tự.</span></li>
+      <li><span class="n">5</span><span><b>Bật thông báo về máy</b>: tin hiện ngay trên điện thoại, kể cả khi không mở app.</span></li>
+      <li><span class="n">6</span><span><b>Nhận thông báo Telegram</b> qua bot của phòng khám.</span></li>
+    </ol>
+  </div>
+  <div class="g2">
+    <div class="box"><h2>Mã QR nhận lương</h2><p>Khi đã có ngân hàng và số tài khoản, Hồ sơ cá nhân tự tạo <b>Mã QR nhận lương</b> (VietQR) để kế toán chuyển khoản nhanh, không nhầm số.</p></div>
+    <div class="box"><h2>Liên kết Telegram</h2><p>Bấm <b>Nhận thông báo Telegram</b> → app mở bot <b>t.me/TH_app_Bot</b> → bấm <b>Bắt đầu / Start</b> là xong.</p></div>
+    <div class="box"><h2>Bảo mật 2 lớp</h2><p>Hồ sơ cá nhân → thẻ <b>Bảo mật</b>: quét mã QR bằng ứng dụng <b>Authenticator</b> trên điện thoại để bật xác thực 2 lớp.</p></div>
+    <div class="box"><h2>Sau khi đổi mật khẩu</h2><p>Bạn bị <b>đăng xuất khỏi tất cả thiết bị</b> và cần đăng nhập lại bằng mật khẩu mới.</p></div>
+  </div>
+  <div class="tip"><b>Không chia sẻ mật khẩu.</b> Mỗi lượt chấm công, đơn từ, phiếu chi đều ghi theo tài khoản của bạn.</div>
+  <div class="ft"><span>Dr Tuấn Hùng · Lưu hành nội bộ</span><span>Trang 12/18</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

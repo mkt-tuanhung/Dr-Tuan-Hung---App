@@ -1,0 +1,180 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-05T07:10:00Z"
+  },
+  "title": "Catalogue hướng dẫn nhân viên – App Dr Tuấn Hùng",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 794,
+      "h": 1123,
+      "title": "01 · Bìa",
+      "paper": "a4"
+    },
+    "P02-BatDau.dc.html": {
+      "x": 874,
+      "y": 0,
+      "w": 794,
+      "h": 1123,
+      "title": "02 · Mục lục & Bắt đầu",
+      "paper": "a4"
+    },
+    "P03-TrangChu.dc.html": {
+      "x": 1748,
+      "y": 0,
+      "w": 794,
+      "h": 1123,
+      "title": "03 · Trang chủ & điều hướng",
+      "paper": "a4"
+    },
+    "P04-DangKyFaceID.dc.html": {
+      "x": 2622,
+      "y": 0,
+      "w": 794,
+      "h": 1123,
+      "title": "04 · Đăng ký Face ID",
+      "paper": "a4"
+    },
+    "P05-ChamCong.dc.html": {
+      "x": 3496,
+      "y": 0,
+      "w": 794,
+      "h": 1123,
+      "title": "05 · Chấm công vào / ra",
+      "paper": "a4"
+    },
+    "P06-BangChamCong.dc.html": {
+      "x": 0,
+      "y": 1243,
+      "w": 794,
+      "h": 1123,
+      "title": "06 · Bảng chấm công",
+      "paper": "a4"
+    },
+    "P07-DonTangCa.dc.html": {
+      "x": 874,
+      "y": 1243,
+      "w": 794,
+      "h": 1123,
+      "title": "07 · Xin nghỉ & Tăng ca",
+      "paper": "a4"
+    },
+    "P08-LichLamViec.dc.html": {
+      "x": 1748,
+      "y": 1243,
+      "w": 794,
+      "h": 1123,
+      "title": "08 · Lịch làm việc",
+      "paper": "a4"
+    },
+    "P09-TamUng.dc.html": {
+      "x": 2622,
+      "y": 1243,
+      "w": 794,
+      "h": 1123,
+      "title": "09 · Tạm ứng chi",
+      "paper": "a4"
+    },
+    "P10-Luong.dc.html": {
+      "x": 3496,
+      "y": 1243,
+      "w": 794,
+      "h": 1123,
+      "title": "10 · Lương của tôi",
+      "paper": "a4"
+    },
+    "P11-KPI.dc.html": {
+      "x": 0,
+      "y": 2486,
+      "w": 794,
+      "h": 1123,
+      "title": "11 · KPI của tôi",
+      "paper": "a4"
+    },
+    "P12-TaiKhoan.dc.html": {
+      "x": 874,
+      "y": 2486,
+      "w": 794,
+      "h": 1123,
+      "title": "12 · Thông báo & Tài khoản",
+      "paper": "a4"
+    },
+    "P13-DieuDuong.dc.html": {
+      "x": 1748,
+      "y": 2486,
+      "w": 794,
+      "h": 1123,
+      "title": "13 · Dành cho Điều dưỡng",
+      "paper": "a4"
+    },
+    "P14-Sale.dc.html": {
+      "x": 2622,
+      "y": 2486,
+      "w": 794,
+      "h": 1123,
+      "title": "14 · Dành cho Sale",
+      "paper": "a4"
+    },
+    "P15-DataMarketing.dc.html": {
+      "x": 3496,
+      "y": 2486,
+      "w": 794,
+      "h": 1123,
+      "title": "15 · Telesale & Marketing",
+      "paper": "a4"
+    },
+    "P16-LamViecNhom.dc.html": {
+      "x": 0,
+      "y": 3729,
+      "w": 794,
+      "h": 1123,
+      "title": "16 · Làm việc nhóm",
+      "paper": "a4"
+    },
+    "P17-TruongBoPhan.dc.html": {
+      "x": 874,
+      "y": 3729,
+      "w": 794,
+      "h": 1123,
+      "title": "17 · Dành cho Trưởng bộ phận",
+      "paper": "a4"
+    },
+    "P18-HoiDap.dc.html": {
+      "x": 1748,
+      "y": 3729,
+      "w": 794,
+      "h": 1123,
+      "title": "18 · Hỏi đáp & Hỗ trợ",
+      "paper": "a4"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "P02-BatDau.dc.html",
+    "P03-TrangChu.dc.html",
+    "P04-DangKyFaceID.dc.html",
+    "P05-ChamCong.dc.html",
+    "P06-BangChamCong.dc.html",
+    "P07-DonTangCa.dc.html",
+    "P08-LichLamViec.dc.html",
+    "P09-TamUng.dc.html",
+    "P10-Luong.dc.html",
+    "P11-KPI.dc.html",
+    "P12-TaiKhoan.dc.html",
+    "P13-DieuDuong.dc.html",
+    "P14-Sale.dc.html",
+    "P15-DataMarketing.dc.html",
+    "P16-LamViecNhom.dc.html",
+    "P17-TruongBoPhan.dc.html",
+    "P18-HoiDap.dc.html"
+  ],
+  "notes": {},
+  "designSystems": []
+}
