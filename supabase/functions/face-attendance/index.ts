@@ -226,30 +226,31 @@ Deno.serve(async (req) => {
       // Nhìn ẢNH check-in -> AI "soi" 1 câu trêu yêu dễ thương (nền; lỗi -> bỏ qua).
       // Ưu tiên Gemini; nếu Gemini lỗi/không có key -> fallback sang beeknoee.
       const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
-      // Nhiều "hướng" câu khác nhau -> chọn NGẪU NHIÊN mỗi lần cho đỡ lặp, lầy hơn.
+      // Nhiều "hướng" câu khác nhau -> chọn NGẪU NHIÊN mỗi lần cho đỡ lặp.
+      // CHỈ hướng TÍCH CỰC: không ví dụ nào nói về khuyết điểm (tóc rối, ngái ngủ, mụn...)
+      // vì AI hay bắt chước ví dụ và "bịa" ra khuyết điểm không có trong ảnh.
       const STYLES = [
-        'Khen nức nở, khen quá đà lên cho vui (VD: "Ui đẹp dã man, nay có hẹn hò gì đúng không bé 😍").',
-        'Troll kiểu giả vờ KHÔNG nhận xét (VD: "Thôi mình sẽ không nói là tóc bé rối đâu, giữ bí mật 🤐").',
-        'Giám khảo chấm điểm nhan sắc hôm nay x/10 kèm lý do hài (VD: "Nhan sắc hôm nay 8.5/10, trừ điểm vì mặt còn ngái ngủ 😴").',
+        'Khen nức nở, hơi quá đà cho vui (VD: "Ui nay phong độ dữ, có hẹn hò gì đúng không 😍").',
+        'Chấm điểm năng lượng hôm nay x/10 (chỉ từ 8 trở lên) kèm lý do vui, tích cực.',
         'Khen tích cực làm phấn khởi đầu ngày (VD: "Nay tươi phết, cả phòng khám sáng bừng luôn ✨").',
-        'Trêu nhẹ vẻ buồn ngủ/thiếu ngủ nhưng thương (VD: "Mắt lờ đờ ghê, tối ngủ sớm bé nhé 🌙").',
-        'Bắt 1 chi tiết dễ thương trong ảnh (kính, áo, dây đeo...) rồi trêu (VD: "Cặp kính nay trí thức ghê nha 🤓").',
-        'Chê yêu rồi bẻ lái thành khen (VD: "Nhìn bặm trợn vậy mà cười cái lại xinh, ghét ghê 😆").',
-        'Doạ vui "kẻo sếp Hùng nhắc" nhưng thật ra là khen trá hình.',
-        'Khen bất ngờ, lầy lội, hơi xàm cho vui (VD: "Ok tạm xinh, khen đó, cười tươi lên coi 🙂").',
-        'Giả vờ nghiêm túc rồi quay xe cực lầy ở cuối câu.',
+        'Bắt 1 chi tiết TÍCH CỰC nhìn thấy RÕ trong ảnh (kính, màu áo, mũ, dây đeo thẻ, nụ cười...) rồi khen dí dỏm.',
+        'Giả vờ nghiêm túc kiểu "báo cáo sếp" rồi quay xe khen cực lầy ở cuối câu.',
+        'Cổ vũ tinh thần làm việc kiểu lầy lội (VD: "Chiến binh đã có mặt, hôm nay chốt đơn rực rỡ nha 💪").',
+        'Khen phong cách/thần thái như người mẫu, MC, idol... một cách vui vẻ.',
+        'Chúc một ngày làm việc vui vẻ theo kiểu hài hước, dễ thương, có 1 lời khen nhỏ.',
       ];
       const style = STYLES[Math.floor(Math.random() * STYLES.length)];
       const funnyPrompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
-Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 24 từ), hài hước, trêu yêu dễ thương, lầy lội một chút, gọi thân mật "bé".
+Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 22 từ), vui vẻ, dễ thương, hơi lầy một chút, gọi thân mật "bé".
 
 LẦN NÀY HÃY ĐI THEO HƯỚNG: ${style}
 
-QUY TẮC:
-- QUAN SÁT giới tính trong ảnh: NAM thì có thể khen "đẹp trai / bảnh / soái"; NỮ thì khen "xinh / xinh gái / dễ thương". TUYỆT ĐỐI KHÔNG gọi nữ là "đẹp trai" hay nam là "xinh gái". Không chắc thì khen trung tính (tươi tắn, dễ thương).
-- ĐỪNG lần nào cũng nhận xét về "tóc" — mỗi lần chọn một góc KHÁC nhau, sáng tạo, bất ngờ, troll nhẹ.
-- Có thể nhận xét điều nhìn thấy (khẩu trang, mụn, quầng thâm, buồn ngủ, tóc, trang phục...) nhưng theo kiểu vui, không lặp khuôn.
-- Giọng luôn THƯƠNG YÊU QUAN TÂM, KHÔNG miệt thị, KHÔNG chê cân nặng/ngoại hình nặng nề, không tục, không làm ai tổn thương.
+QUY TẮC BẮT BUỘC:
+- CHỈ nói về điều NHÌN THẤY RÕ RÀNG trong ảnh. Ảnh selfie thường mờ, chụp từ dưới lên, ánh sáng kém — KHÔNG được suy đoán hay bịa chi tiết.
+- TUYỆT ĐỐI KHÔNG nhận xét khuyết điểm ngoại hình: KHÔNG nói tóc rối/bù xù, KHÔNG nói mụn, thâm, quầng mắt, da xấu, ngái ngủ, mệt mỏi, buồn ngủ, mặt mộc, béo/gầy. Chỉ khen hoặc cổ vũ.
+- Không chắc chi tiết nào thì chỉ khen chung (năng lượng, thần thái, nụ cười) và chúc ngày làm việc vui.
+- QUAN SÁT giới tính: NAM thì "đẹp trai / bảnh / soái"; NỮ thì "xinh / xinh gái / dễ thương". KHÔNG gọi nữ là "đẹp trai" hay nam là "xinh gái". Không chắc thì dùng từ trung tính (tươi tắn, phong độ).
+- Không nhắc "sếp Hùng nhắc nhở", không doạ, không miệt thị, không tục.
 Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
       const cleanLine = (s: string) => (s || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0].slice(0, 180);
 
@@ -269,7 +270,7 @@ Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc k
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: funnyPrompt }, { inlineData: { mimeType: 'image/jpeg', data: b64 } }] }],
-              generationConfig: { temperature: 0.95, maxOutputTokens: 80 },
+              generationConfig: { temperature: 0.7, maxOutputTokens: 80 },
               safetySettings,
             }),
           });
@@ -293,7 +294,7 @@ Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc k
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bkey}` },
             body: JSON.stringify({
-              model, temperature: 0.95, max_tokens: 80,
+              model, temperature: 0.7, max_tokens: 80,
               messages: [{
                 role: 'user',
                 content: [
