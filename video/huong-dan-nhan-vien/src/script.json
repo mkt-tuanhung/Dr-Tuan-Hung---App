@@ -1,0 +1,435 @@
+{
+ "title": "Hướng dẫn sử dụng app Dr Tuấn Hùng",
+ "subtitle": "Bản điện thoại · dành cho Điều dưỡng, Sale, Marketing",
+ "scenes": [
+  {
+   "id": "intro",
+   "kind": "title",
+   "chapter": "",
+   "lines": [
+    {
+     "sub": "Chào mừng bạn đến với ứng dụng nội bộ Dr Tuấn Hùng."
+    },
+    {
+     "sub": "Video này hướng dẫn nhân viên Điều dưỡng, Sale và Marketing dùng app trên điện thoại."
+    },
+    {
+     "sub": "Chỉ vài phút, bạn sẽ nắm được mọi thao tác hằng ngày."
+    }
+   ]
+  },
+  {
+   "id": "login",
+   "chapter": "Đăng nhập",
+   "shot": "login",
+   "lines": [
+    {
+     "sub": "Mở trình duyệt trên điện thoại và vào địa chỉ app của phòng khám."
+    },
+    {
+     "sub": "Nhập ID nhân sự và mật khẩu được cấp.",
+     "focus": "input[placeholder=\"Nhập ID"
+    },
+    {
+     "sub": "Rồi bấm Đăng nhập để bắt đầu ca làm việc.",
+     "focus": "Đăng nhập"
+    },
+    {
+     "sub": "Mẹo nhỏ: bấm Chia sẻ, chọn Thêm vào Màn hình chính để mở app nhanh như ứng dụng thật."
+    }
+   ]
+  },
+  {
+   "id": "home",
+   "chapter": "Trang chủ",
+   "shot": "home",
+   "lines": [
+    {
+     "sub": "Đây là Trang chủ, có lời chào và ngày hôm nay của bạn."
+    },
+    {
+     "sub": "Dải màu xanh nhắc bạn chấm công. Bấm Chấm công vào là mở camera ngay.",
+     "focus": "Chấm công vào"
+    },
+    {
+     "sub": "Các ô lớn bên dưới mở nhanh chức năng hay dùng: chấm công, lịch làm việc, lịch hẹn, KPI, phiếu lương.",
+     "focus": "Lịch làm việc"
+    },
+    {
+     "sub": "Hàng số liệu cho biết ngày công, lịch hẹn hôm nay và tiến độ KPI.",
+     "focus": "Ngày công tháng"
+    },
+    {
+     "sub": "Kéo xuống để xem lịch hẹn hôm nay và tổng kết tháng này.",
+     "focus": "Tháng này"
+    }
+   ]
+  },
+  {
+   "id": "nav",
+   "chapter": "Thanh điều hướng",
+   "shot": "nav",
+   "lines": [
+    {
+     "sub": "Thanh dưới cùng luôn có mặt ở mọi màn hình.",
+     "focus": {
+      "box": [
+       0,
+       772,
+       390,
+       72
+      ]
+     }
+    },
+    {
+     "sub": "Nút tròn ở giữa là chấm công bằng khuôn mặt.",
+     "focus": "nav button[aria-label"
+    },
+    {
+     "sub": "Nút Tất cả mở toàn bộ chức năng của bạn.",
+     "focus": "nav button:has-text"
+    },
+    {
+     "sub": "Chức năng được chia theo nhóm, có ô tìm kiếm để tìm thật nhanh.",
+     "shot": "all",
+     "focus": "input[placeholder"
+    },
+    {
+     "sub": "Ở các màn khác, bấm mũi tên góc trái để quay lại.",
+     "shot": "schedule",
+     "focus": "header button[aria-label=\"Quay lại\"]",
+     "say": "Ở các màn khác, bấm mũi tên ở góc trái để quay lại."
+    }
+   ]
+  },
+  {
+   "id": "face_register",
+   "chapter": "Đăng ký Face ID",
+   "shot": "att_noface",
+   "lines": [
+    {
+     "sub": "Lần đầu sử dụng, bạn cần đăng ký khuôn mặt để chấm công."
+    },
+    {
+     "sub": "Vào mục Chấm công, bấm Đăng ký Face ID.",
+     "focus": "Đăng ký Face ID",
+     "say": "Hãy vào mục Chấm công, rồi bấm nút Đăng ký khuôn mặt."
+    },
+    {
+     "sub": "Đưa khuôn mặt vào giữa khung và giữ yên vài giây đến khi hoàn tất.",
+     "shot": "@face-register"
+    },
+    {
+     "sub": "Nên đứng nơi đủ sáng, không đeo khẩu trang và không che mặt.",
+     "shot": "@face-register"
+    }
+   ]
+  },
+  {
+   "id": "face_checkin",
+   "chapter": "Chấm công bằng khuôn mặt",
+   "shot": "nav",
+   "lines": [
+    {
+     "sub": "Mỗi ngày khi tới phòng khám, bấm nút tròn ở giữa thanh dưới.",
+     "focus": "nav button[aria-label"
+    },
+    {
+     "sub": "Camera mở ra. Bạn nhìn thẳng vào màn hình, hệ thống tự nhận diện và ghi giờ vào.",
+     "shot": "@face-checkin"
+    },
+    {
+     "sub": "Nhớ bật định vị và dùng Wi-Fi phòng khám để lượt chấm công hợp lệ.",
+     "shot": "@face-checkin"
+    },
+    {
+     "sub": "Cuối ngày, bấm lại nút này để chấm công ra.",
+     "shot": "att",
+     "focus": "Check-out bằng khuôn"
+    },
+    {
+     "sub": "Ảnh chấm công sẽ được gửi vào nhóm Telegram chấm công của phòng khám.",
+     "shot": "att"
+    }
+   ]
+  },
+  {
+   "id": "attendance",
+   "chapter": "Màn Chấm công",
+   "shot": "att",
+   "lines": [
+    {
+     "sub": "Màn Chấm công hiển thị giờ vào, giờ ra và trạng thái Wi-Fi, vị trí của hôm nay.",
+     "focus": "Mạng Wi‑Fi văn phòng"
+    },
+    {
+     "sub": "Bảng chấm công tô màu từng ngày: có mặt, đi trễ, vắng, nghỉ phép.",
+     "focus": "Bảng chấm công",
+     "say": "Bảng chấm công tô màu từng ngày: có mặt, đi trễ, vắng mặt, và nghỉ phép."
+    },
+    {
+     "sub": "Kéo xuống cuối là lịch sử chi tiết giờ vào, giờ ra từng ngày.",
+     "focus": "Lịch sử chi tiết"
+    }
+   ]
+  },
+  {
+   "id": "leave",
+   "chapter": "Xin nghỉ phép, đi muộn",
+   "shot": "att",
+   "lines": [
+    {
+     "sub": "Muốn xin nghỉ, đi muộn hay về sớm, bấm ô Tạo đơn.",
+     "focus": "Tạo đơn"
+    },
+    {
+     "sub": "Chọn loại đơn: đi muộn, về sớm, nghỉ phép hoặc nghỉ nửa ngày.",
+     "shot": "leave",
+     "focus": "Loại đơn"
+    },
+    {
+     "sub": "Chọn ngày, ghi rõ lý do, rồi bấm Gửi đơn.",
+     "shot": "leave",
+     "focus": "Gửi đơn",
+     "say": "Chọn ngày, ghi rõ lý do, rồi bấm nút Gửi đơn."
+    },
+    {
+     "sub": "Đơn sẽ ở trạng thái Chờ duyệt. Khi được duyệt, bạn nhận thông báo ngay.",
+     "shot": "bell"
+    }
+   ]
+  },
+  {
+   "id": "ot",
+   "chapter": "Ghi tăng ca",
+   "shot": "att",
+   "lines": [
+    {
+     "sub": "Làm thêm giờ thì bấm ô Ghi tăng ca.",
+     "focus": "Ghi tăng ca",
+     "say": "Làm thêm giờ thì bấm vào ô Ghi tăng ca."
+    },
+    {
+     "sub": "Chọn ngày, nhập giờ bắt đầu và kết thúc. Có thể thêm nhiều khoảng giờ trong ngày.",
+     "shot": "ot",
+     "focus": "Khoảng giờ tăng ca"
+    },
+    {
+     "sub": "Bấm Lưu tăng ca. Giờ tăng ca được tính vào lương cuối tháng.",
+     "shot": "ot",
+     "focus": "Lưu tăng ca",
+     "say": "Cuối cùng, bấm nút Lưu tăng ca. Giờ tăng ca được tính vào lương cuối tháng."
+    }
+   ]
+  },
+  {
+   "id": "schedule",
+   "chapter": "Lịch làm việc",
+   "shot": "schedule",
+   "lines": [
+    {
+     "sub": "Mục Lịch làm việc cho biết ca làm của bạn trong cả tuần."
+    },
+    {
+     "sub": "Ca hôm nay hiện nổi bật, kèm giờ bắt đầu và kết thúc.",
+     "focus": "Ca hôm nay"
+    },
+    {
+     "sub": "Bấm biểu tượng hình người để xem đồng nghiệp làm cùng ca.",
+     "focus": "button:has(svg.lucide-users)"
+    },
+    {
+     "sub": "Lịch do quản lý xếp và công bố. Khi có lịch mới, bạn sẽ được báo.",
+     "focus": "Lịch trong tuần"
+    }
+   ]
+  },
+  {
+   "id": "advance",
+   "chapter": "Tạm ứng chi",
+   "shot": "adv",
+   "lines": [
+    {
+     "sub": "Khi cần ứng tiền để chi hộ việc chung của phòng khám, vào mục Tạm ứng chi."
+    },
+    {
+     "sub": "Bấm nút Tạo phiếu.",
+     "focus": "Tạo phiếu"
+    },
+    {
+     "sub": "Chọn ngày chi, danh mục, nhập số tiền và mô tả mục đích chi.",
+     "shot": "adv_new",
+     "focus": "Số tiền (VNĐ) *"
+    },
+    {
+     "sub": "Đính kèm ảnh hóa đơn, chứng từ, rồi bấm Gửi yêu cầu.",
+     "shot": "adv_new",
+     "focus": "Gửi yêu cầu"
+    },
+    {
+     "sub": "Phiếu sẽ chờ duyệt. Bạn theo dõi trạng thái và số tiền đã được hoàn ngay tại đây.",
+     "shot": "adv"
+    }
+   ]
+  },
+  {
+   "id": "payroll",
+   "chapter": "Lương của tôi",
+   "shot": "payroll",
+   "lines": [
+    {
+     "sub": "Mục Lương của tôi chỉ riêng bạn xem được."
+    },
+    {
+     "sub": "Bấm mũi tên hai bên để chuyển kỳ lương.",
+     "focus": "Kỳ lương"
+    },
+    {
+     "sub": "Thẻ màu xanh là số tiền thực nhận trong tháng.",
+     "focus": "Thực nhận Tháng"
+    },
+    {
+     "sub": "Kéo xuống để xem chi tiết từng khoản thu nhập và khấu trừ.",
+     "focus": "Khấu trừ"
+    }
+   ]
+  },
+  {
+   "id": "kpi",
+   "chapter": "KPI của tôi",
+   "shot": "kpi",
+   "lines": [
+    {
+     "sub": "Mục KPI của tôi cho biết bạn đã hoàn thành bao nhiêu phần trăm chỉ tiêu tháng."
+    },
+    {
+     "sub": "Vòng tròn lớn là phần trăm hoàn thành, bên dưới là từng chỉ tiêu.",
+     "focus": "Chỉ tiêu KPI được giao"
+    },
+    {
+     "sub": "Phần Doanh thu và Hoa hồng cho biết hoa hồng ước tính của bạn.",
+     "focus": "Doanh thu & Hoa hồng"
+    },
+    {
+     "sub": "Với Điều dưỡng, KPI thống kê ca trực, ca phụ mổ, ca hậu phẫu và hoa hồng tương ứng.",
+     "shot": "kpi_dd",
+     "focus": "Tổng hoa hồng ước tính"
+    }
+   ]
+  },
+  {
+   "id": "notify",
+   "chapter": "Thông báo & Tài khoản",
+   "shot": "schedule",
+   "lines": [
+    {
+     "sub": "Chuông ở góc trên báo tin mới: đơn được duyệt, lịch làm việc, lương.",
+     "focus": "header button[aria-label=\"Thông báo\"]"
+    },
+    {
+     "sub": "Bấm vào chuông để xem toàn bộ thông báo.",
+     "shot": "bell"
+    },
+    {
+     "sub": "Bấm ảnh đại diện để mở Tài khoản: sửa hồ sơ và đổi mật khẩu.",
+     "shot": "account",
+     "focus": "Đổi mật khẩu"
+    },
+    {
+     "sub": "Nên bật thông báo về máy và liên kết Telegram để không bỏ lỡ tin quan trọng.",
+     "shot": "account",
+     "focus": "Bật thông báo về máy"
+    }
+   ]
+  },
+  {
+   "id": "nurse",
+   "chapter": "Dành cho Điều dưỡng",
+   "shot": "dd_pt",
+   "lines": [
+    {
+     "sub": "Dành cho Điều dưỡng: mục Khách phẫu thuật hiển thị lịch mổ, ê kíp phụ trách và báo cáo vật tư."
+    },
+    {
+     "sub": "Mục Hậu phẫu, chăm sóc khách hàng giúp theo dõi khách sau mổ, gọi điện và cập nhật tình trạng.",
+     "shot": "dd_hp"
+    }
+   ]
+  },
+  {
+   "id": "sale",
+   "chapter": "Dành cho Sale",
+   "shot": "sale_appt",
+   "lines": [
+    {
+     "sub": "Dành cho Sale: mục Lịch hẹn hiển thị các cuộc hẹn trong ngày theo giờ, tô màu theo trạng thái."
+    },
+    {
+     "sub": "Khách tư vấn lưu hồ sơ khách đã tiếp nhận và kết quả tư vấn.",
+     "shot": "sale_tv"
+    },
+    {
+     "sub": "Khách cọc giúp chăm sóc khách đã đặt cọc, chờ ngày phẫu thuật.",
+     "shot": "sale_coc"
+    },
+    {
+     "sub": "Telesale dùng Data khách hàng: bấm gọi ngay, nhắn Zalo, ghi chú và hẹn lịch gọi lại.",
+     "shot": "tele_data",
+     "focus": "main a[href"
+    }
+   ]
+  },
+  {
+   "id": "marketing",
+   "chapter": "Dành cho Marketing",
+   "shot": "tele_data",
+   "lines": [
+    {
+     "sub": "Dành cho Marketing: Data khách hàng giúp theo dõi khách đến từ quảng cáo theo từng kênh."
+    },
+    {
+     "sub": "Mục Video Ads quản lý clip quảng cáo, chấm điểm và theo dõi hiệu quả.",
+     "shot": "mkt_video",
+     "say": "Mục Video Ads quản lý các clip quảng cáo, chấm điểm và theo dõi hiệu quả."
+    },
+    {
+     "sub": "Kho Media và Hình ảnh là nơi lưu trữ, chia sẻ tư liệu cho cả đội.",
+     "shot": "mkt_kho"
+    }
+   ]
+  },
+  {
+   "id": "team",
+   "chapter": "Làm việc nhóm",
+   "shot": "community",
+   "lines": [
+    {
+     "sub": "Cộng đồng là bảng tin chung của phòng khám: đăng bài, bình luận, thả cảm xúc."
+    },
+    {
+     "sub": "Phòng họp giúp leader tổ chức họp trực tuyến, AI tự ghi biên bản và việc cần làm.",
+     "shot": "meetings"
+    },
+    {
+     "sub": "Bấm nút cộng để tạo cuộc họp mới và mời đồng nghiệp tham gia.",
+     "shot": "meetings",
+     "focus": "main button:has(svg.lucide-plus)"
+    }
+   ]
+  },
+  {
+   "id": "outro",
+   "kind": "title",
+   "chapter": "",
+   "lines": [
+    {
+     "sub": "Vậy là bạn đã nắm được các thao tác chính trên app Dr Tuấn Hùng.",
+     "say": "Vậy là bạn đã nắm được các thao tác chính trên ứng dụng Đốc tơ Tuấn Hùng."
+    },
+    {
+     "sub": "Có thắc mắc, hãy liên hệ quản lý hoặc admin. Chúc bạn một ngày làm việc thật hiệu quả!"
+    }
+   ]
+  }
+ ]
+}
