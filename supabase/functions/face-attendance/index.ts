@@ -223,36 +223,56 @@ Deno.serve(async (req) => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: tgChat, text: cap }),
       }).catch(() => {});
-      // Nhìn ẢNH check-in -> AI "soi" 1 câu trêu yêu dễ thương (nền; lỗi -> bỏ qua).
+      // Nhìn ẢNH check-in -> AI SOI TÁC PHONG rồi viết 1 câu (nền; lỗi -> bỏ qua):
+      //   - Có lỗi THẤY RÕ (tóc rối, đồng phục xộc xệch...) -> câu NHẮC NHỞ cụ thể, nhẹ nhàng
+      //   - Gọn gàng / ảnh không đủ rõ -> câu KHEN (không được đoán bừa ra lỗi)
+      // AI trả JSON gồm đánh giá + 2 câu; CODE quyết định dùng câu nào (chặn bịa lỗi).
       // Ưu tiên Gemini; nếu Gemini lỗi/không có key -> fallback sang beeknoee.
       const moment = action === 'CHECK_IN' ? 'vừa tới công ty đầu giờ sáng' : 'chuẩn bị tan làm ra về';
-      // Nhiều "hướng" câu khác nhau -> chọn NGẪU NHIÊN mỗi lần cho đỡ lặp.
-      // CHỈ hướng TÍCH CỰC: không ví dụ nào nói về khuyết điểm (tóc rối, ngái ngủ, mụn...)
-      // vì AI hay bắt chước ví dụ và "bịa" ra khuyết điểm không có trong ảnh.
+      // Nhiều "hướng" cho câu KHEN -> chọn ngẫu nhiên cho đỡ lặp
       const STYLES = [
         'Khen nức nở, hơi quá đà cho vui (VD: "Ui nay phong độ dữ, có hẹn hò gì đúng không 😍").',
-        'Chấm điểm năng lượng hôm nay x/10 (chỉ từ 8 trở lên) kèm lý do vui, tích cực.',
+        'Chấm điểm tác phong hôm nay x/10 kèm lý do vui, tích cực.',
         'Khen tích cực làm phấn khởi đầu ngày (VD: "Nay tươi phết, cả phòng khám sáng bừng luôn ✨").',
-        'Bắt 1 chi tiết TÍCH CỰC nhìn thấy RÕ trong ảnh (kính, màu áo, mũ, dây đeo thẻ, nụ cười...) rồi khen dí dỏm.',
+        'Bắt 1 chi tiết đẹp nhìn thấy RÕ trong ảnh (kính, màu áo, mũ, dây đeo thẻ, nụ cười...) rồi khen dí dỏm.',
         'Giả vờ nghiêm túc kiểu "báo cáo sếp" rồi quay xe khen cực lầy ở cuối câu.',
         'Cổ vũ tinh thần làm việc kiểu lầy lội (VD: "Chiến binh đã có mặt, hôm nay chốt đơn rực rỡ nha 💪").',
         'Khen phong cách/thần thái như người mẫu, MC, idol... một cách vui vẻ.',
-        'Chúc một ngày làm việc vui vẻ theo kiểu hài hước, dễ thương, có 1 lời khen nhỏ.',
       ];
       const style = STYLES[Math.floor(Math.random() * STYLES.length)];
-      const funnyPrompt = `Bạn là "trợ lý vui tính" của phòng khám thẩm mỹ Dr Tuấn Hùng. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
-Viết ĐÚNG 1 câu tiếng Việt ngắn (tối đa 22 từ), vui vẻ, dễ thương, hơi lầy một chút, gọi thân mật "bé".
+      const funnyPrompt = `Bạn là trợ lý kiểm tra tác phong của phòng khám thẩm mỹ Dr Tuấn Hùng — nơi nhân sự phải gọn gàng, chỉn chu khi đón khách. Đây là ảnh selfie chấm công của bạn ${name}, ${moment}.
 
-LẦN NÀY HÃY ĐI THEO HƯỚNG: ${style}
+BƯỚC 1 — SOI KỸ ảnh và đánh giá KHÁCH QUAN:
+- "anh_ro": ảnh có đủ rõ để đánh giá tóc/trang phục không? (false nếu mờ, tối, ngược sáng, chỉ thấy một phần mặt/đầu, góc chụp quá thấp che mất tóc)
+- "toc": "gon_gang" | "roi" | "khong_ro"
+   • "roi" CHỈ KHI thấy RÕ: tóc bù xù, nhiều lọn dựng ngược/vểnh tung tứ phía, rõ ràng chưa chải, tóc dài xõa rối che mặt.
+   • KHÔNG coi là rối: tay đang chạm/vuốt tóc, tóc xoăn/uốn tự nhiên, tóc ngắn dựng kiểu vuốt keo có chủ đích, mái để kiểu, bóng đổ, góc chụp từ dưới lên, đội mũ/mũ trùm tóc phẫu thuật (= gọn gàng), đội mũ bảo hiểm.
+   • Phân vân → "khong_ro".
+- "trang_phuc": "chinh_te" | "xoc_xech" | "khong_ro" ("xoc_xech" chỉ khi thấy RÕ cổ áo lệch, áo nhàu nhiều, cúc cài lệch).
+- "loi": danh sách lỗi tác phong THẤY RÕ (ví dụ "tóc rối", "cổ áo lệch"); không chắc thì để []. KHÔNG đưa vào: mụn, da, quầng thâm, cân nặng, vẻ mặt buồn ngủ/mệt (không đánh giá được qua ảnh).
 
-QUY TẮC BẮT BUỘC:
-- CHỈ nói về điều NHÌN THẤY RÕ RÀNG trong ảnh. Ảnh selfie thường mờ, chụp từ dưới lên, ánh sáng kém — KHÔNG được suy đoán hay bịa chi tiết.
-- TUYỆT ĐỐI KHÔNG nhận xét khuyết điểm ngoại hình: KHÔNG nói tóc rối/bù xù, KHÔNG nói mụn, thâm, quầng mắt, da xấu, ngái ngủ, mệt mỏi, buồn ngủ, mặt mộc, béo/gầy. Chỉ khen hoặc cổ vũ.
-- Không chắc chi tiết nào thì chỉ khen chung (năng lượng, thần thái, nụ cười) và chúc ngày làm việc vui.
-- QUAN SÁT giới tính: NAM thì "đẹp trai / bảnh / soái"; NỮ thì "xinh / xinh gái / dễ thương". KHÔNG gọi nữ là "đẹp trai" hay nam là "xinh gái". Không chắc thì dùng từ trung tính (tươi tắn, phong độ).
-- Không nhắc "sếp Hùng nhắc nhở", không doạ, không miệt thị, không tục.
-Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc kép.`;
+BƯỚC 2 — viết 2 câu tiếng Việt, mỗi câu tối đa 22 từ, gọi thân mật "bé", kèm 1-2 emoji, không dùng dấu ngoặc kép:
+- "cau_nhac": nếu "loi" có phần tử → nhắc ĐÚNG lỗi đó, cụ thể, nhẹ nhàng, có lý do (VD: "Bé ơi tóc đang hơi rối, chải lại chút trước khi đón khách nha 💇"). Nếu "loi" rỗng → "".
+- "cau_khen": câu khen theo hướng: ${style}. Chỉ khen điều nhìn thấy RÕ; không chắc thì khen chung thần thái/năng lượng.
+- Giới tính: NAM → "đẹp trai / bảnh / soái"; NỮ → "xinh / dễ thương"; không chắc → từ trung tính (tươi tắn, phong độ). Không miệt thị, không tục.
+
+Trả về DUY NHẤT JSON: {"anh_ro":true,"toc":"...","trang_phuc":"...","loi":[...],"cau_nhac":"...","cau_khen":"..."}`;
       const cleanLine = (s: string) => (s || '').toString().trim().replace(/^["']+|["']+$/g, '').split('\n')[0].slice(0, 180);
+      // Đọc JSON AI trả về -> chọn câu: chỉ NHẮC khi ảnh rõ + có lỗi cụ thể; còn lại KHEN
+      const pickLine = (raw: string): string => {
+        const txt = (raw || '').trim();
+        if (!txt) return '';
+        try {
+          const m = txt.match(/\{[\s\S]*\}/);
+          const j = JSON.parse(m ? m[0] : txt);
+          const loi = Array.isArray(j?.loi) ? j.loi.filter((x: unknown) => String(x || '').trim()) : [];
+          const flagged = j?.toc === 'roi' || j?.trang_phuc === 'xoc_xech';
+          if (j?.anh_ro !== false && loi.length > 0 && flagged && String(j?.cau_nhac || '').trim()) return cleanLine(j.cau_nhac);
+          return cleanLine(j?.cau_khen || '');
+        } catch {
+          return txt.startsWith('{') ? '' : cleanLine(txt); // không phải JSON -> dùng nguyên câu
+        }
+      };
 
       // AI #1: Gemini vision
       const genGemini = async (b64: string): Promise<string> => {
@@ -270,13 +290,13 @@ Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc k
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: funnyPrompt }, { inlineData: { mimeType: 'image/jpeg', data: b64 } }] }],
-              generationConfig: { temperature: 0.7, maxOutputTokens: 80 },
+              generationConfig: { temperature: 0.4, maxOutputTokens: 400, responseMimeType: 'application/json' },
               safetySettings,
             }),
           });
           if (!res.ok) { console.error('genFunny gemini HTTP', res.status, (await res.text()).slice(0, 300)); return ''; }
           const data = await res.json();
-          const t = cleanLine(data?.candidates?.[0]?.content?.parts?.[0]?.text || '');
+          const t = pickLine(data?.candidates?.[0]?.content?.parts?.[0]?.text || '');
           if (!t) console.error('genFunny gemini empty', JSON.stringify(data?.candidates?.[0]?.finishReason || data));
           return t;
         } catch (e) { console.error('genFunny gemini err', (e as Error).message); return ''; }
@@ -294,7 +314,7 @@ Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc k
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bkey}` },
             body: JSON.stringify({
-              model, temperature: 0.7, max_tokens: 80,
+              model, temperature: 0.4, max_tokens: 400,
               messages: [{
                 role: 'user',
                 content: [
@@ -306,7 +326,7 @@ Chỉ trả về đúng 1 câu đó kèm 1-2 emoji, KHÔNG dùng dấu ngoặc k
           });
           if (!res.ok) { console.error('genFunny bee HTTP', res.status, (await res.text()).slice(0, 300)); return ''; }
           const data = await res.json();
-          const t = cleanLine(data?.choices?.[0]?.message?.content || '');
+          const t = pickLine(data?.choices?.[0]?.message?.content || '');
           if (!t) console.error('genFunny bee empty', JSON.stringify(data).slice(0, 300));
           return t;
         } catch (e) { console.error('genFunny bee err', (e as Error).message); return ''; }
