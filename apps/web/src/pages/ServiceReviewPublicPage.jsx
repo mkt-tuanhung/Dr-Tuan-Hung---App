@@ -622,7 +622,7 @@ export default function ServiceReviewPublicPage() {
 function Shell({ children }) {
   return (
     <div className="min-h-screen bg-slate-100 flex items-stretch sm:items-center justify-center sm:py-6">
-      <div className="w-full sm:max-w-md bg-white sm:rounded-[32px] sm:shadow-2xl min-h-screen sm:min-h-[85vh] sm:max-h-[900px] flex flex-col overflow-hidden">
+      <div className="w-full sm:max-w-md bg-white sm:rounded-[32px] sm:shadow-2xl min-h-screen sm:min-h-[85dvh] sm:max-h-[900px] flex flex-col overflow-hidden">
         {children}
       </div>
     </div>

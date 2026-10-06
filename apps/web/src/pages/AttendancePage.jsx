@@ -599,7 +599,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
         const isToday = new Date(year, month-1, selectedDay).toDateString() === today.toDateString();
         return (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center p-4 max-lg:p-0">
-            <div className="e-modal max-w-sm overflow-hidden max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88vh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-lg:overflow-y-auto">
+            <div className="e-modal max-w-sm overflow-hidden max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88dvh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-lg:overflow-y-auto">
               <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2.5" />
               <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100 max-lg:px-4 max-lg:pt-3">
                 <div>
@@ -809,7 +809,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
       {/* Overtime form modal */}
       {showOtForm && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center p-4 max-lg:p-0">
-          <div className="e-modal max-w-sm max-h-[90vh] overflow-y-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88vh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]">
+          <div className="e-modal max-w-sm max-h-[90dvh] overflow-y-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88dvh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2.5" />
             <div className="e-modal-header items-center max-lg:px-4 max-lg:pt-3">
               <h3 className="e-modal-title flex items-center gap-2"><Clock className="w-5 h-5 text-warning-500" /> Ghi giờ tăng ca</h3>
@@ -857,7 +857,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
       {/* Leave form modal */}
       {showLeaveForm && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center p-4 max-lg:p-0">
-          <div className="e-modal max-w-sm max-h-[90vh] overflow-y-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88vh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]">
+          <div className="e-modal max-w-sm max-h-[90dvh] overflow-y-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[88dvh] max-lg:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2.5" />
             <div className="e-modal-header items-center max-lg:px-4 max-lg:pt-3">
               <h3 className="e-modal-title">Tạo đơn xin phép</h3>

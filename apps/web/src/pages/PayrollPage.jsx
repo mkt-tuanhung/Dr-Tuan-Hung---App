@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound, ChevronDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
@@ -19,6 +19,14 @@ const STANDARD_DAYS = 26;
 const ATT_STATUS_LABEL = { leave: 'Nghỉ phép', half_day: 'Nghỉ nửa ngày', absent: 'Vắng', unpaid_leave: 'Nghỉ không lương', sick: 'Nghỉ ốm' };
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
 const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) : '0';
+
+// Dòng "nhãn — giá trị" của thẻ lương mobile (kiểu m-pay-line Ethics)
+const Line = ({ label, children, cls = '' }) => (
+  <div className="flex items-center justify-between gap-3 min-h-[44px] py-2 border-b border-[#EAF4F4] last:border-0">
+    <span className="text-[14px] text-slate-500">{label}</span>
+    <span className={`text-[14px] font-semibold tabular-nums text-right ${cls}`}>{children}</span>
+  </div>
+);
 const ROLE_LABELS = {
   telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
   media: 'Media', marketing: 'Marketing', editor: 'Editor', dieu_duong: 'Điều dưỡng', accountant: 'Kế toán',
@@ -549,14 +557,14 @@ const PayrollPage = () => {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap lg:justify-end">
+        <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:justify-end">
           <button onClick={exportImage} disabled={loading || exportSel.size === 0} className="e-btn e-btn-secondary">
             <ImageDown /> Xuất ảnh ({exportSel.size}/{rowsView.length})
           </button>
           <button onClick={() => savePayroll(false)} disabled={saving} className="e-btn e-btn-outline">
             <Save /> Lưu nháp
           </button>
-          <button onClick={() => savePayroll(true)} disabled={saving} className="e-btn e-btn-primary">
+          <button onClick={() => savePayroll(true)} disabled={saving} className="e-btn e-btn-primary max-lg:col-span-2 max-lg:h-12">
             <Lock /> Chốt lương tháng
           </button>
         </div>
@@ -584,17 +592,72 @@ const PayrollPage = () => {
       {loading ? (
         <div className="e-card flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin" /></div>
       ) : (
-        <div className="e-card overflow-hidden">
+        <>
+        {/* MOBILE: mỗi nhân sự 1 thẻ (Thực nhận nổi bật, bấm để xem từng dòng) — không kéo ngang */}
+        <div className="lg:hidden space-y-3">
+          {rowsView.length > 0 && (
+            <label className="flex items-center gap-2.5 px-1 text-[13px] text-slate-600">
+              <input type="checkbox"
+                checked={exportSel.size === rowsView.length}
+                onChange={e => setExportSel(e.target.checked ? new Set(rowsView.map(r => r.staff.id)) : new Set())}
+                className="w-5 h-5 accent-teal-600" />
+              Chọn tất cả để xuất ảnh ({exportSel.size}/{rowsView.length})
+            </label>
+          )}
+          {rowsView.length === 0 && <div className="e-card e-card-pad text-center text-[13px] text-slate-400">Chưa có nhân sự.</div>}
+          {rowsView.map(r => {
+            const on = exportSel.has(r.staff.id);
+            const toggle = () => setExportSel(sel => { const x = new Set(sel); x.has(r.staff.id) ? x.delete(r.staff.id) : x.add(r.staff.id); return x; });
+            return (
+              <details key={r.staff.id} className={`e-card overflow-hidden group ${on ? '' : 'opacity-60'}`}>
+                <summary className="list-none flex items-center gap-3 p-3.5 cursor-pointer [&::-webkit-details-marker]:hidden">
+                  <input type="checkbox" checked={on} onChange={toggle} onClick={e => e.stopPropagation()} aria-label="Chọn để xuất ảnh" className="w-5 h-5 accent-teal-600 shrink-0" />
+                  <span className="e-avatar w-10 h-10 ring-2 ring-teal-50 shrink-0"><UserRound className="w-5 h-5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-900 truncate">{r.staff.full_name}</div>
+                    <div className="flex items-center gap-1 text-[12px] text-slate-400 min-w-0"><span className="truncate">{ROLE_LABELS[r.staff.role] || r.staff.role}{r.staff.employment_status === 'probation' ? ' · TV' : ''}</span><span className="shrink-0">· {r.workingDays} công{r.daysOff > 0 ? <span className="text-danger-500"> · nghỉ {r.daysOff}</span> : ''}</span></div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[11px] text-slate-400">Thực nhận</div>
+                    <div className="text-[16px] font-bold text-teal-700 tabular-nums leading-tight">{fmtM(r.net)}</div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 transition group-open:rotate-180" />
+                </summary>
+                <div className="px-4 pb-3 border-t border-[#EAF4F4]">
+                  <Line label="Lương theo công" cls="text-slate-800">{fmtM(r.luongCong)}</Line>
+                  <Line label="Phụ cấp" cls="text-slate-600">{fmtM(r.phuCap)}</Line>
+                  <Line label="Hoa hồng" cls="text-slate-800">{fmtM(r.commission)}{r.commission > 0 && <button onClick={() => setSaleDetail(r)} className="ml-2 text-[12px] font-medium text-teal-700">Chi tiết</button>}</Line>
+                  <Line label="Lương tăng ca" cls="text-slate-800">{r.overtime ? '+' + fmtM(r.overtime) : '0đ'}{(r.otDetail?.length > 0 || r.lateEarlyHours > 0) && <button onClick={() => setSaleDetail(r)} className="ml-2 text-[12px] font-medium text-teal-700">{r.overtimeHours}h · chi tiết</button>}</Line>
+                  <Line label="Thưởng khác">
+                    <input value={fmt(r.otherBonus)} inputMode="numeric" onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
+                      className="e-input h-10 w-32 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
+                  </Line>
+                  <Line label="Ứng lương" cls="text-danger-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</Line>
+                  <Line label="Khấu trừ">
+                    <input value={fmt(r.otherDeduction)} inputMode="numeric" onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
+                      className="e-input h-10 w-32 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
+                  </Line>
+                  <div className="grid grid-cols-3 gap-2 pt-3">
+                    <button onClick={() => { setSaModal({ staff: r.staff }); setSaForm({ amount: '', reason: '' }); }} className="e-btn e-btn-secondary e-btn-sm"><HandCoins className="w-4 h-4" />Ứng</button>
+                    <button onClick={() => { setPassInput(''); setPassModal({ staff: r.staff }); }} className={`e-btn e-btn-sm ${r.staff.payslip_code ? 'e-btn-secondary' : 'e-btn-outline !border-warning-200 !bg-warning-50 !text-warning-600'}`}><KeyRound className="w-4 h-4" />Mã</button>
+                    <button onClick={() => printPayslip(r)} className="e-btn e-btn-secondary e-btn-sm"><Printer className="w-4 h-4" />In</button>
+                  </div>
+                </div>
+              </details>
+            );
+          })}
+        </div>
+        <div className="e-card overflow-hidden hidden lg:block">
           <div className="e-table-wrap">
             <table className="e-table whitespace-nowrap">
               <thead><tr>
-                <th className="w-10">
+                <th className="w-12 min-w-[48px] e-stick-l left-0">
                   <input type="checkbox" title="Tích/bỏ tích tất cả để xuất ảnh"
                     checked={rowsView.length > 0 && exportSel.size === rowsView.length}
                     onChange={e => setExportSel(e.target.checked ? new Set(rowsView.map(r => r.staff.id)) : new Set())}
                     className="w-4 h-4 accent-teal-600 cursor-pointer align-middle" />
                 </th>
-                <th>Nhân sự</th>
+                <th className="e-stick-l e-stick-edge left-[48px]">Nhân sự</th>
                 <th className="!text-center">Công</th>
                 <th className="num">Lương theo công</th>
                 <th className="num">Phụ cấp</th>
@@ -603,21 +666,21 @@ const PayrollPage = () => {
                 <th className="num">Thưởng khác</th>
                 <th className="num">Ứng lương</th>
                 <th className="num">Khấu trừ</th>
-                <th className="num">Thực nhận</th>
-                <th></th>
+                <th className="num e-stick-r e-stick-edge right-[140px]">Thực nhận</th>
+                <th className="e-stick-r right-0 w-[140px] min-w-[140px]"></th>
               </tr></thead>
               <tbody>
                 {rowsView.length === 0 ? (
                   <tr><td colSpan={12} className="!h-24 text-center text-[13px] text-slate-400">Chưa có nhân sự.</td></tr>
                 ) : rowsView.map(r => (
-                  <tr key={r.staff.id} className={exportSel.has(r.staff.id) ? '' : 'opacity-50'}>
-                    <td>
+                  <tr key={r.staff.id} className={exportSel.has(r.staff.id) ? '' : 'e-row-dim'}>
+                    <td className="e-stick-l left-0">
                       <input type="checkbox" title="Tích để đưa vào ảnh xuất"
                         checked={exportSel.has(r.staff.id)}
                         onChange={() => setExportSel(sel => { const s = new Set(sel); s.has(r.staff.id) ? s.delete(r.staff.id) : s.add(r.staff.id); return s; })}
                         className="w-4 h-4 accent-teal-600 cursor-pointer align-middle" />
                     </td>
-                    <td>
+                    <td className="e-stick-l e-stick-edge left-[48px]">
                       <div className="flex items-center gap-3">
                         <span className="e-avatar w-11 h-11 ring-2 ring-teal-50"><UserRound className="w-5 h-5" /></span>
                         <div className="min-w-0">
@@ -655,8 +718,8 @@ const PayrollPage = () => {
                       <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
                         className="e-input h-9 w-28 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
                     </td>
-                    <td className="num text-[15px] font-bold text-teal-700">{fmtM(r.net)}</td>
-                    <td>
+                    <td className="num text-[15px] font-bold text-teal-700 e-stick-r e-stick-edge right-[140px]">{fmtM(r.net)}</td>
+                    <td className="e-stick-r right-0 w-[140px] min-w-[140px]">
                       <div className="flex items-center gap-1.5 justify-end">
                         <button onClick={() => { setSaModal({ staff: r.staff }); setSaForm({ amount: '', reason: '' }); }} title="Ứng lương" className="e-icon-btn w-8 h-8 rounded-[10px] text-slate-500"><HandCoins className="w-4 h-4" /></button>
                         <button onClick={() => { setPassInput(''); setPassModal({ staff: r.staff }); }} title={r.staff.payslip_code ? 'Đổi mã bảo mật phiếu lương' : 'Đặt mã bảo mật phiếu lương'}
@@ -670,6 +733,7 @@ const PayrollPage = () => {
             </table>
           </div>
         </div>
+        </>
       )}
 
       {/* Yêu cầu XEM LƯƠNG chờ duyệt — duyệt ngay trong app */}
@@ -798,7 +862,7 @@ const PayrollPage = () => {
 
       {saleDetail && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-3xl overflow-hidden flex flex-col max-h-[88vh]">
+          <div className="e-modal max-w-3xl overflow-hidden flex flex-col max-h-[88dvh]">
             <div className="e-modal-header items-center shrink-0">
               <div>
                 <h3 className="e-modal-title">Chi tiết lương — {saleDetail.staff.full_name}</h3>

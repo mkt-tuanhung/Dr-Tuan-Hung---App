@@ -695,7 +695,7 @@ export default function AdvanceExpensePage() {
       {/* Image Viewer Modal */}
       {showTrash && (
         <div className="e-modal-backdrop z-[90] flex items-center justify-center p-4" onClick={() => setShowTrash(false)}>
-          <div className="e-modal max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="e-modal max-w-2xl max-h-[85dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title flex items-center gap-2"><Trash2 className="w-5 h-5 text-danger-500" /> Lịch sử xoá — {trashData.length} giao dịch</h3>
               <button onClick={() => setShowTrash(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
@@ -735,7 +735,7 @@ export default function AdvanceExpensePage() {
           <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 text-white hover:text-slate-300 p-2 z-10"><X className="w-8 h-8" /></button>
           <div className="relative max-w-5xl w-full flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
             {imgs.length > 1 && <span className="text-white/80 text-sm font-semibold">{imgs.length} ảnh chứng từ</span>}
-            {imgs.map((u, i) => <img key={i} src={u} alt={`Chứng từ ${i + 1}`} className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" />)}
+            {imgs.map((u, i) => <img key={i} src={u} alt={`Chứng từ ${i + 1}`} className="max-w-full max-h-[85dvh] object-contain rounded-xl shadow-2xl" />)}
           </div>
         </div>
       ); })()}
@@ -743,7 +743,7 @@ export default function AdvanceExpensePage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="e-modal-backdrop z-50 flex items-end lg:items-center justify-center lg:p-4">
-          <form onSubmit={handleCreateSubmit} className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[88vh] lg:max-h-[90vh] max-lg:rounded-b-none max-lg:rounded-t-3xl">
+          <form onSubmit={handleCreateSubmit} className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[88dvh] lg:max-h-[90dvh] max-lg:rounded-b-none max-lg:rounded-t-3xl">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
             <div className="e-modal-header items-center shrink-0 max-lg:pt-3 max-lg:px-4">
               <h3 className="e-modal-title">Tạo phiếu tạm ứng chi</h3>
@@ -831,7 +831,7 @@ export default function AdvanceExpensePage() {
       {/* Reject Modal */}
       {showRejectModal && (
         <div className="e-modal-backdrop z-[60] flex items-end lg:items-center justify-center lg:p-4">
-          <form onSubmit={handleRejectSubmit} className="e-modal max-w-sm overflow-hidden max-lg:max-w-none max-lg:max-h-[88vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-3xl">
+          <form onSubmit={handleRejectSubmit} className="e-modal max-w-sm overflow-hidden max-lg:max-w-none max-lg:max-h-[88dvh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-3xl">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2" />
             <div className="e-modal-header items-center max-lg:pt-3 max-lg:px-4">
               <h3 className="e-modal-title">Từ chối phiếu tạm ứng</h3>
@@ -855,13 +855,13 @@ export default function AdvanceExpensePage() {
       {/* Repay Modal */}
       {showRepayModal && (
         <div className="e-modal-backdrop z-[60] flex items-end lg:items-center justify-center lg:p-4">
-          <form onSubmit={handleRepaySubmit} className="e-modal max-w-lg overflow-hidden flex flex-col max-lg:max-w-none max-lg:max-h-[88vh] max-lg:rounded-b-none max-lg:rounded-t-3xl">
+          <form onSubmit={handleRepaySubmit} className="e-modal max-w-lg overflow-hidden flex flex-col max-lg:max-w-none max-lg:max-h-[88dvh] max-lg:rounded-b-none max-lg:rounded-t-3xl">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
             <div className="e-modal-header items-center shrink-0 max-lg:pt-3 max-lg:px-4">
               <h3 className="e-modal-title">Ghi nhận hoàn ứng (Thanh toán)</h3>
               <button type="button" onClick={() => setShowRepayModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
             </div>
-            <div className="e-modal-body space-y-4 overflow-y-auto max-h-[70vh] max-lg:max-h-none max-lg:flex-1 max-lg:px-4">
+            <div className="e-modal-body space-y-4 overflow-y-auto max-h-[70dvh] max-lg:max-h-none max-lg:flex-1 max-lg:px-4">
               <div>
                 <label className="e-label">Chọn phiếu tạm ứng cần hoàn *</label>
                 <select 

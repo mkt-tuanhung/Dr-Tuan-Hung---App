@@ -34,7 +34,7 @@ export default function ConsultButton({ app, className }) {
 
       {open && (
         <div className="fixed inset-0 bg-slate-900/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b bg-teal-50 shrink-0">
               <div>
                 <h3 className="font-bold text-teal-800">Hồ sơ tư vấn</h3>
@@ -75,7 +75,7 @@ export default function ConsultButton({ app, className }) {
             {imgs.length > 1 && <button onClick={() => nav(-1)} className="absolute left-3 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"><ChevronLeft className="w-6 h-6" /></button>}
             <img src={imgs[viewIdx]} alt="" draggable={false} onMouseDown={onMouseDown} onDoubleClick={() => { if (scale > 1) { setScale(1); setPos({ x: 0, y: 0 }); } else setScale(2); }}
               style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, cursor: scale > 1 ? (dragRef.current ? 'grabbing' : 'grab') : 'zoom-in' }}
-              className="max-w-[92vw] max-h-[80vh] object-contain" />
+              className="max-w-[92vw] max-h-[80dvh] object-contain" />
             {imgs.length > 1 && <button onClick={() => nav(1)} className="absolute right-3 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"><ChevronRight className="w-6 h-6" /></button>}
           </div>
           <div className="text-center text-white/50 text-xs pb-3 shrink-0" onClick={e => e.stopPropagation()}>Lăn chuột để zoom · kéo để di chuyển · nhấp đúp để phóng to</div>

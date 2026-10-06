@@ -175,7 +175,7 @@ export default function ImageLibrary({ me, canWrite }) {
         <div className="fixed inset-0 z-[70] bg-black/85 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
           <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white/80 hover:text-white"><X className="w-7 h-7" /></button>
           <a href={lightbox.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="absolute top-4 left-4 text-white/80 hover:text-white inline-flex items-center gap-1 text-sm"><Download className="w-5 h-5" />Tải/mở gốc</a>
-          <img src={lightbox.url} alt={lightbox.name || ''} className="max-w-full max-h-[88vh] rounded-lg object-contain" onClick={e => e.stopPropagation()} />
+          <img src={lightbox.url} alt={lightbox.name || ''} className="max-w-full max-h-[88dvh] rounded-lg object-contain" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

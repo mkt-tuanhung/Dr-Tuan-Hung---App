@@ -190,14 +190,14 @@ const KhachTuVanPage = () => {
       {/* Đầu màn: mô tả + chọn tháng thống kê + thùng rác */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="e-page-desc">Tiếp nhận • Hồ sơ • Ghi âm • Đánh giá AI</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <div className="e-seg gap-0.5">
             <button onClick={prevStatMonth} aria-label="Tháng trước" className="e-seg-item w-8 px-0"><ChevronLeft className="w-4 h-4" /></button>
             <span className="inline-flex items-center justify-center gap-1.5 h-8 px-2 min-w-[104px] text-[13px] font-semibold text-slate-800 tabular-nums"><CalendarDays className="w-4 h-4 text-teal-600 shrink-0" />Th{statMonth}/{statYear}</span>
             <button onClick={nextStatMonth} aria-label="Tháng sau" className="e-seg-item w-8 px-0"><ChevronRight className="w-4 h-4" /></button>
           </div>
         {!loading && isAdmin && trash.length > 0 && (
-          <button onClick={() => setTrashOpen(true)} className="e-btn e-btn-secondary inline-flex items-center gap-2 h-10 px-3.5 shrink-0"><Trash2 className="w-4 h-4" /> Thùng rác <span className="bg-danger-50 text-danger-600 font-semibold text-[11px] rounded-full min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center tabular-nums">{trash.length}</span></button>
+          <button onClick={() => setTrashOpen(true)} className="e-btn e-btn-secondary inline-flex items-center gap-2 h-10 px-3.5 shrink-0"><Trash2 className="w-4 h-4" /><span className="max-[389px]:sr-only">Thùng rác</span><span className="bg-danger-50 text-danger-600 font-semibold text-[11px] rounded-full min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center tabular-nums">{trash.length}</span></button>
         )}
         </div>
       </div>
@@ -542,7 +542,7 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
 const Field = ({ label, children }) => (<div className="mb-4"><label className="e-label">{label}</label>{children}</div>);
 const Modal = ({ title, onClose, children }) => (
   <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={onClose}>
-    <div className="e-modal max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="e-modal max-w-md max-h-[90dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
       <div className="e-modal-header items-center sticky top-0 z-10 bg-white rounded-t-2xl"><h3 className="e-modal-title">{title}</h3><button onClick={onClose} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button></div>
       <div className="e-modal-body">{children}</div>
     </div>

@@ -75,11 +75,13 @@ export default function SchedulePage() {
   const [over, setOver] = useState(null);
   const [confirm, setConfirm] = useState(null);  // 'publish' | 'copy'
   const [busy, setBusy] = useState(false);
+  const [mDay, setMDay] = useState(null);       // ngày đang xem trên mobile
   const pickRef = useRef(null);
 
   const weekStart = parseYmd(week);
   const dates = useMemo(() => Array.from({ length: 7 }, (_, i) => ymd(addDays(parseYmd(week), i))), [week]);
   const today = ymd(new Date());
+  const day = mDay && dates.includes(mDay) ? mDay : (dates.includes(today) ? today : dates[0]);
   const shiftById = useMemo(() => Object.fromEntries(shifts.map(s => [s.id, s])), [shifts]);
 
   const load = useCallback(async () => {
@@ -179,19 +181,19 @@ export default function SchedulePage() {
           <button onClick={() => setWeek(ymd(addDays(weekStart, 7)))} className="w-9 h-full grid place-items-center text-slate-500 hover:text-teal-700" aria-label="Tuần sau"><ChevronRight className="w-4 h-4" /></button>
         </div>
         {week !== ymd(mondayOf(new Date())) && <button onClick={() => setWeek(ymd(mondayOf(new Date())))} className="e-btn e-btn-ghost e-btn-sm">Tuần này</button>}
-        <select value={role} onChange={e => setRole(e.target.value)} className="e-input w-auto min-w-[170px]">
+        <select value={role} onChange={e => setRole(e.target.value)} className="e-input max-lg:w-full lg:w-auto lg:min-w-[170px]">
           <option value="all">Tất cả vị trí</option>
           {roleOptions.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
         </select>
-        <div className="flex flex-wrap gap-2 lg:ml-auto">
+        <div className="grid grid-cols-2 gap-2 max-lg:w-full lg:flex lg:flex-wrap lg:ml-auto">
           <button onClick={exportCsv} className="e-btn e-btn-secondary"><Download />Xuất Excel</button>
           <button onClick={() => setConfirm('copy')} disabled={missing} className="e-btn e-btn-secondary"><Copy />Chép tuần trước</button>
-          <button onClick={() => setConfirm('publish')} disabled={!draftCount || missing} className="e-btn e-btn-primary"><Megaphone />Công bố lịch{draftCount ? ` (${draftCount})` : ''}</button>
+          <button onClick={() => setConfirm('publish')} disabled={!draftCount || missing} className="e-btn e-btn-primary max-lg:col-span-2"><Megaphone />Công bố lịch{draftCount ? ` (${draftCount})` : ''}</button>
         </div>
       </div>
 
       {missing && (
-        <div className="rounded-2xl border border-warning-100 bg-warning-50 text-warning-700 px-4 py-3 text-[13px] flex gap-2"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />Chưa tạo bảng phân ca trên máy chủ. Vui lòng chạy file <b>supabase/work_schedule.sql</b> trong Supabase › SQL Editor.</div>
+        <div className="rounded-2xl border border-warning-100 bg-warning-50 text-warning-700 px-4 py-3 text-[13px] flex gap-2 [overflow-wrap:anywhere]"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /><span className="min-w-0">Chưa tạo bảng phân ca trên máy chủ. Vui lòng chạy file <b>supabase/work_schedule.sql</b> trong Supabase › SQL Editor.</span></div>
       )}
 
       {/* Chú giải */}
@@ -208,7 +210,45 @@ export default function SchedulePage() {
         ) : rows.length === 0 ? (
           <div className="e-empty"><div className="e-empty-icon"><Users /></div><div className="e-empty-title">Không có nhân sự</div><div className="e-empty-desc">Đổi bộ lọc vị trí để xem nhân sự khác.</div></div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* MOBILE: dải 7 ngày + danh sách nhân sự của ngày đang chọn (không kéo ngang) */}
+          <div className="lg:hidden">
+            <div className="grid grid-cols-7 gap-1 p-2 border-b border-slate-100">
+              {dates.map((d, i) => {
+                const on = d === day; const n = rows.filter(s => itemOf(s.id, d)).length;
+                return (
+                  <button key={d} onClick={() => setMDay(d)} className={`flex flex-col items-center justify-center h-[58px] rounded-xl transition ${on ? 'bg-teal-700 text-white shadow-nav' : d === today ? 'bg-teal-50 text-teal-800' : 'text-slate-600'}`}>
+                    <span className={`text-[11px] font-medium ${on ? 'text-white/80' : 'text-slate-400'}`}>{DOW[i].replace('Thứ ', 'T').replace('Chủ nhật', 'CN')}</span>
+                    <span className="text-[15px] font-bold tabular-nums leading-tight">{parseYmd(d).getDate()}</span>
+                    <span className={`text-[10px] tabular-nums ${on ? 'text-white/80' : 'text-slate-400'}`}>{n} ca</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="divide-y divide-slate-100">
+              {rows.map(s => {
+                const it = itemOf(s.id, day); const sh = it && shiftById[it.shift_id];
+                const lv = leaveOf(s.id, day); const warns = warnOf(s.id, day);
+                const cls = lv ? 'e-shift-leave' : sh ? `e-shift-${sh.tone}` : 'e-shift-empty';
+                return (
+                  <div key={s.id} className="flex items-center gap-3 px-3.5 py-2.5 min-h-[68px]">
+                    {s.avatar_url ? <img src={s.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" /> : <span className="e-avatar w-10 h-10 text-[13px] shrink-0">{initials(s.full_name)}</span>}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] font-semibold text-slate-900 truncate">{s.full_name}</div>
+                      <div className="text-[12px] text-slate-500 truncate">{warns.length ? <span className="text-danger-600">{warns[0].message}</span> : (s.position || [s.role, s.role_2].filter(Boolean).map(r => ROLE_LABELS[r] || r).join(' · '))}</div>
+                    </div>
+                    <button type="button"
+                      className={`e-shift !w-[112px] !mx-0 shrink-0 ${cls} ${it?.status === 'draft' ? 'e-shift-draft' : ''} ${warns.length ? 'e-shift-warn' : ''}`}
+                      onClick={(e) => { if (lv || missing) return; setPick({ staff: s, date: day, rect: e.currentTarget.getBoundingClientRect() }); }}
+                      disabled={missing && !sh}>
+                      {lv ? (lv.half_day_period ? 'Nghỉ ½' : 'Nghỉ phép') : sh ? sh.short : '+ Xếp ca'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="overflow-x-auto hidden lg:block">
             <table className="w-full border-separate border-spacing-0 min-w-[980px]">
               <thead>
                 <tr>
@@ -260,21 +300,22 @@ export default function SchedulePage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
-      {/* Bảng chọn ca */}
+      {/* Bảng chọn ca (mobile: tấm trượt từ đáy) */}
       {pick && (() => {
         const cur = itemOf(pick.staff.id, pick.date);
         const top = Math.min(pick.rect.bottom + 6, window.innerHeight - 250);
         const left = Math.min(Math.max(8, pick.rect.left + pick.rect.width / 2 - 140), window.innerWidth - 288);
         return (
-          <div ref={pickRef} className="fixed z-[60] w-[280px] e-card p-3 shadow-float" style={{ top, left }}>
+          <div ref={pickRef} className="fixed z-[60] w-[280px] e-card p-3 shadow-float max-lg:!inset-x-0 max-lg:!top-auto max-lg:!bottom-0 max-lg:!w-full max-lg:!rounded-b-none max-lg:p-4 max-lg:pb-[calc(16px+env(safe-area-inset-bottom))]" style={{ top, left }}>
             <div className="text-[12.5px] text-slate-500 mb-2 px-0.5"><b className="text-slate-800">{pick.staff.full_name}</b> · {DOW[dates.indexOf(pick.date)]} {dm(parseYmd(pick.date))}</div>
             <div className="grid grid-cols-2 gap-1.5">
               {shifts.map(sh => (
                 <button key={sh.id} onClick={() => { setShift(pick.staff.id, pick.date, sh.id); setPick(null); }}
-                  className={`h-11 rounded-[10px] text-[13px] font-semibold flex flex-col items-center justify-center leading-tight e-shift-${sh.tone} ${cur?.shift_id === sh.id ? 'ring-2 ring-teal-600' : ''}`}>
+                  className={`h-11 max-lg:h-12 rounded-[10px] text-[13px] font-semibold flex flex-col items-center justify-center leading-tight e-shift-${sh.tone} ${cur?.shift_id === sh.id ? 'ring-2 ring-teal-600' : ''}`}>
                   {sh.name}{!sh.is_off && <small className="text-[10.5px] font-normal opacity-80">{sh.start_time}–{sh.end_time}</small>}
                 </button>
               ))}

@@ -276,7 +276,7 @@ const KhachBongPage = ({ isNested = false }) => {
           {/* Nhật ký CSKH */}
           <div className="e-card e-card-pad">
             <h3 className="e-card-title mb-3 flex items-center gap-2"><MessageCircle className="w-5 h-5 text-teal-600" /> Nhật ký chăm sóc</h3>
-            <div className="text-[13.5px] leading-relaxed text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+            <div className="text-[13.5px] leading-relaxed text-slate-700 max-h-[40dvh] overflow-y-auto pr-1">
               {careApp.care_notes ? renderNotes(careApp.care_notes) : <div className="text-[13px] text-slate-400 text-center py-6">Chưa có ghi chú nào — thêm mốc đầu tiên bên dưới</div>}
             </div>
           </div>
@@ -422,7 +422,7 @@ const KhachBongPage = ({ isNested = false }) => {
               <h3 className="e-modal-title">Chốt Phẫu Thuật: {selectedApp?.customer_name}</h3>
               <button type="button" onClick={() => setShowSurgeryModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="e-modal-body space-y-4 max-h-[70dvh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="e-label">Ngày phẫu thuật</label>
@@ -493,7 +493,7 @@ const KhachBongPage = ({ isNested = false }) => {
               <h3 className="e-modal-title flex items-center gap-2"><Wallet className="w-5 h-5 text-teal-600" /> Chốt cọc: {selectedApp?.customer_name}</h3>
               <button type="button" onClick={() => setShowDepositModal(false)} className="e-icon-btn w-9 h-9 shrink-0 border-transparent"><X className="w-[18px] h-[18px]" /></button>
             </div>
-            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="e-modal-body space-y-4 max-h-[70dvh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="e-label">Số tiền cọc (VNĐ)</label>

@@ -531,7 +531,7 @@ export default function ServiceQualityPage() {
       {/* Chi tiết phản hồi */}
       {detail && (
         <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setDetail(null)}>
-          <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[88vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[88dvh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="e-modal-header items-center">
               <div className="min-w-0">
                 <h3 className="e-modal-title truncate">{detail.invitation?.customer_name || 'Khách'}</h3>
@@ -663,7 +663,7 @@ function TicketDetailModal({ ticket, staffList, onClose, onSave, onResurvey, res
 
   return (
     <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[90dvh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="e-modal-header items-center">
           <div className="min-w-0">
             <h3 className="e-modal-title truncate">{ticket.customer_name || 'Khách'}</h3>

@@ -492,13 +492,13 @@ const MarketingDataPage = () => {
       )}
 
       {canWrite && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
-        <button onClick={() => setEdit({})} title="Thêm khách" className="sm:hidden fixed z-[25] bottom-24 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-float ring-4 ring-white flex items-center justify-center"><UserPlus className="w-6 h-6" /></button>
+        <button onClick={() => setEdit({})} title="Thêm khách" className="sm:hidden fixed z-[25] bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 w-14 h-14 rounded-full bg-teal-600 text-white shadow-float ring-4 ring-white flex items-center justify-center"><UserPlus className="w-6 h-6" /></button>
       )}
 
       {/* Bottom-sheet BỘ LỌC (mobile) */}
       {filterOpen && (
         <div className="fixed inset-0 bg-slate-900/40 z-[80] flex items-end justify-center backdrop-blur-[2px]" onClick={() => setFilterOpen(false)}>
-          <div className="bg-white w-full rounded-t-3xl shadow-xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white w-full rounded-t-3xl shadow-xl max-h-[85dvh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="pt-2.5 pb-1 grid place-items-center"><span className="w-10 h-1.5 rounded-full bg-slate-200" /></div>
             <div className="shrink-0 px-5 py-3 border-b flex justify-between items-center">
               <h3 className="font-bold text-slate-900 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-teal-600" /> Bộ lọc</h3>
@@ -1464,7 +1464,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 z-[80] flex items-end sm:items-center justify-center sm:p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-3xl shadow-xl max-h-[94dvh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b flex justify-between items-center bg-white">
           <h3 className="font-bold text-slate-800">Báo cáo ngày — Telesale</h3>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
@@ -1696,7 +1696,7 @@ const ImportModal = ({ me, onClose, onDone }) => {
 const Field = ({ label, children }) => (<div className="mb-3"><label className="e-label">{label}</label>{children}</div>);
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 bg-slate-900/40 z-[80] flex items-center justify-center p-4 backdrop-blur-[1px]" onClick={onClose}>
-    <div className="e-modal max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="e-modal max-w-md max-h-[90dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
       <div className="e-modal-header items-center sticky top-0 bg-white rounded-t-2xl z-10"><h3 className="e-modal-title">{title}</h3><button onClick={onClose} className="w-8 h-8 rounded-full grid place-items-center text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button></div>
       <div className="p-5">{children}</div>
     </div>
@@ -1830,7 +1830,7 @@ const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92dvh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="shrink-0 px-5 py-3.5 border-b flex items-center justify-between bg-white">
           <h3 className="font-bold text-slate-800 flex items-center gap-2"><CalendarDays className="w-4 h-4 text-violet-600" /> Tạo lịch hẹn</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>

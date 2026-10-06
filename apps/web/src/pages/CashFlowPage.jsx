@@ -545,7 +545,7 @@ export default function CashFlowPage() {
       {sheet && (
         <div className="lg:hidden fixed inset-0 z-50 flex items-end">
           <div className="e-modal-backdrop" onClick={() => setSheet(null)} />
-          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[88vh] overflow-y-auto animate-page">
+          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[88dvh] overflow-y-auto animate-page">
             <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />
             <div className="flex items-center gap-3">
               <span className={`w-12 h-12 rounded-full grid place-items-center shrink-0 ${sheet.flow_type === 'in' ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'}`}>
@@ -577,7 +577,7 @@ export default function CashFlowPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="e-modal-backdrop z-50 flex items-end lg:items-center justify-center lg:p-4">
-          <form onSubmit={handleCreateSubmit} className="e-modal max-w-lg max-h-[92vh] overflow-hidden flex flex-col max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl">
+          <form onSubmit={handleCreateSubmit} className="e-modal max-w-lg max-h-[92dvh] overflow-hidden flex flex-col max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">{editId ? 'Sửa giao dịch Dòng tiền' : 'Ghi nhận Dòng tiền'}</h3>

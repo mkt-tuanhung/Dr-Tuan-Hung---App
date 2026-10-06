@@ -166,7 +166,7 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[70dvh] overflow-y-auto">
             {items.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-sm">Chưa có thông báo nào</div>
             ) : items.map(n => (

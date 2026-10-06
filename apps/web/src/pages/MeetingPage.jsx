@@ -366,7 +366,7 @@ export default function MeetingPage() {
       {/* FAB tạo cuộc họp — góc dưới phải, thuận ngón cái (như Google Meet) */}
       {!showCreate && !showAsk && !sheet && !view && (
         <button onClick={() => { setSchedOn(false); setSchedAt(''); setShowCreate(true); }} title="Tạo cuộc họp"
-          className="e-btn-primary fixed z-[60] bottom-20 lg:bottom-8 right-5 lg:right-8 w-14 h-14 rounded-full shadow-float ring-4 ring-teal-500/15 flex items-center justify-center hover:scale-105 active:scale-95 transition">
+          className="e-btn-primary fixed z-[25] bottom-[calc(88px+env(safe-area-inset-bottom))] lg:bottom-8 right-4 lg:right-8 w-14 h-14 rounded-full shadow-float ring-4 ring-teal-500/15 flex items-center justify-center hover:scale-105 active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
@@ -393,7 +393,7 @@ function MinutesModal({ m, onClose, onReanalyze }) {
   const Section = ({ title, children }) => <div className="mb-5"><div className="e-caption mb-2">{title}</div>{children}</div>;
   return (
     <div className="e-modal-backdrop z-[90] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="e-modal max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="e-modal max-w-2xl max-h-[90dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="e-modal-header items-center sticky top-0 bg-white rounded-t-2xl z-10">
           <h3 className="e-modal-title flex items-center gap-2"><Sparkles className="w-5 h-5 text-teal-600" /> Biên bản: {m.title}</h3>
           <button onClick={onClose} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>

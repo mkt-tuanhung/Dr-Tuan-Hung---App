@@ -981,7 +981,7 @@ const HauPhauPage = () => {
             </button>
           </div>
           {showHauPhauLog && (
-            <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+            <div className="text-sm text-slate-700 max-h-[40dvh] overflow-y-auto pr-1">
               {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6 text-[13px]">Chưa có ghi chú nào</div>}
             </div>
           )}
@@ -991,7 +991,7 @@ const HauPhauPage = () => {
         {isCskhTab && (
         <div className="e-card e-card-pad">
           <div className="e-card-header"><h3 className="e-card-title flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-lavender-50 text-lavender-600 grid place-items-center shrink-0"><MessageCircle className="w-4 h-4" /></span> Nhật ký CSKH</h3></div>
-          <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
+          <div className="text-sm text-slate-700 max-h-[40dvh] overflow-y-auto pr-1">
             {careApp.cskh_notes ? renderNotes(careApp.cskh_notes) : <div className="text-slate-400 text-center py-6 text-[13px]">Chưa có ghi chú CSKH nào</div>}
           </div>
         </div>
@@ -1058,7 +1058,7 @@ const HauPhauPage = () => {
         {viewImage && (
           <div className="fixed inset-0 bg-black/85 z-[95] flex items-center justify-center p-4" onClick={() => setViewImage(null)}>
             <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 z-10 w-11 h-11 grid place-items-center rounded-full bg-white/15 text-white hover:bg-white/30 backdrop-blur"><X className="w-6 h-6" /></button>
-            <img src={viewImage} alt="" className="max-w-full max-h-[85vh] rounded-2xl object-contain" />
+            <img src={viewImage} alt="" className="max-w-full max-h-[85dvh] rounded-2xl object-contain" />
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 text-white/50 text-[12px]">Chạm để đóng</div>
           </div>
         )}
@@ -1492,7 +1492,7 @@ const HauPhauPage = () => {
                               <span className={`e-badge e-badge-sm border shrink-0 ${stCls}`}>{st}</span>
                             </div>
                             <div className="mt-2 flex items-center gap-2 text-[12px] min-w-0">
-                              <span className="e-badge e-badge-sm e-tone-neutral max-w-[55%] overflow-hidden">{app.service || 'Chưa rõ DV'}</span>
+                              <span className="e-badge e-badge-sm e-tone-neutral max-w-[55%] min-w-0" title={app.service || ''}><span className="truncate">{app.service || 'Chưa rõ DV'}</span></span>
                               <span className="text-slate-300 shrink-0">·</span>
                               <span className="text-slate-500 truncate min-w-0">{app.hau_phau?.full_name || 'Chưa phân công'}</span>
                             </div>
@@ -1546,7 +1546,7 @@ const HauPhauPage = () => {
       {viewImage && (
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
           <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 z-10 w-11 h-11 grid place-items-center rounded-full bg-white/15 text-white hover:bg-white/30 backdrop-blur"><X className="w-6 h-6" /></button>
-          <img src={viewImage} alt="Phóng to" className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
+          <img src={viewImage} alt="Phóng to" className="max-h-[85dvh] max-w-full object-contain rounded-xl shadow-2xl" />
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 text-white/50 text-[12px]">Chạm để đóng</div>
         </div>
       )}
@@ -1554,7 +1554,7 @@ const HauPhauPage = () => {
       {/* Modal Import khách hàng chăm sóc */}
       {showImportModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">Import khách hàng chăm sóc</h3>
               <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-4 h-4" /></button>

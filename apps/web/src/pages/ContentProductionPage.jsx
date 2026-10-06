@@ -259,7 +259,7 @@ const isVideoFile = (url) => /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url || '');
 const VIDEO_BASE = 'block w-full rounded-lg border border-slate-200 bg-black';
 // Mặc định: khung dọc 9:16, canh giữa, giới hạn chiều cao — hợp clip quảng cáo (quay dọc)
 // và tránh trình phát (Google Drive / YouTube) bị nhồi vào khung ngang gây lỗi giao diện trên mobile.
-const VideoPreview = ({ url, className = 'max-w-[300px] mx-auto aspect-[9/16] max-h-[75vh]' }) => {
+const VideoPreview = ({ url, className = 'max-w-[300px] mx-auto aspect-[9/16] max-h-[75dvh]' }) => {
   const emb = embedUrl(url);
   if (emb) return <iframe src={emb} loading="lazy" allow="autoplay; fullscreen" allowFullScreen title="clip" className={`${VIDEO_BASE} ${className}`} />;
   if (isVideoFile(url)) return <video src={url} controls playsInline preload="metadata" className={`${VIDEO_BASE} ${className}`} />;
@@ -1130,7 +1130,7 @@ const ImageLightbox = () => {
     <div className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4" onClick={() => setUrl(null)}>
       <button onClick={() => setUrl(null)} className="absolute top-4 right-4 text-white/80 hover:text-white"><X className="w-7 h-7" /></button>
       <button onClick={(e) => { e.stopPropagation(); downloadFile(url, 'thumbnail.jpg'); }} title="Tải ảnh" className="absolute top-4 right-16 text-white/80 hover:text-white"><Download className="w-6 h-6" /></button>
-      <img src={url} alt="" onClick={(e) => e.stopPropagation()} className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl" />
+      <img src={url} alt="" onClick={(e) => e.stopPropagation()} className="max-h-[90dvh] max-w-[92vw] object-contain rounded-lg shadow-2xl" />
     </div>
   );
 };
@@ -2054,7 +2054,7 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="e-modal max-w-md max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="e-modal max-w-md max-h-[92dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="e-modal-header">
           <div className="flex items-start gap-3 min-w-0">
             <span className="e-metric-icon w-11 h-11 lg:w-11 lg:h-11 bg-success-50 text-success-600 [&_svg]:w-5 [&_svg]:h-5"><CheckCircle2 /></span>
@@ -2946,7 +2946,7 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
 
       {/* Thẻ video dạng reel 9:16 bo tròn, canh giữa */}
       <div className="relative z-10 w-full flex justify-center px-3 sm:px-0" onClick={e => e.stopPropagation()}>
-        <div className="relative w-full max-w-[400px] aspect-[9/16] max-h-[90vh] bg-black rounded-[26px] overflow-hidden shadow-2xl ring-1 ring-white/10">
+        <div className="relative w-full max-w-[400px] aspect-[9/16] max-h-[90dvh] bg-black rounded-[26px] overflow-hidden shadow-2xl ring-1 ring-white/10">
           <TikTokPlayer key={cur} url={cur} onLike={doubleTapLike} />
 
           {/* Tiêu đề trên cùng */}
@@ -3281,7 +3281,7 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
                 <h4 className="text-[14px] font-semibold text-slate-800 flex items-center gap-2"><span className="w-7 h-7 rounded-full grid place-items-center bg-success-50 text-success-600 shrink-0"><CheckCircle2 className="w-4 h-4" /></span>Nguồn mới ({news.length})</h4>
                 <div className="flex gap-1"><button onClick={() => toggleGroup(news, true)} className="e-btn e-btn-ghost e-btn-sm h-8">Chọn hết</button><button onClick={() => toggleGroup(news, false)} className="e-btn e-btn-ghost e-btn-sm h-8 text-slate-500">Bỏ chọn</button></div>
               </div>
-              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-[32vh] overflow-y-auto">
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-[32dvh] overflow-y-auto">
                 {news.map(p => <Row key={p.driveId} p={p} />)}
               </div>
             </div>
@@ -3293,7 +3293,7 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
                 <h4 className="text-[14px] font-semibold text-slate-800 flex items-center gap-2 min-w-0"><span className="w-7 h-7 rounded-full grid place-items-center bg-warning-50 text-warning-600 shrink-0"><AlertTriangle className="w-4 h-4" /></span><span className="min-w-0">Nghi trùng ({dups.length}) — trùng tên &amp; gần ngày với nguồn đã có</span></h4>
                 <button onClick={() => toggleGroup(dups, true)} className="e-btn e-btn-ghost e-btn-sm h-8 shrink-0">Vẫn thêm tất cả</button>
               </div>
-              <div className="border border-warning-200 bg-warning-50/40 rounded-xl divide-y divide-warning-100 max-h-[28vh] overflow-y-auto">
+              <div className="border border-warning-200 bg-warning-50/40 rounded-xl divide-y divide-warning-100 max-h-[28dvh] overflow-y-auto">
                 {dups.map(p => <Row key={p.driveId} p={p} warn />)}
               </div>
             </div>
@@ -3314,7 +3314,7 @@ const AutoImportModal = ({ me, stores, onClose, onSaved }) => {
 
 const Modal = ({ title, onClose, children, wide }) => (
   <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={onClose}>
-    <div className={`e-modal ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+    <div className={`e-modal ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90dvh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
       <div className="e-modal-header items-center sticky top-0 z-10 bg-white rounded-t-2xl">
         <h3 className="e-modal-title min-w-0 truncate">{title}</h3>
         <button onClick={onClose} className="e-icon-btn w-9 h-9 border-transparent shrink-0"><X className="w-5 h-5" /></button>

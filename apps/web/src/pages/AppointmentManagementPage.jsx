@@ -585,7 +585,7 @@ const AppointmentManagementPage = () => {
       </div>
 
       {!showCreateModal && !showEvalModal && !drawerApp && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-nav ring-4 ring-white flex items-center justify-center active:scale-95 transition">
+        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[25] bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 w-14 h-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-nav ring-4 ring-white flex items-center justify-center active:scale-95 transition">
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
@@ -872,7 +872,7 @@ const AppointmentManagementPage = () => {
       {/* Modal Thêm Lịch Hẹn Mới */}
       {showCreateModal && (
         <div className="e-modal-backdrop z-[70] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowCreateModal(false)}>
-          <div className="e-modal sm:max-w-2xl rounded-b-none sm:rounded-2xl max-h-[94vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="e-modal sm:max-w-2xl rounded-b-none sm:rounded-2xl max-h-[94dvh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="e-modal-header shrink-0 items-center">
               <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><CalendarDays className="w-5 h-5" /></span>
@@ -1072,7 +1072,7 @@ const AppointmentManagementPage = () => {
       {/* Modal Đánh Giá */}
       {showEvalModal && evalApp && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="e-modal max-w-lg overflow-hidden max-h-[90dvh] flex flex-col">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">Đánh giá lịch hẹn: {evalApp.customer_name}</h3>
               <button onClick={() => setShowEvalModal(false)} className="e-icon-btn w-9 h-9 shrink-0">
@@ -1206,7 +1206,7 @@ const AppointmentManagementPage = () => {
       {/* Modal View Note (Lịch sử chăm sóc) */}
       {viewNoteApp && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[80dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">Lịch sử chăm sóc: {viewNoteApp.customer_name}</h3>
               <button onClick={() => setViewNoteApp(null)} className="e-icon-btn w-9 h-9 shrink-0">
@@ -1227,7 +1227,7 @@ const AppointmentManagementPage = () => {
       {/* Modal Lịch sử tư vấn (care_notes từ Khách Cọc/Bong) */}
       {careHistoryApp && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[80dvh]">
             <div className="e-modal-header items-center shrink-0">
               <div>
                 <h3 className="e-modal-title">Lịch sử tư vấn</h3>
@@ -1249,7 +1249,7 @@ const AppointmentManagementPage = () => {
       {/* Modal Hồ sơ tư vấn (ảnh + ghi chú) */}
       {consultView && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[85dvh]">
             <div className="e-modal-header items-center shrink-0">
               <div>
                 <h3 className="e-modal-title">Hồ sơ tư vấn</h3>
@@ -1278,7 +1278,7 @@ const AppointmentManagementPage = () => {
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
           <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 z-10 w-11 h-11 grid place-items-center rounded-full bg-white/15 text-white hover:bg-white/30 backdrop-blur"><X className="w-6 h-6" /></button>
           <div className="relative max-w-5xl w-full flex justify-center">
-            <img src={viewImage} alt="Phóng to" className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
+            <img src={viewImage} alt="Phóng to" className="max-h-[85dvh] max-w-full object-contain rounded-xl shadow-2xl" />
           </div>
         </div>
       )}
@@ -1291,7 +1291,7 @@ const AppointmentManagementPage = () => {
               <h3 className="e-modal-title flex items-center gap-2"><User className="w-4 h-4 text-teal-600" /> Sửa thông tin khách</h3>
               <button onClick={() => setCustEdit(null)} className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
             </div>
-            <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="e-modal-body space-y-4 max-h-[70dvh] overflow-y-auto">
               <div>
                 <label className="e-label">Tên khách <span className="text-danger-500">*</span></label>
                 <input value={custForm.customer_name} onChange={e => setCustForm(f => ({ ...f, customer_name: e.target.value }))}

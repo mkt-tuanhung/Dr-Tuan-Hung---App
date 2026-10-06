@@ -230,7 +230,7 @@ const DieuDuongAdmin = ({ month, year }) => {
       {/* Modal danh sách khách theo vai trò */}
       {detail && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
-          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[85dvh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
               <div>
                 <h3 className="e-modal-title">{ROLE_LABEL[detail.roleKey]} — {detail.staff.full_name}</h3>

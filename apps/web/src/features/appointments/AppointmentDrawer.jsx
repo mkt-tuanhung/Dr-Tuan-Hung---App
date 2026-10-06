@@ -39,7 +39,7 @@ export default function AppointmentDrawer({ app, onClose, actions, profile }) {
     <div className="fixed inset-0 z-[45]">
       <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px]" onClick={onClose} />
       <aside className="absolute bg-white shadow-float flex flex-col
-        inset-x-0 bottom-0 max-h-[88vh] rounded-t-3xl
+        inset-x-0 bottom-0 max-h-[88dvh] rounded-t-3xl
         lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[440px] lg:max-h-none lg:rounded-none lg:rounded-l-3xl animate-page">
         {/* Thanh kéo (mobile) */}
         <div className="lg:hidden pt-2.5 pb-1 grid place-items-center"><span className="w-10 h-1.5 rounded-full bg-slate-200" /></div>

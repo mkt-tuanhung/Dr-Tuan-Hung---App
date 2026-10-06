@@ -494,7 +494,7 @@ const FinanceManagementPage = () => {
           {/* ===== Modal chi tiết tiền cọc ===== */}
           {showCocModal && (
             <div className="e-modal-backdrop z-[80] flex items-end md:items-center justify-center p-0 md:p-6" onClick={() => setShowCocModal(false)}>
-              <div className="e-modal md:max-w-3xl max-h-[92vh] md:max-h-[85vh] rounded-b-none rounded-t-3xl md:rounded-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="e-modal md:max-w-3xl max-h-[92dvh] md:max-h-[85dvh] rounded-b-none rounded-t-3xl md:rounded-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 <div className="md:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
                 <div className="e-modal-header items-center shrink-0">
                   <div className="min-w-0">
@@ -789,7 +789,7 @@ const FinanceManagementPage = () => {
       {sheet && (
         <div className="lg:hidden fixed inset-0 z-50 flex items-end">
           <div className="e-modal-backdrop" onClick={() => setSheet(null)} />
-          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[88vh] overflow-y-auto animate-page">
+          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[88dvh] overflow-y-auto animate-page">
             <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
@@ -821,7 +821,7 @@ const FinanceManagementPage = () => {
       {/* Direct Revenue Modal */}
       {showImportModal && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="e-modal max-w-2xl overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">Import doanh thu từ Excel / CSV</h3>
               <button onClick={() => { setShowImportModal(false); setImportPreview(null); }} title="Đóng" className="e-icon-btn w-8 h-8 shrink-0"><X className="w-4 h-4" /></button>
@@ -899,7 +899,7 @@ const FinanceManagementPage = () => {
 
       {showCreateModal && (
         <div className="e-modal-backdrop z-50 flex justify-center items-end lg:items-start lg:py-10 lg:px-4 overflow-y-auto">
-          <div className="e-modal max-w-3xl overflow-hidden lg:my-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[92vh] max-lg:flex max-lg:flex-col">
+          <div className="e-modal max-w-3xl overflow-hidden lg:my-auto max-lg:max-w-none max-lg:rounded-b-none max-lg:rounded-t-3xl max-lg:max-h-[92dvh] max-lg:flex max-lg:flex-col">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
             <div className="e-modal-header items-center">
               <div className="min-w-0">

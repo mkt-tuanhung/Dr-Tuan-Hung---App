@@ -245,7 +245,7 @@ export default function NhapVatTuMoiPage() {
 
       {modal && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title flex items-center gap-2"><PackagePlus className="w-5 h-5 text-teal-600" /> Nhập vật tư mới</h3>
               <button onClick={() => setModal(null)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>

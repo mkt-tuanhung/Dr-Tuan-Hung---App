@@ -229,7 +229,7 @@ const MoDoiTacPage = () => {
 
       {modal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">{modal.id ? 'Sửa ca mổ đối tác' : 'Thêm ca mổ đối tác'}</h3>
               <button onClick={() => setModal(null)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>

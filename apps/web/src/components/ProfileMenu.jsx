@@ -376,7 +376,7 @@ export default function ProfileMenu({ children, mobile = false }) {
       {/* Profile Modal — portal ra body để không kẹt trong containing block của header (backdrop-blur) */}
       {modalOpen && createPortal((
         <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-end lg:items-center justify-center p-0 lg:p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-t-3xl lg:rounded-2xl w-full lg:max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] lg:max-h-[92vh] animate-page">
+          <div className="bg-white rounded-t-3xl lg:rounded-2xl w-full lg:max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] lg:max-h-[92dvh] animate-page">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 mb-1 shrink-0" />
             <div className="flex bg-white lg:bg-slate-50 border-b border-slate-100 lg:border-slate-200 shrink-0 px-2 lg:px-0">
               <button onClick={() => setActiveTab('profile')} className={`flex-1 min-h-[48px] py-3.5 px-1 text-[14px] lg:text-sm font-bold leading-tight transition-colors border-b-2 ${activeTab === 'profile' ? 'border-teal-600 text-teal-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
@@ -394,7 +394,7 @@ export default function ProfileMenu({ children, mobile = false }) {
             <div className="px-4 pt-5 pb-[calc(20px+env(safe-area-inset-bottom))] lg:p-6 overflow-y-auto flex-1">
               {activeTab === 'profile' ? (
                 selectingBank ? (
-                  <div className="flex flex-col h-[60vh]">
+                  <div className="flex flex-col h-[60dvh]">
                     <div className="flex items-center gap-3 mb-4">
                       <button onClick={() => setSelectingBank(false)} className="p-2 -ml-2 rounded-xl text-slate-400 hover:bg-slate-100"><ChevronLeft className="w-5 h-5"/></button>
                       <h3 className="font-bold text-slate-800 flex-1">Chọn Ngân hàng</h3>

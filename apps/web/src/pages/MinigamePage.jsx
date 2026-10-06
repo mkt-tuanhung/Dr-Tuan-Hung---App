@@ -311,7 +311,7 @@ const GameEditModal = ({ game, me, onClose, onSaved }) => {
 
   return (
     <div className="e-modal-backdrop z-[90] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
-      <div className="e-modal sm:max-w-lg rounded-b-none sm:rounded-2xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="e-modal sm:max-w-lg rounded-b-none sm:rounded-2xl max-h-[92dvh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="e-modal-header items-center shrink-0">
           <h3 className="e-modal-title flex items-center gap-2"><Gamepad2 className="w-5 h-5 text-teal-600" /> {editing ? 'Sửa game' : 'Tạo minigame'}</h3>
           <button onClick={onClose} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>

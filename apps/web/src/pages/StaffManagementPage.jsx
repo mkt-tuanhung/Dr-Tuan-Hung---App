@@ -479,7 +479,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       {sheet && (
         <div className="lg:hidden fixed inset-0 z-50 flex items-end">
           <div className="e-modal-backdrop" onClick={() => setSheet(null)} />
-          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto animate-page">
+          <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto animate-page">
             <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />
             <div className="flex items-center gap-3">
               <span className={`w-14 h-14 rounded-full overflow-hidden shrink-0 grid place-items-center text-[17px] font-bold ${sheet.avatar_url ? '' : 'bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700'}`}>
@@ -549,7 +549,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       </Dialog>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200 p-0 gap-0">
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border-slate-200 p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-100 text-left">
             <DialogTitle className="e-modal-title">{editTarget ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}</DialogTitle>
           </DialogHeader>

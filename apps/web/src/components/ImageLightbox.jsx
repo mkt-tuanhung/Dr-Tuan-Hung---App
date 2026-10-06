@@ -92,7 +92,7 @@ export default function ImageLightbox({ images = [], index = 0, onClose }) {
         onTouchEnd={onTouchEnd}
         draggable={false}
         style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, cursor: scale > 1 ? 'grab' : 'zoom-in', transition: drag.current || pinch.current ? 'none' : 'transform 0.12s ease-out' }}
-        className="max-h-[82vh] max-w-[92vw] object-contain rounded-lg shadow-2xl touch-none"
+        className="max-h-[82dvh] max-w-[92vw] object-contain rounded-lg shadow-2xl touch-none"
       />
 
       <div className="absolute bottom-3 inset-x-0 text-center text-white/45 text-[11px] px-4" onClick={e => e.stopPropagation()}>

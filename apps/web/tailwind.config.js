@@ -156,6 +156,7 @@ module.exports = {
         soft: "0 2px 8px rgba(7, 95, 99, 0.06)",
         float: "0 12px 40px rgba(7, 95, 99, 0.14)",
         nav: "0 6px 16px rgba(6, 123, 127, 0.24)",
+        focus: "0 0 0 3px rgba(18, 164, 165, 0.22)",
       },
       borderRadius: {
         lg: "var(--radius)",

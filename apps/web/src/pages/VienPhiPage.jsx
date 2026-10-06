@@ -364,7 +364,7 @@ const VienPhiPage = ({ isNested = false }) => {
         <div className="fixed inset-0 bg-slate-900/85 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewImage(null)}>
           <button onClick={() => setViewImage(null)} className="fixed top-4 right-4 z-10 w-11 h-11 grid place-items-center rounded-full bg-white/15 text-white hover:bg-white/30 backdrop-blur"><X className="w-6 h-6" /></button>
           <div className="relative max-w-5xl w-full flex justify-center">
-            <img src={viewImage} alt="Hoá đơn" className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
+            <img src={viewImage} alt="Hoá đơn" className="max-h-[85dvh] max-w-full object-contain rounded-xl shadow-2xl" />
           </div>
         </div>
       )}

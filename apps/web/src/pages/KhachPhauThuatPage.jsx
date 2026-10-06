@@ -465,7 +465,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       {/* Modal Phân công Điều dưỡng */}
       {showNurseModal && selectedApp && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSave} className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <form onSubmit={handleSave} className="e-modal max-w-lg overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">Phân công điều dưỡng: {selectedApp.customer_name}</h3>
               <button type="button" onClick={() => setShowNurseModal(false)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>
@@ -607,7 +607,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       {/* MODAL: VẬT TƯ TIÊU HAO */}
       {showMaterialModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title flex items-center gap-2"><PackageOpen className="w-5 h-5 text-teal-600"/> Báo cáo Vật tư tiêu hao</h3>
               <button onClick={() => setShowMaterialModal(false)} className="e-icon-btn w-8 h-8 border-transparent shrink-0"><X className="w-5 h-5" /></button>

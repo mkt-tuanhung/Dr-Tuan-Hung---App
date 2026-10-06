@@ -102,6 +102,7 @@ function Matrix({ me, overrides, reload, roleCount, disabled }) {
   const [q, setQ] = useState('');
   const [onlyChanged, setOnlyChanged] = useState(false);
   const [pending, setPending] = useState(null); // { role, m, next, reset? }
+  const [mRole, setMRole] = useState(MATRIX_ROLES[0]); // vai trò đang xem trên mobile
   const groups = useMemo(groupedModules, []);
   const needle = fold(q.trim());
 
@@ -115,7 +116,7 @@ function Matrix({ me, overrides, reload, roleCount, disabled }) {
   return (
     <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 lg:p-5 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative flex-1 min-w-0 basis-full sm:basis-auto sm:min-w-[200px] max-w-sm max-sm:max-w-none">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm chức năng…" className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-[13.5px] outline-none focus:bg-white focus:border-teal-400" />
         </div>
@@ -123,7 +124,7 @@ function Matrix({ me, overrides, reload, roleCount, disabled }) {
           <input type="checkbox" checked={onlyChanged} onChange={e => setOnlyChanged(e.target.checked)} className="accent-teal-600 w-4 h-4" />
           Chỉ hiện chức năng đã chỉnh {changedCount > 0 && <span className="text-amber-600 font-bold">({changedCount} ô)</span>}
         </label>
-        <div className="ml-auto flex items-center gap-3 text-[12px] text-slate-500">
+        <div className="sm:ml-auto flex flex-wrap items-center gap-3 text-[12px] text-slate-500">
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-400" />Khác mặc định</span>
           <span className="inline-flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-amber-600" />Nhạy cảm</span>
         </div>
@@ -134,7 +135,45 @@ function Matrix({ me, overrides, reload, roleCount, disabled }) {
         <span>Ma trận quyết định <b>menu chức năng</b> mỗi vai trò nhìn thấy. Dữ liệu bên trong vẫn được máy chủ bảo vệ theo vai trò — nếu mở chức năng cho vai trò chưa có quyền dữ liệu, màn đó có thể hiển thị trống. Admin luôn toàn quyền.</span>
       </div>
 
-      <div className="overflow-auto max-h-[68vh] rounded-xl border border-slate-200/80">
+      {/* MOBILE: chọn 1 vai trò -> danh sách chức năng có ô tích (không kéo ngang ma trận) */}
+      <div className="lg:hidden space-y-3">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-0.5">
+          {MATRIX_ROLES.map(r => (
+            <button key={r} onClick={() => setMRole(r)} className={`e-chip shrink-0 ${mRole === r ? 'e-chip-active' : ''}`}>
+              {ROLE_LABELS[r] || r}<span className="opacity-70 tabular-nums">{roleCount[r] || 0}</span>
+            </button>
+          ))}
+        </div>
+        <div className="rounded-xl border border-slate-200/80 divide-y divide-slate-100">
+          {visibleGroups.map(g => (
+            <div key={g.title}>
+              <div className="px-3 pt-3.5 pb-1.5 text-[10.5px] font-bold tracking-[0.08em] text-slate-400 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-teal-300" />{g.title}</div>
+              {g.items.map(m => {
+                const has = overrides.has(overrideKey(mRole, m.id));
+                const granted = effectiveGrant(mRole, m, overrides);
+                return (
+                  <button key={m.id} disabled={disabled} onClick={() => setPending({ role: mRole, m, next: !granted, overridden: has })}
+                    className={`w-full flex items-center gap-3 px-3 min-h-[52px] py-2 text-left border-t border-slate-50 disabled:cursor-not-allowed ${has ? 'bg-amber-50' : 'active:bg-teal-50'}`}>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-[14px] font-medium text-slate-900">
+                        {SENSITIVE.has(m.id) && <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-label="Nhạy cảm" />}
+                        <span className="truncate">{m.parent ? `${m.parent} › ` : ''}{m.label}</span>
+                      </div>
+                      {has && <div className="text-[11.5px] text-amber-700">Khác mặc định</div>}
+                    </div>
+                    <span className={`w-[22px] h-[22px] rounded-[6px] grid place-items-center border-2 shrink-0 ${granted ? 'bg-teal-600 border-teal-600' : 'bg-white border-slate-300'}`}>
+                      {granted && <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6.2l2.3 2.3 4.7-5" /></svg>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          {visibleGroups.length === 0 && <div className="text-center py-10 text-slate-400 text-[13px]">Không có chức năng phù hợp</div>}
+        </div>
+      </div>
+
+      <div className="overflow-auto max-h-[68dvh] rounded-xl border border-slate-200/80 hidden lg:block">
         <table className="border-separate border-spacing-0 text-[13px] w-full">
           <thead>
             <tr>
@@ -291,7 +330,7 @@ function UsersTab({ staff, overrides }) {
       {open && (
         <div className="fixed inset-0 z-[70]">
           <div className="absolute inset-0 bg-slate-900/30" onClick={() => setOpen(null)} />
-          <aside className="absolute bg-white shadow-float flex flex-col inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[420px] lg:max-h-none lg:rounded-none lg:rounded-l-3xl">
+          <aside className="absolute bg-white shadow-float flex flex-col inset-x-0 bottom-0 max-h-[85dvh] rounded-t-3xl lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[420px] lg:max-h-none lg:rounded-none lg:rounded-l-3xl">
             <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-[18px] font-bold text-slate-900 truncate">{open.full_name}</div>

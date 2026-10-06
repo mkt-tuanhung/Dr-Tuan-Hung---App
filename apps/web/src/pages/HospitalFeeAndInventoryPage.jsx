@@ -47,7 +47,7 @@ export default function HospitalFeeAndInventoryPage() {
         </div>
 
         {/* Content Area */}
-        <div className="min-h-[60vh]">
+        <div className="min-h-[60dvh]">
           {activeTab === 'vien_phi' && showVienPhi && <VienPhiPage isNested={true} />}
           {activeTab === 'inventory' && <InventoryManagementPage isNested={true} />}
           {activeTab === 'nhap_moi' && <NhapVatTuMoiPage />}

@@ -100,6 +100,15 @@
   .e-table tbody td { @apply h-[60px] px-3 border-b border-slate-100 text-slate-700 first:pl-5 last:pr-5; }
   .e-table tbody tr:hover td { @apply bg-teal-50/30; }
   .e-table .num { @apply text-right tabular-nums; }
+  /* Cột ghim khi bảng rộng hơn màn hình (tên bên trái, tổng/thao tác bên phải) */
+  .e-table .e-stick-l, .e-table .e-stick-r { position: sticky; z-index: 2; background: #fff; }
+  .e-table thead th.e-stick-l, .e-table thead th.e-stick-r { @apply bg-slate-50; z-index: 3; }
+  .e-table tbody tr:hover td.e-stick-l, .e-table tbody tr:hover td.e-stick-r { background: #F5FBFB; }
+  /* Làm mờ hàng mà vẫn giữ nền đặc cho cột ghim */
+  .e-table tr.e-row-dim td { color: #A3ABAA; }
+  .e-table tr.e-row-dim td > * { opacity: 0.5; }
+  .e-table .e-stick-l.e-stick-edge { box-shadow: 8px 0 12px -10px rgba(7, 95, 99, 0.28); }
+  .e-table .e-stick-r.e-stick-edge { box-shadow: -8px 0 12px -10px rgba(7, 95, 99, 0.28); }
 
   /* ---------- Trạng thái rỗng ---------- */
   .e-empty { @apply flex flex-col items-center justify-center text-center py-10 px-4; }

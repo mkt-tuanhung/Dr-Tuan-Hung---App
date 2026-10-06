@@ -736,7 +736,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {/* Floating Action Bar for Multi-Select */}
       {isMultiSelect && selectedCells.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] sm:w-auto bg-white border border-teal-100 text-slate-800 px-4 py-3 rounded-2xl shadow-float flex flex-wrap items-center gap-3 z-[60] animate-in slide-in-from-bottom-8">
+        <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] lg:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] sm:w-auto bg-white border border-teal-100 text-slate-800 px-4 py-3 rounded-2xl shadow-float flex flex-wrap items-center gap-3 z-[60] animate-in slide-in-from-bottom-8">
           <div className="font-semibold text-[14px] text-teal-800">Đã chọn {selectedCells.size} ô</div>
           <div className="flex flex-wrap items-center gap-2 sm:border-l sm:border-slate-200 sm:pl-3">
             <button disabled={saving} onClick={() => handleBulkAction('present')} className="e-btn e-btn-sm e-btn-primary">Có mặt</button>
@@ -760,7 +760,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       {/* Modal xem/xuất Bảng công cá nhân */}
       {timesheet && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[70] flex items-center justify-center p-3 sm:p-6" onClick={() => setTimesheet(null)}>
-          <div className="e-modal max-w-3xl h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="e-modal max-w-3xl h-[90dvh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-100 shrink-0">
               <h3 className="e-modal-title">Bảng chấm công cá nhân</h3>
               <div className="flex items-center gap-2">
@@ -775,7 +775,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {editModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex items-center justify-center p-4">
-          <div className="e-modal max-w-sm p-5 max-h-[92vh] overflow-y-auto">
+          <div className="e-modal max-w-sm p-5 max-h-[92dvh] overflow-y-auto">
             <h3 className="e-modal-title">Chấm công</h3>
             <p className="text-[13px] text-slate-500 mt-0.5 mb-4 pb-3 border-b border-slate-100">{editModal.staffName} · {fmtDate(editModal.date)}</p>
 
@@ -1004,7 +1004,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       {/* Modal Cảnh báo vi phạm */}
       {showViolationsModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex items-center justify-center p-4">
-          <div className="e-modal max-w-5xl max-h-[90vh] flex flex-col">
+          <div className="e-modal max-w-5xl max-h-[90dvh] flex flex-col">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
               <h3 className="e-modal-title flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-danger-500" />

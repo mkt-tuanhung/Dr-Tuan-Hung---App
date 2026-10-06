@@ -34,7 +34,7 @@ export default function HRManagementPage({ initialTab = 'staff' }) {
       </div>
 
       {/* Nội dung */}
-      <div className="min-h-[60vh]">
+      <div className="min-h-[60dvh]">
         {activeTab === 'staff' && <StaffManagementPage isNested={true} />}
         {activeTab === 'attendance' && <AttendanceManagementPage isNested={true} defaultTab="attendance" />}
         {activeTab === 'leave' && <AttendanceManagementPage isNested={true} defaultTab="leave" />}

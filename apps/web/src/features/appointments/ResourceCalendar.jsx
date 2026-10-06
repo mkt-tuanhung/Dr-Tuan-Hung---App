@@ -298,7 +298,7 @@ export default function ResourceCalendar({
   // ---------------- Lưới NGÀY (cột = tài nguyên) ----------------
   const dayGrid = (
     <div className="rounded-2xl bg-white border border-slate-200 shadow-soft overflow-hidden">
-      <div ref={scrollRef} className="overflow-auto max-h-[calc(100vh-250px)] min-h-[420px]">
+      <div ref={scrollRef} className="overflow-auto max-h-[calc(100dvh-250px)] min-h-[420px]">
         <div className="w-full" style={{ minWidth: 64 + Math.max(dayCols.length, 1) * COL_MIN }}>
           {/* Tiêu đề cột */}
           <div className="flex sticky top-0 z-20 bg-white border-b border-slate-200">
@@ -349,7 +349,7 @@ export default function ResourceCalendar({
   const week = weekDays(cursor);
   const weekGrid = (
     <div className="rounded-2xl bg-white border border-slate-200 shadow-soft overflow-hidden">
-      <div ref={scrollRef} className="overflow-auto max-h-[calc(100vh-250px)] min-h-[420px]">
+      <div ref={scrollRef} className="overflow-auto max-h-[calc(100dvh-250px)] min-h-[420px]">
         <div className="w-full" style={{ minWidth: 64 + 7 * 100 }}>
           <div className="flex sticky top-0 z-20 bg-white border-b border-slate-200">
             <div className="w-16 shrink-0 border-r border-slate-100" />

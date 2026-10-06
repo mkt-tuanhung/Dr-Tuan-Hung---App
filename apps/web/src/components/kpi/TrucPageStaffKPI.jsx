@@ -384,7 +384,7 @@ const TrucPageStaffKPI = () => {
       {/* Modal Import báo cáo số (điện thoại: dạng bottom sheet) */}
       {showImport && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-end lg:items-center justify-center lg:p-4">
-          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[88vh] lg:max-h-[90vh] rounded-b-none rounded-t-3xl lg:rounded-2xl">
+          <div className="e-modal max-w-xl overflow-hidden flex flex-col max-h-[88dvh] lg:max-h-[90dvh] rounded-b-none rounded-t-3xl lg:rounded-2xl">
             <div className="lg:hidden w-10 h-1.5 rounded-full bg-slate-200 mx-auto mt-2 shrink-0" />
             <div className="flex items-center justify-between gap-3 px-4 lg:px-5 py-3 lg:py-4 border-b border-slate-100 shrink-0">
               <h3 className="e-modal-title">Import báo cáo số điện thoại</h3>

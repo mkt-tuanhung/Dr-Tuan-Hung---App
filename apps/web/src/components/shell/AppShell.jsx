@@ -157,7 +157,7 @@ export default function AppShell({
 
       {/* ===== SIDEBAR ===== */}
       <aside className={`
-        fixed top-0 left-0 h-[100dvh] w-[244px] z-40 flex flex-col bg-white border-r border-slate-200
+        fixed top-0 left-0 h-[100dvh] w-[232px] z-40 flex flex-col bg-white border-r border-slate-200
         transform transition-transform duration-300 ease-out
         ${sidebarOpen ? 'translate-x-0 shadow-float' : '-translate-x-full'}
         lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none lg:shrink-0
@@ -230,8 +230,8 @@ export default function AppShell({
       <div className="flex-1 flex flex-col min-w-0 overflow-x-clip">
 
         {/* Header desktop */}
-        <header className="hidden lg:flex items-center justify-between gap-6 px-8 pt-6 pb-4 sticky top-0 z-20 bg-background/90 backdrop-blur">
-          <h1 className="text-[26px] leading-tight font-bold text-slate-900 tracking-tight truncate">{activeMenu?.label}</h1>
+        <header className="hidden lg:flex items-center justify-between gap-6 h-[76px] px-6 sticky top-0 z-20 bg-background/95 backdrop-blur">
+          <h1 className="text-[28px] leading-tight font-bold text-slate-900 tracking-tight truncate">{activeMenu?.label}</h1>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={focusSearch} className="w-10 h-10 rounded-full grid place-items-center text-slate-600 hover:bg-white hover:shadow-soft transition" aria-label="Tìm chức năng">
               <Search className="w-5 h-5" />
@@ -278,8 +278,8 @@ export default function AppShell({
           </header>
         )}
 
-        <main className="flex-1 px-4 lg:px-8 pt-4 lg:pt-2 pb-28 lg:pb-8">
-          <div key={activeTab} className="animate-page">{children}</div>
+        <main className="flex-1 px-4 lg:px-6 pt-4 lg:pt-1 pb-[calc(96px+env(safe-area-inset-bottom))] lg:pb-8">
+          <div key={activeTab} className="animate-page w-full max-w-[1600px] mx-auto">{children}</div>
         </main>
       </div>
 
@@ -324,8 +324,8 @@ export default function AppShell({
       )}
 
       {/* ===== BOTTOM NAV (mobile) ===== */}
-      <nav className={`lg:hidden fixed bottom-0 inset-x-0 ${allOpen ? 'z-40' : 'z-20'} bg-white/95 backdrop-blur border-t border-slate-200/80 pb-safe`}>
-        <div className="flex items-end justify-around px-1 pt-1.5 pb-1.5">
+      <nav className={`lg:hidden fixed bottom-0 inset-x-0 ${allOpen ? 'z-40' : 'z-20'} bg-white border-t border-[#EAF4F4] pb-safe`}>
+        <div className="flex items-end justify-around h-16 px-1 pb-1.5">
           {(() => {
             const regular = bottomItems.slice(0, centerAction ? 3 : 4);
             const tab = (item) => {

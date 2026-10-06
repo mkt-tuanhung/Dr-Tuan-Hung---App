@@ -701,7 +701,7 @@ const CommunityPage = () => {
       {/* Modal quản lý thành viên */}
       {showMembers && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={() => setShowMembers(false)}>
-          <div className="e-modal max-w-md overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+          <div className="e-modal max-w-md overflow-hidden flex flex-col max-h-[85dvh]" onClick={e => e.stopPropagation()}>
             <div className="e-modal-header items-center">
               <h3 className="e-modal-title">Thành viên · {selectedGroup?.name}</h3>
               <button onClick={() => setShowMembers(false)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
@@ -784,7 +784,7 @@ const CommunityPage = () => {
             </>
           )}
           <img src={lightbox.urls[lightbox.index]} alt="" onClick={e => e.stopPropagation()}
-            className="max-w-full max-h-[88vh] rounded-2xl shadow-2xl object-contain" />
+            className="max-w-full max-h-[88dvh] rounded-2xl shadow-2xl object-contain" />
           {lightbox.urls.length > 1 && (
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-white/15 text-white text-sm px-3 py-1 rounded-full">
               {lightbox.index + 1} / {lightbox.urls.length}
@@ -796,7 +796,7 @@ const CommunityPage = () => {
       {/* Modal: ai đã thả cảm xúc */}
       {reactWho && (
         <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={() => setReactWho(null)}>
-          <div className="e-modal max-w-sm overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="e-modal max-w-sm overflow-hidden max-h-[80dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="e-modal-header items-center">
               <h3 className="e-modal-title">Cảm xúc ({reactWho.list.length})</h3>
               <button onClick={() => setReactWho(null)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>
