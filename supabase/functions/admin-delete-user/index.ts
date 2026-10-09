@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const { error } = await admin.auth.admin.deleteUser(targetUserId);
     if (error) {
       const msg = String(error.message || error);
-      if (/foreign key|violates|referenced/i.test(msg)) {
+      if (/foreign key|violates|referenced|database error/i.test(msg)) {
         return json({ error: "Nhân sự đã có dữ liệu liên quan (lịch hẹn, lương, KPI...). Không thể xóa hẳn — hãy dùng Khóa tài khoản." });
       }
       return json({ error: msg });

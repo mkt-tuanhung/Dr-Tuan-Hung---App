@@ -88,7 +88,8 @@ const StaffManagementPage = ({ isNested = false }) => {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) toast.error('Không tải được danh sách nhân sự: ' + error.message);
-    setStaff(data || []);
+    // employment_status 'inactive' = đã xoá (giữ dữ liệu lịch sử) → không hiện trong danh sách
+    setStaff((data || []).filter(s => s.employment_status !== 'inactive'));
     setLoading(false);
   };
 
@@ -245,12 +246,28 @@ const StaffManagementPage = ({ isNested = false }) => {
   };
 
   const handleDelete = async (s) => {
-    if (!window.confirm(`XÓA HẲN nhân sự "${s.full_name}"?\n\n⚠️ KHÔNG thể hoàn tác — xóa cả tài khoản đăng nhập.\nNếu nhân sự đã có dữ liệu (lịch hẹn, lương, KPI...) sẽ không xóa được, hãy dùng Khóa.`)) return;
+    const { data: { user: me } } = await supabase.auth.getUser();
+    if (me?.id === s.id) { toast.error('Không thể tự xóa chính mình'); return; }
+    if (!window.confirm(`XÓA nhân sự "${s.full_name}"?\n\n⚠️ Tài khoản sẽ không đăng nhập được nữa.\nNếu nhân sự đã có dữ liệu (lịch hẹn, chấm công, lương, KPI...), dữ liệu cũ được giữ nguyên để không sai báo cáo, chỉ ẩn nhân sự khỏi danh sách.`)) return;
     const t = toast.loading('Đang xóa...');
     const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { targetUserId: s.id } });
+    if (!error && !data?.error) {
+      toast.dismiss(t);
+      toast.success('Đã xóa hẳn nhân sự');
+      loadStaff();
+      return;
+    }
+    // Xóa hẳn bị chặn (nhân sự còn dữ liệu liên quan, hoặc lỗi Edge Function):
+    // khoá tài khoản + đánh dấu đã xoá (employment_status = 'inactive') để ẩn khỏi danh sách,
+    // giữ nguyên lịch sử lịch hẹn / chấm công / lương.
+    const reason = data?.error || error?.message || '';
+    if (/Chỉ admin|Unauthorized/i.test(reason)) { toast.dismiss(t); toast.error(reason); return; }
+    const { error: softErr } = await supabase.from('profiles')
+      .update({ is_active: false, employment_status: 'inactive' })
+      .eq('id', s.id);
     toast.dismiss(t);
-    if (error || data?.error) { toast.error(data?.error || error.message); return; }
-    toast.success('Đã xóa hẳn nhân sự');
+    if (softErr) { toast.error('Không xóa được: ' + softErr.message); return; }
+    toast.success(`Đã xóa ${s.full_name} khỏi danh sách (giữ lại dữ liệu cũ)`);
     loadStaff();
   };
 
