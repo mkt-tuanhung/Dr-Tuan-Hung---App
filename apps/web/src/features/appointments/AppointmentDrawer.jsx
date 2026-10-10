@@ -8,11 +8,8 @@ import React, { useEffect } from 'react';
 import { X, Phone, CalendarDays, Clock, Link as LinkIcon, User, Wallet, Receipt, Stethoscope, Tag } from 'lucide-react';
 import { toneOf, parseYMD, fmtDayTitle, timeToMin, minToTime, durationOf, isRecheck, fmtVND } from './calendarUtils';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
+import { JOURNEY, JourneyLabel } from './journey';
 
-const JOURNEY = {
-  ho_so: '📋 Hoàn thiện hồ sơ - XN', xn_xong: '🧪 Đã XN xong', dang_mo: '🔪 Đang phẫu thuật',
-  mo_xong: '✅ Đã mổ xong', ra_vien: '🏠 Đã ra viện',
-};
 
 const Row = ({ icon: Icon, label, value, strong }) => (
   <div className="flex items-center gap-3 py-2">
@@ -63,7 +60,7 @@ export default function AppointmentDrawer({ app, onClose, actions, profile }) {
             </button>
           </div>
           {JOURNEY[app.journey_status] && (
-            <div className="mt-3 text-[12.5px] font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2">{JOURNEY[app.journey_status]}</div>
+            <div className="mt-3 flex items-center gap-2 text-[12.5px] font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2"><JourneyLabel status={app.journey_status} /></div>
           )}
         </div>
 

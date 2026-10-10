@@ -12,6 +12,7 @@ import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 import ResourceCalendar from '@/features/appointments/ResourceCalendar.jsx';
 import AppointmentDrawer from '@/features/appointments/AppointmentDrawer.jsx';
 import { isRecheck } from '@/features/appointments/calendarUtils';
+import { JOURNEY, JourneyLabel } from '@/features/appointments/journey';
 import { vnToday } from '@/lib/vnTime';
 
 // Style tokens dùng chung cho form lịch hẹn
@@ -438,17 +439,10 @@ const AppointmentManagementPage = () => {
   };
 
   // Hành trình sau chốt mổ — cập nhật từ nút bấm trong nhóm Telegram "Hành trình khách hàng"
-  const JOURNEY_BADGE = {
-    ho_so: { label: '📋 Hoàn thiện hồ sơ - XN', cls: 'e-tone-warning' },
-    xn_xong: { label: '🧪 Đã XN xong', cls: 'e-tone-info' },
-    dang_mo: { label: '🔪 Đang phẫu thuật', cls: 'e-tone-brand' },
-    mo_xong: { label: '✅ Đã mổ xong', cls: 'e-tone-success' },
-    ra_vien: { label: '🏠 Đã ra viện', cls: 'e-tone-lavender' },
-  };
   const JourneyBadge = ({ app }) => {
-    const j = JOURNEY_BADGE[app.journey_status];
+    const j = JOURNEY[app.journey_status];
     if (!j) return null;
-    return <span className={`e-badge e-badge-sm shrink-0 ${j.cls}`} title={app.journey_updated_by ? `Cập nhật bởi ${app.journey_updated_by}` : ''}>{j.label}</span>;
+    return <span className={`e-badge e-badge-sm shrink-0 ${j.cls}`} title={app.journey_updated_by ? `Cập nhật bởi ${app.journey_updated_by}` : ''}><JourneyLabel status={app.journey_status} /></span>;
   };
 
   const StatusBadge = ({ status }) => {
