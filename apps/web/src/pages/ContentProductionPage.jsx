@@ -8,7 +8,7 @@ import {
   Clapperboard, Plus, Search, X, Link as LinkIcon, ExternalLink, Trophy,
   Film, Scissors, CheckCircle2, RotateCcw, PlayCircle, PauseCircle, Circle, Image, Link2, FolderOpen, Upload, Loader2, Download, Trash2, ZoomIn, ZoomOut, Maximize2, AlertTriangle, List, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight,
   Heart, MessageCircle, Share2, Star, Volume2, VolumeX, Play, Pause, Send, MoreHorizontal, MoreVertical, Pencil, BarChart2, Ban, EyeOff,
-  Clock, Wallet, TrendingUp, Phone, LayoutDashboard, Copy, Users, User, ShoppingCart, CircleDollarSign,
+  Clock, Wallet, TrendingUp, Phone, LayoutDashboard, Copy, Users, User, ShoppingCart, CircleDollarSign, Zap,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
 import ImageLibrary from '@/components/ImageLibrary.jsx';
@@ -2203,7 +2203,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         </span>
         {(c.post_status === 'posted' || c.post_now) && (
           <span className="absolute top-3 left-3 e-badge e-badge-sm bg-white/90 text-success-600 shadow-soft">
-            {c.post_status === 'posted' ? '✅ Đã đăng page' : '⚡ Đã gửi đăng page'}
+            {c.post_status === 'posted' ? <><span className="e-check" aria-hidden="true" />Đã đăng page</> : <><Zap className="w-3.5 h-3.5" aria-hidden="true" />Đã gửi đăng page</>}
           </span>
         )}
       </button>

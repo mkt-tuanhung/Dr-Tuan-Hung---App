@@ -139,4 +139,9 @@
   .e-shift-draft::after { content: ''; @apply absolute top-1.5 right-1.5 w-[7px] h-[7px] rounded-full bg-warning-500; }
   .e-shift-warn { box-shadow: 0 0 0 2px #E95757 inset; }
   .e-shift-drop { @apply border-teal-500 border-dashed; }
+
+  /* Dấu tích vẽ bằng CSS (không dùng emoji ✅): tròn xanh + nét tích trắng.
+     Cỡ theo font-size của chữ đi kèm: .e-check (1.15em) */
+  .e-check { @apply relative inline-block shrink-0 rounded-full bg-success-500 align-[-0.2em]; width: 1.15em; height: 1.15em; }
+  .e-check::after { content: ''; position: absolute; left: 36%; top: 18%; width: 30%; height: 52%; border: solid #fff; border-width: 0 0.14em 0.14em 0; border-radius: 0 0 1px 0; transform: rotate(45deg); }
 }
