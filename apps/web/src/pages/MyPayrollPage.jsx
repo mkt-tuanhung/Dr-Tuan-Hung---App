@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { computePayrollRow, fetchTelesalePrior } from '@/lib/kpiCalc';
+import { PAY_STATUS_LABEL } from '@/features/payroll/workflow';
 
 const MONTHS = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
 const fmtM = (n) => (Number(n) ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0') + 'đ';
@@ -63,6 +64,15 @@ const MyPayrollPage = () => {
 
   // Bảo mật: NV thường luôn khoá vào chính mình.
   useEffect(() => { if (!isManager && profile?.id) setTargetId(profile.id); }, [isManager, profile?.id]);
+
+  // Bước duyệt của kỳ lương (payroll_workflow.sql). Lỗi (chưa chạy SQL) -> bỏ qua, hiện như cũ.
+  const [periodStatus, setPeriodStatus] = useState(null);
+  useEffect(() => {
+    let off = false;
+    supabase.from('payroll_periods').select('status').eq('year', year).eq('month', month).maybeSingle()
+      .then(({ data, error }) => { if (!off) setPeriodStatus(error ? null : (data?.status || 'draft')); });
+    return () => { off = true; };
+  }, [month, year]);
 
   const loadData = useCallback(async () => {
     if (!targetId) return;
@@ -218,8 +228,10 @@ const MyPayrollPage = () => {
           </div>
         {detail && (
           detail.status === 'locked'
-            ? <span className="e-badge e-tone-success"><Lock className="w-3.5 h-3.5" /> Đã chốt</span>
-            : <span className="e-badge e-badge-dot e-tone-warning">Tạm tính · cập nhật theo thời gian thực</span>
+            ? <span className="e-badge e-tone-success"><Lock className="w-3.5 h-3.5" /> {periodStatus === 'paid' ? 'Đã chi trả' : 'Đã chốt'}</span>
+            : periodStatus && !['draft', 'locked', 'paid'].includes(periodStatus)
+              ? <span className="e-badge e-badge-dot e-tone-info">Đang duyệt · {PAY_STATUS_LABEL[periodStatus]}</span>
+              : <span className="e-badge e-badge-dot e-tone-warning">Tạm tính · cập nhật theo thời gian thực</span>
         )}
         </div>
       </div>

@@ -176,6 +176,20 @@
   .e-drawer-body { @apply flex-1 overflow-y-auto px-6 pt-2 pb-5; }
   .e-drawer-footer { @apply flex items-center justify-end gap-2.5 px-6 py-4 border-t border-slate-100; }
 }
+/* ---------- Quy trình duyệt lương 7 bước (Ethics payroll.css: pay-flow / pay-step) ---------- */
+@layer components {
+  .e-steps { @apply grid gap-1.5 list-none m-0 p-0; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .e-step { @apply relative flex flex-col items-center gap-1.5 text-[11.5px] lg:text-[12px] text-slate-500 text-center leading-tight; }
+  .e-step::before { content: ''; @apply absolute top-[14px] h-0.5 bg-slate-200; left: -50%; right: 50%; z-index: 0; }
+  .e-step:first-child::before { display: none; }
+  .e-step-dot { @apply relative z-[1] w-[30px] h-[30px] rounded-full grid place-items-center bg-white border-2 border-slate-200 font-semibold text-slate-500 text-[13px]; }
+  .e-step-dot svg { @apply w-[15px] h-[15px]; }
+  .e-step-done .e-step-dot { @apply bg-teal-700 border-teal-700 text-white; }
+  .e-step-done::before, .e-step-current::before { @apply bg-teal-500; }
+  .e-step-current .e-step-dot { @apply border-teal-600 text-teal-700; box-shadow: 0 0 0 4px rgba(18, 164, 165, 0.18); }
+  .e-step-current { @apply text-teal-800 font-semibold; }
+}
+
 @keyframes e-drawer-in { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ---------- Lịch làm việc / Phân ca (Ethics hr.css: sch-*) ---------- */
