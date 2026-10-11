@@ -8,7 +8,7 @@
 import {
   LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
-  Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange,
+  Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -46,6 +46,7 @@ export const FULL_MENU = [
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },
   { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin', 'shareholder'] },
+  { id: 'audit_log',  label: 'Nhật ký hoạt động', icon: ScrollText, roles: ['accountant', 'shareholder'] },
   { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong', 'shareholder'] },
 
@@ -73,7 +74,7 @@ export const STAFF_GROUPS = [
     { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, ids: ['khach_phau_thuat', 'mo_doi_tac', 'hau_phau'] },
     'marketing',
   ] },
-  { title: 'TÀI CHÍNH', ids: ['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev'] },
+  { title: 'TÀI CHÍNH', ids: ['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
   { title: 'VẬN HÀNH', ids: ['community', 'meetings', 'minigame'] },
 ];
 
@@ -104,7 +105,7 @@ export const buildMenuGroups = (allowedMenu) => {
 export const MATRIX_ROLES = ['telesale', 'sale_offline', 'cskh', 'truc_page', 'marketing', 'media', 'editor', 'designer', 'seeding', 'dieu_duong', 'bac_si', 'accountant', 'shareholder'];
 
 // Chức năng nhạy cảm (tài chính / lương) — đánh dấu khoá như Ethics
-export const SENSITIVE = new Set(['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'mo_doi_tac', 'seeding_rev', 'ads_report']);
+export const SENSITIVE = new Set(['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'mo_doi_tac', 'seeding_rev', 'ads_report', 'audit_log']);
 
 // Danh sách phẳng mọi chức năng (kèm nhóm cha nếu là mục con)
 export const flatModules = () => FULL_MENU.flatMap(m => (m.children ? m.children.map(c => ({ ...c, parent: m.label })) : [m]));

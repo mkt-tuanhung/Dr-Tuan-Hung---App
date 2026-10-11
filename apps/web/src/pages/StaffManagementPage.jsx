@@ -16,6 +16,7 @@ import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, C
 import { vnToday } from '@/lib/vnTime';
 import { downloadCsv } from '@/lib/csv';
 import { DataTable, FilterBar, FilterSelect, AlertStrip, Drawer, ConfirmDialog } from '@/components/ds';
+import { runWithReason, logAuditEvent } from '@/lib/audit';
 
 const avInit = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
@@ -149,16 +150,18 @@ const StaffManagementPage = ({ isNested = false }) => {
   const exportCsv = (rows) => {
     const head = ['Mã NV', 'Họ tên', 'Vị trí', 'Vị trí 2', 'Chức danh', 'SĐT', 'Trạng thái', 'Ngày vào làm'];
     const lines = rows.map(s => [s.employee_id, s.full_name, ROLE_LABELS[s.role] || s.role, s.role_2 ? (ROLE_LABELS[s.role_2] || s.role_2) : '', s.position, s.phone, statusLabel(s), fmtDate(joinDate(s))].map(csvCell).join(','));
-    downloadCsv(`nhan-su-${vnToday()}.csv`, [head.map(csvCell).join(','), ...lines].join('\n'));
+    const file = `nhan-su-${vnToday()}.csv`;
+    downloadCsv(file, [head.map(csvCell).join(','), ...lines].join('\n'));
+    logAuditEvent('export', 'profiles', { details: { file, rows: rows.length } });
   };
 
-  const applyBulkLock = async () => {
+  const applyBulkLock = async (reason) => {
     const lock = bulkLock;
     const { data: { user: me } } = await supabase.auth.getUser();
     const ids = selectedRows.filter(s => s.is_active === lock && s.id !== me?.id).map(s => s.id);
     if (!ids.length) { toast.info(lock ? 'Các tài khoản đã chọn đều đang khoá' : 'Các tài khoản đã chọn đều đang mở'); setBulkLock(null); return; }
     setBulkBusy(true);
-    const { error } = await supabase.from('profiles').update({ is_active: !lock }).in('id', ids);
+    const { error } = await runWithReason(() => supabase.from('profiles').update({ is_active: !lock }).in('id', ids), reason);
     setBulkBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`${lock ? 'Đã khoá' : 'Đã mở khoá'} ${ids.length} tài khoản`);
@@ -335,6 +338,7 @@ const StaffManagementPage = ({ isNested = false }) => {
     toast.dismiss(t);
     if (error || data?.error) { toast.error(data?.error || error.message); return; }
     window.open(data.actionLink, '_blank');
+    logAuditEvent('impersonate', 'profiles', { entityId: s.id, details: { full_name: s.full_name } });
     toast.success('Đã mở tài khoản nhân sự ở tab mới');
   };
 
@@ -671,9 +675,11 @@ const StaffManagementPage = ({ isNested = false }) => {
         danger={bulkLock === true}
         title={bulkLock ? `Khoá ${selected.size} tài khoản?` : `Mở khoá ${selected.size} tài khoản?`}
         description={bulkLock
-          ? 'Nhân sự bị khoá sẽ không đăng nhập được nữa. Dữ liệu chấm công, lương, lịch hẹn vẫn giữ nguyên. Tài khoản của chính bạn sẽ được bỏ qua.'
+          ? 'Nhân sự bị khoá sẽ không đăng nhập được nữa. Dữ liệu chấm công, lương, lịch hẹn vẫn giữ nguyên. Tài khoản của chính bạn sẽ được bỏ qua. Lý do được ghi vào nhật ký hoạt động.'
           : 'Nhân sự được mở khoá sẽ đăng nhập lại được bình thường.'}
         confirmLabel={bulkLock ? 'Khoá tài khoản' : 'Mở khoá'}
+        requireReason
+        reasonPlaceholder={bulkLock ? 'VD: Nghỉ việc từ 15/10' : 'VD: Quay lại làm việc'}
       />
 
       {/* QR Code Dialog */}
