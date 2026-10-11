@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound, LockOpen } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ds';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
@@ -164,12 +165,15 @@ const PayrollPage = () => {
     setRows(computed);
     setExportSel(new Set(computed.map(r => r.staff.id))); // mặc định tích tất cả
     setEdits(Object.fromEntries(computed.map(r => [r.staff.id, { other_bonus: r.otherBonus, other_deduction: r.otherDeduction }])));
-    setLocked((payroll[0]?.status) === 'locked' && payroll.length > 0 && payroll.every(p => p.status === 'locked'));
+    // Chốt lương là thao tác CẢ THÁNG: chỉ cần 1 dòng đã chốt là cả tháng coi như đã chốt
+    // (trước đây đòi tất cả dòng chốt -> nhân sự mới thêm sau làm tháng đã chốt "mở" lại).
+    const monthLocked = payroll.some(p => p.status === 'locked');
+    setLocked(monthLocked);
 
     // Tự lưu BẢN NHÁP để nhân sự xem được ngay (chỉ admin/kế toán; KHÔNG đụng dòng đã chốt).
     // Chạy 1 lần/tháng để tránh ghi lặp.
     const monthKey = `${year}-${month}`;
-    if (['admin', 'accountant'].includes(me?.role) && autosavedRef.current !== monthKey) {
+    if (['admin', 'accountant'].includes(me?.role) && !monthLocked && autosavedRef.current !== monthKey) {
       autosavedRef.current = monthKey;
       const draft = computed
         .filter(r => r.savedStatus !== 'locked')
@@ -273,6 +277,8 @@ const PayrollPage = () => {
   const setEdit = (id, field, val) => setEdits(e => ({ ...e, [id]: { ...e[id], [field]: val.replace(/\D/g, '') } }));
 
   const savePayroll = async (lock = false) => {
+    // Tháng đã chốt thì không ghi đè (trước đây "Lưu nháp" làm cả tháng về nháp)
+    if (locked) { toast.error('Tháng này đã chốt lương. Admin cần "Mở lại tháng" trước khi sửa.'); return; }
     setSaving(true);
     try {
       const payload = rowsView.map(r => ({
@@ -293,6 +299,20 @@ const PayrollPage = () => {
       loadData();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
+  };
+
+  // Mở lại tháng đã chốt để sửa (chỉ Admin, có xác nhận)
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const reopenMonth = async () => {
+    setSaving(true);
+    const { error } = await supabase.from('payroll')
+      .update({ status: 'draft', locked_at: null, locked_by: null, updated_at: new Date().toISOString() })
+      .eq('month', month).eq('year', year).eq('status', 'locked');
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Đã mở lại bảng lương ${MONTHS[month - 1]} ${year}`);
+    setReopenOpen(false);
+    loadData();
   };
 
   // Xuất bảng lương thành ẢNH PNG (vẽ canvas trực tiếp — không cần in/PDF)
@@ -553,14 +573,35 @@ const PayrollPage = () => {
           <button onClick={exportImage} disabled={loading || exportSel.size === 0} className="e-btn e-btn-secondary">
             <ImageDown /> Xuất ảnh ({exportSel.size}/{rowsView.length})
           </button>
-          <button onClick={() => savePayroll(false)} disabled={saving} className="e-btn e-btn-outline">
-            <Save /> Lưu nháp
-          </button>
-          <button onClick={() => savePayroll(true)} disabled={saving} className="e-btn e-btn-primary">
-            <Lock /> Chốt lương tháng
-          </button>
+          {locked ? (
+            me?.role === 'admin' && (
+              <button onClick={() => setReopenOpen(true)} disabled={saving || loading} className="e-btn e-btn-outline">
+                <LockOpen /> Mở lại tháng
+              </button>
+            )
+          ) : (
+            <>
+              <button onClick={() => savePayroll(false)} disabled={saving || loading} className="e-btn e-btn-outline">
+                <Save /> Lưu nháp
+              </button>
+              <button onClick={() => savePayroll(true)} disabled={saving || loading} className="e-btn e-btn-primary">
+                <Lock /> Chốt lương tháng
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={reopenOpen}
+        onClose={() => setReopenOpen(false)}
+        onConfirm={reopenMonth}
+        busy={saving}
+        danger
+        title={`Mở lại bảng lương ${MONTHS[month - 1]} ${year}?`}
+        description="Bảng lương sẽ về trạng thái nháp để sửa. Nhân sự có thể thấy số liệu thay đổi cho tới khi chốt lại."
+        confirmLabel="Mở lại tháng"
+      />
 
       {/* Chart lương các tháng */}
       {history.length > 0 && (

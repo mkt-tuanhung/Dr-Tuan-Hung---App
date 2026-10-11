@@ -12,10 +12,29 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, Clock, BadgeCheck, ChevronRight, UserPlus, Phone, X } from 'lucide-react';
+import { Plus, Search, UserCheck, Pencil, UserX, QrCode, LogIn, Trash2, Users, Clock, BadgeCheck, ChevronRight, UserPlus, Phone, X, Download, Lock, LockOpen } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
+import { downloadCsv } from '@/lib/csv';
+import { DataTable, FilterBar, FilterSelect, AlertStrip, Drawer, ConfirmDialog } from '@/components/ds';
 
 const avInit = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+
+// Ngày vào làm (Ethics D05): ngày chính thức, nếu chưa có thì ngày bắt đầu thử việc
+const joinDate = (s) => s.official_started_at || s.probation_started_at || (s.created_at ? s.created_at.slice(0, 10) : null);
+const fmtDate = (d) => (d ? d.slice(0, 10).split('-').reverse().join('/') : '—');
+// Trạng thái làm việc hiển thị (lọc + xuất file)
+const STATUS_OPTIONS = [
+  { value: 'official', label: 'Chính thức', test: (s) => s.is_active && s.employment_status !== 'probation' },
+  { value: 'probation', label: 'Thử việc', test: (s) => s.is_active && s.employment_status === 'probation' },
+  { value: 'locked', label: 'Đã khoá', test: (s) => !s.is_active },
+];
+const statusLabel = (s) => (STATUS_OPTIONS.find(o => o.test(s)) || STATUS_OPTIONS[0]).label;
+const StatusBadge = ({ x }) => (!x.is_active
+  ? <span className="e-badge e-tone-neutral"><Lock />Đã khoá</span>
+  : x.employment_status === 'probation'
+    ? <span className="e-badge e-tone-warning"><Clock />Thử việc</span>
+    : <span className="e-badge e-tone-success"><BadgeCheck />Chính thức</span>);
+const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
 // Format số tiền VND có dấu chấm
 const fmtInput = (val) => {
@@ -80,6 +99,13 @@ const StaffManagementPage = ({ isNested = false }) => {
   // Điện thoại (Ethics "Nhân sự & tài khoản"): lọc nhanh + bảng thao tác theo từng người
   const [mFilter, setMFilter] = useState('all');
   const [sheet, setSheet] = useState(null);
+  // Máy tính (Ethics D05): lọc vị trí / trạng thái, chọn nhiều dòng, ngăn chi tiết
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [detail, setDetail] = useState(null);
+  const [bulkLock, setBulkLock] = useState(null); // true = khoá, false = mở khoá
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const loadStaff = async () => {
     setLoading(true);
@@ -111,6 +137,35 @@ const StaffManagementPage = ({ isNested = false }) => {
   const mList = filtered.filter(mTest);
   const mCount = (id) => staff.filter(M_FILTERS.find(f => f.id === id).test).length;
   const sheetAct = (fn) => () => { const s = sheet; setSheet(null); fn(s); };
+
+  const deskList = filtered.filter(s =>
+    (!roleFilter || s.role === roleFilter || s.role_2 === roleFilter) &&
+    (!statusFilter || STATUS_OPTIONS.find(o => o.value === statusFilter).test(s)));
+  const roleOptions = ROLES.filter(r => staff.some(s => s.role === r.value || s.role_2 === r.value));
+  const probationList = staff.filter(STATUS_OPTIONS[1].test);
+  const selectedRows = staff.filter(s => selected.has(s.id));
+
+  // Xuất danh sách (không kèm lương — Ethics: file xuất không chứa dữ liệu lương)
+  const exportCsv = (rows) => {
+    const head = ['Mã NV', 'Họ tên', 'Vị trí', 'Vị trí 2', 'Chức danh', 'SĐT', 'Trạng thái', 'Ngày vào làm'];
+    const lines = rows.map(s => [s.employee_id, s.full_name, ROLE_LABELS[s.role] || s.role, s.role_2 ? (ROLE_LABELS[s.role_2] || s.role_2) : '', s.position, s.phone, statusLabel(s), fmtDate(joinDate(s))].map(csvCell).join(','));
+    downloadCsv(`nhan-su-${vnToday()}.csv`, [head.map(csvCell).join(','), ...lines].join('\n'));
+  };
+
+  const applyBulkLock = async () => {
+    const lock = bulkLock;
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const ids = selectedRows.filter(s => s.is_active === lock && s.id !== me?.id).map(s => s.id);
+    if (!ids.length) { toast.info(lock ? 'Các tài khoản đã chọn đều đang khoá' : 'Các tài khoản đã chọn đều đang mở'); setBulkLock(null); return; }
+    setBulkBusy(true);
+    const { error } = await supabase.from('profiles').update({ is_active: !lock }).in('id', ids);
+    setBulkBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${lock ? 'Đã khoá' : 'Đã mở khoá'} ${ids.length} tài khoản`);
+    setBulkLock(null);
+    setSelected(new Set());
+    loadStaff();
+  };
 
   const openCreate = () => {
     setEditTarget(null);
@@ -294,6 +349,67 @@ const StaffManagementPage = ({ isNested = false }) => {
 
   const fmt = (n) => n ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
 
+  const roleText = (x) => [x.role, x.role_2].filter(Boolean).map(r => ROLE_LABELS[r] || r).join(' · ');
+  const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
+  const iconBtn = 'w-8 h-8 rounded-lg grid place-items-center text-slate-400 transition-colors';
+
+  // Thao tác cho 1 nhân sự — dùng chung cho ngăn chi tiết (máy tính) và bảng thao tác (điện thoại)
+  const staffActions = (x) => [
+    { show: true, icon: Pencil, label: 'Sửa thông tin', fn: openEdit },
+    { show: x.employment_status === 'probation', icon: UserCheck, label: 'Kết thúc thử việc', fn: handleEndProbation },
+    { show: !!(x.bank_name && x.bank_account), icon: QrCode, label: 'QR nhận lương (VietQR)', fn: setViewQR },
+    { show: !!x.phone, icon: Phone, label: 'Gọi điện', href: `tel:${x.phone}` },
+    { show: true, icon: LogIn, label: 'Đăng nhập với tư cách', fn: handleImpersonate },
+    { show: true, icon: UserX, label: x.is_active ? 'Khoá tài khoản' : 'Mở khoá tài khoản', fn: handleToggleActive, warn: true },
+    { show: true, icon: Trash2, label: 'Xoá hẳn nhân sự', fn: handleDelete, danger: true },
+  ].filter(a => a.show);
+
+  // Cột bảng máy tính: Nhân viên · Mã NV · Vị trí · Ngày vào làm · Trạng thái (Ethics D05)
+  // + Lương cơ bản · Nhận lương · thao tác (riêng Tuấn Hùng); SĐT nằm dưới tên
+  const desktopColumns = [
+    { key: 'name', header: 'Nhân viên', sortValue: x => x.full_name || '', cell: x => (
+      <div className="flex items-center gap-3 min-w-[210px]">
+        <div className="w-11 h-11 rounded-full overflow-hidden bg-teal-50 grid place-items-center shrink-0">
+          {x.avatar_url
+            ? <img src={x.avatar_url} alt={x.full_name} className="w-full h-full object-cover" />
+            : <span className="text-[14px] font-bold text-teal-700">{avInit(x.full_name)}</span>}
+        </div>
+        <div className="min-w-0">
+          <div className="font-semibold text-slate-900 text-[14px] leading-tight truncate">{x.full_name}</div>
+          {(x.position || x.phone) && <div className="text-[12px] text-slate-500 truncate tabular-nums">{[x.position, x.phone].filter(Boolean).join(' · ')}</div>}
+        </div>
+      </div>
+    ) },
+    { key: 'code', header: 'Mã NV', sortValue: x => x.employee_id || '', cell: x => <span className="text-slate-600 tabular-nums whitespace-nowrap">{x.employee_id}</span> },
+    { key: 'role', header: 'Vị trí', sortValue: x => ROLE_LABELS[x.role] || x.role || '', cell: x => (
+      <div className="flex flex-wrap gap-1">
+        {[x.role, x.role_2].filter(Boolean).map(r => <span key={r} className={`e-badge e-badge-sm ${ROLE_COLORS[r] || 'e-tone-neutral'}`}>{ROLE_LABELS[r] || r}</span>)}
+      </div>
+    ) },
+    { key: 'join', header: 'Ngày vào làm', sortValue: x => joinDate(x) || '', cell: x => <span className="text-slate-600 tabular-nums whitespace-nowrap">{fmtDate(joinDate(x))}</span> },
+    { key: 'salary', header: 'Lương cơ bản', align: 'right', sortValue: x => Number(x.base_salary) || 0, cell: x => (
+      <div className="whitespace-nowrap">
+        <div className="text-slate-800 font-medium">{fmt(x.base_salary)}</div>
+        {x.allowance > 0 && <div className="text-[12px] text-slate-400">PC: {fmt(x.allowance)}</div>}
+      </div>
+    ) },
+    { key: 'status', header: 'Trạng thái', sortValue: x => statusLabel(x), cell: x => <StatusBadge x={x} /> },
+    { key: 'bank', header: 'Nhận lương', cell: x => (x.bank_name && x.bank_account
+      ? <button onClick={stop(() => setViewQR(x))} className="e-btn e-btn-outline e-btn-sm h-8 px-2.5"><QrCode className="w-3.5 h-3.5" /> VietQR</button>
+      : <span className="text-[12px] text-slate-400 whitespace-nowrap">Chưa cập nhật</span>) },
+    { key: 'actions', header: <span className="sr-only">Thao tác</span>, align: 'right', cell: x => (
+      <div className="flex items-center gap-1 justify-end">
+        {x.employment_status === 'probation' && x.is_active && (
+          <button onClick={stop(() => handleEndProbation(x))} title="Kết thúc thử việc" aria-label="Kết thúc thử việc" className={`${iconBtn} hover:bg-success-50 hover:text-success-600`}><UserCheck className="w-4 h-4" /></button>
+        )}
+        <button onClick={stop(() => handleImpersonate(x))} title="Đăng nhập với tư cách" aria-label="Đăng nhập với tư cách" className={`${iconBtn} hover:bg-teal-50 hover:text-teal-700`}><LogIn className="w-4 h-4" /></button>
+        <button onClick={stop(() => openEdit(x))} title="Sửa" aria-label="Sửa" className={`${iconBtn} hover:bg-teal-50 hover:text-teal-700`}><Pencil className="w-4 h-4" /></button>
+        <button onClick={stop(() => handleToggleActive(x))} title="Khóa / Mở khóa" aria-label="Khóa / Mở khóa" className={`${iconBtn} hover:bg-warning-50 hover:text-warning-600`}><UserX className="w-4 h-4" /></button>
+        <button onClick={stop(() => handleDelete(x))} title="Xóa hẳn" aria-label="Xóa hẳn" className={`${iconBtn} hover:bg-danger-50 hover:text-danger-600`}><Trash2 className="w-4 h-4" /></button>
+      </div>
+    ) },
+  ];
+
   return (
     <div className="space-y-4">
       {!isNested && (
@@ -302,27 +418,84 @@ const StaffManagementPage = ({ isNested = false }) => {
         </div>
       )}
 
-      {/* Stat cards */}
+      {/* ===== MÁY TÍNH (Ethics D05): thanh lọc -> chỉ số -> cảnh báo -> bảng ===== */}
+      <FilterBar
+        className="hidden lg:flex"
+        search={{ value: search, onChange: setSearch, placeholder: 'Tìm nhân sự theo tên, mã NV, SĐT…' }}
+        actions={<>
+          <button onClick={() => exportCsv(deskList)} className="e-btn e-btn-secondary" disabled={!deskList.length}><Download /> Xuất danh sách</button>
+          <button onClick={openCreate} className="e-btn e-btn-primary"><Plus /> Thêm nhân sự</button>
+        </>}
+      >
+        <FilterSelect label="Vị trí" allLabel="Tất cả vị trí" value={roleFilter} onChange={setRoleFilter} options={roleOptions} />
+        <FilterSelect label="Trạng thái" allLabel="Tất cả trạng thái" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
+      </FilterBar>
+
+      {/* Thẻ chỉ số (riêng Tuấn Hùng — giữ lại, bấm để lọc nhanh) */}
       {!loading && (
-        <div className="hidden lg:grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div className="hidden lg:grid grid-cols-4 gap-4">
           {[
-            { label: 'Tổng nhân sự', icon: Users, tone: 'teal', value: staff.length, sub: 'trong hệ thống' },
-            { label: 'Đang làm việc', icon: UserCheck, tone: 'violet', value: staff.filter(s => s.is_active).length, sub: 'đang hoạt động' },
-            { label: 'Chính thức', icon: BadgeCheck, tone: 'blue', value: staff.filter(s => s.employment_status !== 'probation').length, sub: 'nhân sự' },
-            { label: 'Thử việc', icon: Clock, tone: 'amber', value: staff.filter(s => s.employment_status === 'probation').length, sub: 'nhân sự' },
+            { label: 'Tổng nhân sự', icon: Users, tone: 'teal', value: staff.length, sub: 'trong hệ thống', filter: '' },
+            { label: 'Đang làm việc', icon: UserCheck, tone: 'violet', value: staff.filter(s => s.is_active).length, sub: 'đang hoạt động', filter: null },
+            { label: 'Chính thức', icon: BadgeCheck, tone: 'blue', value: staff.filter(STATUS_OPTIONS[0].test).length, sub: 'nhân sự', filter: 'official' },
+            { label: 'Thử việc', icon: Clock, tone: 'amber', value: probationList.length, sub: 'nhân sự', filter: 'probation' },
           ].map(t => {
             const TT = { teal: 'bg-teal-50 text-teal-700', violet: 'bg-success-50 text-success-600', blue: 'bg-info-50 text-info-600', amber: 'bg-warning-50 text-warning-600' }[t.tone];
+            const on = t.filter !== null && statusFilter === t.filter && (t.filter !== '' || !roleFilter);
+            const Tag = t.filter === null ? 'div' : 'button';
             return (
-              <div key={t.label} className="e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 lg:gap-x-4 gap-y-0 p-3.5">
-                <div className={`e-metric-icon row-span-3 w-11 h-11 ${TT}`}><t.icon className="w-5 h-5 lg:w-6 lg:h-6" strokeWidth={1.9} /></div>
+              <Tag key={t.label} {...(t.filter === null ? {} : { type: 'button', onClick: () => setStatusFilter(t.filter) })}
+                className={`e-metric grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0 p-3.5 ${t.filter === null ? '' : 'e-card-hover'} ${on && t.filter ? 'ring-2 ring-teal-200 border-teal-300' : ''}`}>
+                <div className={`e-metric-icon row-span-3 w-11 h-11 ${TT}`}><t.icon className="w-6 h-6" strokeWidth={1.9} /></div>
                 <div className="e-metric-label">{t.label}</div>
                 <div className="e-metric-value">{t.value}</div>
                 <div className="e-metric-hint">{t.sub}</div>
-              </div>
+              </Tag>
             );
           })}
         </div>
       )}
+
+      {/* Dải cảnh báo (Ethics D05) */}
+      {!loading && probationList.length > 0 && statusFilter !== 'probation' && (
+        <div className="hidden lg:block">
+          <AlertStrip tone="warning" action="Xem" onAction={() => setStatusFilter('probation')}>
+            <b>{probationList.length} nhân sự đang thử việc:</b>{' '}
+            {probationList.slice(0, 3).map(s => `${s.full_name}${s.probation_started_at ? ` (từ ${fmtDate(s.probation_started_at)})` : ''}`).join(', ')}
+            {probationList.length > 3 ? ` và ${probationList.length - 3} người khác` : ''}
+          </AlertStrip>
+        </div>
+      )}
+
+      {/* Thanh thao tác hàng loạt */}
+      {selected.size > 0 && (
+        <div className="hidden lg:flex e-bulkbar">
+          <b className="text-teal-800">Đã chọn {selected.size}</b>
+          <button onClick={() => exportCsv(selectedRows)} className="e-btn e-btn-secondary e-btn-sm"><Download /> Xuất CSV</button>
+          <button onClick={() => setBulkLock(true)} className="e-btn e-btn-secondary e-btn-sm"><Lock /> Khoá tài khoản</button>
+          <button onClick={() => setBulkLock(false)} className="e-btn e-btn-secondary e-btn-sm"><LockOpen /> Mở khoá</button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-[13px] font-semibold text-slate-500 hover:text-slate-800">Bỏ chọn</button>
+        </div>
+      )}
+
+      <div className="hidden lg:block">
+        <DataTable
+          rows={deskList}
+          loading={loading}
+          columns={desktopColumns}
+          minWidth={960}
+          pageSize={12}
+          initialSort={null}
+          selectable
+          selectPosition="end"
+          selected={selected}
+          onSelectedChange={setSelected}
+          onRowClick={setDetail}
+          rowClassName={(s) => (!s.is_active ? 'opacity-55' : '')}
+          empty={{ title: 'Không tìm thấy nhân sự', description: search || roleFilter || statusFilter ? 'Thử đổi từ khoá hoặc bộ lọc.' : undefined, icon: Users }}
+          footerStart={`${deskList.length} nhân sự`}
+        />
+      </div>
 
       {/* Điện thoại: ô số đếm (bấm để lọc) */}
       {!loading && (
@@ -342,8 +515,8 @@ const StaffManagementPage = ({ isNested = false }) => {
         </div>
       )}
 
-      {/* Thanh lọc / công cụ (mockup 05: ô tìm bên trái, nút thêm bên phải) */}
-      <div className="e-toolbar">
+      {/* Điện thoại: ô tìm */}
+      <div className="e-toolbar lg:hidden">
         <div className="e-search flex-1 min-w-[160px] sm:max-w-[340px]">
           <Search />
           <input placeholder="Tìm theo tên, ID, SĐT…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -366,98 +539,11 @@ const StaffManagementPage = ({ isNested = false }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-40">
+        <div className="lg:hidden flex items-center justify-center h-40">
           <div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
         <>
-          {/* Desktop table */}
-          <div className="e-card e-table-wrap overflow-x-auto hidden lg:block">
-            <table className="e-table min-w-[860px]">
-              <thead className="text-slate-500">
-                <tr>
-                  <th className="text-left">Nhân sự</th>
-                  <th className="text-left">Mã NV</th>
-                  <th className="text-left">Vị trí</th>
-                  <th className="text-left">Lương cơ bản</th>
-                  <th className="text-left">Trạng thái</th>
-                  <th className="text-left">SĐT</th>
-                  <th className="text-left">Nhận lương</th>
-                  <th className="text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="align-middle">
-                {filtered.map(s => (
-                  <tr key={s.id} className={`transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
-                    <td className="align-middle">
-                      <div className="flex items-center gap-3 min-w-[200px]">
-                        <div className="w-11 h-11 rounded-full overflow-hidden bg-teal-50 grid place-items-center shrink-0">
-                          {s.avatar_url ? (
-                            <img src={s.avatar_url} alt={s.full_name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[15px] font-bold text-teal-700">{s.full_name?.charAt(0)}</span>
-                          )}
-                        </div>
-                        <div className="font-semibold text-slate-900 text-[14px] leading-tight">{s.full_name}</div>
-                      </div>
-                    </td>
-                    <td className="text-slate-600 tabular-nums whitespace-nowrap">{s.employee_id}</td>
-                    <td className="align-middle">
-                      <span className={`e-badge e-badge-sm ${ROLE_COLORS[s.role] || 'e-tone-neutral'}`}>
-                        {ROLE_LABELS[s.role] || s.role}
-                      </span>
-                    </td>
-                    <td className="text-slate-800 font-medium tabular-nums whitespace-nowrap">
-                      <div>{fmt(s.base_salary)}</div>
-                      {s.allowance > 0 && <div className="text-[12px] text-slate-400 font-normal">PC: {fmt(s.allowance)}</div>}
-                    </td>
-                    <td className="align-middle">
-                      {s.employment_status === 'probation' ? (
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <span className="e-badge e-tone-warning"><Clock />Thử việc</span>
-                          <button onClick={() => handleEndProbation(s)} className="text-[12px] text-teal-700 hover:underline font-semibold inline-flex items-center gap-1">
-                            <UserCheck className="w-3 h-3" /> Kết thúc TV
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="e-badge e-tone-success"><BadgeCheck />Chính thức</span>
-                      )}
-                    </td>
-                    <td className="text-slate-600 tabular-nums whitespace-nowrap">{s.phone || '—'}</td>
-                    <td className="align-middle">
-                      {s.bank_name && s.bank_account ? (
-                        <button onClick={() => setViewQR(s)} className="e-btn e-btn-outline e-btn-sm h-8 px-2.5">
-                          <QrCode className="w-3.5 h-3.5" /> VietQR
-                        </button>
-                      ) : (
-                        <span className="text-[12px] text-slate-400">Chưa cập nhật</span>
-                      )}
-                    </td>
-                    <td className="align-middle">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => handleImpersonate(s)} title="Đăng nhập với tư cách" className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-teal-50 hover:text-teal-700 transition-colors">
-                          <LogIn className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => openEdit(s)} className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-teal-50 hover:text-teal-700 transition-colors">
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleToggleActive(s)} title="Khóa / Mở khóa" className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-warning-50 hover:text-warning-600 transition-colors">
-                          <UserX className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(s)} title="Xóa hẳn" className="w-8 h-8 rounded-lg grid place-items-center text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-12 text-slate-400 text-[13px] border-r-0">Không tìm thấy nhân sự</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
           {/* Điện thoại: thẻ nhân sự (Ethics) — bấm để mở bảng thao tác */}
           <div className="lg:hidden space-y-2.5 pb-16">
             {mList.length === 0 && (
@@ -516,15 +602,7 @@ const StaffManagementPage = ({ isNested = false }) => {
               <div className="col-span-2"><div className="e-kv-label">Số điện thoại</div><div className="e-kv-value tabular-nums">{sheet.phone || '—'}</div></div>
             </div>
             <div className="mt-3 divide-y divide-slate-100">
-              {[
-                { show: true, icon: Pencil, label: 'Sửa thông tin', fn: openEdit },
-                { show: sheet.employment_status === 'probation', icon: UserCheck, label: 'Kết thúc thử việc', fn: handleEndProbation },
-                { show: !!(sheet.bank_name && sheet.bank_account), icon: QrCode, label: 'QR nhận lương (VietQR)', fn: setViewQR },
-                { show: !!sheet.phone, icon: Phone, label: 'Gọi điện', href: `tel:${sheet.phone}` },
-                { show: true, icon: LogIn, label: 'Đăng nhập với tư cách', fn: handleImpersonate },
-                { show: true, icon: UserX, label: sheet.is_active ? 'Khoá tài khoản' : 'Mở khoá tài khoản', fn: handleToggleActive, warn: true },
-                { show: true, icon: Trash2, label: 'Xoá hẳn nhân sự', fn: handleDelete, danger: true },
-              ].filter(a => a.show).map(a => {
+              {staffActions(sheet).map(a => {
                 const cls = `w-full flex items-center gap-3 h-12 px-1 text-[15px] font-medium text-left ${a.danger ? 'text-danger-600' : a.warn ? 'text-warning-600' : 'text-slate-800'}`;
                 const inner = <><span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${a.danger ? 'bg-danger-50' : a.warn ? 'bg-warning-50' : 'bg-teal-50 text-teal-700'}`}><a.icon className="w-[18px] h-[18px]" /></span><span className="flex-1">{a.label}</span><ChevronRight className="w-4 h-4 text-slate-300" /></>;
                 return a.href
@@ -535,6 +613,68 @@ const StaffManagementPage = ({ isNested = false }) => {
           </div>
         </div>
       )}
+
+      {/* Máy tính: ngăn chi tiết nhân sự (Ethics D05 EmployeeDrawer) */}
+      <Drawer
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.full_name}
+        description={detail ? [detail.employee_id, detail.position].filter(Boolean).join(' · ') : ''}
+        footer={detail && (
+          <>
+            <button onClick={() => { const x = detail; setDetail(null); handleToggleActive(x); }} className="e-btn e-btn-secondary mr-auto">{detail.is_active ? <><Lock /> Khoá</> : <><LockOpen /> Mở khoá</>}</button>
+            <button onClick={() => { const x = detail; setDetail(null); openEdit(x); }} className="e-btn e-btn-primary"><Pencil /> Sửa thông tin</button>
+          </>
+        )}
+      >
+        {detail && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <span className={`w-16 h-16 rounded-full overflow-hidden shrink-0 grid place-items-center text-[20px] font-bold ${detail.avatar_url ? '' : 'bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700'}`}>
+                {detail.avatar_url ? <img src={detail.avatar_url} alt={detail.full_name} className="w-full h-full object-cover" /> : avInit(detail.full_name)}
+              </span>
+              <div className="min-w-0 space-y-1.5">
+                <StatusBadge x={detail} />
+                <div className="flex flex-wrap gap-1">
+                  {[detail.role, detail.role_2].filter(Boolean).map(r => <span key={r} className={`e-badge e-badge-sm ${ROLE_COLORS[r] || 'e-tone-neutral'}`}>{ROLE_LABELS[r] || r}</span>)}
+                </div>
+              </div>
+            </div>
+            <div className="e-subtle px-4 py-3 grid grid-cols-2 gap-y-3 gap-x-4">
+              <div><div className="e-kv-label">Mã nhân viên</div><div className="e-kv-value tabular-nums">{detail.employee_id || '—'}</div></div>
+              <div><div className="e-kv-label">Số điện thoại</div><div className="e-kv-value tabular-nums">{detail.phone || '—'}</div></div>
+              <div><div className="e-kv-label">Ngày vào làm</div><div className="e-kv-value tabular-nums">{fmtDate(joinDate(detail))}</div></div>
+              <div><div className="e-kv-label">Bắt đầu thử việc</div><div className="e-kv-value tabular-nums">{fmtDate(detail.probation_started_at)}</div></div>
+              <div><div className="e-kv-label">Lương cơ bản</div><div className="e-kv-value tabular-nums">{fmt(detail.base_salary)}</div></div>
+              <div><div className="e-kv-label">Phụ cấp</div><div className="e-kv-value tabular-nums">{fmt(detail.allowance)}</div></div>
+              <div><div className="e-kv-label">Kiểu lương</div><div className="e-kv-value">{detail.fixed_salary ? 'Lương cố định' : 'Theo ngày công'}</div></div>
+              <div><div className="e-kv-label">Nhận lương</div><div className="e-kv-value truncate">{detail.bank_name && detail.bank_account ? `${detail.bank_name} · ${detail.bank_account}` : 'Chưa cập nhật'}</div></div>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {staffActions(detail).filter(a => a.label !== 'Sửa thông tin' && !a.warn).map(a => {
+                const cls = `w-full flex items-center gap-3 h-12 px-1 text-[14.5px] font-medium text-left ${a.danger ? 'text-danger-600' : 'text-slate-800'}`;
+                const inner = <><span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${a.danger ? 'bg-danger-50' : 'bg-teal-50 text-teal-700'}`}><a.icon className="w-[18px] h-[18px]" /></span><span className="flex-1">{a.label}</span><ChevronRight className="w-4 h-4 text-slate-300" /></>;
+                return a.href
+                  ? <a key={a.label} href={a.href} className={cls}>{inner}</a>
+                  : <button key={a.label} onClick={() => { const x = detail; setDetail(null); a.fn(x); }} className={cls}>{inner}</button>;
+              })}
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <ConfirmDialog
+        open={bulkLock !== null}
+        onClose={() => setBulkLock(null)}
+        onConfirm={applyBulkLock}
+        busy={bulkBusy}
+        danger={bulkLock === true}
+        title={bulkLock ? `Khoá ${selected.size} tài khoản?` : `Mở khoá ${selected.size} tài khoản?`}
+        description={bulkLock
+          ? 'Nhân sự bị khoá sẽ không đăng nhập được nữa. Dữ liệu chấm công, lương, lịch hẹn vẫn giữ nguyên. Tài khoản của chính bạn sẽ được bỏ qua.'
+          : 'Nhân sự được mở khoá sẽ đăng nhập lại được bình thường.'}
+        confirmLabel={bulkLock ? 'Khoá tài khoản' : 'Mở khoá'}
+      />
 
       {/* QR Code Dialog */}
       <Dialog open={!!viewQR} onOpenChange={(open) => !open && setViewQR(null)}>
