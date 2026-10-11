@@ -40,10 +40,16 @@ import {
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
-  AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText
+  AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText,
+  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon,
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
+import ReportsPage from '@/features/reports/ReportsPage.jsx';
+import CallsPage from '@/features/channels/CallsPage.jsx';
+import InboxPage from '@/features/channels/InboxPage.jsx';
+import TasksPage from '@/features/work/TasksPage.jsx';
+import SettingsPage from '@/features/settings/SettingsPage.jsx';
 import SchedulePage from '@/features/hr/SchedulePage.jsx';
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
@@ -62,6 +68,10 @@ const MENU_GROUPS = [
       { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
     ] },
     { id: 'appointments', label: 'Lịch hẹn', shortLabel: 'Lịch hẹn', icon: CalendarDays },
+    { id: 'grp_channels', label: 'Inbox & Tổng đài', icon: Inbox, children: [
+      { id: 'inbox', label: 'Hộp thư đa kênh', icon: Inbox },
+      { id: 'calls', label: 'Tổng đài', icon: PhoneCall },
+    ] },
     { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, children: [
       { id: 'khach_phau_thuat', label: 'Khách phẫu thuật', icon: Activity },
       { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
@@ -81,6 +91,7 @@ const MENU_GROUPS = [
     { id: 'payroll', label: 'Bảng lương', icon: Wallet },
   ]},
   { title: 'TÀI CHÍNH', color: 'amber', items: [
+    { id: 'reports', label: 'Báo cáo & Phân tích', shortLabel: 'Báo cáo', icon: BarChart3 },
     { id: 'finance', label: 'Doanh thu', icon: Banknote },
     { id: 'pl', label: 'Lãi / Lỗ (P&L)', icon: PieChart },
     { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout },
@@ -89,6 +100,7 @@ const MENU_GROUPS = [
     { id: 'hospital_fee_inventory', label: 'Viện phí / Vật tư', icon: Activity },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
+    { id: 'tasks', label: 'Công việc & Duyệt', shortLabel: 'Công việc', icon: ListTodo },
     { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
     { id: 'minigame', label: 'Minigame', icon: Gamepad2 },
@@ -97,6 +109,7 @@ const MENU_GROUPS = [
   { title: 'HỆ THỐNG', color: 'slate', items: [
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
     { id: 'audit_log', label: 'Nhật ký hoạt động', icon: ScrollText },
+    { id: 'settings', label: 'Cài đặt hệ thống', shortLabel: 'Cài đặt', icon: SettingsIcon },
   ]},
 ];
 const MENU = MENU_GROUPS.flatMap(g => g.items).flatMap(m => m.children ? [m, ...m.children] : [m]);
@@ -718,6 +731,11 @@ const AdminDashboard = () => {
       case 'service_quality': return <ServiceQualityPage />;
       case 'permissions': return <PermissionsPage />;
       case 'audit_log': return <AuditLogPage />;
+      case 'reports': return <ReportsPage onNavigate={setActiveTab} />;
+      case 'calls': return <CallsPage onNavigate={setActiveTab} />;
+      case 'inbox': return <InboxPage />;
+      case 'tasks': return <TasksPage onNavigate={setActiveTab} />;
+      case 'settings': return <SettingsPage onNavigate={setActiveTab} />;
       case 'schedule': return <SchedulePage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }
