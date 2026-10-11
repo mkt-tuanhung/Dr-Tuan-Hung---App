@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
 import PipelineBoard from '@/features/crm/PipelineBoard.jsx';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3 } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
@@ -918,6 +919,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 <div className="flex items-center gap-2 min-w-0 text-[13px] text-slate-600">
                   <Phone className="w-4 h-4 text-slate-400 shrink-0" /><span className="tabular-nums">{phoneView(row.phone, me)}</span>
                   <button onClick={() => { navigator.clipboard?.writeText(phoneView(row.phone, me) || ''); toast.success('Đã copy SĐT'); }} className="text-slate-300 hover:text-slate-600" title="Copy SĐT"><Copy className="w-3.5 h-3.5" /></button>
+                  <Customer360Button phone={row.phone} name={row.customer_name} className="!h-7 ml-1" />
                 </div>
                 <Meta icon={Hash}>{row.getfly_code || `KH${String(row.id).padStart(6, '0')}`}</Meta>
                 <Meta icon={Mail}>{row.email || 'Chưa có email'}</Meta>

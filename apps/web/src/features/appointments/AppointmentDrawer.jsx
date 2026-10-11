@@ -9,6 +9,7 @@ import { X, Phone, CalendarDays, Clock, Link as LinkIcon, User, Wallet, Receipt,
 import { toneOf, parseYMD, fmtDayTitle, timeToMin, minToTime, durationOf, isRecheck, fmtVND } from './calendarUtils';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 import { JOURNEY, JourneyLabel } from './journey';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 
 const Row = ({ icon: Icon, label, value, strong }) => (
@@ -54,6 +55,7 @@ export default function AppointmentDrawer({ app, onClose, actions, profile }) {
                   ? <div className="mt-1 text-[14px] text-slate-500 flex items-center gap-1.5"><Phone className="w-4 h-4" />{phoneFor(app.phone, profile)}</div>
                   : <a href={`tel:${app.phone}`} className="mt-1 text-[14px] text-teal-700 font-semibold flex items-center gap-1.5 w-fit"><Phone className="w-4 h-4" />{app.phone}</a>
               )}
+              {app.phone && <Customer360Button phone={app.phone} name={app.customer_name} className="mt-2 -ml-2.5" />}
             </div>
             <button onClick={onClose} className="w-9 h-9 rounded-full grid place-items-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 shrink-0" aria-label="Đóng">
               <X className="w-5 h-5" />

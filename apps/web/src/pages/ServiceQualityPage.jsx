@@ -13,6 +13,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
 import { QUESTIONS, STAFF_ROLE_LABELS, RATING_LABELS, npsGroup, SENTIMENT_STYLE } from '@/lib/serviceReviewQuestions';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 const SENTIMENTS = ['rất tích cực', 'tích cực', 'trung lập', 'tiêu cực', 'rất tiêu cực'];
 
@@ -668,6 +669,7 @@ function TicketDetailModal({ ticket, staffList, onClose, onSave, onResurvey, res
           <div className="min-w-0">
             <h3 className="e-modal-title truncate">{ticket.customer_name || 'Khách'}</h3>
             <p className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums">{resp.invitation?.service || '—'}{resp.invitation?.phone ? ` · ${resp.invitation.phone}` : ''}</p>
+            <Customer360Button phone={resp.invitation?.phone} name={ticket.customer_name} className="mt-1 -ml-2.5 !h-7" />
           </div>
           <button onClick={onClose} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button>
         </div>

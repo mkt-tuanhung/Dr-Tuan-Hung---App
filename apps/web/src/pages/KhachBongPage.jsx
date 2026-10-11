@@ -8,6 +8,7 @@ import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { phoneFor } from '@/lib/phoneMask';
 import { vnToday } from '@/lib/vnTime';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -243,6 +244,7 @@ const KhachBongPage = ({ isNested = false }) => {
                   </span>
                 </div>
                 <div className="text-[13px] text-slate-500 flex items-center gap-1.5 mt-1"><Phone className="w-4 h-4" /> {phoneFor(careApp.phone, profile)}</div>
+                <Customer360Button phone={careApp.phone} name={careApp.customer_name} className="mt-1.5 -ml-2.5" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2.5 mt-4">
