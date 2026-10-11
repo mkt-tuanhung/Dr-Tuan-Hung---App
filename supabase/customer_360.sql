@@ -3,7 +3,8 @@
 --
 -- get_customer_360(p_phone): gom MỌI dữ liệu của 1 khách (khớp theo 9 số cuối SĐT)
 --   lead Data KH · lịch hẹn / cọc / phẫu thuật / hậu phẫu · cuộc gọi & chăm sóc ·
---   đánh giá dịch vụ · ghi âm tư vấn (điểm AI) · hình ảnh media · tin nhắn Messenger
+--   đánh giá dịch vụ · ghi âm tư vấn (điểm AI) · hình ảnh media · tin nhắn Messenger ·
+--   lịch sử ghi chú GetFly (getfly_comments.sql)
 -- để mọi màn (Lịch hẹn, Khách cọc, Phẫu thuật, Hậu phẫu, CSKH…) mở cùng 1 hồ sơ.
 --
 -- Ai xem được (giống quy tắc get_customer_card đang dùng):
@@ -12,7 +13,7 @@
 --   - vai trò được xem theo trạng thái lịch hẹn của khách (chờ tư vấn / cọc / bong / phẫu thuật)
 --   Không đủ quyền -> trả { denied: true }.
 -- Sale Offline (không phải admin): SĐT bị che 4 số cuối NGAY TRÊN MÁY CHỦ.
--- Bảng tuỳ chọn chưa có (đánh giá, ghi âm, media, Messenger) -> phần đó để trống.
+-- Bảng tuỳ chọn chưa có (đánh giá, ghi âm, media, Messenger, ghi chú GetFly) -> phần đó để trống.
 -- ============================================================
 
 create or replace function public.c360_phone_key(p text)
@@ -38,6 +39,7 @@ declare
   v_recordings jsonb := '[]'::jsonb;
   v_media jsonb := '[]'::jsonb;
   v_messages jsonb := '[]'::jsonb;
+  v_getfly jsonb := '[]'::jsonb;
   v_names jsonb := '{}'::jsonb;
   v_people text[] := array['sale_id', 'telesale_id', 'telesale_id_2', 'bac_si_id', 'phu_mo_1_id', 'phu_mo_2_id',
                            'phu_mo_3_id', 'truc_dem_id', 'truc_dem_id_2', 'hau_phau_id', 'created_by', 'truc_page_id'];
@@ -136,6 +138,16 @@ begin
     into v_messages using (v_lead->>'id')::uuid, v_key;
   end if;
 
+  if to_regclass('public.getfly_comments') is not null and v_lead is not null then
+    execute $q$
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'id', g.id, 'title', g.title, 'content', g.content, 'creator_name', g.creator_name,
+        'is_feedback', g.is_feedback, 'created_at', g.created_at
+      ) order by g.created_at desc nulls last), '[]'::jsonb)
+      from (select * from getfly_comments where data_id = $1 order by created_at desc nulls last limit 200) g $q$
+    into v_getfly using (v_lead->>'id')::uuid;
+  end if;
+
   -- Tên nhân sự cho mọi mã người xuất hiện trong hồ sơ
   select coalesce(jsonb_object_agg(p.id, p.full_name), '{}'::jsonb) into v_names
   from profiles p
@@ -155,6 +167,7 @@ begin
     'recordings', v_recordings,
     'media', v_media,
     'messages', v_messages,
+    'getfly_notes', v_getfly,
     'names', v_names
   );
 end $$;
