@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -9,6 +10,8 @@ import { OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS, calcDistance, getL
 import FaceCameraScreen from '@/features/faceid/FaceCameraScreen.jsx';
 import FaceEnrollScreen from '@/features/faceid/FaceEnrollScreen.jsx';
 import { fetchMyFaceStatus } from '@/features/faceid/faceApi';
+import FaceIdHome from '@/features/faceid/FaceIdHome.jsx';
+import FaceHistoryScreen from '@/features/faceid/FaceHistoryScreen.jsx';
 import { vnToday, vnTimeHMS } from '@/lib/vnTime';
 
 const STATUS_CONFIG = {
@@ -71,6 +74,7 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
   // ---- Chấm công KHUÔN MẶT (FACE_AI) ----
   const [faceMode, setFaceMode] = useState(null);      // null | 'CHECK_IN' | 'CHECK_OUT'
   const [showEnroll, setShowEnroll] = useState(false);
+  const [showFaceHistory, setShowFaceHistory] = useState(false);
   const [faceStatus, setFaceStatus] = useState(undefined); // undefined=đang tải, null=chưa đăng ký
   const faceReady = faceStatus?.status === 'ACTIVE';
   const loadFaceStatus = useCallback(async () => {
@@ -326,132 +330,17 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
     <div className="space-y-4">
       <p className="e-page-desc capitalize hidden lg:block">{dateStr}</p>
 
-      {/* Chấm công hôm nay — vòng tròn kiểu Face ID (Ethics M05/M06) */}
-      <div className="e-card e-card-pad text-center max-lg:pt-5 max-lg:pb-5 max-lg:bg-gradient-to-b max-lg:from-teal-50/70 max-lg:via-white max-lg:to-white">
-        <div className="e-caption">Chấm công hôm nay</div>
-        <div
-          className="mx-auto mt-4 w-[236px] h-[236px] lg:w-[228px] lg:h-[228px] rounded-full p-2 shadow-[0_16px_40px_rgba(6,123,127,0.22)]"
-          style={{ background: 'conic-gradient(#12A4A5, #76C2C3, #06686C, #12A4A5)' }}
-        >
-          <div className="w-full h-full rounded-full bg-white grid place-content-center max-lg:shadow-[inset_0_0_0_4px_#fff]">
-            <div className="text-[40px] lg:text-[38px] font-bold tracking-wide text-slate-900 tabular-nums leading-none">{timeStr}</div>
-            <div className="text-[13px] lg:text-[12.5px] text-slate-500 mt-2 capitalize px-6">{dateStr}</div>
-          </div>
-        </div>
-        <div className="mt-5 max-lg:mt-6">
-        {loading ? (
-          <div className="w-6 h-6 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin mx-auto" />
-        ) : !todayRecord ? (
-          <div className="space-y-3">
-            {locationInfo && (
-              <div className={`inline-flex items-center gap-2 h-8 px-3 rounded-full text-[12px] font-semibold ${locationInfo.inOffice ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'}`}>
-                {locationInfo.inOffice ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                {locationInfo.inOffice ? 'Trong văn phòng' : `Ngoài văn phòng (${locationInfo.distance}m)`}
-                {locationInfo.ip && <span className="text-slate-400 font-normal text-[11px]">· {locationInfo.ip}</span>}
-              </div>
-            )}
-            {faceReady ? (
-              <button onClick={() => setFaceMode('CHECK_IN')} disabled={saving}
-                className="e-btn e-btn-primary e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
-                <ScanFace /> Check-in bằng khuôn mặt
-              </button>
-            ) : (
-              <button onClick={() => setShowEnroll(true)}
-                className="e-btn e-btn-outline e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
-                <ScanFace /> {faceStatus === undefined ? 'Face ID…' : faceStatus?.status === 'NEEDS_REENROLLMENT' ? 'Đăng ký lại khuôn mặt' : 'Đăng ký Face ID để chấm công'}
-              </button>
-            )}
-            <p className="text-[12px] text-slate-500">
-              {faceReady ? 'Chấm công bằng nhận diện khuôn mặt · GPS được ghi nhận tự động' : 'Cần đăng ký Face ID để chấm công'}
-            </p>
-          </div>
-        ) : !todayRecord.check_out ? (
-          <div className="space-y-3">
-            <div className="e-subtle px-4 py-2 inline-flex items-center gap-2 text-[13.5px] text-slate-700 max-lg:h-10 max-lg:rounded-full max-lg:bg-teal-50 max-lg:border-teal-100 max-lg:text-[14px]">
-              <Clock className="w-4 h-4 text-teal-600" />
-              <span>Vào lúc <strong className="text-slate-900 tabular-nums">{fmtTime(todayRecord.check_in)}</strong></span>
-            </div>
-            <div className="space-y-2">
-              {faceReady ? (
-                <button onClick={() => setFaceMode('CHECK_OUT')} disabled={saving}
-                  className="e-btn e-btn-primary e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
-                  <ScanFace /> Check-out bằng khuôn mặt
-                </button>
-              ) : (
-                <button onClick={() => setShowEnroll(true)}
-                  className="e-btn e-btn-outline e-btn-lg flex w-full sm:w-auto sm:min-w-[280px] mx-auto active:scale-[0.98] max-lg:h-[52px] max-lg:rounded-[14px] max-lg:text-[16px]">
-                  <ScanFace /> Đăng ký Face ID để check-out
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-center gap-3">
-              <div className="e-subtle px-5 py-2.5 text-center min-w-[100px] max-lg:flex-1 max-lg:py-3 max-lg:rounded-2xl max-lg:bg-white max-lg:border-slate-200/80">
-                <div className="text-[12px] text-slate-500">Vào</div>
-                <div className="text-[24px] lg:text-[20px] font-bold text-slate-900 tabular-nums">{fmtTime(todayRecord.check_in)}</div>
-              </div>
-              <div className="text-slate-300">→</div>
-              <div className="e-subtle px-5 py-2.5 text-center min-w-[100px] max-lg:flex-1 max-lg:py-3 max-lg:rounded-2xl max-lg:bg-white max-lg:border-slate-200/80">
-                <div className="text-[12px] text-slate-500">Ra</div>
-                <div className="text-[24px] lg:text-[20px] font-bold text-slate-900 tabular-nums">{fmtTime(todayRecord.check_out)}</div>
-              </div>
-            </div>
-            <div className="e-badge e-tone-success">
-              <CalendarCheck />
-              {STATUS_CONFIG[todayRecord.status]?.label || 'Đã chấm công'}
-            </div>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              {faceReady ? (
-                <button onClick={() => setFaceMode('CHECK_OUT')} disabled={saving}
-                  className="e-btn e-btn-secondary e-btn-sm max-lg:h-11 max-lg:w-full max-lg:rounded-[14px] max-lg:text-[14.5px]">
-                  <ScanFace /> Cập nhật giờ ra (Face)
-                </button>
-              ) : (
-                <button onClick={() => setShowEnroll(true)}
-                  className="e-btn e-btn-outline e-btn-sm max-lg:h-11 max-lg:w-full max-lg:rounded-[14px] max-lg:text-[14.5px]">
-                  <ScanFace /> Đăng ký Face ID
-                </button>
-              )}
-            </div>
-            <p className="text-[12px] text-slate-400">Quét lại khi về để cập nhật đúng giờ ra</p>
-          </div>
-        )}
-        </div>
-      </div>
-
-      {/* ===== Thẻ FACE ID — LUÔN hiển thị, bất kể đã chấm công hay chưa ===== */}
-      {faceStatus !== undefined && (
-        !faceReady ? (
-          <button onClick={() => setShowEnroll(true)}
-            className="w-full flex items-center gap-3 e-card e-card-hover p-4 border-dashed border-teal-300 text-left active:scale-[0.99]">
-            <span className="w-11 h-11 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
-              <ScanFace className="w-6 h-6" />
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block font-semibold text-slate-900 text-[14.5px]">
-                {faceStatus?.status === 'NEEDS_REENROLLMENT' ? 'Cần đăng ký lại Face ID' : 'Đăng ký Face ID'}
-              </span>
-              <span className="block text-[12px] text-slate-500 mt-0.5">Chấm công bằng khuôn mặt — quét ~1 giây, chống chấm hộ</span>
-            </span>
-            <ChevronRight className="w-5 h-5 text-teal-600 shrink-0" />
-          </button>
-        ) : (
-          <div className="e-card-flat flex items-center gap-3 p-3 max-lg:p-4 max-lg:gap-3.5">
-            <span className="w-10 h-10 max-lg:w-12 max-lg:h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0">
-              <ScanFace className="w-5 h-5 max-lg:w-6 max-lg:h-6" />
-            </span>
-            <span className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-slate-900 text-[14px]">Face ID</span>
-              <span className="e-badge e-badge-sm e-tone-success">Đã kích hoạt</span>
-            </span>
-            <button onClick={() => setShowEnroll(true)} className="e-btn e-btn-ghost e-btn-sm shrink-0">
-              Đăng ký lại
-            </button>
-          </div>
-        )
-      )}
+      {/* Chấm công Face AI — giao diện v2 (banner động + 4 thẻ), dùng nguyên luồng chấm công cũ */}
+      <FaceIdHome
+        now={now}
+        faceStatus={faceStatus}
+        todayRecord={todayRecord}
+        loading={loading || saving}
+        onCheckIn={() => (faceReady ? setFaceMode('CHECK_IN') : setShowEnroll(true))}
+        onCheckOut={() => (faceReady ? setFaceMode('CHECK_OUT') : setShowEnroll(true))}
+        onHistory={() => setShowFaceHistory(true)}
+        onSetup={() => setShowEnroll(true)}
+      />
 
       {/* Xác thực vị trí — chỉ điện thoại (Ethics M07) */}
       <div className="lg:hidden rounded-2xl bg-white border border-slate-200/80 shadow-soft divide-y divide-slate-100">
@@ -966,19 +855,29 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
         </div>
       )}
 
-      {/* ===== CHẤM CÔNG KHUÔN MẶT (FACE_AI) ===== */}
-      {faceMode && (
-        <FaceCameraScreen
-          action={faceMode}
-          onClose={() => setFaceMode(null)}
-          onSuccess={() => { loadData(); }}
-        />
-      )}
-      {showEnroll && (
-        <FaceEnrollScreen
-          onClose={() => { setShowEnroll(false); loadFaceStatus(); }}
-          onDone={() => { loadFaceStatus(); toast.success('Đã đăng ký khuôn mặt — từ giờ chấm công bằng Face ID!'); }}
-        />
+      {/* ===== CHẤM CÔNG KHUÔN MẶT (FACE_AI) — màn toàn trang render qua portal để luôn phủ trên app shell ===== */}
+      {(faceMode || showFaceHistory || showEnroll) && createPortal(
+        <>
+          {faceMode && (
+            <FaceCameraScreen
+              action={faceMode}
+              onClose={() => setFaceMode(null)}
+              onSuccess={() => { loadData(); }}
+              onEnroll={() => { setFaceMode(null); setShowEnroll(true); }}
+            />
+          )}
+          {showFaceHistory && (
+            <FaceHistoryScreen profile={profile} onClose={() => setShowFaceHistory(false)} />
+          )}
+          {showEnroll && (
+            <FaceEnrollScreen
+              faceStatus={faceStatus}
+              onClose={() => { setShowEnroll(false); loadFaceStatus(); }}
+              onDone={() => { loadFaceStatus(); toast.success('Đã đăng ký khuôn mặt — từ giờ chấm công bằng Face ID!'); }}
+            />
+          )}
+        </>,
+        document.body,
       )}
     </div>
   );

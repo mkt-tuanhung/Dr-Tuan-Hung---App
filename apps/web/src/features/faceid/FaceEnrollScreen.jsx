@@ -6,11 +6,12 @@
 // ============================================================
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, ScanFace, ShieldCheck, Check } from 'lucide-react';
+import { ArrowLeft, ScanFace, ShieldCheck, Check, SunMedium, Glasses, RotateCcw, Lock, CircleCheck, RefreshCw } from 'lucide-react';
 import { loadEngine, analyzeFrame, mapFaceToScreen } from './faceEngine';
 import { submitEnrollment } from './faceApi';
-import { playSuccessChime, playErrorBeep, unlockAudio } from './faceSound';
-import { FaceStyles, FaceScanCanvas, Glass, HUD, toneColor } from './FaceHud';
+import { playSuccessChime, playErrorBeep, playScanStart, unlockAudio } from './faceSound';
+import { FaceStyles, FaceScanCanvas, HUD, toneColor } from './FaceHud';
+import './faceV2.css';
 
 // Mỗi bước: điều kiện góc mặt (độ) + số mẫu cần thu
 const STEPS = [
@@ -22,7 +23,7 @@ const STEPS = [
   { id: 'down',  label: 'CÚI NHẸ', hint: 'Cúi cằm xuống một chút', test: (_y, p) => p > 8, need: 2 },
 ];
 
-export default function FaceEnrollScreen({ onClose, onDone }) {
+export default function FaceEnrollScreen({ onClose, onDone, faceStatus }) {
   const [phase, setPhase] = useState('consent'); // consent | capturing | uploading | done | error
   const [stepIdx, setStepIdx] = useState(0);
   const [stepCount, setStepCount] = useState(0);
@@ -45,6 +46,7 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
 
   const startCapture = useCallback(async () => {
     unlockAudio();
+    playScanStart();
     setPhase('capturing'); setStepIdx(0); setStepCount(0); setErrMsg(null);
     aliveRef.current = true;
     dataRef.current = { embeddings: [], qualities: [], stepIdx: 0, stepGot: 0, lastAt: 0 };
@@ -127,6 +129,7 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
     }
   }, [stopCamera, onDone]);
 
+
   const color = phase === 'done' ? HUD.success : phase === 'error' ? HUD.error : toneColor('neutral');
   const step = STEPS[stepIdx];
 
@@ -137,57 +140,135 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
     if (phase === 'done' || phase === 'error') feedRef.current.pulse = performance.now();
   }, [color, phase]);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: HUD.bg }}>
-      <FaceStyles />
-      {phase !== 'consent' && (
-        <>
-          <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(5,9,8,.78) 0%, rgba(5,9,8,.12) 25%, rgba(5,9,8,.1) 55%, rgba(5,9,8,.9) 100%)' }} />
-          <div className="absolute inset-0 pointer-events-none">
-            <FaceScanCanvas feed={feedRef} />
-          </div>
-        </>
-      )}
+  const close = () => { stopCamera(); onClose?.(); };
+  const active = faceStatus?.status === 'ACTIVE';
+  const reenroll = faceStatus?.status === 'NEEDS_REENROLLMENT';
 
-      {/* Header */}
-      <div className="relative flex items-center justify-between px-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}>
-        <button onClick={() => { stopCamera(); onClose?.(); }} className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)', border: `1px solid ${HUD.glassBorder}`, color: '#fff' }}>
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="font-black tracking-[0.16em] text-white text-sm" style={{ textShadow: '0 1px 6px rgba(0,0,0,.7)' }}>ĐĂNG KÝ KHUÔN MẶT</div>
-        <div className="w-11" />
+  // ---------- MÀN 02 — Thiết lập Face AI (sáng) ----------
+  if (phase === 'consent') {
+    return (
+      <div className="fv2-screen fv2-setup">
+        <div className="fv2-top">
+          <button type="button" className="fv2-icon-btn" onClick={close} aria-label="Quay lại"><ArrowLeft /></button>
+          <h1>Thiết lập Face AI</h1>
+          <span className="w-11" />
+        </div>
+        <div className="max-w-md w-full mx-auto pb-4">
+          <h2>{active ? 'Face ID đã được kích hoạt' : reenroll ? 'Cần quét lại khuôn mặt' : 'Quét khuôn mặt ban đầu để kích hoạt chấm công'}</h2>
+          <p className="lead">
+            {active
+              ? 'Chỉ cần quét lại khi khuôn mặt thay đổi nhiều hoặc chấm công hay báo không khớp.'
+              : 'Hệ thống lưu mã đặc trưng khuôn mặt của bạn (đã mã hoá) để phục vụ chấm công hằng ngày.'}
+          </p>
+          <div className="fv2-portrait" aria-hidden="true">
+            <img src="/faceid/hero-portrait.webp" alt="" />
+            <span className="fv2-hud-ring" />
+            <span className="corners" />
+            <span className="beam" />
+            <span className="fv2-status-chip">
+              {active ? <><CircleCheck className="w-4 h-4 text-[#5BF2A0]" /> Đã kích hoạt</> : <><ScanFace className="w-4 h-4" /> Ảnh minh hoạ</>}
+            </span>
+          </div>
+          <div className="fv2-steps">
+            <div className="fv2-step"><span><ScanFace /></span>Nhìn thẳng vào camera</div>
+            <div className="fv2-step"><span><SunMedium /></span>Đủ ánh sáng, không quá tối</div>
+            <div className="fv2-step"><span><Glasses /></span>Bỏ khẩu trang / kính râm</div>
+            <div className="fv2-step"><span><RotateCcw /></span>Quay nhẹ trái – phải, ngẩng – cúi theo hướng dẫn (~10 giây)</div>
+          </div>
+          <div className="fv2-privacy">
+            <Lock />
+            <span>Khi đăng ký, hệ thống <b>không lưu ảnh</b> — chỉ lưu mã đặc trưng đã <b>mã hoá</b>. Khi chấm công, app chụp 1 ảnh làm bằng chứng và lưu vào bản ghi chấm công.</span>
+          </div>
+          <div className="px-[18px] mt-4 space-y-2.5 fv2-safe-bottom">
+            <button type="button" onClick={startCapture} className="fv2-btn fv2-btn-teal">
+              <ScanFace /> {active ? 'Quét lại khuôn mặt' : 'Bắt đầu quét'}
+            </button>
+            {active && <button type="button" onClick={close} className="fv2-btn fv2-btn-ghost">Giữ Face ID hiện tại</button>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Đăng ký xong ----------
+  if (phase === 'done') {
+    return (
+      <div className="fv2-screen fv2-success" role="status">
+        <div className="fv2-top"><span className="w-11" /></div>
+        <div className="px-4 max-w-md w-full mx-auto">
+          <div className="fv2-badge-ring">
+            <div className="fv2-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path className="fv2-draw" d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            </div>
+          </div>
+          <h2 className="fv2-result-title">Hoàn tất đăng ký Face ID</h2>
+          <p className="fv2-result-sub">Từ giờ bạn có thể Check-in / Check-out bằng khuôn mặt.</p>
+          <div className="mt-6 fv2-safe-bottom">
+            <button type="button" onClick={close} className="fv2-btn fv2-btn-green"><CircleCheck /> Xong</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Đăng ký lỗi ----------
+  if (phase === 'error') {
+    return (
+      <div className="fv2-screen fv2-error" role="alert">
+        <div className="fv2-top">
+          <button type="button" className="fv2-icon-btn" onClick={close} aria-label="Quay lại"><ArrowLeft /></button>
+          <h1>Đăng ký chưa thành công</h1>
+          <span className="w-11" />
+        </div>
+        <div className="max-w-md w-full mx-auto">
+          <div className="fv2-err-face" style={{ width: 'min(48vw, 180px)' }}>
+            <span className="ring2" /><div className="img"><ScanFace className="w-1/2 h-1/2 text-[#FF8A92] opacity-50" /></div>
+            <span className="ring" />
+            <div className="fv2-err-x"><svg viewBox="0 0 24 24" fill="none" stroke="#FF4D5A" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6L6 18" /></svg></div>
+          </div>
+          <p className="fv2-result-sub px-6 mt-5">{errMsg}</p>
+          <div className="fv2-reasons">
+            <div className="fv2-reason"><span><SunMedium /></span>Đổi sang chỗ sáng hơn</div>
+            <div className="fv2-reason"><span><ScanFace /></span>Chỉ một người trước camera, đưa điện thoại gần mặt</div>
+          </div>
+          <div className="px-4 mt-5 space-y-2.5 fv2-safe-bottom">
+            <button type="button" onClick={startCapture} className="fv2-btn fv2-btn-red"><RefreshCw /> Thử lại</button>
+            <button type="button" onClick={close} className="fv2-btn fv2-btn-ghost-red"><ArrowLeft /> Đóng</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Đang quét đăng ký (camera thật + HUD) ----------
+  return (
+    <div className="fv2-screen fv2-scan">
+      <FaceStyles />
+      <video ref={videoRef} playsInline muted autoPlay />
+      <div className="fv2-scan-tint" />
+      <div className="fv2-hud" aria-hidden="true"><span className="fv2-hud-ring" /><span className="fv2-hud-ring r2" /><span className="fv2-hud-arc" /></div>
+      <div className="absolute inset-0 pointer-events-none"><FaceScanCanvas feed={feedRef} /></div>
+
+      <div className="fv2-top">
+        <button type="button" onClick={close} className="fv2-icon-btn" style={{ background: 'rgba(255,255,255,.1)', borderColor: HUD.glassBorder, color: '#fff' }} aria-label="Quay lại"><ArrowLeft /></button>
+        <h1 style={{ textShadow: '0 1px 6px rgba(0,0,0,.6)' }}>Thiết lập Face AI</h1>
+        <span className="w-11" />
+      </div>
+      <div className="fv2-scan-head">
+        <span className="fv2-intent fv2-intent-in"><ScanFace />ĐĂNG KÝ KHUÔN MẶT</span>
       </div>
 
       <div className="flex-1" />
 
-      <div className="relative px-3 pb-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 14px)' }}>
-        {phase === 'consent' && (
-          <Glass className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${HUD.neutral}1c`, border: `1px solid ${HUD.neutral}44` }}>
-                <ScanFace className="w-6 h-6" style={{ color: HUD.neutral }} />
-              </span>
-              <div className="font-black text-white text-lg leading-tight">Chấm công bằng nhận diện khuôn mặt</div>
-            </div>
-            <p className="text-white/70 text-sm leading-relaxed">
-              Chấm công khuôn mặt sử dụng <b className="text-white">dữ liệu sinh trắc học</b> để xác minh danh tính khi Check-in/Check-out.
-              Hệ thống <b className="text-white">không lưu ảnh</b> khuôn mặt — chỉ lưu mã đặc trưng đã <b className="text-white">mã hóa</b>.
-              Bạn vẫn có thể chấm công bằng GPS/Wi-Fi như bình thường.
-            </p>
-            <div className="mt-3 text-white/60 text-xs leading-relaxed">
-              Quy trình ~10 giây: nhìn thẳng → quay nhẹ trái → quay nhẹ phải → ngẩng nhẹ → cúi nhẹ.
-            </div>
-            <button onClick={startCapture} className="mt-4 w-full py-3.5 rounded-2xl font-bold text-slate-900" style={{ background: HUD.neutral }}>
-              Đồng ý & Đăng ký khuôn mặt
-            </button>
-            <button onClick={() => onClose?.()} className="mt-2 w-full py-3 rounded-2xl font-bold text-white/70" style={{ background: 'rgba(255,255,255,0.08)' }}>Để sau</button>
-          </Glass>
-        )}
-
-        {phase === 'capturing' && (
-          <Glass className="p-4">
-            {/* Tiến trình 5 bước */}
+      <div className="relative fv2-safe-bottom">
+        {phase === 'uploading' ? (
+          <div className="fv2-capture-card text-center">
+            <div className="fv2-spin mx-auto" style={{ width: 40, height: 40 }} />
+            <div className="mt-3 font-bold">Đang tạo Face Profile…</div>
+            <div className="text-[#8FC8CF] text-xs mt-1">Mã đặc trưng được mã hoá trước khi lưu</div>
+          </div>
+        ) : (
+          <div className="fv2-capture-card">
             <div className="flex items-center gap-1.5 mb-3">
               {STEPS.map((s, i) => (
                 <div key={s.id} className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
@@ -200,59 +281,26 @@ export default function FaceEnrollScreen({ onClose, onDone }) {
             </div>
             <div className="text-center">
               <div className="font-black text-xl" style={{ color: HUD.neutral }}>{step?.label}</div>
-              <div className="text-white/60 text-xs mt-1">{hint || step?.hint}</div>
+              <div className="text-[#B5E6EC] text-[13px] mt-1">{hint || step?.hint}</div>
               {progress && <div className="text-white/45 text-[11px] mt-2">{progress}</div>}
             </div>
             <div className="mt-3 flex items-center justify-center gap-1.5">
               {STEPS.map((s, i) => (
-                <span key={s.id} className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                <span key={s.id} className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
                   style={{
                     background: i < stepIdx ? `${HUD.success}22` : 'rgba(255,255,255,0.08)',
                     border: `1px solid ${i < stepIdx ? HUD.success : i === stepIdx ? HUD.neutral : 'rgba(255,255,255,0.15)'}`,
-                    color: i < stepIdx ? HUD.success : 'rgba(255,255,255,0.6)',
+                    color: i < stepIdx ? HUD.success : 'rgba(255,255,255,0.7)',
                   }}>
                   {i < stepIdx ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </span>
               ))}
             </div>
-          </Glass>
-        )}
-
-        {phase === 'uploading' && (
-          <Glass className="p-5 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full border-[3px] border-t-transparent animate-spin" style={{ borderColor: `${HUD.neutral}66`, borderTopColor: 'transparent' }} />
-            <div className="mt-3 font-bold text-white">Đang tạo Face Profile…</div>
-            <div className="text-white/55 text-xs mt-1">Mã đặc trưng được mã hóa trước khi lưu</div>
-          </Glass>
-        )}
-
-        {phase === 'done' && (
-          <Glass className="p-5 text-center">
-            <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center" style={{ background: `${HUD.success}1e`, border: `2px solid ${HUD.success}` }}>
-              <Check className="w-7 h-7" style={{ color: HUD.success }} />
-            </div>
-            <div className="mt-3 font-black text-lg" style={{ color: HUD.success }}>HOÀN TẤT ĐĂNG KÝ</div>
-            <div className="text-white/60 text-xs mt-1">Từ giờ bạn có thể chấm công bằng khuôn mặt</div>
-            <button onClick={() => onClose?.()} className="mt-4 w-full py-3 rounded-2xl font-bold text-slate-900" style={{ background: HUD.success }}>Xong</button>
-          </Glass>
-        )}
-
-        {phase === 'error' && (
-          <Glass className="p-5 text-center">
-            <div className="font-black text-lg" style={{ color: HUD.error }}>Đăng ký chưa thành công</div>
-            <div className="text-white/65 text-sm mt-1">{errMsg}</div>
-            <div className="mt-4 flex gap-2">
-              <button onClick={startCapture} className="flex-1 py-3 rounded-2xl font-bold text-slate-900" style={{ background: HUD.neutral }}>Thử lại</button>
-              <button onClick={() => onClose?.()} className="px-5 py-3 rounded-2xl font-bold text-white/75" style={{ background: 'rgba(255,255,255,0.08)' }}>Đóng</button>
-            </div>
-          </Glass>
-        )}
-
-        {phase !== 'consent' && (
-          <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-white/45">
-            <ShieldCheck className="w-3.5 h-3.5" style={{ color: HUD.success }} /> Dữ liệu sinh trắc học được mã hóa và bảo mật
           </div>
         )}
+        <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-white/50">
+          <ShieldCheck className="w-3.5 h-3.5" style={{ color: HUD.success }} /> Dữ liệu sinh trắc học được mã hoá và bảo mật
+        </div>
       </div>
     </div>
   );

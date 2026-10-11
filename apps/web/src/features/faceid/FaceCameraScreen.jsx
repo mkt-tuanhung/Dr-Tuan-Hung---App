@@ -9,13 +9,15 @@
 // ============================================================
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { ArrowLeft, ShieldCheck, User, RefreshCw, Send } from 'lucide-react';
-import { loadEngine, analyzeFrame, mapFaceToScreen, MODEL_VERSION } from './faceEngine';
+import { ArrowLeft, ScanFace, Activity, Camera, Volume2, VolumeX, LogIn, LogOut, MapPin } from 'lucide-react';
+import { loadEngine, analyzeFrame, mapFaceToScreen } from './faceEngine';
 import { newRequestId, submitFaceAttendance } from './faceApi';
-import { playSuccessChime, playErrorBeep, unlockAudio, speak } from './faceSound';
+import { playSuccessChime, playErrorBeep, playScanStart, unlockAudio, speak, isFaceSoundMuted, setFaceSoundMuted } from './faceSound';
 import { getLocation, getPublicIP, calcDistance, OFFICE_LAT, OFFICE_LNG, OFFICE_RADIUS_M, OFFICE_IPS } from '@/lib/geo';
 import { uploadToR2 } from '@/lib/r2Client';
-import { FaceStyles, FaceScanCanvas, StatusRow, ResultIcon, ResultBar, Glass, CameraTelemetry, HUD, toneColor } from './FaceHud';
+import { FaceStyles, FaceScanCanvas, HUD, toneColor } from './FaceHud';
+import { FaceSuccessScreen, FaceErrorScreen } from './FaceResultScreens';
+import './faceV2.css';
 
 // ---------- State machine ----------
 const S = {
@@ -69,7 +71,7 @@ const TITLES = {
   [S.SUBMITTING_TO_CRM]: 'Đang xác nhận chấm công…',
 };
 
-export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSuccess }) {
+export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSuccess, onEnroll }) {
   const { profile } = useAuth();
   const [ui, dispatch] = useReducer(reducer, { state: S.IDLE, hint: null, error: null, result: null });
   const [fps, setFps] = useState(null);
@@ -79,6 +81,8 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const [loc, setLoc] = useState({ gps: null, ip: null, gpsVerified: null, wifiVerified: null });
   const [snap, setSnap] = useState(null);   // ảnh bằng chứng vừa chụp (objectURL) hiện ở góc
   const [flash, setFlash] = useState(false); // hiệu ứng "nháy đèn" lúc chụp
+  const [hasFace, setHasFace] = useState(false); // có khung mặt thật -> ẩn khung hướng dẫn tĩnh
+  const [muted, setMuted] = useState(isFaceSoundMuted);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -91,19 +95,20 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   const pipeRef = useRef(null);      // dữ liệu pipeline (liveness, samples…)
   const payloadRef = useRef(null);   // payload đã gửi (để "Thử gửi lại" idempotent)
   const beepedRef = useRef(false);
+  const hasFaceRef = useRef(false);
 
   const goto = useCallback((state, hint) => { stateRef.current = state; dispatch({ type: 'GOTO', state, hint }); }, []);
-  const fail = useCallback((error, opts = {}) => {
-    stateRef.current = opts.crm ? S.ATTENDANCE_REJECTED : S.ERROR;
-    if (!beepedRef.current) { playErrorBeep(); beepedRef.current = true; } // 1 lần, không loop
-    dispatch({ type: 'FAIL', error, ...opts });
-  }, []);
-
   const stopCamera = useCallback(() => {
     aliveRef.current = false;
     try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
     streamRef.current = null;
   }, []);
+  const fail = useCallback((error, opts = {}) => {
+    stateRef.current = opts.crm ? S.ATTENDANCE_REJECTED : S.ERROR;
+    stopCamera(); // màn kết quả không giữ camera (quét lại sẽ mở phiên mới)
+    if (!beepedRef.current) { playErrorBeep(); beepedRef.current = true; } // 1 lần, không loop
+    dispatch({ type: 'FAIL', error, ...opts });
+  }, [stopCamera]);
 
   // ---------- Gửi về CRM (Attendance Engine quyết định) ----------
   const submit = useCallback(async (payload) => {
@@ -153,6 +158,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   // ---------- Pipeline chính ----------
   const start = useCallback(async () => {
     unlockAudio();
+    playScanStart(); // người dùng vừa bấm Check-in/Check-out hoặc Quét lại
     aliveRef.current = true;
     beepedRef.current = false;
 
@@ -281,6 +287,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
       } else {
         fd.pts = null; // mất mặt thoáng qua: giữ khung, ẩn lưới
       }
+      if (!!fd.box !== hasFaceRef.current) { hasFaceRef.current = !!fd.box; setHasFace(!!fd.box); }
 
       const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
       // Điểm passive kết hợp antispoof (real) + liveness (live) — số THẬT từ model
@@ -364,7 +371,7 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
     return () => { document.removeEventListener('visibilitychange', onVis); stopCamera(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ---------- Render ----------
+  // ---------- Render (giao diện v2: màn 03 quét · 04 thành công · 05 thất bại) ----------
   const st = ui.state;
   const isFinal = [S.ATTENDANCE_SUCCESS, S.ATTENDANCE_REJECTED, S.ERROR].includes(st);
   const tone = st === S.ATTENDANCE_SUCCESS ? 'success' : isFinal ? 'error' : 'neutral';
@@ -379,143 +386,117 @@ export default function FaceCameraScreen({ action = 'CHECK_IN', onClose, onSucce
   useEffect(() => {
     if (isFinal) feedRef.current.pulse = performance.now();
   }, [isFinal]);
-  const actLabel = action === 'CHECK_IN' ? 'CHECK-IN' : 'CHECK-OUT';
+
+  const isIn = action === 'CHECK_IN';
   const netErr = st === S.ERROR && ui.error === 'NETWORK_ERROR' && payloadRef.current;
+  const close = () => { stopCamera(); onClose?.(); };
+  const toggleMute = () => { setMuted((m) => { setFaceSoundMuted(!m); return !m; }); };
 
-  // Tên chỉ hiện sau khi identity được server xác nhận (không flicker theo frame)
-  const identityLocked = st === S.ATTENDANCE_SUCCESS || (st === S.ATTENDANCE_REJECTED && ui.result?.accepted === false && !['FACE_NOT_MATCHED', 'LIVENESS_FAILED', 'FACE_NOT_ENROLLED'].includes(ui.error));
-  const displayName = identityLocked ? (profile?.full_name || '—') : 'Chưa xác định danh tính';
+  // 3 ô trạng thái — chỉ phản ánh tiến trình THẬT của engine/server
+  const matchTile = st === S.SUBMITTING_TO_CRM ? { v: 'Đang đối chiếu', ok: null }
+    : [S.FACE_DETECTED, S.MATCHING_FACE, S.CHECKING_LIVENESS].includes(st) ? { v: 'Đã thấy khuôn mặt', ok: true }
+      : st === S.SEARCHING_FACE ? { v: 'Đang tìm…', ok: null } : { v: 'Chờ camera', ok: null };
+  const liveTile = st === S.CHECKING_LIVENESS ? { v: 'Chớp mắt', ok: null }
+    : st === S.SUBMITTING_TO_CRM ? { v: 'Đạt', ok: true }
+      : [S.FACE_DETECTED, S.MATCHING_FACE].includes(st) ? { v: 'Đang phân tích', ok: null } : { v: 'Chờ', ok: null };
+  const camTile = st === S.REQUESTING_PERMISSION ? { v: 'Xin quyền…', ok: null }
+    : st === S.LOADING_ENGINE ? { v: 'Tải AI…', ok: null }
+      : st === S.SUBMITTING_TO_CRM ? { v: 'Đã tắt', ok: null }
+        : fps != null ? { v: `Tốt · ${fps} fps`, ok: true } : res ? { v: 'Đã bật', ok: true } : { v: '…', ok: null };
 
-  const bigTitle = st === S.ATTENDANCE_SUCCESS ? 'Nhận diện thành công'
-    : st === S.ATTENDANCE_REJECTED || st === S.ERROR
-      ? (ui.error === 'FACE_NOT_MATCHED' || ui.error === 'LIVENESS_FAILED' ? 'Không nhận diện được' : ERR[ui.error] ? (ui.result?.message || ERR[ui.error]) : 'Không nhận diện được')
-      : TITLES[st] || 'Đang quét…';
-
-  const badges = [
-    { label: 'Liveness', value: st === S.ATTENDANCE_SUCCESS ? 'OK' : isFinal && ['LIVENESS_FAILED'].includes(ui.error) ? 'Thất bại' : scanning || st === S.SUBMITTING_TO_CRM ? 'Đang kiểm tra' : isFinal ? 'Cần xác minh' : '…', ok: st === S.ATTENDANCE_SUCCESS ? true : isFinal ? false : null },
-    { label: 'Face Match', value: ui.result?.matchScore != null ? `${Math.round(ui.result.matchScore * 100)}%` : isFinal ? 'Thất bại' : '…', ok: ui.result?.accepted ? true : isFinal ? false : null },
-    { label: 'Wi-Fi', value: loc.wifiVerified == null ? '…' : loc.wifiVerified ? 'Verified' : 'Sai mạng', ok: loc.wifiVerified },
-    { label: 'GPS', value: loc.gpsVerified == null ? '…' : loc.gpsVerified ? 'Verified' : 'Ngoài VP', ok: loc.gpsVerified },
-  ];
+  const locText = loc.gpsVerified == null ? 'Đang lấy vị trí…' : loc.gpsVerified ? 'Trong văn phòng' : 'Ngoài văn phòng';
+  const progressText = st === S.SUBMITTING_TO_CRM ? 'Đang đối chiếu dữ liệu khuôn mặt trên máy chủ…'
+    : st === S.LOADING_ENGINE ? (progress || TITLES[st]) : (TITLES[st] || 'Đang khởi động…');
+  const bars = [12, 20, 30, 18, 34, 24, 14, 28, 36, 22, 30, 16, 26, 12];
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: HUD.bg }}>
+    <div className="fv2-screen fv2-scan">
       <FaceStyles />
+      {/* Camera thật của engine cũ — giữ nguyên, mirror */}
+      <video ref={videoRef} playsInline muted autoPlay />
+      <div className="fv2-scan-tint" />
 
-      {/* Camera */}
-      <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(5,9,8,.75) 0%, rgba(5,9,8,.15) 22%, rgba(5,9,8,.1) 55%, rgba(5,9,8,.88) 100%)' }} />
-
-      {/* HUD trên video — canvas 60fps: khung + lưới + tia quét + shimmer + ripple */}
+      {/* Vòng HUD xoay (trang trí) — đổi màu theo kết quả */}
+      <div className="fv2-hud" data-tone={tone} aria-hidden="true">
+        <span className="fv2-hud-ring" /><span className="fv2-hud-ring r2" /><span className="fv2-hud-arc" />
+      </div>
+      {/* Khung hướng dẫn khi CHƯA thấy mặt; có mặt -> canvas vẽ khung bám mặt + lưới landmark THẬT */}
+      <div className={`fv2-guide ${hasFace || isFinal ? 'hide' : ''}`} aria-hidden="true">
+        {scanning && <span className="fv2-guide-beam" />}
+      </div>
       <div className="absolute inset-0 pointer-events-none">
         <FaceScanCanvas feed={feedRef} />
       </div>
 
-      {/* Hiệu ứng nháy đèn máy ảnh lúc chụp */}
-      {flash && <div className="absolute inset-0 bg-white pointer-events-none z-20" style={{ animation: 'snapFlash .26s ease-out forwards' }} />}
-
-      {/* Ảnh bằng chứng vừa chụp — người dùng biết ảnh đã được lưu */}
-      {snap && (
-        <div className="absolute right-3 z-10 pointer-events-none" style={{ top: 'calc(max(env(safe-area-inset-top), 14px) + 118px)', animation: 'snapPop .45s cubic-bezier(.2,1.3,.4,1)' }}>
-          <div className="rounded-xl overflow-hidden" style={{ border: `2px solid ${st === S.ATTENDANCE_SUCCESS ? HUD.success : HUD.neutral}`, boxShadow: `0 4px 18px rgba(0,0,0,.5), 0 0 12px ${st === S.ATTENDANCE_SUCCESS ? HUD.success : HUD.neutral}55`, width: 64 }}>
-            <img src={snap} alt="Ảnh chấm công" className="w-full h-20 object-cover block" />
-          </div>
-          <div className="mt-1 text-center text-[9px] font-bold px-1 py-0.5 rounded-md"
-            style={{ background: 'rgba(5,12,11,0.7)', color: st === S.ATTENDANCE_SUCCESS ? HUD.success : 'rgba(255,255,255,0.85)' }}>
-            {st === S.ATTENDANCE_SUCCESS ? '✓ Đã lưu hệ thống' : 'Ảnh chấm công'}
-          </div>
+      {flash && <div className="fv2-flash" />}
+      {snap && !isFinal && (
+        <div className="fv2-snap" style={{ top: 'calc(max(env(safe-area-inset-top), 12px) + 120px)' }}>
+          <img src={snap} alt="Ảnh chấm công" />
+          <span>Ảnh chấm công</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="relative flex items-center justify-between px-4 pt-safe" style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}>
-        <button onClick={() => { stopCamera(); onClose?.(); }} className="pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)', border: `1px solid ${HUD.glassBorder}`, color: '#fff' }}>
-          <ArrowLeft className="w-5 h-5" />
+      <div className="fv2-top">
+        <button type="button" onClick={close} className="fv2-icon-btn" style={{ background: 'rgba(255,255,255,.1)', borderColor: HUD.glassBorder, color: '#fff' }} aria-label="Quay lại">
+          <ArrowLeft />
         </button>
-        <div className="text-center select-none">
-          <div className="font-black tracking-[0.18em] text-white text-sm" style={{ textShadow: '0 1px 6px rgba(0,0,0,.7)' }}>CHẤM CÔNG KHUÔN MẶT</div>
-          <div className="mx-auto mt-1 h-[2px] w-40 rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
-        </div>
-        <div className="w-11 h-11 rounded-full flex items-center justify-center relative" style={{ background: 'rgba(255,255,255,0.1)', border: `1px solid ${HUD.glassBorder}` }}>
-          <ShieldCheck className="w-5 h-5" style={{ color }} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-        </div>
+        <h1 style={{ textShadow: '0 1px 6px rgba(0,0,0,.6)' }}>Đang quét khuôn mặt</h1>
+        <button type="button" onClick={toggleMute} className="fv2-icon-btn" style={{ background: 'rgba(255,255,255,.1)', borderColor: HUD.glassBorder, color: '#fff' }} aria-label={muted ? 'Bật âm thanh' : 'Tắt âm thanh'}>
+          {muted ? <VolumeX /> : <Volume2 />}
+        </button>
       </div>
-
-      {/* Telemetry 2 bên (dữ liệu thật) */}
-      <div className="relative flex items-start justify-between px-4 mt-3 select-none">
-        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, letterSpacing: 1 }}>
-          <span className="px-2 py-1 rounded-lg font-bold" style={{ border: `1px solid ${color}55`, color }}>
-            SCAN <span style={{ animation: 'hudDot 1.2s infinite' }}>●</span>
-          </span>
-          <div className="mt-2" style={{ lineHeight: 1.8 }}>
-            <div>{scanning ? 'SEARCHING…' : isFinal ? (tone === 'success' ? 'LOCKED' : 'FAILED') : 'INIT'}</div>
-            <div>MODEL: {MODEL_VERSION.slice(0, 14)}</div>
-          </div>
-        </div>
-        <CameraTelemetry res={res} fps={fps} color={color} />
+      <div className="fv2-scan-head">
+        <span className={`fv2-intent ${isIn ? 'fv2-intent-in' : 'fv2-intent-out'}`}>
+          {isIn ? <LogIn /> : <LogOut />}{isIn ? 'CHECK-IN · CHẤM CÔNG VÀO' : 'CHECK-OUT · CHẤM CÔNG RA'}
+        </span>
+        <p className="fv2-scan-hint" aria-live="polite">
+          {ui.hint || 'Vui lòng giữ nguyên khuôn mặt và nhìn thẳng vào camera'}
+          {challenge && <><br /><span className="fv2-challenge">{challenge}</span></>}
+        </p>
       </div>
+      <div className="fv2-mini"><span>{res ? `RES ${res}` : 'CAMERA TRƯỚC'}</span><span>{fps != null ? `AI ${fps} FPS` : ''}</span></div>
 
       <div className="flex-1" />
 
-      {/* Card kết quả */}
-      <div className="relative px-3 pb-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 14px)' }}>
-        <Glass className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.12)' }}>
-                  <User className="w-4 h-4 text-white/80" />
-                </span>
-                <span className="text-white/85 font-semibold text-sm truncate">{displayName}</span>
-              </div>
-              <div className="font-black text-xl leading-tight" style={{ color: isFinal ? color : '#fff' }}>{bigTitle}</div>
-              <div className="text-white/60 text-xs mt-1">
-                {st === S.ATTENDANCE_SUCCESS ? (ui.result?.message || (ui.result?.lateMinutes > 0 ? `Đi muộn ${ui.result.lateMinutes} phút` : 'Đúng giờ'))
-                  : isFinal ? (ui.error === 'NETWORK_ERROR' ? 'Đã nhận diện khuôn mặt — chưa gửi được về CRM' : 'Vui lòng nhìn thẳng vào camera và thử lại')
-                  : challenge || ui.hint || 'Giữ khuôn mặt trong khung hình'}
-              </div>
-            </div>
-            {isFinal && <ResultIcon ok={st === S.ATTENDANCE_SUCCESS} />}
-            {st === S.SUBMITTING_TO_CRM && (
-              <div className="w-12 h-12 rounded-full border-[3px] border-t-transparent animate-spin shrink-0" style={{ borderColor: `${color}66`, borderTopColor: 'transparent' }} />
-            )}
-          </div>
-
-          <div className="mt-3"><StatusRow items={badges} /></div>
-
-          {st === S.ATTENDANCE_SUCCESS && ui.result?.time && (
-            <div className="mt-3"><ResultBar tone="success" title={`${actLabel} THÀNH CÔNG`} time={ui.result.time.slice(0, 8)} /></div>
-          )}
-          {st === S.ATTENDANCE_REJECTED && (
-            <div className="mt-3"><ResultBar tone="error" title="XÁC MINH THẤT BẠI" time={new Date().toTimeString().slice(0, 8)} /></div>
-          )}
-
-          <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-white/50">
-            <ShieldCheck className="w-3.5 h-3.5" style={{ color: HUD.success }} />
-            Dữ liệu được <b className="text-white/70">mã hóa</b> và bảo mật — không lưu ảnh khuôn mặt
-          </div>
-
-          {isFinal && (
-            <div className="mt-3 flex gap-2">
-              {st === S.ATTENDANCE_SUCCESS ? (
-                <button onClick={() => { stopCamera(); onClose?.(); }} className="flex-1 py-3 rounded-2xl font-bold text-slate-900" style={{ background: HUD.success }}>Hoàn tất</button>
-              ) : netErr ? (
-                <>
-                  <button onClick={retrySend} className="flex-1 py-3 rounded-2xl font-bold text-slate-900 flex items-center justify-center gap-2" style={{ background: HUD.neutral }}><Send className="w-4 h-4" /> Thử gửi lại</button>
-                  <button onClick={() => { stopCamera(); onClose?.(); }} className="px-5 py-3 rounded-2xl font-bold text-white/80" style={{ background: 'rgba(255,255,255,0.1)' }}>Đóng</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={restart} className="flex-1 py-3 rounded-2xl font-bold text-slate-900 flex items-center justify-center gap-2" style={{ background: HUD.neutral }}><RefreshCw className="w-4 h-4" /> Thử lại</button>
-                  <button onClick={() => { stopCamera(); onClose?.(); }} className="px-5 py-3 rounded-2xl font-bold text-white/80" style={{ background: 'rgba(255,255,255,0.1)' }}>Đóng</button>
-                </>
-              )}
-            </div>
-          )}
-          {(st === S.LOADING_ENGINE) && progress && <div className="mt-2 text-center text-[11px] text-white/50">{progress}</div>}
-        </Glass>
+      {/* Bảng trạng thái dưới */}
+      <div className="relative fv2-safe-bottom">
+        <div className="fv2-tiles">
+          <div className="fv2-tile" data-ok={String(matchTile.ok)}><ScanFace /><b>Face Match</b><small>{matchTile.v}</small></div>
+          <div className="fv2-tile" data-ok={String(liveTile.ok)}><Activity /><b>Liveness</b><small>{liveTile.v}</small></div>
+          <div className="fv2-tile" data-ok={String(camTile.ok)}><Camera /><b>Camera</b><small>{camTile.v}</small></div>
+        </div>
+        <div className="fv2-progress" aria-live="polite">
+          {!isFinal && <span className="fv2-spin" />}
+          <span className="flex-1 min-w-0">
+            <span className="block font-semibold">{progressText}</span>
+            <span className="flex items-center gap-1.5 mt-0.5 text-[11.5px] text-[#8FC8CF]"><MapPin className="w-3.5 h-3.5" />{locText}</span>
+          </span>
+        </div>
+        <div className={`fv2-wavebars ${scanning || st === S.SUBMITTING_TO_CRM ? '' : 'idle'}`} aria-hidden="true">
+          <span className="fv2-dots-line" />
+          {bars.map((h, i) => <i key={i} style={{ '--h': `${h}px`, animationDelay: `${(i % 7) * -0.13}s` }} />)}
+          <span className="fv2-dots-line" />
+        </div>
       </div>
+
+      {/* Kết quả — CHỈ dựng màn thành công khi server đã accepted */}
+      {st === S.ATTENDANCE_SUCCESS && ui.result?.accepted && (
+        <FaceSuccessScreen action={action} result={ui.result} profile={profile} snapUrl={snap}
+          photoSaved={!!payloadRef.current?.snapshotUrl} onDone={close} />
+      )}
+      {(st === S.ATTENDANCE_REJECTED || st === S.ERROR) && (
+        <FaceErrorScreen
+          errorCode={ui.error}
+          message={ui.result?.message || ERR[ui.error] || null}
+          snapUrl={snap}
+          netRetry={!!netErr}
+          onRetry={restart}
+          onRetrySend={retrySend}
+          onClose={close}
+          onEnroll={onEnroll ? () => { stopCamera(); onEnroll(); } : null}
+        />
+      )}
     </div>
   );
 }
