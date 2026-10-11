@@ -14,6 +14,7 @@ import { X, Search, ChevronDown, ChevronLeft, LayoutGrid, House } from 'lucide-r
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import { PageTitleProvider, usePageTitleValue } from '@/components/ds/PageTitle.jsx';
+import { Customer360Provider } from '@/features/crm/Customer360.jsx';
 
 // Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("lai lo" -> "Lãi / Lỗ")
 const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
@@ -54,7 +55,8 @@ export const Avatar = ({ profile, size = 'w-9 h-9', text = 'text-sm' }) => (
 
 // Trang con có thể tự đặt tiêu đề header bằng usePageTitle() (components/ds)
 export default function AppShell(props) {
-  return <PageTitleProvider><Shell {...props} /></PageTitleProvider>;
+  // Hồ sơ khách hàng 360 dùng chung: màn nào trong khung app cũng mở được (useCustomer360)
+  return <PageTitleProvider><Customer360Provider><Shell {...props} /></Customer360Provider></PageTitleProvider>;
 }
 
 function Shell({

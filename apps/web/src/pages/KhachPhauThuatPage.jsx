@@ -12,6 +12,7 @@ import { uploadToR2 } from '@/lib/r2Client';
 import MoDoiTacPage from '@/pages/MoDoiTacPage.jsx';
 import { Handshake, Stethoscope } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
   const { profile } = useAuth();
@@ -363,6 +364,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                         <div className="min-w-0 flex-1">
                           <h4 className="text-[15px] font-semibold text-slate-900 leading-snug truncate">{app.customer_name}</h4>
                           <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{app.service}</div>
+                          <Customer360Button phone={app.phone} name={app.customer_name} className="mt-1 -ml-2.5 !h-7" />
                         </div>
                         <div className="text-right shrink-0">
                           <div className="e-kv-label">Doanh thu</div>

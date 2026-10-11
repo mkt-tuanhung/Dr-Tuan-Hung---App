@@ -9,6 +9,7 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import MediaCustomerButton from '@/components/MediaCustomerButton.jsx';
 import { vnToday } from '@/lib/vnTime';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 const IMPORT_HEADERS = ['ngay_mo', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'ma_dieu_duong', 'ghi_chu'];
 const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
@@ -810,6 +811,7 @@ const HauPhauPage = () => {
                 {careApp.cskh_status && <span className={`e-badge border ${CSKH_STATUS_STYLE[careApp.cskh_status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>CSKH: {careApp.cskh_status}</span>}
               </div>
               {PhoneLine}
+              <Customer360Button phone={careApp.phone} name={careApp.customer_name} className="mt-1.5 -ml-2.5" />
               <div className="e-subtle grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 mt-3 px-4 py-3">
                 <div className="min-w-0"><div className="e-kv-label">Dịch vụ</div><div className="e-kv-value">{careApp.service || '—'}</div></div>
                 <div className="min-w-0"><div className="e-kv-label">Ngày phẫu thuật</div><div className="e-kv-value tabular-nums">{surgStr}</div></div>

@@ -9,6 +9,7 @@ import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
 import { vnToday } from '@/lib/vnTime';
+import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 // Lưới ảnh bấm được -> mở popup xem/zoom
 const Thumbs = ({ urls = [], size = 'h-20 w-20', wrapClass = 'flex flex-wrap gap-2' }) => {
@@ -862,6 +863,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-[18px] font-[650] text-slate-900 leading-tight">{r.customer_name}</h3>
           <span className={`e-badge e-badge-sm shrink-0 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-600'}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{ST[r.status]?.label || r.status}</span>
+          <Customer360Button phone={r.phone} name={r.customer_name} className="!h-7" />
         </div>
         <div className="text-[13px] text-slate-500 flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 tabular-nums"><span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" strokeWidth={1.75} /> {maskPhone(r.phone)}</span>{r.appointment_date && <span className="text-slate-500 before:content-['·'] before:mr-3 before:text-slate-300">{dOnly(r.appointment_date)}</span>}</div>
       </div>
