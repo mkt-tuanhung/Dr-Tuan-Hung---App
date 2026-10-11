@@ -202,7 +202,8 @@ export const FaceScanCanvas = ({ feed }) => {
 
         // Vòng sóng lan 1 lần khi có kết quả (xanh/đỏ)
         if (f.pulse && now - f.pulse < 700) {
-          const t = (now - f.pulse) / 700;
+          // rAF timestamp có thể nhỏ hơn performance.now() lúc đặt pulse -> kẹp về 0, tránh bán kính âm làm canvas ngừng vẽ
+          const t = Math.max(0, (now - f.pulse) / 700);
           ctx.save();
           ctx.globalAlpha = (1 - t) * 0.8;
           ctx.strokeStyle = color; ctx.lineWidth = 3;
