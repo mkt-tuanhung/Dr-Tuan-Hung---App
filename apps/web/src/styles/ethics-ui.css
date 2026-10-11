@@ -124,6 +124,60 @@
   .e-avatar { @apply inline-grid place-items-center rounded-full bg-teal-50 text-teal-700 font-bold shrink-0; }
 }
 
+/* ---------- Khối dùng chung cho components/ds (Ethics ds/styles/components.css) ---------- */
+@layer components {
+  /* Thanh lọc: ô tìm + các ô chọn + nút chính bên phải */
+  .e-filter-select { @apply relative min-w-[180px]; }
+  .e-filter-select > select { @apply w-full h-10 pl-3.5 pr-9 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-700 outline-none appearance-none cursor-pointer transition hover:border-teal-300 focus:border-teal-400; }
+  .e-filter-select > select:focus { box-shadow: 0 0 0 3px rgba(18, 164, 165, 0.22); }
+  .e-filter-select > svg { @apply w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none; }
+  .e-filter-select-on > select { @apply border-teal-300 bg-teal-50/40 text-teal-800 font-medium; }
+
+  /* Bảng: tiêu đề cột bấm để sắp xếp, dòng bấm được, dòng đã chọn, chân bảng */
+  .e-table th .e-sort { @apply inline-flex items-center gap-1 hover:text-teal-800 transition; color: inherit; font-weight: inherit; }
+  .e-table th .e-sort svg { @apply w-3.5 h-3.5 text-slate-400; }
+  .e-table th .e-sort[data-active='true'] { @apply text-teal-800; }
+  .e-table th .e-sort[data-active='true'] svg { @apply text-teal-700; }
+  .e-table tbody tr[data-clickable='true'] { @apply cursor-pointer; }
+  .e-table tbody tr[data-clickable='true']:focus-visible td { @apply bg-teal-50/60 outline-none; }
+  .e-table tbody tr[data-selected='true'] td { @apply bg-teal-50/60; }
+  .e-table td.e-col-check, .e-table th.e-col-check { @apply w-12 text-center; }
+  .e-table-footer { @apply flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-t border-slate-100 text-[13px] text-slate-500; }
+  .e-pagination { @apply flex items-center gap-1; }
+  .e-pagination button { @apply min-w-[32px] h-8 px-2 rounded-[9px] inline-grid place-items-center text-[13px] font-medium text-slate-600 transition hover:bg-teal-50 hover:text-teal-800 disabled:opacity-40 disabled:hover:bg-transparent; }
+  .e-pagination button[aria-current='page'] { @apply bg-teal-700 text-white hover:bg-teal-700 hover:text-white; }
+  .e-pagination svg { @apply w-4 h-4; }
+
+  /* Ô tick (Ethics .checkbox) */
+  .e-checkbox { @apply appearance-none m-0 w-5 h-5 rounded-[6px] border-[1.5px] border-teal-100 bg-white grid place-items-center cursor-pointer shrink-0 transition hover:border-teal-300 align-middle; }
+  .e-checkbox:checked, .e-checkbox:indeterminate { @apply bg-teal-700 border-teal-700; }
+  .e-checkbox:checked::after { content: ''; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+  .e-checkbox:indeterminate::after { content: ''; width: 10px; height: 2px; background: #fff; border-radius: 1px; }
+  .e-checkbox:focus-visible { box-shadow: 0 0 0 3px rgba(18, 164, 165, 0.22); outline: none; }
+
+  /* Dải cảnh báo (Ethics .alert-strip) */
+  .e-alert { @apply flex items-center gap-3 px-4 py-3 rounded-xl text-[14px]; }
+  .e-alert > svg { @apply w-[18px] h-[18px] shrink-0; }
+  .e-alert-warning { @apply bg-warning-50 text-warning-700; }
+  .e-alert-danger { @apply bg-danger-50 text-danger-700; }
+  .e-alert-info { @apply bg-info-50 text-info-700; }
+  .e-alert-success { @apply bg-success-50 text-success-700; }
+  .e-alert-action { @apply ml-auto shrink-0 text-[13px] font-semibold text-teal-700 hover:underline; }
+
+  /* Thanh thao tác hàng loạt (Ethics .hr-bulk) */
+  .e-bulkbar { @apply flex flex-wrap items-center gap-2.5 px-4 py-2.5 rounded-xl bg-teal-50 border border-teal-100 text-[13px] text-slate-700; }
+
+  /* Ngăn kéo chi tiết bên phải (Ethics .drawer) */
+  .e-drawer { @apply fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-white shadow-float; width: min(480px, 100vw); animation: e-drawer-in 220ms cubic-bezier(.2,.8,.2,1); }
+  .e-drawer-lg { width: min(720px, 100vw); }
+  .e-drawer-header { @apply flex items-start justify-between gap-3 px-6 pt-5 pb-3; }
+  .e-drawer-title { @apply text-[20px] font-bold text-slate-900 leading-tight; }
+  .e-drawer-desc { @apply text-[13px] text-slate-500 mt-1; }
+  .e-drawer-body { @apply flex-1 overflow-y-auto px-6 pt-2 pb-5; }
+  .e-drawer-footer { @apply flex items-center justify-end gap-2.5 px-6 py-4 border-t border-slate-100; }
+}
+@keyframes e-drawer-in { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+
 /* ---------- Lịch làm việc / Phân ca (Ethics hr.css: sch-*) ---------- */
 @layer components {
   .e-shift { @apply relative w-full max-w-[132px] h-[46px] mx-auto rounded-xl text-[13.5px] font-semibold grid place-items-center border border-transparent transition; }

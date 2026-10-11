@@ -13,6 +13,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, Search, ChevronDown, ChevronLeft, LayoutGrid, House } from 'lucide-react';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
+import { PageTitleProvider, usePageTitleValue } from '@/components/ds/PageTitle.jsx';
 
 // Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("lai lo" -> "Lãi / Lỗ")
 const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
@@ -51,7 +52,12 @@ export const Avatar = ({ profile, size = 'w-9 h-9', text = 'text-sm' }) => (
   </div>
 );
 
-export default function AppShell({
+// Trang con có thể tự đặt tiêu đề header bằng usePageTitle() (components/ds)
+export default function AppShell(props) {
+  return <PageTitleProvider><Shell {...props} /></PageTitleProvider>;
+}
+
+function Shell({
   groups,           // [{ title: string|null, items: [{ id, label, shortLabel?, icon, children?, badge? }] }]
   activeTab,
   onSelect,
@@ -65,7 +71,6 @@ export default function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [allOpen, setAllOpen] = useState(false);   // màn "Tất cả chức năng" (mobile)
   const [allQ, setAllQ] = useState('');
-  const [openGroups, setOpenGroups] = useState({});
   const [navQ, setNavQ] = useState('');
   const searchRef = useRef(null);
 
@@ -74,6 +79,7 @@ export default function AppShell({
     ? flat.filter(m => !m.children && deAccent(m.label).includes(deAccent(navQ)))
     : null;
   const activeMenu = flat.find(m => m.id === activeTab);
+  const pageTitle = usePageTitleValue() || activeMenu?.label;
 
   const go = (id) => { onSelect(id); setSidebarOpen(false); setNavQ(''); setAllOpen(false); setAllQ(''); };
 
@@ -104,21 +110,18 @@ export default function AppShell({
   const renderItem = (item) => {
     const Icon = item.icon;
     if (item.children) {
+      // Ethics: nhóm là MỘT dòng, không mũi tên — bấm mở màn con đầu tiên;
+      // dòng nhóm tô teal đặc khi đang ở 1 màn con và chỉ khi đó mới hiện màn con.
       const childActive = item.children.some(c => c.id === activeTab);
-      const open = openGroups[item.id] ?? childActive;
+      const groupBadge = item.children.reduce((s, c) => s + (c.badge || 0), 0);
       return (
         <div key={item.id}>
-          <button
-            onClick={() => setOpenGroups(g => ({ ...g, [item.id]: !(g[item.id] ?? childActive) }))}
-            className={`w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-[14.5px] font-medium transition-all ${
-              childActive ? 'text-teal-800' : 'text-slate-600 hover:bg-teal-50 hover:text-teal-800'
-            }`}
-          >
-            <Icon className={`w-[18px] h-[18px] shrink-0 ${childActive ? 'text-teal-700' : ''}`} />
+          <button onClick={() => go(item.children[0].id)} className={itemCls(childActive)} aria-current={childActive ? 'page' : undefined}>
+            <Icon className="w-[18px] h-[18px] shrink-0" />
             <span className="flex-1 text-left truncate">{item.label}</span>
-            <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+            {!childActive && <Badge n={groupBadge} active={false} />}
           </button>
-          {open && (
+          {childActive && item.children.length > 1 && (
             <div className="mt-0.5 mb-1.5 ml-[22px] pl-3 border-l-[1.5px] border-slate-200 space-y-0.5">
               {item.children.map(c => {
                 const active = activeTab === c.id;
@@ -231,7 +234,7 @@ export default function AppShell({
 
         {/* Header desktop */}
         <header className="hidden lg:flex items-center justify-between gap-6 px-8 pt-6 pb-4 sticky top-0 z-20 bg-background/90 backdrop-blur">
-          <h1 className="text-[26px] leading-tight font-bold text-slate-900 tracking-tight truncate">{activeMenu?.label}</h1>
+          <h1 className="text-[26px] leading-tight font-bold text-slate-900 tracking-tight truncate">{pageTitle}</h1>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={focusSearch} className="w-10 h-10 rounded-full grid place-items-center text-slate-600 hover:bg-white hover:shadow-soft transition" aria-label="Tìm chức năng">
               <Search className="w-5 h-5" />

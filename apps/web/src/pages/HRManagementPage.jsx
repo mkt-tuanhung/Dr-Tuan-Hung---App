@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import StaffManagementPage from './StaffManagementPage.jsx';
 import AttendanceManagementPage from './AttendanceManagementPage.jsx';
 import { Users, CalendarCheck, FileText } from 'lucide-react';
+import { usePageTitle } from '@/components/ds';
 
 export default function HRManagementPage({ initialTab = 'staff' }) {
   const [activeTab, setActiveTab] = useState(initialTab); // staff, attendance, leave
   useEffect(() => { setActiveTab(initialTab); }, [initialTab]);
+  usePageTitle('HRM - Quản lý nhân sự');
 
   return (
     <div className="space-y-4">
-      {/* Mô tả trang + tab khu vực (gạch chân teal kiểu Ethics) */}
-      <p className="e-page-desc">Danh sách, chấm công và duyệt đơn từ</p>
-
+      {/* Tab khu vực (riêng Tuấn Hùng — gạch chân teal kiểu Ethics) */}
       <div className="e-tabs">
         <button
           onClick={() => setActiveTab('staff')}
