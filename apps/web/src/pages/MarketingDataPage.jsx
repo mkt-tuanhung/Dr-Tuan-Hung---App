@@ -63,7 +63,8 @@ const callPriority = (r) => {
   return 4;
 };
 
-const MarketingDataPage = () => {
+// initialView='pipeline': mở thẳng chế độ Pipeline (mục "Pipeline khách hàng" trên sidebar)
+const MarketingDataPage = ({ initialView = null }) => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
   const canWrite = ['marketing', 'truc_page', 'telesale', 'admin'].some(r => roles.includes(r));
@@ -91,8 +92,9 @@ const MarketingDataPage = () => {
   const [reportOpen, setReportOpen] = useState(false);  // Báo cáo ngày
   const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
   // Chế độ xem: 'list' (bảng) | 'pipeline' (cột thẻ theo giai đoạn, kiểu Ethics BOS)
-  const [view, setView] = useState(() => { try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
-  const changeView = (v) => { setView(v); try { localStorage.setItem('crm_view', v); } catch { /* bỏ qua */ } };
+  const [view, setView] = useState(() => { if (initialView) return initialView; try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
+  // Mở từ mục Pipeline thì không ghi đè lựa chọn đã nhớ của màn Data khách hàng
+  const changeView = (v) => { setView(v); if (initialView) return; try { localStorage.setItem('crm_view', v); } catch { /* bỏ qua */ } };
 
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
