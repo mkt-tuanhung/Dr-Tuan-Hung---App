@@ -41,7 +41,7 @@ import {
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
   AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText,
-  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon,
+  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3,
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
@@ -63,6 +63,7 @@ const MENU_GROUPS = [
   { title: 'KHÁCH HÀNG', color: 'blue', items: [
     { id: 'grp_crm', label: 'Khách hàng', icon: Database, children: [
       { id: 'data_kh', label: 'Data khách hàng', icon: Database },
+      { id: 'crm_pipeline', label: 'Pipeline khách hàng', icon: Columns3 },
       { id: 'khach_tu_van', label: 'Khách tư vấn', icon: UserCheck },
       { id: 'deposit_management', label: 'Quản lý đặt cọc', icon: ClipboardList },
       { id: 'service_quality', label: 'Đánh giá dịch vụ', icon: Smile },
@@ -724,6 +725,7 @@ const AdminDashboard = () => {
       case 'content_images': return <ContentProductionPage setActiveTab={setActiveTab} view="images" />;
       case 'ads_report': return <AdsReportPage />;
       case 'data_kh': return <MarketingDataPage />;
+      case 'crm_pipeline': return <MarketingDataPage initialView="pipeline" />;
       case 'khach_tu_van': return <KhachTuVanPage />;
       case 'hospital_fee_inventory': return <HospitalFeeAndInventoryPage />;
       case 'cashflow': return <CashFlowPage />;

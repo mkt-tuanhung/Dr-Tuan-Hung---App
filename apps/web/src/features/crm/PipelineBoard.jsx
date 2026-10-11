@@ -4,7 +4,7 @@
 // marketing_data; đổi giai đoạn dùng lại đúng hàm quickStatus của trang.
 // ============================================================
 import React, { useState } from 'react';
-import { UserRound, MessagesSquare, CircleCheckBig, HeartHandshake, Clock3, ArrowRightLeft, X, XCircle } from 'lucide-react';
+import { UserRound, MessagesSquare, CircleCheckBig, HeartHandshake, Clock3, ArrowRightLeft, X, XCircle, StickyNote, ClipboardList } from 'lucide-react';
 
 export const PIPELINE_COLUMNS = [
   { id: 'potential', label: 'Tiềm năng', stages: ['tiep_can', 'nong', 'tiem_nang', 'sai_gon'], icon: UserRound,
@@ -57,7 +57,27 @@ function LeadCard({ r, STATUS, isDue, phoneView, me, canWrite, onOpen, onAskMove
           </button>
         )}
       </div>
-      {(r.description || r.last_exchange) && <p className="text-[12.5px] text-slate-600 mt-2 line-clamp-2">{r.description || r.last_exchange}</p>}
+      {r.description && <p className={`text-[12.5px] text-slate-600 mt-2 ${r.last_exchange || r.reached_info ? 'line-clamp-1' : 'line-clamp-2'}`} title={r.description}>{r.description}</p>}
+      {/* Ghi chú đồng bộ từ GetFly: trao đổi gần nhất + thông tin đã tiếp cận */}
+      {(r.last_exchange || r.reached_info) && (
+        <div className="mt-2 rounded-xl bg-amber-50/70 border border-amber-100 px-2.5 py-2 space-y-1.5">
+          {r.last_exchange && (
+            <div className="flex gap-1.5" title={r.last_exchange}>
+              <StickyNote className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[12px] text-slate-700 leading-snug line-clamp-3 whitespace-pre-line">{r.last_exchange}</p>
+                {r.getfly_updated_at && <p className="text-[10.5px] text-slate-400 mt-0.5">Ghi chú gần nhất · {timeAgo(r.getfly_updated_at)}</p>}
+              </div>
+            </div>
+          )}
+          {r.reached_info && (
+            <div className="flex gap-1.5" title={r.reached_info}>
+              <ClipboardList className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[12px] text-slate-600 leading-snug line-clamp-2 whitespace-pre-line"><b className="font-semibold text-slate-700">Đã tiếp cận:</b> {r.reached_info}</p>
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
         {r.customer_group && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 truncate max-w-[110px]">{r.customer_group}</span>}

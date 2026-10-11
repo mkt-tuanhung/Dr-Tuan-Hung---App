@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
   Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
-  Inbox, PhoneCall, BarChart3, ListTodo,
+  Inbox, PhoneCall, BarChart3, ListTodo, Columns3,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -37,6 +37,8 @@ export const FULL_MENU = [
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
+  // Lối tắt mở Data khách hàng ở chế độ Pipeline — dùng CHUNG quyền với data_kh (sameAs), không có ô riêng trong ma trận
+  { id: 'crm_pipeline', label: 'Pipeline khách hàng', icon: Columns3, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'], sameAs: 'data_kh' },
   { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
     { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },
@@ -74,7 +76,7 @@ export const STAFF_GROUPS = [
   { title: 'CÁ NHÂN', ids: ['attendance', 'my_schedule', 'kpi', 'my_payroll', 'advances'] },
   // Mục cha (grp_*) chỉ để gom nhóm hiển thị kiểu Ethics BOS — quyền vẫn xét theo từng mục con.
   { title: 'KHÁCH HÀNG', ids: [
-    { id: 'grp_crm', label: 'Khách hàng', icon: Database, ids: ['data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'service_quality'] },
+    { id: 'grp_crm', label: 'Khách hàng', icon: Database, ids: ['data_kh', 'crm_pipeline', 'khach_tu_van', 'khach_coc', 'khach_bong', 'service_quality'] },
     'appointments',
     { id: 'grp_channels', label: 'Inbox & Tổng đài', icon: Inbox, ids: ['inbox', 'calls'] },
     { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, ids: ['khach_phau_thuat', 'mo_doi_tac', 'hau_phau'] },
@@ -114,7 +116,8 @@ export const MATRIX_ROLES = ['telesale', 'sale_offline', 'cskh', 'truc_page', 'm
 export const SENSITIVE = new Set(['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'mo_doi_tac', 'seeding_rev', 'ads_report', 'audit_log', 'reports']);
 
 // Danh sách phẳng mọi chức năng (kèm nhóm cha nếu là mục con)
-export const flatModules = () => FULL_MENU.flatMap(m => (m.children ? m.children.map(c => ({ ...c, parent: m.label })) : [m]));
+// (bỏ các lối tắt sameAs — chúng theo quyền của chức năng gốc)
+export const flatModules = () => FULL_MENU.flatMap(m => (m.children ? m.children.map(c => ({ ...c, parent: m.label })) : [m])).filter(m => !m.sameAs);
 
 // Quyền MẶC ĐỊNH của 1 vai trò với 1 chức năng
 export const defaultGrant = (role, m) =>
@@ -123,7 +126,7 @@ export const defaultGrant = (role, m) =>
 // overrides: Map 'role|module' -> boolean
 export const overrideKey = (role, module) => `${role}|${module}`;
 export const effectiveGrant = (role, m, overrides) => {
-  const k = overrideKey(role, m.id);
+  const k = overrideKey(role, m.sameAs || m.id);
   return overrides?.has(k) ? overrides.get(k) : defaultGrant(role, m);
 };
 
@@ -133,7 +136,7 @@ export const effectiveGrant = (role, m, overrides) => {
 export const userCanModule = (profile, m, overrides) => {
   const roles = [profile?.role, profile?.role_2].filter(Boolean);
   if (profile?.position === 'Outsource' && OUTSOURCE_HIDE.includes(m.id)) return false;
-  const hasOverride = roles.some(r => overrides?.has(overrideKey(r, m.id)));
+  const hasOverride = roles.some(r => overrides?.has(overrideKey(r, m.sameAs || m.id)));
   if (!hasOverride) {
     return (m.roles?.includes('all') || roles.some(r => m.roles?.includes(r)))
       && !(m.exclude && roles.some(r => m.exclude.includes(r)));

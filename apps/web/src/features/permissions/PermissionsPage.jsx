@@ -27,7 +27,7 @@ const groupedModules = () => {
   const groups = STAFF_GROUPS.map(g => {
     const items = groupIds(g).flatMap(id => {
       const m = FULL_MENU.find(x => x.id === id);
-      if (!m) return [];
+      if (!m || m.sameAs) return [];
       return m.children ? m.children.map(c => ({ ...c, parent: m.label })) : [m];
     });
     items.forEach(i => used.add(i.id));

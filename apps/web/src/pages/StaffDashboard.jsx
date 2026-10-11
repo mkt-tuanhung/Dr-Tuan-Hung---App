@@ -437,6 +437,7 @@ const StaffDashboard = () => {
     if (activeTab === 'seeding_rev') return <SeedingRevenuePage />;
     if (activeTab === 'service_quality') return <ServiceQualityPage />;
     if (activeTab === 'data_kh') return <MarketingDataPage />;
+    if (activeTab === 'crm_pipeline') return <MarketingDataPage initialView="pipeline" />;
     if (activeTab === 'khach_tu_van') return <KhachTuVanPage />;
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
