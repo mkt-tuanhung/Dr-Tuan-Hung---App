@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { Check, X, Clock, ChevronLeft, ChevronRight, Search, FileText, CalendarDays } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ds';
+import { runWithReason } from '@/lib/audit';
 
 const LEAVE_TYPES = {
   late:     { label: 'Đi muộn',       color: 'e-tone-warning' },
@@ -142,14 +144,21 @@ const LeaveManagementPage = () => {
     setSaving(null);
   };
 
-  const handleReject = async (id) => {
+  // Từ chối phải có lý do (Ethics: ConfirmDialog requireReason). Lưu vào decision_note nếu đã chạy
+  // hr_extended.sql, đồng thời gửi kèm làm lý do cho nhật ký hoạt động.
+  const [rejecting, setRejecting] = useState(null); // đơn đang từ chối
+  const handleReject = (id) => setRejecting(requests.find(r => r.id === id) || { id });
+  const confirmReject = async (reason) => {
+    const id = rejecting.id;
     setSaving(id);
-    const { error } = await supabase.from('leave_requests').update({
+    const hasNote = requests.some(r => 'decision_note' in r);
+    const { error } = await runWithReason(() => supabase.from('leave_requests').update({
       status: 'rejected',
       reviewed_at: new Date().toISOString(),
-    }).eq('id', id);
+      ...(hasNote ? { decision_note: reason } : {}),
+    }).eq('id', id), reason);
     if (error) { toast.error(error.message); }
-    else { toast.success('Đã từ chối đơn'); loadData(); }
+    else { toast.success('Đã từ chối đơn'); setRejecting(null); loadData(); }
     setSaving(null);
   };
 
@@ -287,6 +296,7 @@ const LeaveManagementPage = () => {
                   {new Date(r.date).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' })}
                 </div>
                 <div className="mt-1.5 text-[13.5px] leading-[1.45] text-slate-600 whitespace-pre-line break-words">{r.reason}</div>
+                {r.decision_note && <div className="mt-1 text-[12.5px] text-slate-500"><b className="font-semibold">Phản hồi:</b> {r.decision_note}</div>}
                 <div className="flex items-center gap-1 text-[11.5px] text-slate-400 mt-2 tabular-nums">
                   <Clock className="w-3.5 h-3.5" />
                   Gửi lúc {new Date(r.created_at).toLocaleString('vi-VN')}
@@ -352,6 +362,7 @@ const LeaveManagementPage = () => {
                 <div className="mt-2 e-subtle px-3 py-2">
                   <div className="e-kv-label">Lý do</div>
                   <div className="text-[13px] text-slate-700 mt-0.5">{r.reason}</div>
+                  {r.decision_note && <div className="text-[12px] text-slate-500 mt-0.5"><b className="font-semibold">Phản hồi:</b> {r.decision_note}</div>}
                 </div>
 
                 <div className="text-[11.5px] text-slate-400 mt-2.5">
@@ -376,6 +387,20 @@ const LeaveManagementPage = () => {
         </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={!!rejecting}
+        onClose={() => setRejecting(null)}
+        onConfirm={confirmReject}
+        busy={saving === rejecting?.id}
+        danger
+        title="Từ chối đơn?"
+        description={rejecting?.profiles?.full_name ? `Đơn của ${rejecting.profiles.full_name}. Nhân sự sẽ thấy lý do từ chối.` : 'Nhân sự sẽ thấy lý do từ chối.'}
+        confirmLabel="Từ chối đơn"
+        requireReason
+        reasonLabel="Lý do từ chối"
+        reasonPlaceholder="VD: Trùng lịch phẫu thuật, cần đổi ngày khác"
+      />
     </div>
   );
 };
