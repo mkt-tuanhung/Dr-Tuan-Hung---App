@@ -3,7 +3,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound, LockOpen } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ds';
+import { ConfirmDialog, usePageTitle } from '@/components/ds';
+import PayrollFlowCard, { PayrollHistoryCard } from '@/features/payroll/PayrollFlowCard.jsx';
+import { PAY_STATUS_LABEL, isEditableStatus, isLockedStatus, isMissingTable, hasRole } from '@/features/payroll/workflow';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import QRCode from 'qrcode';
 import {
@@ -35,7 +37,12 @@ const PayrollPage = () => {
   const [saving, setSaving] = useState(false);
   const [rows, setRows] = useState([]);
   const [edits, setEdits] = useState({}); // staff_id -> { other_bonus, other_deduction }
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(false);     // tháng đã chốt / đã khoá
+  const [editable, setEditable] = useState(true);  // còn sửa được số liệu (Nháp / HR kiểm tra)
+  // Quy trình duyệt 7 bước (supabase/payroll_workflow.sql). null = đang tải; false = chưa chạy SQL -> cách cũ
+  const [workflowOn, setWorkflowOn] = useState(null);
+  const [period, setPeriod] = useState(null);      // { status, locked_at, ... }
+  const [flowHistory, setFlowHistory] = useState([]);
   const [exportSel, setExportSel] = useState(new Set()); // nhân sự được TÍCH để xuất ảnh
   const [history, setHistory] = useState([]);
   const [pendingSA, setPendingSA] = useState([]);          // đơn ứng lương chờ duyệt
@@ -48,6 +55,7 @@ const PayrollPage = () => {
   const [passInput, setPassInput] = useState('');
   const [saleDetail, setSaleDetail] = useState(null);      // row nhân sự — modal chi tiết hoa hồng + tăng ca
   const autosavedRef = useRef('');                         // chống tự-lưu nháp lặp lại cùng 1 tháng
+  usePageTitle('Payroll - Bảng lương tổng hợp');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -165,15 +173,30 @@ const PayrollPage = () => {
     setRows(computed);
     setExportSel(new Set(computed.map(r => r.staff.id))); // mặc định tích tất cả
     setEdits(Object.fromEntries(computed.map(r => [r.staff.id, { other_bonus: r.otherBonus, other_deduction: r.otherDeduction }])));
-    // Chốt lương là thao tác CẢ THÁNG: chỉ cần 1 dòng đã chốt là cả tháng coi như đã chốt
+    // Trạng thái kỳ lương theo quy trình duyệt (nếu đã chạy payroll_workflow.sql)
+    const [perRes, flowRes] = await Promise.all([
+      supabase.from('payroll_periods').select('*').eq('year', year).eq('month', month).maybeSingle(),
+      supabase.from('payroll_period_history').select('*, actor:profiles!actor_id(full_name)').eq('year', year).eq('month', month).order('created_at'),
+    ]);
+    const wfOn = !isMissingTable(perRes.error);
+    const status = perRes.data?.status || 'draft';
+    setWorkflowOn(wfOn);
+    setPeriod(wfOn ? (perRes.data || { year, month, status: 'draft' }) : null);
+    setFlowHistory(wfOn ? (flowRes.data || []) : []);
+
+    // Cách cũ: chốt lương là thao tác CẢ THÁNG — chỉ cần 1 dòng đã chốt là cả tháng coi như đã chốt
     // (trước đây đòi tất cả dòng chốt -> nhân sự mới thêm sau làm tháng đã chốt "mở" lại).
-    const monthLocked = payroll.some(p => p.status === 'locked');
+    const monthLocked = wfOn ? isLockedStatus(status) : payroll.some(p => p.status === 'locked');
+    const canEdit = wfOn ? isEditableStatus(status) : !monthLocked;
     setLocked(monthLocked);
+    setEditable(canEdit);
 
     // Tự lưu BẢN NHÁP để nhân sự xem được ngay (chỉ admin/kế toán; KHÔNG đụng dòng đã chốt).
     // Chạy 1 lần/tháng để tránh ghi lặp.
     const monthKey = `${year}-${month}`;
-    if (['admin', 'accountant'].includes(me?.role) && !monthLocked && autosavedRef.current !== monthKey) {
+    // Có quy trình: chỉ tự lưu khi kỳ còn Nháp (HR đang kiểm tra thì không đổi số dưới tay HR)
+    const canAutosave = wfOn ? status === 'draft' : !monthLocked;
+    if (['admin', 'accountant'].includes(me?.role) && canAutosave && autosavedRef.current !== monthKey) {
       autosavedRef.current = monthKey;
       const draft = computed
         .filter(r => r.savedStatus !== 'locked')
@@ -276,29 +299,51 @@ const PayrollPage = () => {
 
   const setEdit = (id, field, val) => setEdits(e => ({ ...e, [id]: { ...e[id], [field]: val.replace(/\D/g, '') } }));
 
+  // Ghi bảng lương đang hiển thị vào payroll. lock=true chỉ dùng ở cách cũ (chưa có quy trình duyệt).
+  const persistRows = async (lock = false) => {
+    const payload = rowsView.map(r => ({
+      staff_id: r.staff.id, month, year,
+      base_salary: r.staff.base_salary || 0, allowance: r.phuCap,
+      working_days: r.workingDays, salary_by_attendance: r.luongCong,
+      total_commission: r.commission, other_bonus: r.otherBonus,
+      overtime_pay: r.overtime || 0, salary_advance: r.salaryAdvance || 0,
+      unpaid_advance: 0, other_deduction: r.otherDeduction,
+      gross_income: r.gross, total_deductions: (r.salaryAdvance || 0) + r.otherDeduction, net_salary: r.net,
+      status: lock ? 'locked' : 'draft',
+      locked_at: lock ? new Date().toISOString() : null, locked_by: lock ? me?.id : null,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from('payroll').upsert(payload, { onConflict: 'staff_id,month,year' });
+    return error;
+  };
+
   const savePayroll = async (lock = false) => {
-    // Tháng đã chốt thì không ghi đè (trước đây "Lưu nháp" làm cả tháng về nháp)
-    if (locked) { toast.error('Tháng này đã chốt lương. Admin cần "Mở lại tháng" trước khi sửa.'); return; }
+    // Tháng đã chốt / đang duyệt thì không ghi đè (trước đây "Lưu nháp" làm cả tháng về nháp)
+    if (!editable) {
+      toast.error(workflowOn ? 'Bảng lương đang ở bước duyệt — Admin cần "Trả về nháp" trước khi sửa.' : 'Tháng này đã chốt lương. Admin cần "Mở lại tháng" trước khi sửa.');
+      return;
+    }
     setSaving(true);
-    try {
-      const payload = rowsView.map(r => ({
-        staff_id: r.staff.id, month, year,
-        base_salary: r.staff.base_salary || 0, allowance: r.phuCap,
-        working_days: r.workingDays, salary_by_attendance: r.luongCong,
-        total_commission: r.commission, other_bonus: r.otherBonus,
-        overtime_pay: r.overtime || 0, salary_advance: r.salaryAdvance || 0,
-        unpaid_advance: 0, other_deduction: r.otherDeduction,
-        gross_income: r.gross, total_deductions: (r.salaryAdvance || 0) + r.otherDeduction, net_salary: r.net,
-        status: lock ? 'locked' : 'draft',
-        locked_at: lock ? new Date().toISOString() : null, locked_by: lock ? me?.id : null,
-        updated_at: new Date().toISOString(),
-      }));
-      const { error } = await supabase.from('payroll').upsert(payload, { onConflict: 'staff_id,month,year' });
-      if (error) throw error;
-      toast.success(lock ? 'Đã chốt & lưu bảng lương' : 'Đã lưu bảng lương');
-      loadData();
-    } catch (err) { toast.error(err.message); }
-    finally { setSaving(false); }
+    const error = await persistRows(lock && !workflowOn);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(lock ? 'Đã chốt & lưu bảng lương' : 'Đã lưu bảng lương');
+    loadData();
+  };
+
+  // Chuyển bước quy trình duyệt (luật kiểm tra ở hàm payroll_transition trên database)
+  const transition = async (to, note) => {
+    setSaving(true);
+    if (editable && ['hr_review', 'manager_review'].includes(to)) {
+      const saveErr = await persistRows(false); // lưu số đang hiển thị trước khi gửi duyệt
+      if (saveErr) { setSaving(false); toast.error(saveErr.message); return false; }
+    }
+    const { error } = await supabase.rpc('payroll_transition', { p_year: year, p_month: month, p_to: to, p_note: note || null });
+    setSaving(false);
+    if (error) { toast.error(error.message); return false; }
+    toast.success(`Bảng lương ${MONTHS[month - 1]} ${year} chuyển sang “${PAY_STATUS_LABEL[to]}”`);
+    loadData();
+    return true;
   };
 
   // Mở lại tháng đã chốt để sửa (chỉ Admin, có xác nhận)
@@ -555,10 +600,31 @@ const PayrollPage = () => {
         <button onClick={prevMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng trước"><ChevronLeft className="w-4 h-4" /></button>
         <span className="min-w-[120px] text-center text-[14px] font-semibold text-slate-800 tabular-nums">{MONTHS[month - 1]} {year}</span>
         <button onClick={nextMonth} className="e-icon-btn w-9 h-9" aria-label="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
+        {workflowOn && period && <span className={`e-badge e-badge-sm ${isLockedStatus(period.status) ? 'e-tone-brand' : isEditableStatus(period.status) ? 'e-tone-info' : 'e-tone-warning'}`}>{PAY_STATUS_LABEL[period.status]}</span>}
         <span className="e-page-desc hidden sm:inline ml-2">Bảng lương tổng hợp — tính tự động từ chấm công, CRM và ca phẫu thuật</span>
       </div>
 
-      {/* Tổng kỳ lương + thao tác (kiểu pay-flow Ethics) */}
+      {/* Quy trình duyệt 7 bước (Ethics D08) */}
+      {workflowOn && (
+        <PayrollFlowCard
+          period={period}
+          history={flowHistory}
+          profile={me}
+          periodLabel={`${MONTHS[month - 1]} ${year}`}
+          totalNet={totalNet}
+          staffCount={rowsView.length}
+          totalCommission={rowsView.reduce((sum, r) => sum + (r.commission || 0), 0)}
+          busy={saving}
+          loading={loading}
+          onSave={() => savePayroll(false)}
+          onTransition={transition}
+          onExportImage={exportImage}
+          exportLabel={`Xuất ảnh (${exportSel.size}/${rowsView.length})`}
+        />
+      )}
+
+      {/* Cách cũ khi chưa chạy payroll_workflow.sql: Lưu nháp / Chốt lương tháng */}
+      {workflowOn === false && (
       <div className="e-card e-card-pad flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <div className="e-metric-icon"><Wallet /></div>
@@ -591,6 +657,7 @@ const PayrollPage = () => {
           )}
         </div>
       </div>
+      )}
 
       <ConfirmDialog
         open={reopenOpen}
@@ -688,12 +755,12 @@ const PayrollPage = () => {
                         </button>
                       )}</td>
                     <td className="num">
-                      <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={locked}
+                      <input value={fmt(r.otherBonus)} onChange={e => setEdit(r.staff.id, 'other_bonus', e.target.value)} disabled={!editable}
                         className="e-input h-9 w-28 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
                     </td>
                     <td className="num text-danger-600">{r.salaryAdvance ? '−' + fmtM(r.salaryAdvance) : '0đ'}</td>
                     <td className="num">
-                      <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={locked}
+                      <input value={fmt(r.otherDeduction)} onChange={e => setEdit(r.staff.id, 'other_deduction', e.target.value)} disabled={!editable}
                         className="e-input h-9 w-28 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-400" />
                     </td>
                     <td className="num text-[15px] font-bold text-teal-700">{fmtM(r.net)}</td>
@@ -712,6 +779,10 @@ const PayrollPage = () => {
           </div>
         </div>
       )}
+
+      {/* Lịch sử phê duyệt + yêu cầu chờ duyệt (Ethics: 2 cột dưới bảng) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      {workflowOn && hasRole(me, ['admin', 'accountant', 'shareholder']) && <PayrollHistoryCard history={flowHistory} />}
 
       {/* Yêu cầu XEM LƯƠNG chờ duyệt — duyệt ngay trong app */}
       {pendingPV.length > 0 && (
@@ -755,6 +826,8 @@ const PayrollPage = () => {
           </div>
         </div>
       )}
+
+      </div>
 
       <p className="e-subtle px-4 py-3 text-[12px] text-slate-500 leading-relaxed">
         <span className="e-caption mr-2">Công thức</span>
