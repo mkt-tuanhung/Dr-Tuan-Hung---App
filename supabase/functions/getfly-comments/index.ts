@@ -29,6 +29,7 @@ const PAGE = 100;
 const MAX_PAGES_PER_ACCOUNT = 30;   // tối đa 3.000 ghi chú / khách
 const TIME_BUDGET_MS = 110_000;
 const WORKERS = 4;                  // số khách kéo song song
+const MAX_PER_RUN = 200;            // Edge Function giới hạn CPU / lượt -> mỗi lượt cron 200 khách (WORKER_RESOURCE_LIMIT)
 
 const stripHtml = (s: string) => s
   .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li)>/gi, "\n")
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
 
     // ---- Đồng bộ nền: khách chưa kéo hoặc GetFly có cập nhật mới ----
     if (body.mode === "incremental") {
-      const limit = Math.min(Number(body.limit) || 2000, 5000);
+      const limit = Math.min(Number(body.limit) || MAX_PER_RUN, 1000);
       const started = Date.now();
       // PostgREST trả tối đa 1.000 dòng / lần -> đọc theo lô
       const syncMap = new Map<string, any>();
