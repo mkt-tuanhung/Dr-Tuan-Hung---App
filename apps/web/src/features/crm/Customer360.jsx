@@ -8,7 +8,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Phone, CalendarDays, Wallet, Stethoscope, Image as ImageIcon, Mic, Smile, History, PhoneCall,
-  MessageSquare, HandCoins, Activity, UserX, Check, ExternalLink, Sparkles,
+  MessageSquare, HandCoins, Activity, UserX, Check, ExternalLink, Sparkles, StickyNote,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Drawer, EmptyState, ErrorState, PermissionDenied } from '@/components/ds';
@@ -93,6 +93,7 @@ function buildTimeline(d, lead, appts, who) {
   });
   (d.recordings || []).forEach(r => ev.push({ at: r.created_at, icon: Mic, tone: 'e-tone-sky', title: `Ghi âm tư vấn${r.ai_score != null ? ` · AI chấm ${r.ai_score}` : ''}`, sub: r.summary }));
   (d.reviews || []).forEach(r => ev.push({ at: r.submitted_at, icon: Smile, tone: 'e-tone-peach', title: `Đánh giá ${r.milestone || ''}${r.csat_score != null ? ` · CSAT ${r.csat_score}` : ''}${r.nps_score != null ? ` · NPS ${r.nps_score}` : ''}`, sub: r.comment }));
+  (d.getfly_notes || []).forEach(n => ev.push({ at: n.created_at, icon: StickyNote, tone: 'e-tone-peach', title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly', sub: [n.title, n.content, n.creator_name].filter(Boolean).join(' · ') }));
   (d.messages || []).forEach(m => m.last_time && ev.push({ at: m.last_time, icon: MessageSquare, tone: 'e-tone-info', title: 'Tin nhắn Messenger', sub: m.last_message }));
   return ev.filter(e => e.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }

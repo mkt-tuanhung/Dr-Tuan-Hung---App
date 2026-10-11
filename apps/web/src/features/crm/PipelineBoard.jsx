@@ -31,7 +31,7 @@ const timeAgo = (iso) => {
   const d = Math.round(h / 24); return d < 30 ? `${d} ngày trước` : `${Math.round(d / 30)} tháng trước`;
 };
 
-function LeadCard({ r, STATUS, isDue, phoneView, me, canWrite, onOpen, onAskMove, dragging, setDragging }) {
+function LeadCard({ r, noteCount = 0, STATUS, isDue, phoneView, me, canWrite, onOpen, onAskMove, dragging, setDragging }) {
   const due = isDue(r.next_call_at);
   const st = STATUS[r.status] || STATUS.tiep_can;
   return (
@@ -81,6 +81,7 @@ function LeadCard({ r, STATUS, isDue, phoneView, me, canWrite, onOpen, onAskMove
       <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
         {r.customer_group && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 truncate max-w-[110px]">{r.customer_group}</span>}
+        {noteCount > 0 && <span title="Lịch sử ghi chú trên GetFly — mở hồ sơ để xem" className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center gap-1"><StickyNote className="w-3 h-3" />{noteCount} ghi chú</span>}
       </div>
       <div className="flex items-center justify-between gap-2 mt-2.5 pt-2.5 border-t border-slate-100 text-[11.5px]">
         <span className="text-slate-500 truncate" title="Telesale phụ trách">{r.telesale?.full_name || 'Chưa phân công'}</span>
@@ -141,7 +142,7 @@ function MoveDialog({ r, toCol, STATUS, onClose, onConfirm }) {
   );
 }
 
-export default function PipelineBoard({ rows, STATUS, isDue, phoneView, me, canWrite, onOpen, onMove }) {
+export default function PipelineBoard({ rows, noteCounts = {}, STATUS, isDue, phoneView, me, canWrite, onOpen, onMove }) {
   const [limit, setLimit] = useState({});
   const [showLost, setShowLost] = useState(false);
   const [dragging, setDragging] = useState(null);
@@ -190,7 +191,7 @@ export default function PipelineBoard({ rows, STATUS, isDue, phoneView, me, canW
               </div>
               {list.length === 0
                 ? <div className="rounded-xl border-2 border-dashed border-slate-200 text-center text-[12.5px] text-slate-400 py-8">{canWrite ? 'Kéo khách hàng vào đây' : 'Chưa có khách'}</div>
-                : list.slice(0, shown).map(r => <LeadCard key={r.id} r={r} {...cardProps} />)}
+                : list.slice(0, shown).map(r => <LeadCard key={r.id} r={r} noteCount={noteCounts[r.id] || 0} {...cardProps} />)}
               {list.length > shown && (
                 <button onClick={() => setLimit(l => ({ ...l, [c.id]: shown + PAGE * 2 }))}
                   className="w-full h-9 rounded-xl bg-white border border-slate-200 text-[12.5px] font-semibold text-slate-600 hover:text-teal-700 hover:border-teal-300">
@@ -207,7 +208,7 @@ export default function PipelineBoard({ rows, STATUS, isDue, phoneView, me, canW
           <div className="text-[14.5px] font-bold text-slate-900 mb-3">Khách thất bại ({lostRows.length})</div>
           {lostRows.length === 0 ? <div className="text-[13px] text-slate-400">Không có khách thất bại</div> : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {lostRows.slice(0, limit.lost ?? 12).map(r => <LeadCard key={r.id} r={r} {...cardProps} />)}
+              {lostRows.slice(0, limit.lost ?? 12).map(r => <LeadCard key={r.id} r={r} noteCount={noteCounts[r.id] || 0} {...cardProps} />)}
             </div>
           )}
           {lostRows.length > (limit.lost ?? 12) && (

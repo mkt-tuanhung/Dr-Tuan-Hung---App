@@ -9,7 +9,8 @@ import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/
 import { maskPhone, phoneView } from '@/lib/phoneMask';
 import PipelineBoard from '@/features/crm/PipelineBoard.jsx';
 import { Customer360Button } from '@/features/crm/Customer360.jsx';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3 } from 'lucide-react';
+import { useGetflyNotes, GetflyNotesList } from '@/features/crm/GetflyNotes.jsx';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
 const STATUS = {
@@ -83,6 +84,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   const [detail, setDetail] = useState(null);    // khách đang mở console gọi/chăm sóc
   const [importOpen, setImportOpen] = useState(false);
   const [getflyOpen, setGetflyOpen] = useState(false);
+  const [noteCounts, setNoteCounts] = useState({});    // data_id -> số ghi chú GetFly
   const [chip, setChip] = useState('all');
   const [page, setPage] = useState(1);
   const [teleStaff, setTeleStaff] = useState([]);       // danh sách telesale để phân công
@@ -122,6 +124,15 @@ const MarketingDataPage = ({ initialView = null }) => {
     }
     setApptMap(map);
     didLoad.current = true; setLoading(false);
+    // Số ghi chú GetFly theo khách (getfly_comments.sql chưa chạy -> bỏ qua)
+    const counts = {};
+    for (let from = 0; from < 50000; from += 1000) {
+      const { data: gs, error: ge } = await supabase.from('getfly_comment_sync').select('data_id, comment_count').gt('comment_count', 0).range(from, from + 999);
+      if (ge || !gs?.length) break;
+      gs.forEach(g => { if (g.data_id) counts[g.data_id] = g.comment_count; });
+      if (gs.length < 1000) break;
+    }
+    setNoteCounts(counts);
   }, []);
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('marketing_data', loadData);
@@ -371,7 +382,7 @@ const MarketingDataPage = ({ initialView = null }) => {
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : view === 'pipeline' ? (
-        <PipelineBoard rows={baseVisible} STATUS={STATUS} isDue={isDue} phoneView={phoneView} me={me} canWrite={canWrite} onOpen={setDetail} onMove={moveStage} />
+        <PipelineBoard rows={baseVisible} noteCounts={noteCounts} STATUS={STATUS} isDue={isDue} phoneView={phoneView} me={me} canWrite={canWrite} onOpen={setDetail} onMove={moveStage} />
       ) : (
         <div className="bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
@@ -686,6 +697,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   }, [row.phone]);
   useEffect(() => { loadActs(); loadAppts(); }, [loadActs, loadAppts]);
   useEffect(() => { setTab('activity'); }, [row.id]);
+  const gf = useGetflyNotes(row);   // lịch sử ghi chú GetFly
 
   const calls = acts.filter(a => a.type === 'call');
   const cares = acts.filter(a => a.type === 'care');
@@ -838,6 +850,10 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
       at: a.created_at, icon: a.type === 'call' ? PhoneCall : HeartHandshake, color: a.type === 'call' ? '#5BAE7B' : '#8B7BD8',
       title: a.type === 'call' ? `Cuộc gọi · ${OUTCOMES[a.outcome]?.label || 'Gọi'}` : 'Chăm sóc', desc: a.content, by: a.author?.full_name, next: a.next_at,
     }));
+    gf.notes.forEach(n => ev.push({
+      at: n.created_at, icon: StickyNote, color: '#C9892B', title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly',
+      desc: [n.title, n.content].filter(Boolean).join(' — '), by: n.creator_name,
+    }));
     appts.forEach(a => {
       const re = isRecheckAppt(a);
       ev.push({ at: `${a.appointment_date}T${String(a.appointment_time || '09:00').slice(0, 5)}:00`, icon: re ? Stethoscope : CalendarDays, color: re ? '#8B7BD8' : '#5B8DD6',
@@ -876,6 +892,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     { k: 'payment', label: 'Thanh toán', n: payments.length },
     { k: 'call', label: 'Cuộc gọi', n: calls.length },
     { k: 'care', label: 'Ghi chú', n: cares.length },
+    ...(row.getfly_id ? [{ k: 'getfly', label: 'Ghi chú GetFly', n: gf.notes.length }] : []),
     { k: 'info', label: 'Thông tin' },
   ];
   const btn = 'inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition whitespace-nowrap';
@@ -1009,7 +1026,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 </div>
               )}
             </PCard>
-            <PCard title="Dòng thời gian hợp nhất" sub="Cuộc gọi · ghi chú · lịch hẹn · đặt cọc · phẫu thuật · hậu phẫu">
+            <PCard title="Dòng thời gian hợp nhất" sub="Cuộc gọi · ghi chú · ghi chú GetFly · lịch hẹn · đặt cọc · phẫu thuật · hậu phẫu">
               {loadingActs ? <div className="py-8 grid place-items-center"><div className="w-6 h-6 border-[3px] border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div> : events.length === 0 ? <PEmpty icon={Activity} title="Chưa có hoạt động" sub="Mọi cuộc gọi, ghi chú và lịch hẹn sẽ hiện ở đây." /> : (
                 <ol className="relative">
                   {events.map((e, i) => (
@@ -1127,7 +1144,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
       )}
 
       {/* ===== Các tab nhập liệu ===== */}
-      {['call', 'care', 'appts', 'info'].includes(tab) && (
+      {['call', 'care', 'getfly', 'appts', 'info'].includes(tab) && (
         <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 lg:p-5">
             {/* ---- GỌI ĐIỆN ---- */}
             {tab === 'call' && (
@@ -1174,6 +1191,9 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 <Timeline items={cares} loading={loadingActs} me={me} onDelete={delAct} kind="care" />
               </div>
             )}
+
+            {/* ---- GHI CHÚ GETFLY ---- */}
+            {tab === 'getfly' && <GetflyNotesList row={row} gf={gf} />}
 
             {/* ---- LỊCH HẸN ---- */}
             {tab === 'appts' && (
