@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Printer, Save, Lock, TrendingUp, HandCoins, X, Check, KeyRound, Copy, ImageDown, Wallet, UserRound, LockOpen } from 'lucide-react';
 import { ConfirmDialog, usePageTitle } from '@/components/ds';
+import { logAuditEvent } from '@/lib/audit';
 import PayrollFlowCard, { PayrollHistoryCard } from '@/features/payroll/PayrollFlowCard.jsx';
 import { PAY_STATUS_LABEL, isEditableStatus, isLockedStatus, isMissingTable, hasRole } from '@/features/payroll/workflow';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -456,6 +457,7 @@ const PayrollPage = () => {
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
       toast.success(`Đã xuất ảnh bảng lương ${MONTHS[month - 1]}/${year}`);
+      logAuditEvent('export', 'payroll', { entityId: `${year}-${month}`, details: { file: a.download, rows: list.length, total_net: totalSel } });
     }, 'image/png');
   };
 

@@ -40,9 +40,10 @@ import {
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
-  AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart
+  AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
+import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
 import SchedulePage from '@/features/hr/SchedulePage.jsx';
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
@@ -95,6 +96,7 @@ const MENU_GROUPS = [
   ]},
   { title: 'HỆ THỐNG', color: 'slate', items: [
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
+    { id: 'audit_log', label: 'Nhật ký hoạt động', icon: ScrollText },
   ]},
 ];
 const MENU = MENU_GROUPS.flatMap(g => g.items).flatMap(m => m.children ? [m, ...m.children] : [m]);
@@ -715,6 +717,7 @@ const AdminDashboard = () => {
       case 'seeding_rev': return <SeedingRevenuePage />;
       case 'service_quality': return <ServiceQualityPage />;
       case 'permissions': return <PermissionsPage />;
+      case 'audit_log': return <AuditLogPage />;
       case 'schedule': return <SchedulePage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
     }

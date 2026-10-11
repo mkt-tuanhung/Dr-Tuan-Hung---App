@@ -33,6 +33,7 @@ import HauPhauPage from '@/pages/HauPhauPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import CashFlowPage from '@/pages/CashFlowPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
+import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
 import SeedingRevenuePage from '@/pages/SeedingRevenuePage.jsx';
@@ -419,6 +420,7 @@ const StaffDashboard = () => {
     if (activeTab === 'ads_report') return <AdsReportPage />;
     if (activeTab === 'cashflow') return <CashFlowPage />;
     if (activeTab === 'payroll') return <PayrollPage />;
+    if (activeTab === 'audit_log') return <AuditLogPage />;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
     if (activeTab === 'content_overview') return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
     if (activeTab === 'content' || activeTab === 'content_kho') return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;
