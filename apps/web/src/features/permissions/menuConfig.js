@@ -9,6 +9,7 @@ import {
   LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
   Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
+  Inbox, PhoneCall, BarChart3, ListTodo,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -32,6 +33,7 @@ export const FULL_MENU = [
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
   { id: 'minigame',   label: 'Minigame',        icon: Gamepad2, roles: ['all'] },
   { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
+  { id: 'tasks',      label: 'Công việc & Duyệt', icon: ListTodo, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
@@ -47,6 +49,9 @@ export const FULL_MENU = [
   { id: 'pl',         label: 'Lãi / Lỗ (P&L)',  icon: PieChart, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'cashflow',   label: 'Kế toán dòng tiền', icon: BarChart2, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'audit_log',  label: 'Nhật ký hoạt động', icon: ScrollText, roles: ['accountant', 'shareholder'] },
+  { id: 'reports',    label: 'Báo cáo & Phân tích', icon: BarChart3, roles: ['accountant', 'shareholder'] },
+  { id: 'inbox',      label: 'Hộp thư đa kênh', icon: Inbox, roles: ['marketing', 'truc_page', 'telesale', 'cskh', 'media', 'accountant', 'shareholder'] },
+  { id: 'calls',      label: 'Tổng đài',        icon: PhoneCall, roles: ['marketing', 'truc_page', 'telesale', 'accountant', 'shareholder'] },
   { id: 'payroll',    label: 'Bảng lương',      icon: Wallet, roles: ['accountant', 'admin', 'shareholder'] },
   { id: 'vien_phi',   label: 'Viện phí / Vật tư', icon: Activity, roles: ['accountant', 'admin', 'dieu_duong', 'shareholder'] },
 
@@ -71,11 +76,12 @@ export const STAFF_GROUPS = [
   { title: 'KHÁCH HÀNG', ids: [
     { id: 'grp_crm', label: 'Khách hàng', icon: Database, ids: ['data_kh', 'khach_tu_van', 'khach_coc', 'khach_bong', 'service_quality'] },
     'appointments',
+    { id: 'grp_channels', label: 'Inbox & Tổng đài', icon: Inbox, ids: ['inbox', 'calls'] },
     { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, ids: ['khach_phau_thuat', 'mo_doi_tac', 'hau_phau'] },
     'marketing',
   ] },
-  { title: 'TÀI CHÍNH', ids: ['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
-  { title: 'VẬN HÀNH', ids: ['community', 'meetings', 'minigame'] },
+  { title: 'TÀI CHÍNH', ids: ['reports', 'finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
+  { title: 'VẬN HÀNH', ids: ['tasks', 'community', 'meetings', 'minigame'] },
 ];
 
 // Mọi id chức năng nằm trong 1 nhóm (kể cả bên trong mục cha grp_*)
@@ -105,7 +111,7 @@ export const buildMenuGroups = (allowedMenu) => {
 export const MATRIX_ROLES = ['telesale', 'sale_offline', 'cskh', 'truc_page', 'marketing', 'media', 'editor', 'designer', 'seeding', 'dieu_duong', 'bac_si', 'accountant', 'shareholder'];
 
 // Chức năng nhạy cảm (tài chính / lương) — đánh dấu khoá như Ethics
-export const SENSITIVE = new Set(['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'mo_doi_tac', 'seeding_rev', 'ads_report', 'audit_log']);
+export const SENSITIVE = new Set(['finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'mo_doi_tac', 'seeding_rev', 'ads_report', 'audit_log', 'reports']);
 
 // Danh sách phẳng mọi chức năng (kèm nhóm cha nếu là mục con)
 export const flatModules = () => FULL_MENU.flatMap(m => (m.children ? m.children.map(c => ({ ...c, parent: m.label })) : [m]));
