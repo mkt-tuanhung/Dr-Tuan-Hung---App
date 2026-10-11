@@ -28,6 +28,7 @@ const FIELDS = "id,comment_title,content,creator,creator_display_name,account_id
 const PAGE = 100;
 const MAX_PAGES_PER_ACCOUNT = 30;   // tối đa 3.000 ghi chú / khách
 const TIME_BUDGET_MS = 110_000;
+const WORKERS = 4;                  // số khách kéo song song
 
 const stripHtml = (s: string) => s
   .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li)>/gi, "\n")
@@ -150,8 +151,14 @@ Deno.serve(async (req) => {
     if (body.mode === "incremental") {
       const limit = Math.min(Number(body.limit) || 2000, 5000);
       const started = Date.now();
-      const { data: synced } = await sb.from("getfly_comment_sync").select("account_getfly_id, source_updated_at, synced_at");
-      const syncMap = new Map((synced || []).map((s: any) => [s.account_getfly_id, s]));
+      // PostgREST trả tối đa 1.000 dòng / lần -> đọc theo lô
+      const syncMap = new Map<string, any>();
+      for (let from = 0; from < 100000; from += 1000) {
+        const { data, error } = await sb.from("getfly_comment_sync").select("account_getfly_id, source_updated_at").range(from, from + 999);
+        if (error) return json({ ok: false, error: "getfly_comment_sync: " + error.message });
+        (data || []).forEach((s: any) => syncMap.set(s.account_getfly_id, s));
+        if (!data || data.length < 1000) break;
+      }
       const todo: any[] = [];
       for (let from = 0; from < 50000 && todo.length < limit; from += 1000) {
         const { data, error } = await sb.from("marketing_data")
@@ -171,12 +178,21 @@ Deno.serve(async (req) => {
       todo.sort((a, b) => Number(!!a._new) - Number(!!b._new));
       let done = 0, notes = 0, failed = 0;
       const errors: string[] = [];
-      for (const acc of todo.slice(0, limit)) {
-        if (Date.now() - started > TIME_BUDGET_MS) break;
+      const queue = todo.slice(0, limit);
+      // Khách đầu tiên chạy riêng để dò đúng đường dẫn API, rồi mới kéo song song
+      const runOne = async (acc: any) => {
         const r = await syncOne(sb, domain, apiKey, acc);
         if (r.ok) { done++; notes += r.count; } else { failed++; if (errors.length < 3) errors.push(`${acc.getfly_id}: ${r.error}`); }
-        if (failed >= 15 && done === 0) break;   // lỗi hàng loạt (sai đường dẫn / key) -> dừng sớm
-      }
+      };
+      const worker = async () => {
+        while (queue.length) {
+          if (Date.now() - started > TIME_BUDGET_MS) break;
+          if (failed >= 15 && done === 0) break;   // lỗi hàng loạt (sai đường dẫn / key) -> dừng sớm
+          await runOne(queue.shift());
+        }
+      };
+      if (queue.length) await runOne(queue.shift());
+      await Promise.all(Array.from({ length: WORKERS }, worker));
       return json({ ok: failed === 0 || done > 0, path: resolvedPath, pending_before: todo.length, synced: done, notes, failed, remaining: Math.max(0, todo.length - done - failed), errors });
     }
 

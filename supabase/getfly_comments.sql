@@ -72,7 +72,8 @@ begin
     return;
   end if;
   cmd := replace(cmd, '/functions/v1/getfly-sync', '/functions/v1/getfly-comments');
-  cmd := replace(cmd, '''{}''::jsonb', '''{"mode":"incremental"}''::jsonb');
+  -- pg_net mặc định ngắt sau 5 giây -> cho chờ tới 150 giây (hàm chạy tối đa ~110 giây / lượt)
+  cmd := replace(cmd, '''{}''::jsonb', '''{"mode":"incremental"}''::jsonb, timeout_milliseconds := 150000');
   perform cron.unschedule(jobid) from cron.job where jobname = 'getfly-comments-10min';
   perform cron.schedule('getfly-comments-10min', '5-59/10 * * * *', cmd);
 end $$;
