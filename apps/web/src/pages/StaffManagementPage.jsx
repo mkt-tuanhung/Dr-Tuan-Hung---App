@@ -17,6 +17,7 @@ import { vnToday } from '@/lib/vnTime';
 import { downloadCsv } from '@/lib/csv';
 import { DataTable, FilterBar, FilterSelect, AlertStrip, Drawer, ConfirmDialog } from '@/components/ds';
 import { runWithReason, logAuditEvent } from '@/lib/audit';
+import StaffDetailDrawer, { CONTRACT_TYPES, GENDERS, daysUntil } from '@/features/hr/StaffDetailDrawer.jsx';
 
 const avInit = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
@@ -84,7 +85,10 @@ const EMPTY_FORM = {
   employee_id: '', password: '', full_name: '', role: 'telesale', role_2: '',
   position: 'Nhân viên', base_salary: '', allowance: '', phone: '',
   employment_status: 'official', probation_started_at: '', fixed_salary: false,
+  // hr_extended.sql: hợp đồng + thông tin cá nhân
+  email: '', birthday: '', gender: '', address: '', contract_type: '', contract_start: '', contract_end: '',
 };
+const EXT_FIELDS = ['email', 'birthday', 'gender', 'address', 'contract_type', 'contract_start', 'contract_end'];
 
 const StaffManagementPage = ({ isNested = false }) => {
   const [staff, setStaff] = useState([]);
@@ -107,6 +111,8 @@ const StaffManagementPage = ({ isNested = false }) => {
   const [detail, setDetail] = useState(null);
   const [bulkLock, setBulkLock] = useState(null); // true = khoá, false = mở khoá
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Đã chạy hr_extended.sql chưa (có cột hợp đồng) -> mới hiện / gửi các trường mới
+  const [hrExt, setHrExt] = useState(false);
 
   const loadStaff = async () => {
     setLoading(true);
@@ -117,6 +123,7 @@ const StaffManagementPage = ({ isNested = false }) => {
     if (error) toast.error('Không tải được danh sách nhân sự: ' + error.message);
     // employment_status 'inactive' = đã xoá (giữ dữ liệu lịch sử) → không hiện trong danh sách
     setStaff((data || []).filter(s => s.employment_status !== 'inactive'));
+    setHrExt((data || []).some(r => 'contract_end' in r));
     setLoading(false);
   };
 
@@ -139,11 +146,15 @@ const StaffManagementPage = ({ isNested = false }) => {
   const mCount = (id) => staff.filter(M_FILTERS.find(f => f.id === id).test).length;
   const sheetAct = (fn) => () => { const s = sheet; setSheet(null); fn(s); };
 
+  const probationList = staff.filter(STATUS_OPTIONS[1].test);
+  // Hợp đồng hết hạn trong 30 ngày (hoặc đã quá hạn) — Ethics D05 alert strip
+  const contractSoon = hrExt ? staff.filter(s => s.is_active && daysUntil(s.contract_end) !== null && daysUntil(s.contract_end) <= 30)
+    .sort((a, b) => daysUntil(a.contract_end) - daysUntil(b.contract_end)) : [];
+  const statusOptions = hrExt ? [...STATUS_OPTIONS, { value: 'contract_soon', label: 'HĐ sắp hết hạn', test: (s) => contractSoon.includes(s) }] : STATUS_OPTIONS;
   const deskList = filtered.filter(s =>
     (!roleFilter || s.role === roleFilter || s.role_2 === roleFilter) &&
-    (!statusFilter || STATUS_OPTIONS.find(o => o.value === statusFilter).test(s)));
+    (!statusFilter || (statusOptions.find(o => o.value === statusFilter) || STATUS_OPTIONS[0]).test(s)));
   const roleOptions = ROLES.filter(r => staff.some(s => s.role === r.value || s.role_2 === r.value));
-  const probationList = staff.filter(STATUS_OPTIONS[1].test);
   const selectedRows = staff.filter(s => selected.has(s.id));
 
   // Xuất danh sách (không kèm lương — Ethics: file xuất không chứa dữ liệu lương)
@@ -193,6 +204,7 @@ const StaffManagementPage = ({ isNested = false }) => {
       employment_status: s.employment_status || 'official',
       probation_started_at: s.probation_started_at || '',
       fixed_salary: s.fixed_salary || false,
+      ...Object.fromEntries(EXT_FIELDS.map(k => [k, s[k] || ''])),
     });
     setAvatarFile(null);
     setAvatarPreview(s.avatar_url || null);
@@ -208,11 +220,17 @@ const StaffManagementPage = ({ isNested = false }) => {
       toast.error('Vui lòng nhập mật khẩu');
       return;
     }
+    if (hrExt && form.contract_start && form.contract_end && form.contract_end < form.contract_start) {
+      toast.error('Ngày hết hạn hợp đồng phải sau ngày bắt đầu');
+      return;
+    }
     if (form.password && form.password.length < 6) {
       toast.error('Mật khẩu phải từ 6 ký tự trở lên');
       return;
     }
     setSaving(true);
+    // Trường mới chỉ gửi khi database đã có cột (tránh lỗi khi chưa chạy hr_extended.sql)
+    const ext = hrExt ? Object.fromEntries(EXT_FIELDS.map(k => [k, String(form[k] || '').trim() || null])) : {};
     try {
       let avatar_url = editTarget?.avatar_url || null;
       if (avatarFile) {
@@ -232,6 +250,7 @@ const StaffManagementPage = ({ isNested = false }) => {
           probation_started_at: form.probation_started_at || null,
           fixed_salary: form.fixed_salary,
           avatar_url,
+          ...ext,
         }).eq('id', editTarget.id);
         if (error) throw error;
 
@@ -273,6 +292,7 @@ const StaffManagementPage = ({ isNested = false }) => {
                 : null,
               fixed_salary: form.fixed_salary,
               avatar_url,
+              ...ext,
             },
           },
         });
@@ -390,7 +410,15 @@ const StaffManagementPage = ({ isNested = false }) => {
         {[x.role, x.role_2].filter(Boolean).map(r => <span key={r} className={`e-badge e-badge-sm ${ROLE_COLORS[r] || 'e-tone-neutral'}`}>{ROLE_LABELS[r] || r}</span>)}
       </div>
     ) },
-    { key: 'join', header: 'Ngày vào làm', sortValue: x => joinDate(x) || '', cell: x => <span className="text-slate-600 tabular-nums whitespace-nowrap">{fmtDate(joinDate(x))}</span> },
+    { key: 'join', header: 'Ngày vào làm', sortValue: x => joinDate(x) || '', cell: x => {
+      const left = hrExt ? daysUntil(x.contract_end) : null;
+      return (
+        <div className="whitespace-nowrap tabular-nums">
+          <div className="text-slate-600">{fmtDate(joinDate(x))}</div>
+          {left !== null && <div className={`text-[12px] ${left < 0 ? 'text-danger-600 font-semibold' : left <= 30 ? 'text-warning-600 font-semibold' : 'text-slate-400'}`}>HĐ đến {fmtDate(x.contract_end)}</div>}
+        </div>
+      );
+    } },
     { key: 'salary', header: 'Lương cơ bản', align: 'right', sortValue: x => Number(x.base_salary) || 0, cell: x => (
       <div className="whitespace-nowrap">
         <div className="text-slate-800 font-medium">{fmt(x.base_salary)}</div>
@@ -432,7 +460,7 @@ const StaffManagementPage = ({ isNested = false }) => {
         </>}
       >
         <FilterSelect label="Vị trí" allLabel="Tất cả vị trí" value={roleFilter} onChange={setRoleFilter} options={roleOptions} />
-        <FilterSelect label="Trạng thái" allLabel="Tất cả trạng thái" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
+        <FilterSelect label="Trạng thái" allLabel="Tất cả trạng thái" value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
       </FilterBar>
 
       {/* Thẻ chỉ số (riêng Tuấn Hùng — giữ lại, bấm để lọc nhanh) */}
@@ -460,7 +488,18 @@ const StaffManagementPage = ({ isNested = false }) => {
         </div>
       )}
 
-      {/* Dải cảnh báo (Ethics D05) */}
+      {/* Dải cảnh báo (Ethics D05): hợp đồng sắp hết hạn */}
+      {!loading && contractSoon.length > 0 && statusFilter !== 'contract_soon' && (
+        <div className="hidden lg:block">
+          <AlertStrip tone={contractSoon.some(s => daysUntil(s.contract_end) < 0) ? 'danger' : 'warning'} action="Xem" onAction={() => setStatusFilter('contract_soon')}>
+            <b>{contractSoon.length} hợp đồng {contractSoon.some(s => daysUntil(s.contract_end) < 0) ? 'đã hoặc sắp hết hạn' : 'sắp hết hạn trong 30 ngày'}:</b>{' '}
+            {contractSoon.slice(0, 3).map(s => { const d = daysUntil(s.contract_end); return `${s.full_name} (${d < 0 ? `quá ${-d} ngày` : d === 0 ? 'hôm nay' : `${d} ngày`})`; }).join(', ')}
+            {contractSoon.length > 3 ? ` và ${contractSoon.length - 3} người khác` : ''}
+          </AlertStrip>
+        </div>
+      )}
+
+      {/* Dải cảnh báo (Ethics D05): nhân sự thử việc */}
       {!loading && probationList.length > 0 && statusFilter !== 'probation' && (
         <div className="hidden lg:block">
           <AlertStrip tone="warning" action="Xem" onAction={() => setStatusFilter('probation')}>
@@ -619,53 +658,21 @@ const StaffManagementPage = ({ isNested = false }) => {
       )}
 
       {/* Máy tính: ngăn chi tiết nhân sự (Ethics D05 EmployeeDrawer) */}
-      <Drawer
-        open={!!detail}
-        onClose={() => setDetail(null)}
-        title={detail?.full_name}
-        description={detail ? [detail.employee_id, detail.position].filter(Boolean).join(' · ') : ''}
-        footer={detail && (
-          <>
-            <button onClick={() => { const x = detail; setDetail(null); handleToggleActive(x); }} className="e-btn e-btn-secondary mr-auto">{detail.is_active ? <><Lock /> Khoá</> : <><LockOpen /> Mở khoá</>}</button>
-            <button onClick={() => { const x = detail; setDetail(null); openEdit(x); }} className="e-btn e-btn-primary"><Pencil /> Sửa thông tin</button>
-          </>
-        )}
-      >
-        {detail && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <span className={`w-16 h-16 rounded-full overflow-hidden shrink-0 grid place-items-center text-[20px] font-bold ${detail.avatar_url ? '' : 'bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700'}`}>
-                {detail.avatar_url ? <img src={detail.avatar_url} alt={detail.full_name} className="w-full h-full object-cover" /> : avInit(detail.full_name)}
-              </span>
-              <div className="min-w-0 space-y-1.5">
-                <StatusBadge x={detail} />
-                <div className="flex flex-wrap gap-1">
-                  {[detail.role, detail.role_2].filter(Boolean).map(r => <span key={r} className={`e-badge e-badge-sm ${ROLE_COLORS[r] || 'e-tone-neutral'}`}>{ROLE_LABELS[r] || r}</span>)}
-                </div>
-              </div>
-            </div>
-            <div className="e-subtle px-4 py-3 grid grid-cols-2 gap-y-3 gap-x-4">
-              <div><div className="e-kv-label">Mã nhân viên</div><div className="e-kv-value tabular-nums">{detail.employee_id || '—'}</div></div>
-              <div><div className="e-kv-label">Số điện thoại</div><div className="e-kv-value tabular-nums">{detail.phone || '—'}</div></div>
-              <div><div className="e-kv-label">Ngày vào làm</div><div className="e-kv-value tabular-nums">{fmtDate(joinDate(detail))}</div></div>
-              <div><div className="e-kv-label">Bắt đầu thử việc</div><div className="e-kv-value tabular-nums">{fmtDate(detail.probation_started_at)}</div></div>
-              <div><div className="e-kv-label">Lương cơ bản</div><div className="e-kv-value tabular-nums">{fmt(detail.base_salary)}</div></div>
-              <div><div className="e-kv-label">Phụ cấp</div><div className="e-kv-value tabular-nums">{fmt(detail.allowance)}</div></div>
-              <div><div className="e-kv-label">Kiểu lương</div><div className="e-kv-value">{detail.fixed_salary ? 'Lương cố định' : 'Theo ngày công'}</div></div>
-              <div><div className="e-kv-label">Nhận lương</div><div className="e-kv-value truncate">{detail.bank_name && detail.bank_account ? `${detail.bank_name} · ${detail.bank_account}` : 'Chưa cập nhật'}</div></div>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {staffActions(detail).filter(a => a.label !== 'Sửa thông tin' && !a.warn).map(a => {
-                const cls = `w-full flex items-center gap-3 h-12 px-1 text-[14.5px] font-medium text-left ${a.danger ? 'text-danger-600' : 'text-slate-800'}`;
-                const inner = <><span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${a.danger ? 'bg-danger-50' : 'bg-teal-50 text-teal-700'}`}><a.icon className="w-[18px] h-[18px]" /></span><span className="flex-1">{a.label}</span><ChevronRight className="w-4 h-4 text-slate-300" /></>;
-                return a.href
-                  ? <a key={a.label} href={a.href} className={cls}>{inner}</a>
-                  : <button key={a.label} onClick={() => { const x = detail; setDetail(null); a.fn(x); }} className={cls}>{inner}</button>;
-              })}
-            </div>
-          </div>
-        )}
-      </Drawer>
+      {detail && (
+        <StaffDetailDrawer
+          staff={detail}
+          hrExt={hrExt}
+          onClose={() => setDetail(null)}
+          onEdit={(x) => { setDetail(null); openEdit(x); }}
+          onToggleActive={(x) => { setDetail(null); handleToggleActive(x); }}
+          actions={staffActions(detail).filter(a => a.label !== 'Sửa thông tin' && !a.warn).map(a => (a.fn ? { ...a, fn: (x) => { setDetail(null); a.fn(x); } } : a))}
+          roleLabels={ROLE_LABELS}
+          roleColors={ROLE_COLORS}
+          StatusBadge={StatusBadge}
+          fmtMoney={fmt}
+          joinDate={joinDate}
+        />
+      )}
 
       <ConfirmDialog
         open={bulkLock !== null}
@@ -907,6 +914,52 @@ const StaffManagementPage = ({ isNested = false }) => {
               </div>
             )}
           </div>
+
+          {hrExt && (
+            <div className="px-6 pb-5 space-y-4">
+              <div className="e-caption">Hợp đồng lao động</div>
+              <div>
+                <label className="e-label">Loại hợp đồng</label>
+                <select className="e-input" value={form.contract_type} onChange={e => setForm(f => ({ ...f, contract_type: e.target.value }))}>
+                  <option value="">Chưa chọn</option>
+                  {CONTRACT_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="e-label">Ngày bắt đầu</label>
+                  <input type="date" className="e-input" value={form.contract_start} onChange={e => setForm(f => ({ ...f, contract_start: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="e-label">Ngày hết hạn</label>
+                  <input type="date" className="e-input" value={form.contract_end} min={form.contract_start || undefined} onChange={e => setForm(f => ({ ...f, contract_end: e.target.value }))} />
+                  <div className="text-[11.5px] text-slate-400 mt-1">Để trống nếu không thời hạn</div>
+                </div>
+              </div>
+              <div className="e-caption pt-1">Thông tin cá nhân</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="e-label">Ngày sinh</label>
+                  <input type="date" className="e-input" value={form.birthday} onChange={e => setForm(f => ({ ...f, birthday: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="e-label">Giới tính</label>
+                  <select className="e-input" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
+                    <option value="">Chưa chọn</option>
+                    {GENDERS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="e-label">Email</label>
+                <input type="email" className="e-input" value={form.email} placeholder="ten@email.com" onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div>
+                <label className="e-label">Địa chỉ</label>
+                <input className="e-input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="e-modal-footer gap-2 sm:space-x-0">
             <button onClick={() => setModalOpen(false)} className="e-btn e-btn-secondary">Hủy</button>

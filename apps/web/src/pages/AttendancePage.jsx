@@ -756,6 +756,9 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
                   <div className="text-[12px] text-slate-500 mt-0.5 truncate">
                     {new Date(r.date).toLocaleDateString('vi-VN')} · {r.reason}
                   </div>
+                  {r.decision_note && (
+                    <div className={`text-[12px] mt-0.5 ${r.status === 'rejected' ? 'text-danger-600' : 'text-slate-500'}`}>Phản hồi: {r.decision_note}</div>
+                  )}
                 </div>
                 <span className={`e-badge e-badge-sm shrink-0 ${LEAVE_STATUS[r.status]?.color}`}>
                   {LEAVE_STATUS[r.status]?.label}

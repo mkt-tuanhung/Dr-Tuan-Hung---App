@@ -5,6 +5,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, User
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 import FaceIdAdminPanel from '@/features/faceid/FaceIdAdminPanel.jsx';
 import { vnToday } from '@/lib/vnTime';
+import AttendanceDayView, { AttendanceDayMetrics, dayRecords } from '@/features/hr/AttendanceDayView.jsx';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'e-tone-success' },
@@ -40,9 +41,12 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const [saving, setSaving] = useState(false);
   const [isMultiSelect, setIsMultiSelect] = useState(false);
   const [selectedCells, setSelectedCells] = useState(new Set());
+  // Ethics D06: xem theo tháng (bảng công) hoặc theo ngày (bảng công ngày + cần xử lý)
+  const [view, setView] = useState('month');
+  const [selDay, setSelDay] = useState(today.getDate());
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
@@ -57,6 +61,20 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   }, [year, month]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Đổi tháng -> ngày đang xem là hôm nay (nếu là tháng hiện tại) hoặc ngày 1
+  useEffect(() => {
+    const t = new Date();
+    setSelDay(t.getFullYear() === year && t.getMonth() + 1 === month ? t.getDate() : 1);
+  }, [year, month]);
+
+  // Xem theo ngày + đang là hôm nay: tự làm mới mỗi 30 giây (Ethics D06)
+  const viewingToday = `${year}-${String(month).padStart(2, '0')}-${String(selDay).padStart(2, '0')}` === vnToday();
+  useEffect(() => {
+    if (activeTab !== 'attendance' || view !== 'day' || !viewingToday) return undefined;
+    const t = setInterval(() => loadData({ silent: true }), 30000);
+    return () => clearInterval(t);
+  }, [activeTab, view, viewingToday, loadData]);
 
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
@@ -525,7 +543,17 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
 
       {activeTab === 'attendance' ? (
         <>
+      {/* 5 chỉ số trong ngày (Ethics D06) */}
+      {!loading && (
+        <AttendanceDayMetrics
+          staff={staff}
+          records={dayRecords(attendance, `${year}-${String(month).padStart(2, '0')}-${String(selDay).padStart(2, '0')}`)}
+          label={viewingToday ? 'hôm nay' : `${String(selDay).padStart(2, '0')}/${String(month).padStart(2, '0')}`}
+        />
+      )}
+
       {/* Chấm công hôm nay (mockup 06): donut lớn "x/y Đang có mặt" */}
+      {view === 'month' && (
       <div className="e-card e-card-pad xl:order-1">
         <div className="e-card-header">
           <div>
@@ -569,9 +597,14 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
           </div>
         </div>
       </div>
+      )}
 
       {/* Search & Bulk Toggle */}
       <div className="e-toolbar xl:col-span-2 xl:order-3">
+        <div className="e-seg shrink-0" role="tablist" aria-label="Chế độ xem">
+          <button role="tab" aria-selected={view === 'month'} onClick={() => setView('month')} className={`e-seg-item ${view === 'month' ? 'e-seg-active' : ''}`}>Theo tháng</button>
+          <button role="tab" aria-selected={view === 'day'} onClick={() => setView('day')} className={`e-seg-item ${view === 'day' ? 'e-seg-active' : ''}`}>Theo ngày</button>
+        </div>
         <div className="e-search w-full sm:w-auto sm:max-w-xs flex-1 min-w-[180px]">
           <Search className="text-slate-400" />
           <input
@@ -608,6 +641,25 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         )}
       </div>
 
+      {/* Theo ngày (Ethics D06): bảng công ngày + phương thức + cần xử lý */}
+      {view === 'day' && !loading ? (
+        <AttendanceDayView
+          staff={filtered}
+          attendance={attendance}
+          year={year}
+          month={month}
+          day={selDay}
+          daysInMonth={daysInMonth}
+          onDay={(d) => setSelDay(Math.min(daysInMonth, Math.max(1, d)))}
+          onEdit={openEdit}
+          isOddLocation={(a) => a.location_status === 'outside' || a.location_status === 'unknown' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address))}
+        />
+      ) : view === 'day' ? (
+        <div className="flex items-center justify-center h-40 xl:col-span-2 xl:order-3">
+          <div className="w-7 h-7 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
+        </div>
+      ) : (
+      <>
       {/* Desktop table */}
       {loading ? (
         <div className="flex items-center justify-center h-40 xl:col-span-2 xl:order-3">
@@ -732,6 +784,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
             </ul>
           </div>
         </>
+      )}
+      </>
       )}
 
       {/* Floating Action Bar for Multi-Select */}
