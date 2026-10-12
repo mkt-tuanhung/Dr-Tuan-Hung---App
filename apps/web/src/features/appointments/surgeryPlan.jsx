@@ -1,6 +1,6 @@
 // Ngày phẫu thuật dự kiến khi khách CỌC (supabase/deposit_surgery_plan.sql)
 //   expected_surgery_plan: 'date' (có ngày) | 'this_month' (PT trong tháng) | 'none' (chưa có ngày)
-// Dùng chung cho mọi form cọc: Lịch hẹn, Khách tư vấn, Khách bong, Khách cọc.
+// Dùng ở form ĐÁNH GIÁ sau tư vấn trực tiếp (Khách tư vấn · Lịch hẹn); các màn khác chỉ hiển thị.
 import React from 'react';
 
 export const SURGERY_PLANS = [

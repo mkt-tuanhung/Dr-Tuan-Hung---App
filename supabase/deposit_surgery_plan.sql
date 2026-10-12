@@ -6,7 +6,7 @@
 --   'this_month' : PT trong tháng (tháng của ngày cọc), chưa chốt ngày cụ thể
 --   'none'       : chưa có ngày PT dự kiến
 --   null         : dữ liệu cũ trước khi có mục này
--- Sale Offline chọn khi đánh giá CỌC sau tư vấn (Lịch hẹn / Khách tư vấn / Khách bong / Khách cọc).
+-- Sale Offline chọn ở form ĐÁNH GIÁ sau tư vấn trực tiếp khi khách CỌC (Khách tư vấn · Lịch hẹn).
 -- Chỉ THÊM cột, không đổi dữ liệu khác.
 -- ============================================================
 
