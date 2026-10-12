@@ -254,8 +254,11 @@ const FinanceManagementPage = () => {
         notes: createForm.notes,
       };
       if (createForm.id) {
-        const { error } = await supabase.from('customer_appointments').update(payload).eq('id', createForm.id);
+        // .select() để biết THỰC SỰ có dòng nào được lưu — bị quyền (RLS) chặn thì Supabase
+        // không báo lỗi mà chỉ cập nhật 0 dòng -> trước đây vẫn báo "thành công" sai.
+        const { data: saved, error } = await supabase.from('customer_appointments').update(payload).eq('id', createForm.id).select('id');
         if (error) throw error;
+        if (!saved?.length) throw new Error('Chưa lưu được: tài khoản của bạn chưa có quyền sửa doanh thu của khách này. Liên hệ Admin.');
         toast.success('Đã cập nhật doanh thu!');
       } else {
         const { error } = await supabase.from('customer_appointments').insert({
@@ -297,8 +300,9 @@ const FinanceManagementPage = () => {
 
   const handleDeleteRevenue = async (r) => {
     if (!window.confirm(`Xóa doanh thu của khách "${r.customer_name}"? Hành động không hoàn tác.`)) return;
-    const { error } = await supabase.from('customer_appointments').delete().eq('id', r.id);
+    const { data: gone, error } = await supabase.from('customer_appointments').delete().eq('id', r.id).select('id');
     if (error) { toast.error(error.message); return; }
+    if (!gone?.length) { toast.error('Chưa xoá được: tài khoản của bạn chưa có quyền xoá doanh thu của khách này.'); return; }
     toast.success('Đã xóa'); loadData();
   };
 
