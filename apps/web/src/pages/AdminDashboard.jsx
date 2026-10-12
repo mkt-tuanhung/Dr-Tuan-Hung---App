@@ -176,7 +176,7 @@ const Overview = ({ profile, setActiveTab }) => {
       const [pf, at, ex, lv, ap, atAll, kt] = await Promise.all([
         supabase.from('profiles').select('id, full_name, created_at').eq('is_active', true),
         supabase.from('attendance').select('id', { count: 'exact', head: true }).eq('date', todayStr).eq('status', 'present'),
-        supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending').is('deleted_at', null),
         supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('customer_appointments')
           .select('id, customer_name, service, status, appointment_date, appointment_time, surgery_date, revenue, telesale_id, created_at')

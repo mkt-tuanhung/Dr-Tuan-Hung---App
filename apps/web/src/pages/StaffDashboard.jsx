@@ -131,7 +131,7 @@ const Overview = ({ profile, setActiveTab, available = [], onScan }) => {
         // Tạm ứng chưa hoàn (đã duyệt, chưa trả)
         supabase.from('expenses')
           .select('amount')
-          .eq('staff_id', profile.id).eq('is_advance', true).eq('status', 'approved'),
+          .eq('staff_id', profile.id).eq('is_advance', true).eq('status', 'approved').is('deleted_at', null),
         // Lịch hẹn hôm nay liên quan tới mình
         supabase.from('customer_appointments')
           .select('id, customer_name, service, status, appointment_time')
