@@ -61,6 +61,8 @@ do $$ begin
   if to_regclass('public.clinic_settings') is not null then
     alter table public.clinic_settings add column if not exists inbox_alert_chat_id text;
     alter table public.clinic_settings add column if not exists inbox_alert_enabled boolean not null default true;
+    -- Mẫu link mở hội thoại trên Pancake cho nút "🐼 Pancake" (để trống = chỉ hiện nút Meta)
+    alter table public.clinic_settings add column if not exists inbox_pancake_url text;
   end if;
 end $$;
 

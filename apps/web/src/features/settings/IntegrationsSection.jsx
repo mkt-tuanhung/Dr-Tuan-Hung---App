@@ -61,16 +61,21 @@ function InboxAlertPanel({ settings }) {
   const ready = !!row && Object.prototype.hasOwnProperty.call(row, 'inbox_alert_chat_id');
   const [chatId, setChatId] = useState('');
   const [enabled, setEnabled] = useState(true);
+  const [pancake, setPancake] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  useEffect(() => { setChatId(row?.inbox_alert_chat_id || ''); setEnabled(row?.inbox_alert_enabled !== false); }, [row?.inbox_alert_chat_id, row?.inbox_alert_enabled]);
+  useEffect(() => { setChatId(row?.inbox_alert_chat_id || ''); setEnabled(row?.inbox_alert_enabled !== false); setPancake(row?.inbox_pancake_url || ''); }, [row?.inbox_alert_chat_id, row?.inbox_alert_enabled, row?.inbox_pancake_url]);
 
   const value = chatId.trim();
+  const pk = pancake.trim();
+  const hasPancakeCol = ready && Object.prototype.hasOwnProperty.call(row, 'inbox_pancake_url');
   const invalid = value !== '' && !/^-?\d{5,20}$/.test(value);
-  const dirty = ready && (value !== (row.inbox_alert_chat_id || '') || enabled !== (row.inbox_alert_enabled !== false));
+  const pkInvalid = pk !== '' && !(/^https:\/\/\S+$/.test(pk) && pk.includes('{psid}'));
+  const dirty = ready && (value !== (row.inbox_alert_chat_id || '') || enabled !== (row.inbox_alert_enabled !== false) || (hasPancakeCol && pk !== (row.inbox_pancake_url || '')));
   const save = async () => {
     setSaving(true);
-    const res = await settings.save({ inbox_alert_chat_id: value || null, inbox_alert_enabled: enabled }, 'Cài đặt cảnh báo inbox chậm phản hồi');
+    const patch = { inbox_alert_chat_id: value || null, inbox_alert_enabled: enabled, ...(hasPancakeCol ? { inbox_pancake_url: pk || null } : {}) };
+    const res = await settings.save(patch, 'Cài đặt cảnh báo inbox chậm phản hồi');
     setSaving(false);
     if (res.error) toast.error('Lỗi: ' + res.error.message); else toast.success('Đã lưu cài đặt cảnh báo inbox');
   };
@@ -105,8 +110,14 @@ function InboxAlertPanel({ settings }) {
           <label className="flex items-center gap-2 text-[13px] text-slate-700 h-10">
             <input type="checkbox" className="e-checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />Bật cảnh báo
           </label>
+          {hasPancakeCol && (
+            <Field className="sm:col-span-2" label="Mẫu link mở hội thoại trên Pancake (không bắt buộc)" error={pkInvalid ? 'Phải bắt đầu bằng https:// và có {psid}' : null}
+              hint="Có thì mỗi cảnh báo thêm nút “🐼 Pancake” mở đúng khách. Dùng {page_id}, {psid}. Để trống = chỉ có nút mở Meta Business Suite.">
+              <input className="e-input font-mono text-[12.5px]" value={pancake} onChange={e => setPancake(e.target.value)} placeholder="https://pancake.vn/{page_id}?c_id={page_id}_{psid}" maxLength={300} />
+            </Field>
+          )}
           <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <button type="button" className="e-btn e-btn-primary e-btn-sm" onClick={save} disabled={!dirty || invalid || saving}><Save />{saving ? 'Đang lưu…' : 'Lưu'}</button>
+            <button type="button" className="e-btn e-btn-primary e-btn-sm" onClick={save} disabled={!dirty || invalid || pkInvalid || saving}><Save />{saving ? 'Đang lưu…' : 'Lưu'}</button>
             <button type="button" className="e-btn e-btn-secondary e-btn-sm" onClick={test} disabled={testing || dirty || !row.inbox_alert_chat_id}><Send />{testing ? 'Đang gửi…' : 'Gửi tin thử'}</button>
           </div>
           <div className="text-[12px] text-slate-400 sm:col-span-2 pt-2 border-t border-slate-100">
