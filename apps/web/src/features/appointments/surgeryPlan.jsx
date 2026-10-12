@@ -4,9 +4,9 @@
 import React from 'react';
 
 export const SURGERY_PLANS = [
-  { value: 'date', label: 'Có ngày PT dự kiến' },
-  { value: 'this_month', label: 'PT trong tháng' },
-  { value: 'none', label: 'Chưa có ngày PT dự kiến' },
+  { value: 'date', label: 'Có ngày PT dự kiến', short: 'Có ngày' },
+  { value: 'this_month', label: 'PT trong tháng', short: 'PT trong tháng' },
+  { value: 'none', label: 'Chưa có ngày PT dự kiến', short: 'Chưa có ngày' },
 ];
 
 // Lựa chọn ban đầu khi mở form: dữ liệu cũ có ngày -> 'date'; chưa có gì -> '' (bắt sale chọn)
@@ -46,12 +46,13 @@ export function ExpectedSurgeryField({ plan, date, onChange, label = 'Ngày ph�
   return (
     <div>
       <span className={labelClassName}>{label} <span className="text-danger-500">*</span></span>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
+      {/* 1 hàng 3 ô bằng nhau (giống Bong / Cọc / Phẫu thuật) — nhãn ngắn, nhãn đầy đủ ở aria-label */}
+      <div className="e-seg w-full grid grid-cols-3 gap-1" role="radiogroup" aria-label={label}>
         {SURGERY_PLANS.map(o => (
-          <button key={o.value} type="button" role="radio" aria-checked={plan === o.value}
+          <button key={o.value} type="button" role="radio" aria-checked={plan === o.value} aria-label={o.label} title={o.label}
             onClick={() => onChange({ plan: o.value, date: o.value === 'date' ? date : '' })}
-            className={`e-chip ${plan === o.value ? 'e-chip-active' : ''}`}>
-            {o.label}
+            className={`e-seg-item w-full min-w-0 h-auto min-h-[36px] px-1.5 py-1.5 whitespace-normal text-center leading-tight text-[12.5px] sm:text-[13px] ${plan === o.value ? 'e-seg-active' : ''}`}>
+            {o.short}
           </button>
         ))}
       </div>

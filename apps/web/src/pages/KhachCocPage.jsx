@@ -416,7 +416,8 @@ const KhachCocPage = ({ isNested = false }) => {
           )}
 
           {/* Thẻ số liệu */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
+          {/* Điện thoại: 2×2 cho gọn (trước là 4 thẻ xếp dọc chiếm cả màn hình) */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4">
             {[
               { icon: Users, color: '#067B7F', label: 'Khách giữ cọc', value: cocStats.count },
               { icon: Wallet, color: '#3CA7A9', label: 'Tổng tiền cọc', value: fmtTy(cocStats.total) },
@@ -434,23 +435,24 @@ const KhachCocPage = ({ isNested = false }) => {
           </div>
 
           <div className="e-toolbar justify-between">
-            <div className="flex flex-wrap gap-1.5">
+            {/* Điện thoại: 1 hàng vuốt ngang thay vì 3 hàng chip */}
+            <div className="flex gap-1.5 w-full sm:w-auto min-w-0 overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible">
               {CARE_TABS.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`e-chip ${activeTab === tab.id ? 'e-chip-active' : 'bg-white'}`}>
+                  className={`e-chip shrink-0 ${activeTab === tab.id ? 'e-chip-active' : 'bg-white'}`}>
                   {tab.label}
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="e-search flex-1 sm:w-72 shrink-0">
+              <div className="e-search flex-1 min-w-0 sm:w-72 sm:flex-none">
                 <Search className="w-4 h-4" />
                 <input type="text" placeholder="Tìm tên KH hoặc số điện thoại..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   className="min-w-0 focus:ring-[3px] focus:ring-teal-500/20" />
               </div>
               {canAdd && (
                 <button onClick={openCreate} className="e-btn e-btn-primary shrink-0">
-                  <Plus className="w-4 h-4" /> Thêm khách cọc
+                  <Plus className="w-4 h-4" /><span className="sm:hidden">Thêm</span><span className="hidden sm:inline">Thêm khách cọc</span>
                 </button>
               )}
             </div>

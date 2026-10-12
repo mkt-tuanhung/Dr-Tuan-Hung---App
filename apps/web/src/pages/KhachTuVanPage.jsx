@@ -222,7 +222,7 @@ const KhachTuVanPage = () => {
                 <div className="min-w-0 flex-1">
                   <div className="e-metric-label">{t.label}</div>
                   <div className={`e-metric-value ${t.num}`}>{t.value}</div>
-                  <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-1.5 min-w-0">
                     {trendTxt && <span className={`shrink-0 tabular-nums ${up ? 'e-delta-up' : 'e-delta-down'}`}>{trendTxt}</span>}
                     <span className="e-metric-hint">{t.sub}</span>
                   </div>
@@ -549,15 +549,16 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
 
 const Field = ({ label, children }) => (<div className="mb-4"><label className="e-label">{label}</label>{children}</div>);
 const Modal = ({ title, onClose, children }) => (
-  <div className="e-modal-backdrop z-50 flex items-center justify-center p-4" onClick={onClose}>
-    <div className="e-modal max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+  // Điện thoại: khung trượt từ dưới lên, nút Hủy/Lưu ghim ở đáy (sticky) — không bị cắt
+  <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+    <div className="e-modal max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain rounded-b-none sm:rounded-2xl" onClick={e => e.stopPropagation()}>
       <div className="e-modal-header items-center sticky top-0 z-10 bg-white rounded-t-2xl"><h3 className="e-modal-title">{title}</h3><button onClick={onClose} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button></div>
       <div className="e-modal-body">{children}</div>
     </div>
   </div>
 );
 const ModalActions = ({ onClose, onSave, saving }) => (
-  <div className="e-modal-footer -mx-5 -mb-4 mt-4">
+  <div className="e-modal-footer -mx-5 -mb-4 mt-4 sticky bottom-0 z-10 bg-white pb-[max(1rem,env(safe-area-inset-bottom))]">
     <button onClick={onClose} className="e-btn e-btn-secondary flex-1 sm:flex-none">Hủy</button>
     <button onClick={onSave} disabled={saving} className="e-btn e-btn-primary flex-1 sm:flex-none min-w-[96px]">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button>
   </div>
