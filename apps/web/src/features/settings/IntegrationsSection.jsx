@@ -62,19 +62,22 @@ function InboxAlertPanel({ settings }) {
   const [chatId, setChatId] = useState('');
   const [enabled, setEnabled] = useState(true);
   const [pancake, setPancake] = useState('');
+  const [duty, setDuty] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  useEffect(() => { setChatId(row?.inbox_alert_chat_id || ''); setEnabled(row?.inbox_alert_enabled !== false); setPancake(row?.inbox_pancake_url || ''); }, [row?.inbox_alert_chat_id, row?.inbox_alert_enabled, row?.inbox_pancake_url]);
+  useEffect(() => { setChatId(row?.inbox_alert_chat_id || ''); setEnabled(row?.inbox_alert_enabled !== false); setPancake(row?.inbox_pancake_url || ''); setDuty(row?.inbox_duty_name || ''); }, [row?.inbox_alert_chat_id, row?.inbox_alert_enabled, row?.inbox_pancake_url, row?.inbox_duty_name]);
 
   const value = chatId.trim();
   const pk = pancake.trim();
   const hasPancakeCol = ready && Object.prototype.hasOwnProperty.call(row, 'inbox_pancake_url');
+  const hasDutyCol = ready && Object.prototype.hasOwnProperty.call(row, 'inbox_duty_name');
+  const dutyVal = duty.trim();
   const invalid = value !== '' && !/^-?\d{5,20}$/.test(value);
   const pkInvalid = pk !== '' && !(/^https:\/\/\S+$/.test(pk) && pk.includes('{psid}'));
-  const dirty = ready && (value !== (row.inbox_alert_chat_id || '') || enabled !== (row.inbox_alert_enabled !== false) || (hasPancakeCol && pk !== (row.inbox_pancake_url || '')));
+  const dirty = ready && (value !== (row.inbox_alert_chat_id || '') || enabled !== (row.inbox_alert_enabled !== false) || (hasPancakeCol && pk !== (row.inbox_pancake_url || '')) || (hasDutyCol && dutyVal !== (row.inbox_duty_name || '')));
   const save = async () => {
     setSaving(true);
-    const patch = { inbox_alert_chat_id: value || null, inbox_alert_enabled: enabled, ...(hasPancakeCol ? { inbox_pancake_url: pk || null } : {}) };
+    const patch = { inbox_alert_chat_id: value || null, inbox_alert_enabled: enabled, ...(hasPancakeCol ? { inbox_pancake_url: pk || null } : {}), ...(hasDutyCol ? { inbox_duty_name: dutyVal || null } : {}) };
     const res = await settings.save(patch, 'Cài đặt cảnh báo inbox chậm phản hồi');
     setSaving(false);
     if (res.error) toast.error('Lỗi: ' + res.error.message); else toast.success('Đã lưu cài đặt cảnh báo inbox');
@@ -110,6 +113,12 @@ function InboxAlertPanel({ settings }) {
           <label className="flex items-center gap-2 text-[13px] text-slate-700 h-10">
             <input type="checkbox" className="e-checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />Bật cảnh báo
           </label>
+          {hasDutyCol && (
+            <Field className="sm:col-span-2" label="Người trực page (ghi trên cảnh báo)"
+              hint="Điền tên cố định, ví dụ “Bảo Bei”. Để trống = tự lấy nhân sự trực page theo Lịch làm việc.">
+              <input className="e-input" value={duty} onChange={e => setDuty(e.target.value)} placeholder="Bảo Bei" maxLength={80} />
+            </Field>
+          )}
           {hasPancakeCol && (
             <Field className="sm:col-span-2" label="Mẫu link mở hội thoại trên Pancake (không bắt buộc)" error={pkInvalid ? 'Phải bắt đầu bằng https:// và có {psid}' : null}
               hint="Có thì mỗi cảnh báo thêm nút “🐼 Pancake” mở đúng khách. Dùng {page_id}, {psid}. Để trống = chỉ có nút mở Meta Business Suite.">
