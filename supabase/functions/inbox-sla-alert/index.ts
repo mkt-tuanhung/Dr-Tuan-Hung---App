@@ -149,6 +149,11 @@ Deno.serve(async (req) => {
       }).map((r: any) => r.staff.full_name).filter(Boolean);
     } catch { /* chưa có lịch làm việc -> bỏ qua */ }
 
+    // Tên fanpage (nhiều page -> ghi rõ khách nhắn page nào)
+    const { data: pgs } = await sb.from("fb_pages").select("page_id, name");
+    const pageName: Record<string, string> = Object.fromEntries((pgs || []).map((p: any) => [String(p.page_id), p.name]));
+    const multiPage = new Set(pick.map((c) => c.page_id)).size > 1 || Object.keys(pageName).length > 1;
+
     // ---- 5. Gửi ----
     for (const g of groups) {
       const list = g.convs.slice(0, PER_MESSAGE);
@@ -156,7 +161,8 @@ Deno.serve(async (req) => {
         const lines = lastOf(c).map((t: string) => `   💬 ${esc(t)}`);
         const sinceMs = new Date(c.sla_waiting_since).getTime();
         const since = hhmm(Math.floor(((sinceMs + 7 * 3600e3) % 86400e3) / 60e3)) + (sinceMs < vnMidnight ? " hôm qua" : "");
-        return `${i + 1}. <b>${esc(c.participant_name || "Khách")}</b> · chờ ${totalMin(c)} phút (từ ${since})\n`
+        const pg = multiPage && pageName[c.page_id] ? `   📄 ${esc(cut(pageName[c.page_id], 40))}\n` : "";
+        return `${i + 1}. <b>${esc(c.participant_name || "Khách")}</b> · chờ ${totalMin(c)} phút (từ ${since})\n` + pg
           + (lines.length ? lines.join("\n") + "\n" : "")
           + `   <a href="${metaInboxUrl(c)}">Mở hội thoại</a>`;
       });

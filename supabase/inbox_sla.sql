@@ -1,8 +1,8 @@
 -- ============================================================
 -- CẢNH BÁO INBOX CHẬM PHẢN HỒI -> nhóm Telegram trực page — chạy 1 lần trong SQL Editor (chạy lại vẫn an toàn)
 --
--- Chỉ dựa trên tin nhắn MỚI do webhook fb-messenger-webhook ghi vào fb_messages
--- (không cần kéo toàn bộ hộp thư):
+-- Chỉ dựa trên tin nhắn MỚI do fb-inbox-poll (mỗi phút) / webhook fb-messenger-webhook ghi vào
+-- fb_messages (không cần kéo toàn bộ hộp thư):
 --   khách nhắn  -> fb_conversations.sla_waiting_since = lúc khách nhắn đầu tiên chưa được trả lời
 --   page trả lời -> xoá sla_waiting_since (nếu đã cảnh báo thì chờ báo "✅ đã phản hồi sau X phút")
 -- Tin cũ hơn 6 giờ (kéo bù lịch sử) KHÔNG tính -> không cảnh báo tràn.
@@ -90,6 +90,24 @@ begin
   perform cron.schedule('inbox-sla-1min', '* * * * *', cmd);
 end $$;
 
+-- ---------- Hỏi Facebook mỗi phút (fb-inbox-poll) ----------
+-- App chưa qua Xét duyệt của Meta thì webhook chỉ nhận tin của người có vai trò trong app
+-- -> đọc hộp thư bằng token từng page. Mỗi page 1 lần gọi / phút, chỉ ghi khi có tin mới.
+do $$
+declare cmd text;
+begin
+  if to_regclass('cron.job') is null then return; end if;
+  select command into cmd from cron.job where jobname = 'getfly-sync-10min';
+  if cmd is null then
+    raise notice 'Chưa có lịch getfly-sync-10min để chép cấu hình — tạo lịch fb-inbox-poll-1min thủ công';
+    return;
+  end if;
+  cmd := replace(cmd, '/functions/v1/getfly-sync', '/functions/v1/fb-inbox-poll');
+  cmd := replace(cmd, '''{}''::jsonb', '''{}''::jsonb, timeout_milliseconds := 30000');
+  perform cron.unschedule(jobid) from cron.job where jobname = 'fb-inbox-poll-1min';
+  perform cron.schedule('fb-inbox-poll-1min', '* * * * *', cmd);
+end $$;
+
 -- Kiểm tra:
---   select jobname, schedule, active from cron.job where jobname = 'inbox-sla-1min';
+--   select jobname, schedule, active from cron.job where jobname in ('inbox-sla-1min', 'fb-inbox-poll-1min');
 --   select participant_name, sla_waiting_since, sla_level from public.fb_conversations where sla_waiting_since is not null;

@@ -6,7 +6,8 @@
 //
 // Secrets:
 //   FB_VERIFY_TOKEN = chuỗi tự đặt, khai giống hệt trong phần Webhooks của app FB
-//   FB_PAGE_TOKEN   = token có quyền pages_messaging (System User gán page)
+//   FB_PAGE_TOKENS  = [{"id":"<page_id>","token":"<Page Access Token>"}, …] — token từng page (ưu tiên)
+//   FB_PAGE_TOKEN   = token có quyền pages_messaging (System User gán page) — dự phòng
 // Deploy: supabase functions deploy fb-messenger-webhook --no-verify-jwt
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -31,10 +32,20 @@ function scanPhone(text: string): string | null {
   return null;
 }
 
-// Đổi token System User -> Page Access Token của page (lấy tên khách bắt buộc cái này).
-const pageTokenCache: Record<string, string> = {};
+// Token từng page từ secret FB_PAGE_TOKENS (JSON mảng {id, token})
+function pageTokensFromEnv(): Record<string, string> {
+  try {
+    const list = JSON.parse(Deno.env.get("FB_PAGE_TOKENS") || "[]");
+    return Object.fromEntries((Array.isArray(list) ? list : []).filter((x: any) => x?.id && x?.token).map((x: any) => [String(x.id), String(x.token)]));
+  } catch { return {}; }
+}
+const pageTokenCache: Record<string, string> = pageTokensFromEnv();
+
+// Page Access Token của page (lấy tên khách bắt buộc cái này): FB_PAGE_TOKENS trước,
+// không có thì đổi từ token System User FB_PAGE_TOKEN.
 async function getPageToken(pageId: string, userToken: string): Promise<string | null> {
   if (pageTokenCache[pageId]) return pageTokenCache[pageId];
+  if (!userToken) return null;
   try {
     const r = await fetch(`https://graph.facebook.com/${API}/${pageId}?fields=access_token&access_token=${userToken}`);
     const d = await r.json().catch(() => ({}));
@@ -95,7 +106,8 @@ Deno.serve(async (req) => {
 
     for (const entry of body.entry || []) {
       const pageId = String(entry.id);
-      for (const ev of entry.messaging || []) {
+      // messaging: app nhận tin chính · standby: page đang dùng công cụ chat khác giữ quyền trả lời
+      for (const ev of [...(entry.messaging || []), ...(entry.standby || [])]) {
         const msg = ev.message;
         if (!msg || !msg.mid) continue;                      // chỉ xử lý tin nhắn
         const isEcho = !!msg.is_echo;                        // echo = page (nhân viên) nhắn
@@ -108,8 +120,8 @@ Deno.serve(async (req) => {
         // Bảo đảm hội thoại tồn tại (lấy tên khách nếu chưa có)
         const { data: conv } = await sb.from("fb_conversations").select("conv_key, participant_name, phone").eq("conv_key", convKey).maybeSingle();
         let pname = conv?.participant_name || null;
-        if (!conv) {
-          const pageToken = userToken ? await getPageToken(pageId, userToken) : null;
+        if (!conv || !pname) {   // hội thoại mới, hoặc tạo lúc chưa có token nên thiếu tên
+          const pageToken = await getPageToken(pageId, userToken);
           pname = pageToken ? await getName(psid, pageToken) : null;
           await sb.from("fb_conversations").upsert({ conv_key: convKey, page_id: pageId, psid, participant_name: pname }, { onConflict: "conv_key" });
         }
