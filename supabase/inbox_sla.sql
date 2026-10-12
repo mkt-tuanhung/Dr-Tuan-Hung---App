@@ -63,6 +63,8 @@ do $$ begin
     alter table public.clinic_settings add column if not exists inbox_alert_enabled boolean not null default true;
     -- Mẫu link mở hội thoại trên Pancake cho nút "🐼 Pancake" (để trống = chỉ hiện nút Meta)
     alter table public.clinic_settings add column if not exists inbox_pancake_url text;
+    -- Tên người trực page cố định ghi trên cảnh báo (để trống = lấy theo Lịch làm việc)
+    alter table public.clinic_settings add column if not exists inbox_duty_name text;
   end if;
 end $$;
 

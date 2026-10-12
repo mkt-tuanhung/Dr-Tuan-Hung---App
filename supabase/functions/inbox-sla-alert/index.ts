@@ -11,12 +11,13 @@
 // Đã bị nhắc mà sau đó có trả lời -> báo "✅ đã phản hồi sau X phút".
 // Mỗi khách: trích 1 tin gần nhất + nút "Trả lời" mở Meta Business Suite / Pancake đúng hội thoại
 //   (mẫu link Pancake: clinic_settings.inbox_pancake_url, vd https://pancake.vn/{page_id}?c_id={page_id}_{psid}).
+// "Đang trực": clinic_settings.inbox_duty_name (cố định) — trống thì lấy theo Lịch làm việc.
 //
 // Secrets: TELEGRAM_BOT_TOKEN. Nhóm: clinic_settings.inbox_alert_chat_id
 //          (dự phòng: secret TELEGRAM_INBOX_CHAT_ID).
 // Gọi:  {}            -> kiểm tra & gửi (cron)
 //       {test:true}   -> gửi 1 tin thử vào nhóm
-//       {demo:true}   -> gửi 1 cảnh báo MẪU (nhãn 🧪) giống hệt cảnh báo thật; nút Meta mở hội thoại
+//       {demo:true}   -> gửi 1 cảnh báo MẪU (nhãn [TIN THỬ]) giống hệt cảnh báo thật; nút Meta mở hội thoại
 //                        mới nhất có thật (page Gọt Hàm nếu có) để thử link — không đổi trạng thái chờ
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -33,12 +34,12 @@ function json(body: unknown, status = 200) {
 // Phút trong ngày (giờ VN)
 const WORK = [[540, 720], [810, 1080], [1140, 1380]];
 const SOFT = [
-  { key: "lunch", from: 720, to: 810, title: "🍱 Giờ nghỉ trưa — có khách đang nhắn tin", tail: "Nghỉ trưa xong nhớ phản hồi khách ngay nhé!" },
-  { key: "commute", from: 1080, to: 1140, title: "🛵 Giờ di chuyển — có khách đang nhắn tin", tail: "Về đến nơi nhớ phản hồi khách ngay nhé!" },
+  { key: "lunch", from: 720, to: 810, title: "🔔 Giờ nghỉ trưa — có khách đang nhắn tin", tail: "Nghỉ trưa xong nhớ phản hồi khách ngay nhé!" },
+  { key: "commute", from: 1080, to: 1140, title: "🔔 Giờ di chuyển — có khách đang nhắn tin", tail: "Về đến nơi nhớ phản hồi khách ngay nhé!" },
 ];
 const LEVELS = [
   { lv: 1, min: 3, title: "⚠️ Khách chờ phản hồi quá 3 phút" },
-  { lv: 2, min: 10, title: "⏰ Nhắc lần 2 — khách đã chờ quá 10 phút" },
+  { lv: 2, min: 10, title: "⚠️ Nhắc lần 2 — khách đã chờ quá 10 phút" },
   { lv: 3, min: 30, title: "🚨 KHẨN — khách đã chờ quá 30 phút" },
 ];
 const PER_MESSAGE = 10;   // tối đa khách / 1 tin Telegram (phần còn lại gửi ở lượt sau)
@@ -51,6 +52,8 @@ const fillUrl = (tpl: string, c: any) => {
   const u = String(tpl || "").replace(/\{page_id\}/g, encodeURIComponent(c.page_id)).replace(/\{psid\}/g, encodeURIComponent(c.psid)).replace(/\{thread_id\}/g, encodeURIComponent(c.thread_id || ""));
   return /^https:\/\/[^\s]+$/.test(u) ? u : null;
 };
+// Các page cùng tiền tố "Dr Tuấn Hùng - " -> bỏ cho gọn
+const shortPage = (n: string) => String(n || "").replace(/^\s*Dr\.?\s*Tuấn\s*Hùng\s*[-–—:]\s*/i, "").trim() || n;
 const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
 async function sendTelegram(token: string, chatId: string, text: string, buttons?: { text: string; url: string }[][]) {
@@ -88,13 +91,14 @@ Deno.serve(async (req) => {
       if (!c) return json({ ok: false, error: "Chưa có hội thoại nào để làm mẫu" });
       const { data: pg } = await sb.from("fb_pages").select("name").eq("page_id", c.page_id).maybeSingle();
       const tpl = String(st?.inbox_pancake_url || "").trim();
-      const row = [{ text: "↩️ 1. Khách mẫu · Meta", url: metaInboxUrl(c) }];
+      const row = [{ text: "Trả lời 1. Khách mẫu (Meta)", url: metaInboxUrl(c) }];
       const pk = tpl ? fillUrl(tpl, c) : null;
-      if (pk) row.push({ text: "🐼 Pancake", url: pk });
-      const text = `🧪 <b>TIN THỬ — không phải khách thật</b>\n\n<b>${LEVELS[0].title}</b>\n👤 Đang trực: (tên nhân sự trực page theo Lịch làm việc)\n\n`
-        + `1. <b>Khách mẫu</b> · chờ 4 phút (từ ${hhmm(Math.floor(((Date.now() - 4 * 60e3 + 7 * 3600e3) % 86400e3) / 60e3))})\n`
-        + (pg?.name ? `   📄 ${esc(cut(pg.name, 40))}\n` : "")
-        + `   💬 Cho em hỏi giá gọt hàm V-line trọn gói bao nhiêu ạ?\n\n`
+      if (pk) row.push({ text: "Pancake", url: pk });
+      const dutyName = String(st?.inbox_duty_name || "").trim() || "(tên nhân sự trực page theo Lịch làm việc)";
+      const text = `<i>[TIN THỬ — không phải khách thật]</i>\n\n<b>${LEVELS[0].title}</b>\nTrực page: <b>${esc(dutyName)}</b>\n\n`
+        + `1. <b>Khách mẫu</b> — chờ 4 phút (từ ${hhmm(Math.floor(((Date.now() - 4 * 60e3 + 7 * 3600e3) % 86400e3) / 60e3))})\n`
+        + (pg?.name ? `Page: ${esc(cut(shortPage(pg.name), 40))}\n` : "")
+        + `“Cho em hỏi giá gọt hàm V-line trọn gói bao nhiêu ạ?”\n\n`
         + `<i>Nút bên dưới mở hội thoại MỚI NHẤT có thật của page này để thử link.</i>`;
       await sendTelegram(token, chatId, text, [row]);
       return json({ ok: true, demo: true, page: pg?.name || c.page_id });
@@ -166,7 +170,9 @@ Deno.serve(async (req) => {
 
     // ---- 4. Ai đang trực page (Lịch làm việc đã công bố) ----
     let onDuty: string[] = [];
-    try {
+    const fixedDuty = String(st?.inbox_duty_name || "").trim();
+    if (fixedDuty) onDuty = [fixedDuty];
+    else try {
       const { data: sch } = await sb.from("staff_schedules")
         .select("shift:work_shifts(start_time, end_time, is_off), staff:profiles!staff_id(full_name, role, role_2, is_active)")
         .eq("date", dayKey).eq("status", "published");
@@ -190,21 +196,21 @@ Deno.serve(async (req) => {
       const list = g.convs.slice(0, PER_MESSAGE);
       // Mỗi khách 1 hàng nút: Trả lời trên Meta Business Suite · Pancake (nếu đã cài mẫu link)
       const buttons = list.map((c: any, i: number) => {
-        const row = [{ text: `↩️ ${i + 1}. ${cut(c.participant_name || "Khách", 22)} · Meta`, url: metaInboxUrl(c) }];
+        const row = [{ text: `Trả lời ${i + 1}. ${cut(c.participant_name || "Khách", 22)} (Meta)`, url: metaInboxUrl(c) }];
         const pk = pancakeTpl ? fillUrl(pancakeTpl, c) : null;
-        if (pk) row.push({ text: "🐼 Pancake", url: pk });
+        if (pk) row.push({ text: "Pancake", url: pk });
         return row;
       });
       const blocks = list.map((c: any, i: number) => {
-        const lines = lastOf(c).map((t: string) => `   💬 ${esc(t)}`);
+        const lines = lastOf(c).map((t: string) => `“${esc(t)}”`);
         const sinceMs = new Date(c.sla_waiting_since).getTime();
         const since = hhmm(Math.floor(((sinceMs + 7 * 3600e3) % 86400e3) / 60e3)) + (sinceMs < vnMidnight ? " hôm qua" : "");
-        const pg = multiPage && pageName[c.page_id] ? `   📄 ${esc(cut(pageName[c.page_id], 40))}\n` : "";
-        return `${i + 1}. <b>${esc(c.participant_name || "Khách")}</b> · chờ ${totalMin(c)} phút (từ ${since})\n` + pg
+        const pg = multiPage && pageName[c.page_id] ? `Page: ${esc(cut(shortPage(pageName[c.page_id]), 40))}\n` : "";
+        return `${i + 1}. <b>${esc(c.participant_name || "Khách")}</b> — chờ ${totalMin(c)} phút (từ ${since})\n` + pg
           + lines.join("\n");
       });
       const more = g.convs.length > PER_MESSAGE ? `\n… và ${g.convs.length - PER_MESSAGE} khách khác` : "";
-      const duty = onDuty.length ? `👤 Đang trực: ${esc(onDuty.join(", "))}\n` : "";
+      const duty = onDuty.length ? `Trực page: <b>${esc(onDuty.join(", "))}</b>\n` : "";
       const text = `<b>${g.title}</b>\n${duty}\n${blocks.join("\n\n")}${more}${g.tail ? `\n\n${g.tail}` : ""}`;
       await sendTelegram(token, chatId, text, buttons);
       await sb.from("fb_conversations").update(g.apply(list[0])).in("conv_key", list.map((c: any) => c.conv_key));
