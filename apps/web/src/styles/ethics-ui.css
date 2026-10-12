@@ -218,3 +218,19 @@
 /* Lớp phủ toàn màn hình (form, ngăn chi tiết) đặt trong khung space-y-* bị cộng margin-top 16px
    -> lệch xuống, hở thanh trên cùng. Lớp fixed phủ kín không bao giờ cần margin. */
 .fixed.inset-0, .e-modal-backdrop { margin: 0 !important; }
+
+/* Điện thoại: form (lớp phủ) luôn nằm trong VÙNG CÒN NHÌN THẤY — khi bật bàn phím thì co lại
+   ngay trên bàn phím, nút Lưu / Xác nhận ở đáy form không bị che (biến --vvh, --vv-top do main.jsx ghi). */
+@media (max-width: 639px) {
+  .e-modal-backdrop {
+    top: var(--vv-top, 0px) !important;
+    bottom: auto !important;
+    height: var(--vvh, 100dvh) !important;
+  }
+  .e-modal-backdrop > .e-modal {
+    max-height: calc(var(--vvh, 100dvh) - 12px) !important;
+  }
+  /* Safari iPhone: làm mờ nền (backdrop-filter) khiến phần trong form không được vẽ -> tắt trên điện thoại */
+  .e-modal-backdrop { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext, createContext } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
@@ -548,21 +549,35 @@ const ConsultModal = ({ app, onClose, onSaved }) => {
 };
 
 const Field = ({ label, children }) => (<div className="mb-4"><label className="e-label">{label}</label>{children}</div>);
-const Modal = ({ title, onClose, children }) => (
-  // Điện thoại: khung trượt từ dưới lên, nút Hủy/Lưu ghim ở đáy (sticky) — không bị cắt
-  <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-    <div className="e-modal max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain rounded-b-none sm:rounded-2xl" onClick={e => e.stopPropagation()}>
-      <div className="e-modal-header items-center sticky top-0 z-10 bg-white rounded-t-2xl"><h3 className="e-modal-title">{title}</h3><button onClick={onClose} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button></div>
-      <div className="e-modal-body">{children}</div>
+// Khung form 3 phần CỐ ĐỊNH: tiêu đề · nội dung (cuộn) · nút bấm.
+// KHÔNG dùng position: sticky — Safari trên iPhone vẽ trắng phần sticky (mất tiêu đề, nút ✕, Hủy/Lưu).
+// ModalActions đặt ở đâu trong nội dung cũng được: nó tự chuyển (portal) xuống phần đáy của khung.
+const ModalFooterSlot = createContext(null);
+const Modal = ({ title, onClose, children }) => {
+  const [footer, setFooter] = useState(null);
+  return (
+    // Điện thoại: khung trượt từ dưới lên, co vừa phần trên bàn phím (xem ethics-ui.css)
+    <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="e-modal max-w-md max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-b-none sm:rounded-2xl" onClick={e => e.stopPropagation()}>
+        <div className="e-modal-header items-center shrink-0"><h3 className="e-modal-title">{title}</h3><button onClick={onClose} aria-label="Đóng" className="e-icon-btn w-9 h-9 shrink-0"><X className="w-4 h-4" /></button></div>
+        <div className="e-modal-body flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <ModalFooterSlot.Provider value={footer}>{children}</ModalFooterSlot.Provider>
+        </div>
+        <div ref={setFooter} className="shrink-0 empty:hidden" />
+      </div>
     </div>
-  </div>
-);
-const ModalActions = ({ onClose, onSave, saving }) => (
-  <div className="e-modal-footer -mx-5 -mb-4 mt-4 sticky bottom-0 z-10 bg-white pb-[max(1rem,env(safe-area-inset-bottom))]">
-    <button onClick={onClose} className="e-btn e-btn-secondary flex-1 sm:flex-none">Hủy</button>
-    <button onClick={onSave} disabled={saving} className="e-btn e-btn-primary flex-1 sm:flex-none min-w-[96px]">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button>
-  </div>
-);
+  );
+};
+const ModalActions = ({ onClose, onSave, saving }) => {
+  const slot = useContext(ModalFooterSlot);
+  const bar = (
+    <div className="e-modal-footer rounded-b-none sm:rounded-b-2xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <button onClick={onClose} className="e-btn e-btn-secondary flex-1 sm:flex-none">Hủy</button>
+      <button onClick={onSave} disabled={saving} className="e-btn e-btn-primary flex-1 sm:flex-none min-w-[96px]">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}</button>
+    </div>
+  );
+  return slot ? createPortal(bar, slot) : bar;
+};
 
 const ConfirmDialog = ({ message, okLabel = 'Xác nhận', danger = false, onOk, onClose }) => {
   const [busy, setBusy] = useState(false);
