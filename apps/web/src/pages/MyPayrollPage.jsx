@@ -99,7 +99,8 @@ const MyPayrollPage = () => {
       supabase.from('customer_appointments').select('phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('bong_date', ms).lte('bong_date', meDay),
       supabase.from('customer_appointments').select('phone, consult_received, telesale_id, telesale_id_2, surgery_type, customer_source').or(orTele).gte('deposit_date', ms).lte('deposit_date', meDay),
       supabase.from('page_daily_reports').select('staff_id, telesale_id, total_phones, total_interested_phones, total_messages, total_spam_messages').or(`staff_id.eq.${tid},telesale_id.eq.${tid}`).gte('date', ms).lte('date', meDay),
-      supabase.from('expenses').select('staff_id, amount').eq('staff_id', tid).eq('is_advance', true).eq('status', 'approved'),
+      // Giống Bảng lương admin: chi hộ đã duyệt trong THÁNG, bỏ khoản đã xoá (trước đây cộng mọi tháng + cả khoản đã xoá)
+      supabase.from('expenses').select('staff_id, amount').eq('staff_id', tid).eq('is_advance', true).eq('status', 'approved').is('deleted_at', null).gte('date', ms).lte('date', meDay),
       supabase.from('salary_advances').select('staff_id, amount').eq('staff_id', tid).eq('status', 'approved').eq('month', month).eq('year', year),
       supabase.from('media_clips').select('editor_id, win, win_amount, approved_to_run').eq('editor_id', tid).gte('evaluated_at', ms).lt('evaluated_at', meNext),
       supabase.from('partner_surgeries').select('customer_name, partner_name, surgery_type, partner_fee, surgery_fee, partner_paid, bac_si_id, phu_mo_1_id, phu_mo_2_id, phu_mo_3_id').or(`bac_si_id.eq.${tid},phu_mo_1_id.eq.${tid},phu_mo_2_id.eq.${tid},phu_mo_3_id.eq.${tid}`).gte('surgery_date', ms).lte('surgery_date', meDay),

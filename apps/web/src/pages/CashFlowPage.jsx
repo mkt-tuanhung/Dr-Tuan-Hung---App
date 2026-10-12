@@ -77,7 +77,7 @@ export default function CashFlowPage() {
         supabase.from('customer_appointments').select('revenue, upsale_revenue, hospital_fee, surgery_date, hospital_fee_date')
           .or(`surgery_date.gte.${startDate},hospital_fee_date.gte.${startDate}`),
         supabase.from('expenses').select('amount, category, is_advance')
-          .eq('status', 'paid')
+          .eq('status', 'paid').is('deleted_at', null)
           .gte('date', startDate).lte('date', endDate),
         supabase.from('partner_surgeries').select('partner_fee, surgery_date')
           .eq('partner_paid', true)
