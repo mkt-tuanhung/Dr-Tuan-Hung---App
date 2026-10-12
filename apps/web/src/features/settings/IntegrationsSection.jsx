@@ -4,11 +4,14 @@
 // Nguồn: fb_ads_config (fb_auto_campaign.sql), profiles.telegram_chat_id (telegram.sql),
 //        push_subscriptions (push_subscriptions.sql), trusted_devices (device_approval.sql),
 //        face_config + face_profiles (face_attendance.sql).
+// Ngoại lệ được SỬA: nhóm Telegram nhận cảnh báo inbox chậm phản hồi
+//   (clinic_settings.inbox_alert_chat_id — mã nhóm, không phải khoá bí mật; inbox_sla.sql).
 // ============================================================
 import React, { useCallback, useEffect, useState } from 'react';
-import { Blocks, Megaphone, Send, Bell, MonitorSmartphone, ScanFace, RotateCw, CircleCheck, CircleAlert, CircleX } from 'lucide-react';
+import { Blocks, Megaphone, Send, Bell, MonitorSmartphone, ScanFace, RotateCw, CircleCheck, CircleAlert, CircleX, MessageSquareWarning, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
-import { SectionHeader, isMissingTable } from './settingsShared.jsx';
+import { SectionHeader, Field, isMissingTable } from './settingsShared.jsx';
 
 const fmtVnd = (n) => `${new Intl.NumberFormat('vi-VN').format(Number(n) || 0)}đ`;
 const fmtDate = (s) => (s ? new Date(s).toLocaleDateString('vi-VN') : '');
@@ -52,7 +55,81 @@ function IntegrationCard({ icon: Icon, name, category, status, lines, foot }) {
   );
 }
 
-export default function IntegrationsSection() {
+// Cảnh báo Messenger chậm phản hồi -> nhóm Telegram trực page (Edge Function inbox-sla-alert)
+function InboxAlertPanel({ settings }) {
+  const row = settings?.row;
+  const ready = !!row && Object.prototype.hasOwnProperty.call(row, 'inbox_alert_chat_id');
+  const [chatId, setChatId] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [pancake, setPancake] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  useEffect(() => { setChatId(row?.inbox_alert_chat_id || ''); setEnabled(row?.inbox_alert_enabled !== false); setPancake(row?.inbox_pancake_url || ''); }, [row?.inbox_alert_chat_id, row?.inbox_alert_enabled, row?.inbox_pancake_url]);
+
+  const value = chatId.trim();
+  const pk = pancake.trim();
+  const hasPancakeCol = ready && Object.prototype.hasOwnProperty.call(row, 'inbox_pancake_url');
+  const invalid = value !== '' && !/^-?\d{5,20}$/.test(value);
+  const pkInvalid = pk !== '' && !(/^https:\/\/\S+$/.test(pk) && pk.includes('{psid}'));
+  const dirty = ready && (value !== (row.inbox_alert_chat_id || '') || enabled !== (row.inbox_alert_enabled !== false) || (hasPancakeCol && pk !== (row.inbox_pancake_url || '')));
+  const save = async () => {
+    setSaving(true);
+    const patch = { inbox_alert_chat_id: value || null, inbox_alert_enabled: enabled, ...(hasPancakeCol ? { inbox_pancake_url: pk || null } : {}) };
+    const res = await settings.save(patch, 'Cài đặt cảnh báo inbox chậm phản hồi');
+    setSaving(false);
+    if (res.error) toast.error('Lỗi: ' + res.error.message); else toast.success('Đã lưu cài đặt cảnh báo inbox');
+  };
+  const test = async () => {
+    setTesting(true);
+    const { data, error } = await supabase.functions.invoke('inbox-sla-alert', { body: { test: true } });
+    setTesting(false);
+    if (error || !data?.ok) toast.error('Gửi thử thất bại: ' + (data?.error || error?.message || 'lỗi'));
+    else toast.success('Đã gửi tin thử vào nhóm Telegram');
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 mt-3.5">
+      <div className="flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 grid place-items-center shrink-0"><MessageSquareWarning className="w-5 h-5" /></span>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-slate-800">Cảnh báo inbox chậm phản hồi</div>
+          <div className="text-[12px] text-slate-400">Khách nhắn fanpage quá 3 phút chưa ai trả lời → báo nhóm Telegram trực page (nhắc lại ở phút 10, 30).</div>
+        </div>
+        {ready && <span className={`e-badge e-badge-sm ${row.inbox_alert_chat_id && row.inbox_alert_enabled !== false ? 'e-tone-success' : 'e-tone-neutral'}`}>
+          {row.inbox_alert_chat_id && row.inbox_alert_enabled !== false ? <><CircleCheck />Đang bật</> : <><CircleX />Chưa bật</>}
+        </span>}
+      </div>
+      {!ready ? (
+        <div className="text-[13px] text-slate-500 mt-3">{settings?.loading ? 'Đang tải…' : 'Chưa chạy supabase/inbox_sla.sql.'}</div>
+      ) : (
+        <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] items-end">
+          <Field label="Mã nhóm Telegram (chat ID)" error={invalid ? 'Mã nhóm chỉ gồm số, thường bắt đầu bằng -100' : null}
+            hint="Thêm bot của app vào nhóm, mở nhóm trên web.telegram.org: dãy số sau dấu # trên thanh địa chỉ là mã nhóm.">
+            <input className="e-input" value={chatId} onChange={e => setChatId(e.target.value)} placeholder="-100…" inputMode="numeric" maxLength={24} />
+          </Field>
+          <label className="flex items-center gap-2 text-[13px] text-slate-700 h-10">
+            <input type="checkbox" className="e-checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />Bật cảnh báo
+          </label>
+          {hasPancakeCol && (
+            <Field className="sm:col-span-2" label="Mẫu link mở hội thoại trên Pancake (không bắt buộc)" error={pkInvalid ? 'Phải bắt đầu bằng https:// và có {psid}' : null}
+              hint="Có thì mỗi cảnh báo thêm nút “🐼 Pancake” mở đúng khách. Dùng {page_id}, {psid}. Để trống = chỉ có nút mở Meta Business Suite.">
+              <input className="e-input font-mono text-[12.5px]" value={pancake} onChange={e => setPancake(e.target.value)} placeholder="https://pancake.vn/{page_id}?c_id={page_id}_{psid}" maxLength={300} />
+            </Field>
+          )}
+          <div className="flex flex-wrap gap-2 sm:col-span-2">
+            <button type="button" className="e-btn e-btn-primary e-btn-sm" onClick={save} disabled={!dirty || invalid || pkInvalid || saving}><Save />{saving ? 'Đang lưu…' : 'Lưu'}</button>
+            <button type="button" className="e-btn e-btn-secondary e-btn-sm" onClick={test} disabled={testing || dirty || !row.inbox_alert_chat_id}><Send />{testing ? 'Đang gửi…' : 'Gửi tin thử'}</button>
+          </div>
+          <div className="text-[12px] text-slate-400 sm:col-span-2 pt-2 border-t border-slate-100">
+            Giờ cảnh báo: 9:00–12:00 · 13:30–18:00 · 19:00–23:00. Nghỉ trưa 12:00–13:30 và 18:00–19:00 chỉ nhắc nhẹ. Ngoài giờ không gửi.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function IntegrationsSection({ settings }) {
   const [data, setData] = useState(null);
 
   const load = useCallback(async () => {
@@ -138,6 +215,7 @@ export default function IntegrationsSection() {
           {cards.map(({ key, ...c }) => <IntegrationCard key={key} {...c} />)}
         </div>
       )}
+      <InboxAlertPanel settings={settings} />
     </div>
   );
 }

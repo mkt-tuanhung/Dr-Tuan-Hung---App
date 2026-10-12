@@ -116,7 +116,7 @@ function SettingsContent({ onNavigate, profile }) {
           <FaceIdAdminPanel />
         </div>
       );
-      case 'integrations': return <IntegrationsSection />;
+      case 'integrations': return <IntegrationsSection settings={settings} />;
       case 'audit': return (
         <div className="space-y-4">
           <div className="e-card e-card-pad">
