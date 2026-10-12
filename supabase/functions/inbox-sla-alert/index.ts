@@ -16,6 +16,8 @@
 //          (dự phòng: secret TELEGRAM_INBOX_CHAT_ID).
 // Gọi:  {}            -> kiểm tra & gửi (cron)
 //       {test:true}   -> gửi 1 tin thử vào nhóm
+//       {demo:true}   -> gửi 1 cảnh báo MẪU (nhãn 🧪) giống hệt cảnh báo thật; nút Meta mở hội thoại
+//                        mới nhất có thật (page Gọt Hàm nếu có) để thử link — không đổi trạng thái chờ
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -78,6 +80,24 @@ Deno.serve(async (req) => {
     if (body.test) {
       await sendTelegram(token, chatId, "✅ <b>Kết nối thành công</b>\nNhóm này sẽ nhận cảnh báo khi khách nhắn fanpage mà chưa được phản hồi.");
       return json({ ok: true, test: true });
+    }
+    if (body.demo) {
+      const { data: convs } = await sb.from("fb_conversations").select("page_id, psid, thread_id, last_time")
+        .not("last_time", "is", null).order("last_time", { ascending: false }).limit(20);
+      const c = (convs || []).find((x: any) => x.page_id === "900471446473281") || convs?.[0];
+      if (!c) return json({ ok: false, error: "Chưa có hội thoại nào để làm mẫu" });
+      const { data: pg } = await sb.from("fb_pages").select("name").eq("page_id", c.page_id).maybeSingle();
+      const tpl = String(st?.inbox_pancake_url || "").trim();
+      const row = [{ text: "↩️ 1. Khách mẫu · Meta", url: metaInboxUrl(c) }];
+      const pk = tpl ? fillUrl(tpl, c) : null;
+      if (pk) row.push({ text: "🐼 Pancake", url: pk });
+      const text = `🧪 <b>TIN THỬ — không phải khách thật</b>\n\n<b>${LEVELS[0].title}</b>\n👤 Đang trực: (tên nhân sự trực page theo Lịch làm việc)\n\n`
+        + `1. <b>Khách mẫu</b> · chờ 4 phút (từ ${hhmm(Math.floor(((Date.now() - 4 * 60e3 + 7 * 3600e3) % 86400e3) / 60e3))})\n`
+        + (pg?.name ? `   📄 ${esc(cut(pg.name, 40))}\n` : "")
+        + `   💬 Cho em hỏi giá gọt hàm V-line trọn gói bao nhiêu ạ?\n\n`
+        + `<i>Nút bên dưới mở hội thoại MỚI NHẤT có thật của page này để thử link.</i>`;
+      await sendTelegram(token, chatId, text, [row]);
+      return json({ ok: true, demo: true, page: pg?.name || c.page_id });
     }
     if (st && st.inbox_alert_enabled === false) return json({ ok: true, disabled: true });
 
