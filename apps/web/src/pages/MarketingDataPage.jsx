@@ -10,6 +10,7 @@ import { maskPhone, phoneView } from '@/lib/phoneMask';
 import PipelineBoard from '@/features/crm/PipelineBoard.jsx';
 import { Customer360Button } from '@/features/crm/Customer360.jsx';
 import { useGetflyNotes, GetflyNotesList } from '@/features/crm/GetflyNotes.jsx';
+import { surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 
@@ -823,7 +824,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     const upcoming = mainAppts.filter(a => a.status === 'scheduled' && a.appointment_date >= todayStr).sort((x, y) => x.appointment_date.localeCompare(y.appointment_date))[0];
     if (upcoming) out.push({ tone: 'blue', icon: CalendarDays, text: `Lịch tư vấn ${fmtDay(upcoming.appointment_date)} ${String(upcoming.appointment_time || '').slice(0, 5)}${upcoming.sale?.full_name ? ' với ' + upcoming.sale.full_name : ''} — nhắc khách trước 1 ngày` });
     const cocAppt = appts.find(a => a.status === 'coc');
-    if (cocAppt) out.push({ tone: 'blue', icon: Wallet, text: `Đã cọc ${fmtMoney(cocAppt.deposit_amount)}${cocAppt.expected_surgery_date ? ` — mổ dự kiến ${fmtDay(cocAppt.expected_surgery_date)}` : ' — chưa chốt ngày mổ'}` });
+    if (cocAppt) out.push({ tone: 'blue', icon: Wallet, text: `Đã cọc ${fmtMoney(cocAppt.deposit_amount)}${cocAppt.expected_surgery_date ? ` — mổ dự kiến ${fmtDay(cocAppt.expected_surgery_date)}` : cocAppt.expected_surgery_plan ? ` — ${surgeryPlanLabel(cocAppt)}` : ' — chưa chốt ngày mổ'}` });
     const ptNoCare = appts.find(a => a.status === 'phau_thuat' && !a.post_op_status);
     if (ptNoCare) out.push({ tone: 'teal', icon: Stethoscope, text: `Đã phẫu thuật ${fmtDay(ptNoCare.surgery_date)} — theo dõi hậu phẫu & xin đánh giá` });
     // Đồng bộ giai đoạn theo lịch hẹn thực tế
@@ -1212,7 +1213,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                         <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${pill.cls}`}>{pill.label}</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                        {[['Bill dự kiến', fmtMoney(a.expected_bill)], ['Đã cọc', fmtMoney(a.deposit_amount)], ['Doanh thu', fmtMoney(Number(a.revenue || 0) + Number(a.upsale_revenue || 0))], ['Ngày mổ', fmtDay(a.surgery_date || a.expected_surgery_date)]].map(([k, v]) => (
+                        {[['Bill dự kiến', fmtMoney(a.expected_bill)], ['Đã cọc', fmtMoney(a.deposit_amount)], ['Doanh thu', fmtMoney(Number(a.revenue || 0) + Number(a.upsale_revenue || 0))], ['Ngày mổ', a.surgery_date ? fmtDay(a.surgery_date) : a.status === 'coc' ? surgeryPlanLabel(a) : fmtDay(a.expected_surgery_date)]].map(([k, v]) => (
                           <div key={k} className="rounded-xl bg-slate-50 px-3 py-2"><div className="text-[11px] text-slate-400">{k}</div><div className="text-[13px] font-semibold text-slate-800 tabular-nums">{v}</div></div>
                         ))}
                       </div>

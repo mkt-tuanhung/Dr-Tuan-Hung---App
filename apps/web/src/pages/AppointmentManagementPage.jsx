@@ -14,6 +14,7 @@ import AppointmentDrawer from '@/features/appointments/AppointmentDrawer.jsx';
 import { isRecheck } from '@/features/appointments/calendarUtils';
 import { JOURNEY, JourneyLabel } from '@/features/appointments/journey';
 import { vnToday } from '@/lib/vnTime';
+import { ExpectedSurgeryField, planOf, surgeryPlanPatch, surgeryPlanError } from '@/features/appointments/surgeryPlan.jsx';
 
 // Style tokens dùng chung cho form lịch hẹn
 const FLD_INP = 'w-full min-w-0 min-h-[40px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-400 focus:ring-[3px] focus:ring-teal-500/20';
@@ -125,7 +126,8 @@ const AppointmentManagementPage = () => {
   const [evalForm, setEvalForm] = useState({
     status: 'phau_thuat', surgery_type: 'Tiểu phẫu',
     expected_surgery_date: vnToday(), revenue: '', upsale_revenue: '', service: '',
-    deposit_date: vnToday(), deposit_amount: '', notes: '', consult_note: ''
+    deposit_date: vnToday(), deposit_amount: '', notes: '', consult_note: '',
+    surgery_plan: '', plan_date: ''   // form cọc: ngày PT dự kiến (có ngày / PT trong tháng / chưa có)
   });
 
   const loadData = useCallback(async () => {
@@ -382,7 +384,9 @@ const AppointmentManagementPage = () => {
       deposit_date: app.deposit_date || vnToday(),
       deposit_amount: app.deposit_amount || '',
       notes: app.notes || '',
-      consult_note: app.consult_note || ''
+      consult_note: app.consult_note || '',
+      surgery_plan: planOf(app),
+      plan_date: app.expected_surgery_date || '',
     });
     setConsultFiles([]);
     setShowEvalModal(true);
@@ -397,15 +401,19 @@ const AppointmentManagementPage = () => {
 
   const handleEvalSubmit = async (e) => {
     e.preventDefault();
+    if (evalForm.status === 'coc') {
+      const planErr = surgeryPlanError(evalForm.surgery_plan, evalForm.plan_date);
+      if (planErr) { toast.error(planErr); return; }
+    }
     setSaving(true);
     try {
       let updateData = { status: evalForm.status, surgery_type: evalForm.surgery_type };
       if (evalForm.status === 'phau_thuat') {
         // Lên phẫu thuật: ghi doanh thu/ngày mổ, xoá dấu bong cũ (nếu có)
-        updateData = { ...updateData, surgery_date: evalForm.expected_surgery_date, expected_surgery_date: evalForm.expected_surgery_date, revenue: evalForm.revenue || 0, upsale_revenue: evalForm.upsale_revenue || 0, service: evalForm.service, bong_date: null };
+        updateData = { ...updateData, surgery_date: evalForm.expected_surgery_date, expected_surgery_date: evalForm.expected_surgery_date, expected_surgery_plan: 'date', revenue: evalForm.revenue || 0, upsale_revenue: evalForm.upsale_revenue || 0, service: evalForm.service, bong_date: null };
       } else if (evalForm.status === 'coc') {
         // Cọc: chưa mổ → xoá doanh thu/ngày mổ và dấu bong cũ
-        updateData = { ...updateData, deposit_date: evalForm.deposit_date, deposit_amount: evalForm.deposit_amount || 0, service: evalForm.service, expected_surgery_date: evalForm.expected_surgery_date, revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
+        updateData = { ...updateData, deposit_date: evalForm.deposit_date, deposit_amount: evalForm.deposit_amount || 0, service: evalForm.service, ...surgeryPlanPatch(evalForm.surgery_plan, evalForm.plan_date), revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
       } else if (evalForm.status === 'bong') {
         // Bong: huỷ → xoá doanh thu/ngày mổ để không lọt vào thống kê
         updateData = { ...updateData, notes: evalForm.notes, bong_date: vnToday(), revenue: 0, upsale_revenue: 0, surgery_date: null };
@@ -1143,10 +1151,8 @@ const AppointmentManagementPage = () => {
                         <MoneyInput required value={evalForm.deposit_amount} onChange={v => setEvalForm({...evalForm, deposit_amount: v})} className="e-input font-semibold tabular-nums" placeholder="0" />
                       </div>
                     </div>
-                    <div>
-                      <label className="e-label">Ngày PT dự kiến</label>
-                      <input type="date" value={evalForm.expected_surgery_date} onChange={e => setEvalForm({...evalForm, expected_surgery_date: e.target.value})} className="e-input" />
-                    </div>
+                    <ExpectedSurgeryField plan={evalForm.surgery_plan} date={evalForm.plan_date}
+                      onChange={({ plan, date }) => setEvalForm({ ...evalForm, surgery_plan: plan, plan_date: date })} />
                     <div>
                       <label className="e-label">Dịch vụ sử dụng</label>
                       <input type="text" value={evalForm.service} onChange={e => setEvalForm({...evalForm, service: e.target.value})} className="e-input" />

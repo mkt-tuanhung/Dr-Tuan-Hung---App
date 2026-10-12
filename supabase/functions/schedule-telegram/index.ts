@@ -172,7 +172,8 @@ Deno.serve(async (req) => {
             `💰 <b>KHÁCH CỌC</b>` +
             line('KH', kh) +
             line('Dịch vụ', esc(serviceClean)) +
-            line('Dự kiến mổ', dShort(rec.expected_surgery_date)) +
+            line('Dự kiến mổ', rec.expected_surgery_plan === 'this_month' ? `PT trong tháng ${String(rec.deposit_date || '').slice(5, 7)}/${String(rec.deposit_date || '').slice(0, 4)}`.replace(/ \/$/, '')
+              : rec.expected_surgery_plan === 'none' ? 'Chưa có ngày PT dự kiến' : dShort(rec.expected_surgery_date)) +
             staffLines);
         } else if (rec.status === 'bong') {
           await send(CHAT_JOURNEY,
