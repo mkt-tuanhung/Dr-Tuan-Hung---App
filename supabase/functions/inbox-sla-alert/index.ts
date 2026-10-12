@@ -12,6 +12,7 @@
 // Mỗi khách: trích 1 tin gần nhất + nút "Trả lời" mở Meta Business Suite / Pancake đúng hội thoại
 //   (mẫu link Pancake: clinic_settings.inbox_pancake_url, vd https://pancake.vn/{page_id}?c_id={page_id}_{psid}).
 // "Đang trực": clinic_settings.inbox_duty_name (cố định) — trống thì lấy theo Lịch làm việc.
+// Kèm ẢNH vẽ lại đoạn hội thoại (Edge Function inbox-chat-image), trả lời ngay dưới cảnh báo — tối đa 5 khách / tin.
 //
 // Secrets: TELEGRAM_BOT_TOKEN. Nhóm: clinic_settings.inbox_alert_chat_id
 //          (dự phòng: secret TELEGRAM_INBOX_CHAT_ID).
@@ -66,6 +67,19 @@ async function sendTelegram(token: string, chatId: string, text: string, buttons
   });
   const d = await r.json().catch(() => ({}));
   if (!d?.ok) throw new Error(d?.description || `Telegram HTTP ${r.status}`);
+  return d.result?.message_id as number | undefined;
+}
+
+// Ảnh hội thoại: gọi inbox-chat-image (mỗi ảnh 1 lượt gọi riêng -> không vượt giới hạn CPU của hàm này)
+const IMAGES_PER_ALERT = 5;
+async function sendChatImages(items: { conv_key?: string; index?: number; demo?: boolean }[], replyTo?: number) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/inbox-chat-image`;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const res = await Promise.allSettled(items.slice(0, IMAGES_PER_ALERT).map((it) => fetch(url, {
+    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ ...it, reply_to: replyTo }),
+  }).then((r) => r.json())));
+  return res.map((r) => (r.status === "fulfilled" ? r.value : { ok: false, error: String(r.reason) }));
 }
 
 Deno.serve(async (req) => {
@@ -100,8 +114,9 @@ Deno.serve(async (req) => {
         + (pg?.name ? `Page: ${esc(cut(shortPage(pg.name), 40))}\n` : "")
         + `“Cho em hỏi giá gọt hàm V-line trọn gói bao nhiêu ạ?”\n\n`
         + `<i>Nút bên dưới mở hội thoại MỚI NHẤT có thật của page này để thử link.</i>`;
-      await sendTelegram(token, chatId, text, [row]);
-      return json({ ok: true, demo: true, page: pg?.name || c.page_id });
+      const mid = await sendTelegram(token, chatId, text, [row]);
+      const images = await sendChatImages([{ demo: true }], mid);
+      return json({ ok: true, demo: true, page: pg?.name || c.page_id, images });
     }
     if (st && st.inbox_alert_enabled === false) return json({ ok: true, disabled: true });
 
@@ -212,9 +227,11 @@ Deno.serve(async (req) => {
       const more = g.convs.length > PER_MESSAGE ? `\n… và ${g.convs.length - PER_MESSAGE} khách khác` : "";
       const duty = onDuty.length ? `Trực page: <b>${esc(onDuty.join(", "))}</b>\n` : "";
       const text = `<b>${g.title}</b>\n${duty}\n${blocks.join("\n\n")}${more}${g.tail ? `\n\n${g.tail}` : ""}`;
-      await sendTelegram(token, chatId, text, buttons);
+      const mid = await sendTelegram(token, chatId, text, buttons);
       await sb.from("fb_conversations").update(g.apply(list[0])).in("conv_key", list.map((c: any) => c.conv_key));
       sent[g.title] = list.length;
+      // Ảnh hội thoại trả lời ngay dưới cảnh báo (lỗi ảnh không ảnh hưởng cảnh báo đã gửi)
+      try { await sendChatImages(list.map((c: any, i: number) => ({ conv_key: c.conv_key, index: i + 1 })), mid); } catch { /* bỏ qua */ }
     }
     return json({ ok: true, window: work ? "work" : soft!.key, waiting: waiting.length, on_duty: onDuty, sent });
   } catch (e) {
