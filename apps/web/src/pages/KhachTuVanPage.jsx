@@ -9,6 +9,7 @@ import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
 import { vnToday } from '@/lib/vnTime';
+import { ExpectedSurgeryField, planOf, surgeryPlanPatch, surgeryPlanError, surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
 import { Customer360Button } from '@/features/crm/Customer360.jsx';
 
 // Lưới ảnh bấm được -> mở popup xem/zoom
@@ -86,7 +87,7 @@ const KhachTuVanPage = () => {
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     const { data } = await supabase.from('customer_appointments')
-      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls, appointment_date, created_at')
+      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, expected_surgery_plan, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls, appointment_date, created_at')
       .or('status.in.(coc,bong,phau_thuat),consult_received.eq.true')
       .order('created_at', { ascending: false }).limit(500);
     setRows(data || []);
@@ -446,13 +447,18 @@ const EvalModal = ({ app, onClose, onSaved }) => {
     expected_surgery_date: app.expected_surgery_date || app.surgery_date || today,
     revenue: app.revenue || '', upsale_revenue: app.upsale_revenue || '', service: app.service || '',
     deposit_date: app.deposit_date || today, deposit_amount: app.deposit_amount || '', notes: app.notes || '',
+    surgery_plan: planOf(app), plan_date: app.expected_surgery_date || '',   // form cọc: ngày PT dự kiến
   });
   const [saving, setSaving] = useState(false);
   const save = async () => {
+    if (f.status === 'coc') {
+      const planErr = surgeryPlanError(f.surgery_plan, f.plan_date);
+      if (planErr) { toast.error(planErr); return; }
+    }
     setSaving(true);
     let upd = { status: f.status, surgery_type: f.surgery_type };
-    if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service, bong_date: null };
-    else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, expected_surgery_date: f.expected_surgery_date, revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
+    if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, expected_surgery_plan: 'date', revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service, bong_date: null };
+    else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, ...surgeryPlanPatch(f.surgery_plan, f.plan_date), revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
     else if (f.status === 'bong') upd = { ...upd, notes: f.notes, bong_date: today, revenue: 0, upsale_revenue: 0, surgery_date: null };
     const { data, error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id).select('id, status, revenue, surgery_date');
     setSaving(false);
@@ -493,10 +499,11 @@ const EvalModal = ({ app, onClose, onSaved }) => {
           <Field label="Ngày cọc"><input type="date" value={f.deposit_date} onChange={e => setF({ ...f, deposit_date: e.target.value })} className={inp} /></Field>
           <Field label="Số tiền cọc"><MoneyInput value={f.deposit_amount} onChange={v => setF({ ...f, deposit_amount: v })} className={inp} /></Field>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Ngày mổ dự kiến"><input type="date" value={f.expected_surgery_date} onChange={e => setF({ ...f, expected_surgery_date: e.target.value })} className={inp} /></Field>
-          <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
+        <div className="mb-4">
+          <ExpectedSurgeryField plan={f.surgery_plan} date={f.plan_date} inputClassName={inp}
+            onChange={({ plan, date }) => setF({ ...f, surgery_plan: plan, plan_date: date })} />
         </div>
+        <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
       </>)}
       {f.status === 'bong' && <Field label="Lý do bong"><textarea rows={3} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} className={inp} placeholder="Khách kẹt tiền, đổi ý…" /></Field>}
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
@@ -725,7 +732,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
   const stats = r.status === 'phau_thuat'
     ? [{ label: 'Doanh thu', value: money(r.revenue), accent: 'text-teal-700' }, { label: 'Upsale', value: money(r.upsale_revenue), accent: 'text-info-600' }, { label: 'Loại mổ', value: r.surgery_type || '—' }, { label: 'Ngày mổ', value: dOnly(r.surgery_date) }]
     : r.status === 'coc'
-      ? [{ label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-info-600' }, { label: 'Ngày cọc', value: dOnly(r.deposit_date) }, { label: 'Mổ dự kiến', value: dOnly(r.expected_surgery_date) }, { label: 'Loại mổ', value: r.surgery_type || '—' }]
+      ? [{ label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-info-600' }, { label: 'Ngày cọc', value: dOnly(r.deposit_date) }, { label: 'Mổ dự kiến', value: surgeryPlanLabel(r) }, { label: 'Loại mổ', value: r.surgery_type || '—' }]
       : [];
   const TABS = [{ k: 'info', label: 'Thông tin', icon: 'info' }, { k: 'rec', label: 'Ghi âm', icon: 'mic' }, { k: 'file', label: 'Hồ sơ', icon: 'doc' }];
   const hasFile = !!r.consult_note || (r.consult_image_urls || []).length > 0;
@@ -849,7 +856,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
       ? [
         { label: 'Tiền cọc', value: money(r.deposit_amount), accent: 'text-info-600' },
         { label: 'Ngày cọc', value: dOnly(r.deposit_date) },
-        { label: 'Mổ dự kiến', value: dOnly(r.expected_surgery_date) },
+        { label: 'Mổ dự kiến', value: surgeryPlanLabel(r) },
         { label: 'Loại mổ', value: r.surgery_type || '—' },
       ]
       : [];

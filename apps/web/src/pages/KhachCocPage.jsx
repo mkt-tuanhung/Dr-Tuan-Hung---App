@@ -10,6 +10,7 @@ import MoneyInput from '@/components/MoneyInput.jsx';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 import { vnToday } from '@/lib/vnTime';
 import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
 
 const CAN_ADD_ROLES = ['sale_offline', 'telesale', 'admin', 'accountant'];
 const fmtInput = (v) => { const n = String(v || '').replace(/\D/g, ''); return n ? new Intl.NumberFormat('vi-VN').format(n) : ''; };
@@ -272,7 +273,7 @@ const KhachCocPage = ({ isNested = false }) => {
   }
 
   const groupedCustomers = filteredCustomers.reduce((acc, app) => {
-    const date = app.expected_surgery_date ? new Date(app.expected_surgery_date).toLocaleDateString('vi-VN') : 'Chưa xếp lịch';
+    const date = surgeryPlanLabel(app, { empty: 'Chưa xếp lịch' });   // ngày · PT trong tháng · chưa có ngày
     if (!acc[date]) acc[date] = [];
     acc[date].push(app);
     return acc;
@@ -343,7 +344,7 @@ const KhachCocPage = ({ isNested = false }) => {
               </div>
               <div className="e-subtle px-3 py-2.5 min-w-0">
                 <div className="e-kv-label">PT dự kiến</div>
-                <div className="e-kv-value tabular-nums">{careApp.expected_surgery_date ? new Date(careApp.expected_surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
+                <div className="e-kv-value tabular-nums">{surgeryPlanLabel(careApp)}</div>
               </div>
               <div className="e-subtle px-3 py-2.5 min-w-0">
                 <div className="e-kv-label">Telesale</div>
