@@ -120,6 +120,9 @@ const AppointmentManagementPage = () => {
     return elements;
   };
 
+  const [fabOpen, setFabOpen] = useState(false);   // menu nút (+) nổi trên mobile
+  const canNewFab = ['telesale', 'sale_offline', 'admin'].includes(profile?.role);
+  const canRecheckFab = ['dieu_duong', 'admin'].includes(profile?.role);
   const [evalApp, setEvalApp] = useState(null);
   const [consultFiles, setConsultFiles] = useState([]);
   const [consultView, setConsultView] = useState(null);
@@ -586,17 +589,29 @@ const AppointmentManagementPage = () => {
         {activeViewTab !== 'calendar' && <div className="hidden lg:flex gap-2 pb-2">{createButtons}</div>}
       </div>
 
-      {!showCreateModal && !showEvalModal && !drawerApp && ['telesale', 'sale_offline', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch" className="lg:hidden fixed z-[60] bottom-20 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-nav ring-4 ring-white flex items-center justify-center active:scale-95 transition">
-          <Plus className="w-7 h-7" strokeWidth={2.5} />
-        </button>
-      )}
-
-      {/* Nút nổi (+) TÁI KHÁM cho Điều dưỡng trên mobile (desktop đã có nút riêng ở header) */}
-      {!showCreateModal && !showEvalModal && !drawerApp && ['dieu_duong', 'admin'].includes(profile?.role) && (
-        <button onClick={() => { setCreateForm({ appointment_type: 'recheck', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} title="Thêm lịch tái khám" className={`lg:hidden fixed z-[60] right-5 w-14 h-14 rounded-full bg-white text-teal-700 border border-teal-200 shadow-card ring-4 ring-white flex items-center justify-center active:scale-95 transition ${isAdmin ? 'bottom-36' : 'bottom-20'}`}>
-          <Stethoscope className="w-6 h-6" strokeWidth={2.5} />
-        </button>
+      {/* Mobile: 1 nút (+) nổi duy nhất — đủ 2 quyền thì bấm ra menu "Lịch hẹn mới / Lịch tái khám" (không xếp 2 nút chồng lên thẻ) */}
+      {!showCreateModal && !showEvalModal && !drawerApp && (canNewFab || canRecheckFab) && (
+        <div className="lg:hidden fixed z-[60] bottom-20 right-4 flex flex-col items-end gap-2">
+          {fabOpen && canNewFab && canRecheckFab && (
+            <>
+              <button onClick={() => { setFabOpen(false); setCreateForm({ appointment_type: 'recheck', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} className="h-11 px-4 rounded-full bg-white text-teal-800 border border-teal-200 shadow-card text-[14px] font-semibold flex items-center gap-2 active:scale-95 transition">
+                <Stethoscope className="w-4 h-4" strokeWidth={2.5} />Lịch tái khám
+              </button>
+              <button onClick={() => { setFabOpen(false); setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }} className="h-11 px-4 rounded-full bg-white text-teal-800 border border-teal-200 shadow-card text-[14px] font-semibold flex items-center gap-2 active:scale-95 transition">
+                <CalendarDays className="w-4 h-4" strokeWidth={2.5} />Lịch hẹn mới
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => {
+              if (canNewFab && canRecheckFab) { setFabOpen(o => !o); return; }
+              if (canNewFab) { setCreateForm({ appointment_type: 'new', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '', telesale_id: '', sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'Ads', customer_type: 'Mới', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); } else { setCreateForm({ appointment_type: 'recheck', appointment_date: vnToday(), appointment_time: '09:00', customer_name: '', phone: '', service: '', test_status: 'Không cần', expected_bill: 0, deposit_amount: 0, telesale_id: null, sale_id: '', social_link: '', notes: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu', customer_source: 'CSKH', customer_type: 'Cũ', extra_consult: '', consult_do_now: false }); setShowCreateModal(true); }
+            }}
+            title={canNewFab && canRecheckFab ? 'Thêm lịch' : canNewFab ? 'Thêm lịch' : 'Thêm lịch tái khám'} aria-expanded={fabOpen}
+            className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-nav flex items-center justify-center active:scale-95 transition">
+            {!canNewFab && canRecheckFab ? <Stethoscope className="w-6 h-6" strokeWidth={2.5} /> : <Plus className={`w-7 h-7 transition-transform ${fabOpen ? 'rotate-45' : ''}`} strokeWidth={2.5} />}
+          </button>
+        </div>
       )}
 
       {loading ? (
@@ -1073,8 +1088,8 @@ const AppointmentManagementPage = () => {
 
       {/* Modal Đánh Giá */}
       {showEvalModal && evalApp && (
-        <div className="e-modal-backdrop z-50 flex items-center justify-center p-4">
-          <div className="e-modal max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="e-modal-backdrop z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="e-modal max-w-lg overflow-hidden max-h-[92dvh] sm:max-h-[90vh] flex flex-col rounded-b-none sm:rounded-2xl">
             <div className="e-modal-header items-center shrink-0">
               <h3 className="e-modal-title">Đánh giá lịch hẹn: {evalApp.customer_name}</h3>
               <button onClick={() => setShowEvalModal(false)} className="e-icon-btn w-9 h-9 shrink-0">
@@ -1192,7 +1207,7 @@ const AppointmentManagementPage = () => {
               </div>
               </div>
 
-              <div className="e-modal-footer shrink-0">
+              <div className="e-modal-footer shrink-0 rounded-b-none sm:rounded-b-2xl pb-[max(1rem,env(safe-area-inset-bottom))]">
               <button type="submit" disabled={saving}
                 className="e-btn e-btn-primary e-btn-block">
                 {saving ? 'Đang lưu...' : `Xác nhận khách ${evalForm.status === 'bong' ? 'Bong' : evalForm.status === 'coc' ? 'Cọc' : 'Phẫu thuật'}`}

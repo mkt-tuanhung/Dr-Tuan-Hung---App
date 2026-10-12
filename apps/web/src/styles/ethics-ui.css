@@ -43,12 +43,13 @@
   .e-badge-dot::before { content: ''; @apply w-1.5 h-1.5 rounded-full bg-current; }
 
   /* ---------- Thẻ chỉ số (MetricCard) ---------- */
-  .e-metric { @apply rounded-2xl bg-white border border-slate-200/80 shadow-card p-4 lg:p-5 flex items-center gap-4 min-w-0 text-left; }
-  .e-metric-icon { @apply w-12 h-12 lg:w-14 lg:h-14 rounded-full grid place-items-center shrink-0 bg-teal-50 text-teal-700; }
-  .e-metric-icon svg { @apply w-6 h-6; }
-  .e-metric-label { @apply text-[13px] text-slate-500 font-medium truncate; }
+  /* Điện thoại: gọn hơn (2 thẻ / hàng), nhãn xuống 2 dòng thay vì bị cắt "…" */
+  .e-metric { @apply rounded-2xl bg-white border border-slate-200/80 shadow-card p-3 sm:p-4 lg:p-5 flex items-center gap-2.5 sm:gap-4 min-w-0 text-left; }
+  .e-metric-icon { @apply w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full grid place-items-center shrink-0 bg-teal-50 text-teal-700; }
+  .e-metric-icon svg { @apply w-5 h-5 sm:w-6 sm:h-6; }
+  .e-metric-label { @apply text-[12px] sm:text-[13px] leading-snug text-slate-500 font-medium line-clamp-2 sm:block sm:truncate; }
   .e-metric-value { @apply text-[20px] lg:text-[22px] font-bold text-slate-900 leading-tight tabular-nums truncate; }
-  .e-metric-hint { @apply text-[12px] text-slate-400 truncate; }
+  .e-metric-hint { @apply text-[11.5px] sm:text-[12px] leading-snug text-slate-400 line-clamp-2 sm:block sm:truncate; }
   .e-delta-up { @apply text-[12px] font-semibold text-success-600; }
   .e-delta-down { @apply text-[12px] font-semibold text-danger-600; }
   /* Tông màu đặt SAU e-metric-icon để "e-metric-icon e-tone-*" đổi được màu */
@@ -213,3 +214,7 @@
   .e-check { @apply relative inline-block shrink-0 rounded-full bg-success-500 align-[-0.2em]; width: 1.15em; height: 1.15em; }
   .e-check::after { content: ''; position: absolute; left: 36%; top: 18%; width: 30%; height: 52%; border: solid #fff; border-width: 0 0.14em 0.14em 0; border-radius: 0 0 1px 0; transform: rotate(45deg); }
 }
+
+/* Lớp phủ toàn màn hình (form, ngăn chi tiết) đặt trong khung space-y-* bị cộng margin-top 16px
+   -> lệch xuống, hở thanh trên cùng. Lớp fixed phủ kín không bao giờ cần margin. */
+.fixed.inset-0, .e-modal-backdrop { margin: 0 !important; }
