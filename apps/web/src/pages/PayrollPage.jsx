@@ -279,6 +279,7 @@ const PayrollPage = () => {
   // Tự làm mới danh sách yêu cầu xem lương (để duyệt kịp thời, không cần Telegram)
   useEffect(() => {
     const t = setInterval(async () => {
+      if (document.hidden) return; // app ở nền thì không tải
       const { data: pv } = await supabase.rpc('payslip_pending_requests');
       setPendingPV(pv || []);
     }, 15000);

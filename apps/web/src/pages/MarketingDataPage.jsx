@@ -57,6 +57,28 @@ const dayKey = (iso) => { if (!iso) return ''; const d = new Date(iso); return `
 const todayKey = () => dayKey(new Date().toISOString());
 const fmtD = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }); };
 // Độ ưu tiên gọi: tới hạn gọi lại -> nóng -> tiềm năng -> chưa gọi lần nào -> còn lại.
+// ===== Bộ nhớ đệm Data KH (dùng chung giữa các lần mở màn trong 1 phiên) =====
+const MD_SELECT = '*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)';
+const MD_FULL_EVERY_MS = 30 * 60 * 1000;
+const mdCache = { userId: null, rows: null, apptMap: null, noteCounts: null, cursor: null, fullAt: 0 };
+const maxUpdatedAt = (list, base = null) => list.reduce((m, r) => (r.updated_at && (!m || r.updated_at > m) ? r.updated_at : m), base);
+// Cùng thứ tự với truy vấn: getfly_updated_at giảm dần (null cuối), rồi id giảm dần
+const sortMd = (list) => list.sort((a, b) => {
+  const x = a.getfly_updated_at, y = b.getfly_updated_at;
+  if (x !== y) { if (!x) return 1; if (!y) return -1; return x < y ? 1 : -1; }
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+});
+async function fetchApptMap(phonesIn) {
+  const phones = [...new Set(phonesIn.filter(Boolean))];
+  const map = {};
+  for (let i = 0; i < phones.length; i += 400) {
+    const { data: appts } = await supabase.from('customer_appointments')
+      .select('id, phone, status, surgery_date, post_op_status').in('phone', phones.slice(i, i + 400));
+    (appts || []).forEach(a => { const k = phoneKey(a.phone); if (!map[k]) map[k] = a; });
+  }
+  return map;
+}
+
 const callPriority = (r) => {
   if (isDue(r.next_call_at)) return 0;
   if (r.status === 'nong') return 1;
@@ -99,13 +121,18 @@ const MarketingDataPage = ({ initialView = null }) => {
   // Mở từ mục Pipeline thì không ghi đè lựa chọn đã nhớ của màn Data khách hàng
   const changeView = (v) => { setView(v); if (initialView) return; try { localStorage.setItem('crm_view', v); } catch { /* bỏ qua */ } };
 
-  const loadData = useCallback(async () => {
+  // ===== Tải dữ liệu — GIẢM BĂNG THÔNG =====
+  // Trước: mỗi thay đổi (kể cả đồng bộ GetFly 10 phút/lần) làm MỌI máy đang mở màn này tải lại
+  // TOÀN BỘ bảng (hàng chục nghìn dòng) + đối chiếu lịch hẹn + đếm ghi chú.
+  // Nay: tải đủ 1 lần (giữ trong bộ nhớ dùng lại khi mở lại màn), sau đó chỉ kéo các dòng có
+  // updated_at mới hơn mốc đã có. Tải đủ lại sau 30 phút để dọn dòng bị đổi quyền/không còn thấy.
+  const fullLoad = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     // Supabase giới hạn 1.000 dòng/truy vấn -> tải theo LÔ tới khi hết sạch (tối đa 50.000).
     const list = [];
     for (let from = 0; from < 50000; from += 1000) {
       const { data, error } = await supabase.from('marketing_data')
-        .select('*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)')
+        .select(MD_SELECT)
         // Mới nhất -> cũ nhất theo LẦN TƯƠNG TÁC GẦN NHẤT trên GetFly (null xuống cuối); id làm mốc phụ để phân lô ổn định
         .order('getfly_updated_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
@@ -116,13 +143,7 @@ const MarketingDataPage = ({ initialView = null }) => {
     }
     setRows(list);
     // Đối chiếu lịch hẹn theo SĐT — chia lô 400 SĐT/truy vấn (tránh URL quá dài)
-    const phones = [...new Set(list.map(r => r.phone).filter(Boolean))];
-    const map = {};
-    for (let i = 0; i < phones.length; i += 400) {
-      const { data: appts } = await supabase.from('customer_appointments')
-        .select('id, phone, status, surgery_date, post_op_status').in('phone', phones.slice(i, i + 400));
-      (appts || []).forEach(a => { const k = phoneKey(a.phone); if (!map[k]) map[k] = a; });
-    }
+    const map = await fetchApptMap(list.map(r => r.phone));
     setApptMap(map);
     didLoad.current = true; setLoading(false);
     // Số ghi chú GetFly theo khách (getfly_comments.sql chưa chạy -> bỏ qua)
@@ -134,9 +155,60 @@ const MarketingDataPage = ({ initialView = null }) => {
       if (gs.length < 1000) break;
     }
     setNoteCounts(counts);
-  }, []);
-  useEffect(() => { loadData(); }, [loadData]);
+    Object.assign(mdCache, { userId: me?.id || null, rows: list, apptMap: map, noteCounts: counts, cursor: maxUpdatedAt(list), fullAt: Date.now() });
+  }, [me?.id]);
+
+  // Chỉ kéo các dòng đã đổi kể từ lần tải trước (thêm mới / sửa / đồng bộ GetFly)
+  const busyRef = useRef(false);
+  const loadData = useCallback(async () => {
+    const stale = !mdCache.rows || mdCache.userId !== (me?.id || null) || Date.now() - mdCache.fullAt > MD_FULL_EVERY_MS || !mdCache.cursor;
+    if (stale) return fullLoad();
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      const changed = [];
+      for (let from = 0; from < 50000; from += 1000) {
+        const { data, error } = await supabase.from('marketing_data').select(MD_SELECT)
+          .gte('updated_at', mdCache.cursor)
+          .order('updated_at', { ascending: true }).order('id', { ascending: true })
+          .range(from, from + 999);
+        if (error) return;
+        if (!data?.length) break;
+        changed.push(...data);
+        if (data.length < 1000) break;
+      }
+      if (!changed.length) return;
+      const byId = new Map(mdCache.rows.map(r => [r.id, r]));
+      changed.forEach(r => byId.set(r.id, r));
+      const list = sortMd([...byId.values()]);
+      const addMap = await fetchApptMap(changed.map(r => r.phone));
+      const map = { ...mdCache.apptMap, ...addMap };
+      Object.assign(mdCache, { rows: list, apptMap: map, cursor: maxUpdatedAt(changed, mdCache.cursor) });
+      setRows(list); setApptMap(map);
+    } finally { busyRef.current = false; }
+  }, [me?.id, fullLoad]);
+
+  // Mở lại màn trong cùng phiên: dùng ngay dữ liệu đã có, rồi chỉ kéo phần thay đổi
+  useEffect(() => {
+    if (mdCache.rows && mdCache.userId === (me?.id || null)) {
+      setRows(mdCache.rows); setApptMap(mdCache.apptMap || {}); setNoteCounts(mdCache.noteCounts || {});
+      didLoad.current = true; setLoading(false);
+    }
+    loadData();
+  }, [loadData]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Giữ bộ nhớ đệm khớp với các sửa đổi tại chỗ (đổi giai đoạn, chia telesale, xoá…)
+  useEffect(() => { if (didLoad.current) mdCache.rows = rows; }, [rows]);
   useRealtimeReload('marketing_data', loadData);
+  // Dòng bị xoá không hiện qua updated_at -> nhận sự kiện DELETE (chỉ chứa id) để bỏ khỏi danh sách
+  useEffect(() => {
+    const ch = supabase.channel('md_del_' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'marketing_data' }, (pl) => {
+        const id = pl.old?.id;
+        if (id) setRows(prev => prev.some(x => x.id === id) ? prev.filter(x => x.id !== id) : prev);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.truc_page,role_2.eq.truc_page').order('full_name').then(({ data }) => setStaff(data || [])); }, []);
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.telesale,role_2.eq.telesale').order('full_name').then(({ data }) => setTeleStaff(data || [])); }, []);
 

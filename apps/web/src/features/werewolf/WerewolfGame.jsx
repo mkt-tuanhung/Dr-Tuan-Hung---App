@@ -212,7 +212,7 @@ export default function WerewolfGame({ onBack, joinCode = null, standalone = fal
   useEffect(() => { load(); }, [load]);
   useRealtimeReload('ww_rooms,ww_players', load);
   // Lưới an toàn: tự làm mới mỗi 3s phòng khi realtime chập chờn (số người/nhận vai luôn đúng)
-  useEffect(() => { const t = setInterval(() => load(), 3000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { const t = setInterval(() => { if (!document.hidden) load(); }, 3000); return () => clearInterval(t); }, [load]);
 
   // Vào phòng qua QR /ma-soi/:code
   useEffect(() => {

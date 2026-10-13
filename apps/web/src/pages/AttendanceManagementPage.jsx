@@ -72,7 +72,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const viewingToday = `${year}-${String(month).padStart(2, '0')}-${String(selDay).padStart(2, '0')}` === vnToday();
   useEffect(() => {
     if (activeTab !== 'attendance' || view !== 'day' || !viewingToday) return undefined;
-    const t = setInterval(() => loadData({ silent: true }), 30000);
+    const t = setInterval(() => { if (!document.hidden) loadData({ silent: true }); }, 30000); // app ở nền thì không tải
     return () => clearInterval(t);
   }, [activeTab, view, viewingToday, loadData]);
 
