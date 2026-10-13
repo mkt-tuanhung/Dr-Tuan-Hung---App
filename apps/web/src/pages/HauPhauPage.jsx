@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal, List, LayoutGrid } from 'lucide-react';
@@ -221,6 +222,10 @@ const HauPhauPage = () => {
 
   const [satByAppt, setSatByAppt] = useState({}); // appointment_id -> điểm hài lòng (1-5)
 
+  // Giảm băng thông: chỉ tải ca mổ 90 ngày gần đây + ca đang Tái khám/Có biến chứng + ca chưa có ngày mổ;
+  // cũ hơn bấm "Tải thêm". Chỉ lấy ca đã phân công hậu phẫu (trước đây lọc sau khi tải).
+  const [winStart, setWinStart] = useState(() => ymdShift(vnToday(), -90));
+  const [moreLoading, setMoreLoading] = useState(false);
   const loadData = useCallback(async () => {
     setLoading(true);
     const [appointmentsRes, nursesRes, reviewRes] = await Promise.all([
@@ -228,6 +233,8 @@ const HauPhauPage = () => {
         .from('customer_appointments')
         .select('*, hau_phau:profiles!hau_phau_id(full_name)')
         .eq('status', 'phau_thuat')
+        .not('hau_phau_id', 'is', null)
+        .or(`surgery_date.gte.${winStart},surgery_date.is.null,post_op_status.in.("Tái khám","Có biến chứng")`)
         .order('surgery_date', { ascending: false }),
       supabase
         .from('profiles')
@@ -264,7 +271,8 @@ const HauPhauPage = () => {
       setNurses(nursesRes.data);
     }
     setLoading(false);
-  }, [profile, canSeeAll]);
+    setMoreLoading(false);
+  }, [profile, canSeeAll, winStart]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments', loadData);
@@ -1619,6 +1627,7 @@ const HauPhauPage = () => {
           </div>
         </div>
       )}
+      {!loading && <LoadOlderBar fromYmd={winStart} label="Đang hiển thị ca mổ từ ngày" loading={moreLoading} onMore={() => { setMoreLoading(true); setWinStart(w => ymdShift(w, -30)); }} />}
     </div>
   );
 };

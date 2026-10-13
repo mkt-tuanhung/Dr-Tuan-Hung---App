@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { 
@@ -52,12 +53,16 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   const isAdmin = profile?.role === 'admin';
 
+  // Giảm băng thông: chỉ tải ca mổ từ 30 ngày trước trở đi (+ ca chưa có ngày mổ); cũ hơn bấm "Tải thêm"
+  const [winStart, setWinStart] = useState(() => ymdShift(vnToday(), -30));
+  const [moreLoading, setMoreLoading] = useState(false);
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     const { data: appsData, error: appsErr } = await supabase
       .from('customer_appointments')
       .select('*, profiles!customer_appointments_created_by_fkey(full_name), telesale:telesale_id(full_name), sale:sale_id(full_name)')
       .eq('status', 'phau_thuat')
+      .or(`surgery_date.gte.${winStart},surgery_date.is.null`)
       .order('surgery_date', { ascending: false });
 
     const { data: nursesData } = await supabase.from('profiles').select('*')
@@ -83,7 +88,8 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     if (nursesData) setNurses(nursesData);
     didLoad.current = true;
     setLoading(false);
-  }, []);
+    setMoreLoading(false);
+  }, [winStart]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments,inventory_transactions,inventory_items', loadData);
@@ -696,6 +702,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
           </div>
         </div>
       )}
+      {!loading && <LoadOlderBar fromYmd={winStart} label="Đang hiển thị ca mổ từ ngày" loading={moreLoading} onMore={() => { setMoreLoading(true); setWinStart(w => ymdShift(w, -30)); }} />}
     </div>
   );
 };

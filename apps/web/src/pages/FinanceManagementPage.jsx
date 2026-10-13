@@ -97,20 +97,29 @@ const FinanceManagementPage = () => {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    const nextMonthFirst = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
-    let query = supabase
-      .from('customer_appointments')
-      .select('*, profiles!customer_appointments_created_by_fkey(full_name)')
-      .eq('status', 'phau_thuat');
-
-    // Phân quyền hiển thị: nhóm quản lý xem tất cả, còn lại chỉ xem doanh thu cá nhân
+    // Lọc THÁNG ngay trên máy chủ (trước đây tải mọi ca phẫu thuật từ trước tới nay rồi mới lọc).
+    // Cùng quy tắc với inMonth bên dưới: theo surgery_date; ca chưa có ngày mổ thì theo updated_at.
     const canSeeAll = ['admin', 'accountant', 'shareholder', 'marketing'].includes(profile?.role)
       || ['admin', 'accountant', 'shareholder', 'marketing'].includes(profile?.role_2);
-    if (!canSeeAll && profile?.id) {
-      query = query.or(`telesale_id.eq.${profile.id},telesale_id_2.eq.${profile.id},sale_id.eq.${profile.id}`);
-    }
-
-    const { data, error } = await query.order('surgery_date', { ascending: false });
+    // Phân quyền hiển thị: nhóm quản lý xem tất cả, còn lại chỉ xem doanh thu cá nhân
+    const base = () => {
+      let q = supabase
+        .from('customer_appointments')
+        .select('*, profiles!customer_appointments_created_by_fkey(full_name)')
+        .eq('status', 'phau_thuat');
+      if (!canSeeAll && profile?.id) {
+        q = q.or(`telesale_id.eq.${profile.id},telesale_id_2.eq.${profile.id},sale_id.eq.${profile.id}`);
+      }
+      return q;
+    };
+    const [withDate, noDate] = await Promise.all([
+      base().gte('surgery_date', startDate).lte('surgery_date', endDate).order('surgery_date', { ascending: false }),
+      base().is('surgery_date', null).gte('updated_at', startDate).lt('updated_at', nextMonthFirst),
+    ]);
+    const error = withDate.error || noDate.error;
+    const data = [...(withDate.data || []), ...(noDate.data || [])];
 
     // Fetch staff for dropdown
     const { data: staffData } = await supabase.from('profiles').select('id, full_name, role, role_2');
