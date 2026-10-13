@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
@@ -15,6 +15,33 @@ import { isRecheck } from '@/features/appointments/calendarUtils';
 import { JOURNEY, JourneyLabel } from '@/features/appointments/journey';
 import { vnToday } from '@/lib/vnTime';
 import { ExpectedSurgeryField, planOf, surgeryPlanPatch, surgeryPlanError } from '@/features/appointments/surgeryPlan.jsx';
+
+// ===== Tải lịch theo khoảng ngày (giảm băng thông) =====
+const APPT_WINDOW_DAYS = 7;   // lần đầu: từ 7 ngày trước + mọi lịch sắp tới
+const APPT_MORE_DAYS = 30;    // mỗi lần "Tải thêm"
+const ymdAddDays = (ymd, n) => { const d = new Date(`${ymd}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const maxUpdated = (list, base = null) => list.reduce((m, r) => (r.updated_at && (!m || r.updated_at > m) ? r.updated_at : m), base);
+// Cùng thứ tự với truy vấn cũ: ngày hẹn giảm dần, giờ hẹn tăng dần
+const sortAppts = (list) => list.sort((a, b) => {
+  const da = a.appointment_date || '', db = b.appointment_date || '';
+  if (da !== db) return da < db ? 1 : -1;
+  const ta = a.appointment_time || '99', tb = b.appointment_time || '99';
+  return ta < tb ? -1 : ta > tb ? 1 : 0;
+});
+// Lịch có ngày hẹn trong [from, to) (to = null: tới mọi lịch sắp tới, kèm lịch chưa có ngày)
+async function fetchApptRange(from, to) {
+  const rows = [];
+  for (let off = 0; off < 20000; off += 1000) {
+    let q = supabase.from('customer_appointments').select('*');
+    q = to ? q.gte('appointment_date', from).lt('appointment_date', to) : q.or(`appointment_date.gte.${from},appointment_date.is.null`);
+    const { data, error } = await q.order('appointment_date', { ascending: false }).order('id', { ascending: true }).range(off, off + 999);
+    if (error) return { rows, error };
+    if (!data?.length) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  return { rows, error: null };
+}
 
 // Style tokens dùng chung cho form lịch hẹn
 const FLD_INP = 'w-full min-w-0 min-h-[40px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-400 focus:ring-[3px] focus:ring-teal-500/20';
@@ -133,53 +160,134 @@ const AppointmentManagementPage = () => {
     surgery_plan: '', plan_date: ''   // form cọc: ngày PT dự kiến (có ngày / PT trong tháng / chưa có)
   });
 
-  const loadData = useCallback(async () => {
+  // ===== Tải dữ liệu — GIẢM BĂNG THÔNG =====
+  // Chỉ tải lịch từ 7 ngày trước trở đi (gồm mọi lịch sắp tới). Xem cũ hơn: nút "Tải thêm"
+  // hoặc lùi lịch về ngày cũ -> tải thêm đúng khoảng đó. Có thay đổi -> chỉ kéo các dòng có
+  // updated_at mới (không tải lại cả danh sách). Tìm kiếm tra trên máy chủ (tìm được cả khách cũ).
+  const [windowStart, setWindowStart] = useState(() => ymdAddDays(vnToday(), -APPT_WINDOW_DAYS));
+  const [loadingMore, setLoadingMore] = useState(false);
+  const winRef = useRef(windowStart);
+  const cursorRef = useRef(null);       // updated_at lớn nhất đã có
+  const staffMapRef = useRef({});
+  const loadedRef = useRef(false);
+  const busyRef = useRef(false);
+  const mapApp = (app) => ({
+    ...app,
+    telesale: staffMapRef.current[app.telesale_id]?.full_name || 'Không có',
+    sale: staffMapRef.current[app.sale_id]?.full_name || 'Không có',
+  });
+  const mergeApps = (prev, incoming) => {
+    const byId = new Map(prev.map(a => [a.id, a]));
+    incoming.forEach(a => byId.set(a.id, mapApp(a)));
+    return sortAppts([...byId.values()]);
+  };
+  const bumpCursor = (list) => { cursorRef.current = maxUpdated(list, cursorRef.current); };
+
+  const fullLoad = useCallback(async () => {
     setLoading(true);
-    
-    // Fetch all appointments
-    const { data: appData, error: appErr } = await supabase
-      .from('customer_appointments')
-      .select('*')
-      .order('appointment_date', { ascending: false })
-      .order('appointment_time', { ascending: true });
-
-    if (appErr) {
-      toast.error('Lỗi tải dữ liệu lịch hẹn: ' + appErr.message);
-    }
-
-    // Fetch staff for joining names
     const { data: staffData, error: staffErr } = await supabase
       .from('profiles')
       .select('id, full_name, role, role_2');
-      
-    if (staffErr) {
-      toast.error('Lỗi tải dữ liệu nhân viên: ' + staffErr.message);
-    }
-
-    if (appData && staffData) {
+    if (staffErr) toast.error('Lỗi tải dữ liệu nhân viên: ' + staffErr.message);
+    if (staffData) {
       setStaffList(staffData);
-      
-      const staffMap = {};
-      staffData.forEach(s => staffMap[s.id] = s);
-      
-      const mappedApps = appData.map(app => ({
-        ...app,
-        telesale: staffMap[app.telesale_id]?.full_name || 'Không có',
-        sale: staffMap[app.sale_id]?.full_name || 'Không có',
-      }));
-      
-      setAppointments(mappedApps);
+      const m = {}; staffData.forEach(st => { m[st.id] = st; }); staffMapRef.current = m;
+    }
+    const { rows, error: appErr } = await fetchApptRange(winRef.current, null);
+    if (appErr) toast.error('Lỗi tải dữ liệu lịch hẹn: ' + appErr.message);
+    if (rows) {
+      cursorRef.current = null; bumpCursor(rows);
+      setAppointments(sortAppts(rows.map(mapApp)));
+      loadedRef.current = true;
     }
     setLoading(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sau khi lưu / có người khác sửa: chỉ kéo các lịch vừa đổi
+  const loadData = useCallback(async () => {
+    if (!loadedRef.current || !cursorRef.current) return fullLoad();
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      const { data, error } = await supabase.from('customer_appointments').select('*')
+        .gte('updated_at', cursorRef.current)
+        .or(`appointment_date.gte.${winRef.current},appointment_date.is.null`)
+        .order('updated_at', { ascending: true }).limit(1000);
+      if (error || !data?.length) return;
+      bumpCursor(data);
+      setAppointments(prev => mergeApps(prev, data));
+    } finally { busyRef.current = false; }
+  }, [fullLoad]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tải thêm lịch CŨ HƠN (mặc định lùi 30 ngày, hoặc tới đúng ngày cần xem)
+  const loadOlder = useCallback(async (toYmd) => {
+    const cur = winRef.current;
+    const target = toYmd && toYmd < cur ? ymdAddDays(toYmd, -3) : ymdAddDays(cur, -APPT_MORE_DAYS);
+    if (target >= cur) return;
+    setLoadingMore(true);
+    const { rows, error } = await fetchApptRange(target, cur);
+    setLoadingMore(false);
+    if (error) { toast.error('Lỗi tải thêm: ' + error.message); return; }
+    winRef.current = target; setWindowStart(target);
+    bumpCursor(rows);
+    setAppointments(prev => mergeApps(prev, rows));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fullLoad(); }, [fullLoad]);
+  // Lịch bị xoá (bởi người khác) -> bỏ khỏi danh sách theo sự kiện DELETE (chỉ chứa id)
+  useEffect(() => {
+    const ch = supabase.channel('appt_del_' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'customer_appointments' }, (pl) => {
+        const id = pl.old?.id;
+        if (id) setAppointments(prev => prev.some(x => x.id === id) ? prev.filter(x => x.id !== id) : prev);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
-  useFocusHighlight('appointments', 'appt-', !loading, () => {
+  // Tìm kiếm: tra trên máy chủ để thấy cả khách ngoài khoảng ngày đã tải
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) return undefined;
+    const t = setTimeout(async () => {
+      const safe = q.replace(/[%,()*]/g, ' ').trim();
+      if (!safe) return;
+      const cond = isSaleOffline(profile) ? `customer_name.ilike.%${safe}%` : `customer_name.ilike.%${safe}%,phone.ilike.%${safe}%`;
+      const { data } = await supabase.from('customer_appointments').select('*').or(cond)
+        .order('appointment_date', { ascending: false }).limit(200);
+      if (data?.length) { bumpCursor(data); setAppointments(prev => mergeApps(prev, data)); }
+    }, 450);
+    return () => clearTimeout(t);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Thống kê 6 tháng: chỉ tải vài cột cần thiết, và chỉ khi mở tab Thống kê
+  const [statsRows, setStatsRows] = useState(null);
+  const loadStats = useCallback(async () => {
+    const d = new Date(); const from = `${new Date(d.getFullYear(), d.getMonth() - 5, 1).toLocaleDateString('en-CA')}`;
+    const out = [];
+    for (let off = 0; off < 20000; off += 1000) {
+      const { data, error } = await supabase.from('customer_appointments')
+        .select('id, customer_name, phone, appointment_date, status, deposit_amount, expected_bill, service')
+        .gte('appointment_date', from).order('appointment_date', { ascending: false }).range(off, off + 999);
+      if (error || !data?.length) break;
+      out.push(...data);
+      if (data.length < 1000) break;
+    }
+    setStatsRows(out);
+  }, []);
+  useEffect(() => { if (activeViewTab === 'stats') loadStats(); }, [activeViewTab, loadStats]);
+  useFocusHighlight('appointments', 'appt-', !loading, (id) => {
     // Bỏ tìm kiếm + về tab Lịch hẹn để chắc chắn thẻ hiện ra rồi mới cuộn tới
     setSearchQuery('');
     setActiveViewTab('appointments');
+    // Lịch nằm ngoài khoảng ngày đã tải -> tải riêng lịch đó
+    if (id) supabase.from('customer_appointments').select('*').eq('id', id).then(({ data }) => {
+      if (data?.length) setAppointments(prev => (prev.some(a => a.id === id) ? prev : mergeApps(prev, data)));
+    });
   });
   useRealtimeReload('customer_appointments', loadData);
+  // Thống kê dùng bộ dữ liệu nhẹ riêng — làm mới khi có thay đổi lúc đang mở tab
+  useRealtimeReload(activeViewTab === 'stats' ? 'customer_appointments' : '', loadStats);
 
   // Derived state
   const { groupedByDate, recheckAppointments, stats, chartData, pieData, trends } = useMemo(() => {
@@ -211,6 +319,15 @@ const AppointmentManagementPage = () => {
     });
 
     // ---- Chỉ số & biểu đồ tính THEO THÁNG (không cộng gộp toàn bộ) ----
+    // Nguồn: bộ dữ liệu nhẹ 6 tháng (tab Thống kê) nếu đã tải; chưa tải thì dùng danh sách đang có
+    let statApps = statsRows || appointments;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      statApps = statApps.filter(c =>
+        (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
+        (!isSaleOffline(profile) && c.phone && c.phone.toLowerCase().includes(q))
+      );
+    }
     const _now = new Date();
     const ymKey = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
     const _pm = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
@@ -218,7 +335,7 @@ const AppointmentManagementPage = () => {
     const cur = { total: 0, pt: 0, coc: 0, bong: 0, bill: 0, deposit: 0 };
     const prev = { total: 0, pt: 0, coc: 0, bong: 0, bill: 0, deposit: 0 };
     const monthMap = {}; // 'YYYY-MM' -> { total, pt } cho biểu đồ kép
-    filteredApps.forEach(app => {
+    statApps.forEach(app => {
       if (app.service && app.service.startsWith('[Tái khám]')) return;
       const mk = (app.appointment_date || '').slice(0, 7);
       if (!mk) return;
@@ -257,7 +374,7 @@ const AppointmentManagementPage = () => {
     const tr = { total: _pct(cur.total, prev.total), pt: _pct(cur.pt, prev.pt), coc: _pct(cur.coc, prev.coc), bong: _pct(cur.bong, prev.bong), bill: _pct(cur.bill, prev.bill), deposit: _pct(cur.deposit, prev.deposit) };
 
     return { groupedByDate: groups, recheckAppointments: rechecks, stats: st, chartData: cd, pieData: pd, trends: tr };
-  }, [appointments, searchQuery]);
+  }, [appointments, searchQuery, statsRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actions
   const handleCreateSubmit = async (e) => {
@@ -446,7 +563,7 @@ const AppointmentManagementPage = () => {
     if(!window.confirm('Bạn có chắc muốn xóa lịch hẹn này?')) return;
     const { error } = await supabase.from('customer_appointments').delete().eq('id', id);
     if(error) toast.error('Lỗi xóa: ' + error.message);
-    else { toast.success('Đã xóa'); loadData(); }
+    else { toast.success('Đã xóa'); setAppointments(prev => prev.filter(a => a.id !== id)); }
   };
 
   // Hành trình sau chốt mổ — cập nhật từ nút bấm trong nhóm Telegram "Hành trình khách hàng"
@@ -625,6 +742,7 @@ const AppointmentManagementPage = () => {
               staffList={staffList}
               selectedId={drawerId}
               onOpen={(app) => setDrawerId(app.id)}
+              onRangeChange={(fromYmd) => { if (fromYmd < winRef.current) loadOlder(fromYmd); }}
               onCreateAt={(canCreateNew || canCreateRecheck) ? (ymd, time) => openCreate(canCreateNew ? 'new' : 'recheck', ymd, time) : undefined}
               toolbarRight={<div className="hidden lg:flex gap-2">{createButtons}</div>}
             />
@@ -873,6 +991,15 @@ const AppointmentManagementPage = () => {
               ))}
             </div>
           ) : null}
+
+          {(activeViewTab === 'appointments' || activeViewTab === 'rechecks') && (
+            <div className="flex flex-col items-center gap-2 pt-2 pb-4">
+              <div className="text-[12.5px] text-slate-500">Đang hiển thị lịch từ ngày <b className="text-slate-700 tabular-nums">{new Date(windowStart).toLocaleDateString('vi-VN')}</b> trở đi</div>
+              <button type="button" onClick={() => loadOlder()} disabled={loadingMore} className="e-btn e-btn-secondary max-lg:h-11 max-lg:w-full">
+                {loadingMore ? 'Đang tải…' : `Tải thêm ${APPT_MORE_DAYS} ngày trước`}
+              </button>
+            </div>
+          )}
         </>
       )}
 

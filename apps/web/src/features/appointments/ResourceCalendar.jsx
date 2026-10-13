@@ -179,6 +179,7 @@ export default function ResourceCalendar({
   selectedId,
   toolbarRight,     // nút "Thêm lịch hẹn"... do trang cha truyền
   initialView = 'day',
+  onRangeChange,    // (fromYmd, toYmd) => void — báo khoảng đang xem để trang cha tải thêm lịch cũ
 }) {
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState(initialView);
@@ -196,6 +197,8 @@ export default function ResourceCalendar({
     const g = monthGrid(cursor); return [g[0], g[41]];
   }, [cursor, view]);
   const inRange = (a) => a.appointment_date >= toYMD(range[0]) && a.appointment_date <= toYMD(range[1]);
+  const rangeKey = `${toYMD(range[0])}|${toYMD(range[1])}`;
+  useEffect(() => { onRangeChange?.(toYMD(range[0]), toYMD(range[1])); }, [rangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tài nguyên (cột) — theo Sale tư vấn hoặc theo Loại lịch
   const resKey = (a) => (groupBy === 'type' ? (isRecheck(a) ? 'recheck' : 'consult') : (a.sale_id || NONE));

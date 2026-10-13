@@ -60,7 +60,11 @@ const fmtD = (iso) => { if (!iso) return '—'; const d = new Date(iso); return 
 // ===== Bộ nhớ đệm Data KH (dùng chung giữa các lần mở màn trong 1 phiên) =====
 const MD_SELECT = '*, truc_page:profiles!truc_page_id(full_name), telesale:profiles!telesale_id(full_name)';
 const MD_FULL_EVERY_MS = 30 * 60 * 1000;
-const mdCache = { userId: null, rows: null, apptMap: null, noteCounts: null, cursor: null, fullAt: 0 };
+const MD_WINDOW_DAYS = 7;   // lần đầu: khách có thay đổi/tương tác trong 7 ngày gần đây (+ khách hẹn gọi tới hạn)
+const MD_MORE_DAYS = 30;    // mỗi lần "Tải thêm"
+const ymdShift = (ymd, n) => { const d = new Date(`${ymd}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const vnStartIso = (ymd) => new Date(`${ymd}T00:00:00+07:00`).toISOString();
+const mdCache = { userId: null, rows: null, apptMap: null, noteCounts: null, cursor: null, fullAt: 0, windowStart: null };
 const maxUpdatedAt = (list, base = null) => list.reduce((m, r) => (r.updated_at && (!m || r.updated_at > m) ? r.updated_at : m), base);
 // Cùng thứ tự với truy vấn: getfly_updated_at giảm dần (null cuối), rồi id giảm dần
 const sortMd = (list) => list.sort((a, b) => {
@@ -100,6 +104,9 @@ const MarketingDataPage = ({ initialView = null }) => {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
+  const [windowStart, setWindowStart] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const winRef = useRef(null);
   const [search, setSearch] = useState('');
   const [fStatus, setFStatus] = useState('');
   const [fTruc, setFTruc] = useState('');
@@ -128,11 +135,17 @@ const MarketingDataPage = ({ initialView = null }) => {
   // updated_at mới hơn mốc đã có. Tải đủ lại sau 30 phút để dọn dòng bị đổi quyền/không còn thấy.
   const fullLoad = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
+    // CHỈ tải khách có thay đổi trong vài ngày gần đây + khách đã tới hạn hẹn gọi lại.
+    // Cũ hơn: nút "Tải thêm", lọc theo ngày, hoặc tìm kiếm (tra trên máy chủ).
+    const ws = mdCache.userId === (me?.id || null) && mdCache.windowStart ? mdCache.windowStart : ymdShift(vnToday(), -MD_WINDOW_DAYS);
+    winRef.current = ws; setWindowStart(ws);
+    const dueIso = endOfToday().toISOString();
     // Supabase giới hạn 1.000 dòng/truy vấn -> tải theo LÔ tới khi hết sạch (tối đa 50.000).
     const list = [];
     for (let from = 0; from < 50000; from += 1000) {
       const { data, error } = await supabase.from('marketing_data')
         .select(MD_SELECT)
+        .or(`updated_at.gte.${vnStartIso(ws)},next_call_at.lte.${dueIso}`)
         // Mới nhất -> cũ nhất theo LẦN TƯƠNG TÁC GẦN NHẤT trên GetFly (null xuống cuối); id làm mốc phụ để phân lô ổn định
         .order('getfly_updated_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
@@ -155,7 +168,7 @@ const MarketingDataPage = ({ initialView = null }) => {
       if (gs.length < 1000) break;
     }
     setNoteCounts(counts);
-    Object.assign(mdCache, { userId: me?.id || null, rows: list, apptMap: map, noteCounts: counts, cursor: maxUpdatedAt(list), fullAt: Date.now() });
+    Object.assign(mdCache, { userId: me?.id || null, rows: list, apptMap: map, noteCounts: counts, cursor: maxUpdatedAt(list), fullAt: Date.now(), windowStart: ws });
   }, [me?.id]);
 
   // Chỉ kéo các dòng đã đổi kể từ lần tải trước (thêm mới / sửa / đồng bộ GetFly)
@@ -192,10 +205,12 @@ const MarketingDataPage = ({ initialView = null }) => {
   useEffect(() => {
     if (mdCache.rows && mdCache.userId === (me?.id || null)) {
       setRows(mdCache.rows); setApptMap(mdCache.apptMap || {}); setNoteCounts(mdCache.noteCounts || {});
+      winRef.current = mdCache.windowStart; setWindowStart(mdCache.windowStart);
       didLoad.current = true; setLoading(false);
     }
     loadData();
   }, [loadData]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (fDay && winRef.current && fDay < winRef.current) loadOlder(fDay); }, [fDay]); // eslint-disable-line react-hooks/exhaustive-deps
   // Giữ bộ nhớ đệm khớp với các sửa đổi tại chỗ (đổi giai đoạn, chia telesale, xoá…)
   useEffect(() => { if (didLoad.current) mdCache.rows = rows; }, [rows]);
   useRealtimeReload('marketing_data', loadData);
@@ -209,6 +224,56 @@ const MarketingDataPage = ({ initialView = null }) => {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
+
+  // Tải thêm khách CŨ HƠN (lùi 30 ngày, hoặc tới đúng ngày cần xem)
+  const mergeRows = async (incoming) => {
+    if (!incoming.length) return;
+    const byId = new Map((mdCache.rows || []).map(r => [r.id, r]));
+    incoming.forEach(r => byId.set(r.id, r));
+    const list = sortMd([...byId.values()]);
+    const addMap = await fetchApptMap(incoming.map(r => r.phone));
+    const map = { ...(mdCache.apptMap || {}), ...addMap };
+    Object.assign(mdCache, { rows: list, apptMap: map, cursor: maxUpdatedAt(incoming, mdCache.cursor) });
+    setRows(list); setApptMap(map);
+  };
+  const loadOlder = useCallback(async (toYmd) => {
+    const cur = winRef.current;
+    if (!cur) return;
+    const target = toYmd && toYmd < cur ? toYmd : ymdShift(cur, -MD_MORE_DAYS);
+    if (target >= cur) return;
+    setLoadingMore(true);
+    const got = [];
+    for (let from = 0; from < 50000; from += 1000) {
+      const { data, error } = await supabase.from('marketing_data').select(MD_SELECT)
+        .gte('updated_at', vnStartIso(target)).lt('updated_at', vnStartIso(cur))
+        .order('updated_at', { ascending: false }).order('id', { ascending: false })
+        .range(from, from + 999);
+      if (error) { toast.error('Lỗi tải thêm: ' + error.message); break; }
+      if (!data?.length) break;
+      got.push(...data);
+      if (data.length < 1000) break;
+    }
+    winRef.current = target; setWindowStart(target); mdCache.windowStart = target;
+    await mergeRows(got);
+    setLoadingMore(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tìm kiếm: tra thêm trên máy chủ để thấy cả khách cũ chưa tải
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2) return undefined;
+    const t = setTimeout(async () => {
+      const safe = q.replace(/[%,()*]/g, ' ').trim();
+      if (!safe) return;
+      const digits = safe.replace(/\D/g, '');
+      const cond = [`customer_name.ilike.%${safe}%`];
+      if (digits.length >= 3) cond.push(`phone.ilike.%${digits}%`);
+      const { data } = await supabase.from('marketing_data').select(MD_SELECT).or(cond.join(','))
+        .order('updated_at', { ascending: false }).limit(200);
+      if (data?.length) await mergeRows(data);
+    }, 450);
+    return () => clearTimeout(t);
+  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.truc_page,role_2.eq.truc_page').order('full_name').then(({ data }) => setStaff(data || [])); }, []);
   useEffect(() => { supabase.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.telesale,role_2.eq.telesale').order('full_name').then(({ data }) => setTeleStaff(data || [])); }, []);
 
@@ -575,6 +640,15 @@ const MarketingDataPage = ({ initialView = null }) => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {!loading && windowStart && (
+        <div className="flex flex-col items-center gap-2 pt-1 pb-4">
+          <div className="text-[12.5px] text-slate-500 text-center px-4">Đang hiển thị khách có thay đổi từ <b className="text-slate-700 tabular-nums">{new Date(windowStart).toLocaleDateString('vi-VN')}</b> + khách tới hạn gọi. Tìm kiếm tra cả khách cũ.</div>
+          <button type="button" onClick={() => loadOlder()} disabled={loadingMore} className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-60 max-sm:w-full">
+            {loadingMore ? 'Đang tải…' : `Tải thêm ${MD_MORE_DAYS} ngày trước`}
+          </button>
         </div>
       )}
 
