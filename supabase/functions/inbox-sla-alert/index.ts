@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       }
     } else {
       const key = `${dayKey}:${soft!.key}`;
-      const convs = waiting.filter((c: any) => c.sla_soft_key !== key && waitedMin(c) >= 3);
+      const convs = waiting.filter((c: any) => c.sla_soft_key !== key && waitedMin(c) >= LEVELS[0].min); // nhắc nhẹ cũng sau 5 phút
       if (convs.length) groups.push({ title: soft!.title, tail: soft!.tail, convs, apply: () => ({ sla_soft_key: key }) });
     }
     if (!groups.length) return json({ ok: true, window: work ? "work" : soft!.key, waiting: waiting.length, sent });
