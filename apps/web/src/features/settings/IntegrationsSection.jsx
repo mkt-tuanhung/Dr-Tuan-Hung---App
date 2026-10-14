@@ -96,7 +96,7 @@ function InboxAlertPanel({ settings }) {
         <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 grid place-items-center shrink-0"><MessageSquareWarning className="w-5 h-5" /></span>
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-slate-800">Cảnh báo inbox chậm phản hồi</div>
-          <div className="text-[12px] text-slate-400">Khách nhắn fanpage quá 3 phút chưa ai trả lời → báo nhóm Telegram trực page (nhắc lại ở phút 10, 30).</div>
+          <div className="text-[12px] text-slate-400">Khách nhắn fanpage quá 5 phút chưa ai trả lời → báo nhóm Telegram trực page (nhắc lại ở phút 10, 30).</div>
         </div>
         {ready && <span className={`e-badge e-badge-sm ${row.inbox_alert_chat_id && row.inbox_alert_enabled !== false ? 'e-tone-success' : 'e-tone-neutral'}`}>
           {row.inbox_alert_chat_id && row.inbox_alert_enabled !== false ? <><CircleCheck />Đang bật</> : <><CircleX />Chưa bật</>}

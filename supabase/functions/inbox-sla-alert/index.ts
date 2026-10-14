@@ -5,7 +5,7 @@
 // 'inbox-sla-1min' chỉ gọi hàm khi có khách đang chờ.
 //
 // Khung giờ (giờ VN):
-//   09:00–12:00 · 13:30–18:00 · 19:00–23:00  -> cảnh báo ở phút 3, nhắc lại ở phút 10 và 30
+//   09:00–12:00 · 13:30–18:00 · 19:00–23:00  -> cảnh báo ở phút 5, nhắc lại ở phút 10 và 30
 //   12:00–13:30 nghỉ trưa · 18:00–19:00 di chuyển -> chỉ nhắc nhẹ 1 lần
 //   23:00–09:00 -> im lặng; sáng ra tính lại từ 9:00
 // Đã bị nhắc mà sau đó có trả lời -> báo "✅ đã phản hồi sau X phút".
@@ -39,7 +39,7 @@ const SOFT = [
   { key: "commute", from: 1080, to: 1140, title: "🔔 Giờ di chuyển — có khách đang nhắn tin", tail: "Về đến nơi nhớ phản hồi khách ngay nhé!" },
 ];
 const LEVELS = [
-  { lv: 1, min: 3, title: "⚠️ Khách chờ phản hồi quá 3 phút" },
+  { lv: 1, min: 5, title: "⚠️ Khách chờ phản hồi quá 5 phút" },
   { lv: 2, min: 10, title: "⚠️ Nhắc lần 2 — khách đã chờ quá 10 phút" },
   { lv: 3, min: 30, title: "🚨 KHẨN — khách đã chờ quá 30 phút" },
 ];
