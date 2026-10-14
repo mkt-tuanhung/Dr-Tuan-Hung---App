@@ -19,7 +19,7 @@
 alter table public.fb_conversations add column if not exists last_customer_at timestamptz;
 alter table public.fb_conversations add column if not exists last_page_at timestamptz;
 alter table public.fb_conversations add column if not exists sla_waiting_since timestamptz;   -- null = không ai chờ
-alter table public.fb_conversations add column if not exists sla_level smallint not null default 0; -- 1 = đã báo 3', 2 = 10', 3 = 30'
+alter table public.fb_conversations add column if not exists sla_level smallint not null default 0; -- 1 = đã báo 5', 2 = 10', 3 = 30'
 alter table public.fb_conversations add column if not exists sla_soft_key text;              -- đã nhắc nhẹ trong khung nghỉ nào (vd 2026-10-12:lunch)
 alter table public.fb_conversations add column if not exists sla_replied_at timestamptz;     -- đã trả lời sau khi bị nhắc -> chờ báo ✅
 alter table public.fb_conversations add column if not exists sla_reply_minutes int;
