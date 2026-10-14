@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { nurseOptions, pickList, hasRole } from '@/lib/staffPick';
 import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
@@ -238,7 +239,7 @@ const HauPhauPage = () => {
         .order('surgery_date', { ascending: false }),
       supabase
         .from('profiles')
-        .select('id, full_name, role'),
+        .select('id, full_name, role, role_2, is_active, employment_status'),
       supabase
         .from('service_review_responses')
         .select('overall_score, invitation:service_review_invitations(appointment_id, is_resurvey)')
@@ -1054,7 +1055,7 @@ const HauPhauPage = () => {
                 <label className="e-label">Chọn nhân sự Điều dưỡng</label>
                 <select value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="e-input">
                   <option value="">-- Chọn Điều dưỡng --</option>
-                  {nurses.filter(n => n.role === 'dieu_duong' && !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
+                  {nurseOptions(nurses).filter(n => !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
                     <option key={n.id} value={n.id}>{n.full_name}</option>
                   ))}
                 </select>
@@ -1121,7 +1122,7 @@ const HauPhauPage = () => {
                   <label className="e-label">Điều dưỡng phụ trách mốc</label>
                   <select value={milestoneEdit.nurse_id || ''} onChange={e => setMilestoneEdit(m => ({ ...m, nurse_id: e.target.value || null }))} className="e-input">
                     <option value="">— Chọn điều dưỡng —</option>
-                    {nurses.filter(n => n.role === 'dieu_duong' || n.role === 'admin').map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                    {nurseOptions(nurses, milestoneEdit.nurse_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -1540,7 +1541,7 @@ const HauPhauPage = () => {
               <label className="e-label">Chọn nhân sự Điều dưỡng</label>
               <select required value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} className="e-input">
                 <option value="">-- Chọn Điều dưỡng --</option>
-                {nurses.filter(n => n.role === 'dieu_duong' && !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
+                {nurseOptions(nurses).filter(n => !assignForm.additional_hau_phau_ids.includes(n.id)).map(n => (
                   <option key={n.id} value={n.id}>{n.full_name}</option>
                 ))}
               </select>

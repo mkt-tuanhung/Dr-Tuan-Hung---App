@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { nurseOptions, pickList, hasRole } from '@/lib/staffPick';
 import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
@@ -65,7 +66,8 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       .or(`surgery_date.gte.${winStart},surgery_date.is.null`)
       .order('surgery_date', { ascending: false });
 
-    const { data: nursesData } = await supabase.from('profiles').select('*')
+    // Lấy cả người đã nghỉ để còn hiện TÊN ở ca cũ; ô chọn phân công chỉ lấy người đang làm (lib/staffPick)
+    const { data: nursesData } = await supabase.from('profiles').select('id, full_name, role, role_2, position, is_active, employment_status')
       .or('role.in.(dieu_duong,admin,bac_si),role_2.in.(dieu_duong,admin,bac_si)');
 
     const appIds = appsData ? appsData.map(a => a.id) : [];
@@ -502,28 +504,28 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                     <label className="e-label">Bác sĩ mổ</label>
                     <select value={form.bac_si_id} onChange={e => setForm({...form, bac_si_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
-                      {nurses.filter(n => n.role === 'bac_si' || n.role_2 === 'bac_si' || n.role === 'admin').map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {pickList(nurses, n => hasRole(n, 'bac_si') || n.role === 'admin', form.bac_si_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="e-label">Phụ mổ 1</label>
                     <select value={form.phu_mo_1_id} onChange={e => setForm({...form, phu_mo_1_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
-                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {nurseOptions(nurses, form.phu_mo_1_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="e-label">Phụ mổ 2</label>
                     <select value={form.phu_mo_2_id} onChange={e => setForm({...form, phu_mo_2_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
-                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {nurseOptions(nurses, form.phu_mo_2_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="e-label">Phụ mổ 3</label>
                     <select value={form.phu_mo_3_id} onChange={e => setForm({...form, phu_mo_3_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
-                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {nurseOptions(nurses, form.phu_mo_3_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                 </>
@@ -534,14 +536,14 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                     <label className="e-label">Người trực đêm 1</label>
                     <select value={form.truc_dem_id} onChange={e => setForm({...form, truc_dem_id: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
-                      {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {nurseOptions(nurses, form.truc_dem_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="e-label">Người trực đêm 2 <span className="text-slate-400 font-normal">(nếu có)</span></label>
                     <select value={form.truc_dem_id_2} onChange={e => setForm({...form, truc_dem_id_2: e.target.value})} className="e-input">
                       <option value="">-- Trống --</option>
-                      {nurses.filter(n => n.id !== form.truc_dem_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {nurseOptions(nurses, form.truc_dem_id_2).filter(n => n.id !== form.truc_dem_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                 </div>
@@ -551,7 +553,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                   <label className="e-label">Người chăm sóc hậu phẫu</label>
                   <select value={form.hau_phau_id} onChange={e => setForm({...form, hau_phau_id: e.target.value})} className="e-input">
                     <option value="">-- Trống --</option>
-                    {nurses.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                    {nurseOptions(nurses, form.hau_phau_id).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                   </select>
                 </div>
               )}

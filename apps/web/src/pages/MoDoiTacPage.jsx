@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { nurseOptions, pickList, hasRole } from '@/lib/staffPick';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -34,7 +35,7 @@ const MoDoiTacPage = () => {
     setLoading(true);
     const [rowsRes, staffRes] = await Promise.all([
       supabase.from('partner_surgeries').select('*, bac_si:bac_si_id(full_name), p1:phu_mo_1_id(full_name), p2:phu_mo_2_id(full_name), p3:phu_mo_3_id(full_name)').order('surgery_date', { ascending: false }),
-      supabase.from('profiles').select('id, full_name, role, role_2').or('role.in.(dieu_duong,admin,bac_si),role_2.in.(dieu_duong,bac_si)').eq('is_active', true).order('full_name'),
+      supabase.from('profiles').select('id, full_name, role, role_2, is_active, employment_status').or('role.in.(dieu_duong,admin,bac_si),role_2.in.(dieu_duong,bac_si)').order('full_name'),
     ]);
     if (rowsRes.error) toast.error('Lỗi tải dữ liệu: ' + rowsRes.error.message);
     setRows(rowsRes.data || []);
@@ -45,7 +46,7 @@ const MoDoiTacPage = () => {
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('partner_surgeries', loadData);
 
-  const doctors = staff.filter(n => n.role === 'bac_si' || n.role_2 === 'bac_si' || n.role === 'admin');
+  const doctors = pickList(staff, n => hasRole(n, 'bac_si') || n.role === 'admin', modal?.bac_si_id);
 
   const openCreate = () => setModal({ ...EMPTY });
   const openEdit = (r) => setModal({
@@ -293,7 +294,7 @@ const MoDoiTacPage = () => {
                     <label className="e-label">Phụ mổ {i + 1}</label>
                     <select value={modal[k]} onChange={e => setModal({ ...modal, [k]: e.target.value })} className="e-input">
                       <option value="">-- Trống --</option>
-                      {staff.map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
+                      {nurseOptions(staff, modal[k]).map(n => <option key={n.id} value={n.id}>{n.full_name}</option>)}
                     </select>
                   </div>
                 ))}
