@@ -1,0 +1,19 @@
+{
+  "name": "huong-dan-cskh",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Video animation hướng dẫn dùng app Dr Tuấn Hùng (bản điện thoại) cho nhân viên Chăm sóc khách hàng",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx HuongDan out/huong-dan-cskh.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.532",
+    "@remotion/media-utils": "^4.0.532",
+    "@remotion/renderer": "^4.0.532",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.532"
+  }
+}
