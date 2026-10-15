@@ -25,12 +25,13 @@ const esc = (s: unknown) =>
 const JOURNEY: Record<string, { icon: string; label: string; btn: string }> = {
   ho_so: { icon: '📋', label: 'HOÀN THIỆN HỒ SƠ - XÉT NGHIỆM', btn: 'Hoàn thiện hồ sơ - XN' },
   xn_xong: { icon: '🧪', label: 'ĐÃ XÉT NGHIỆM XONG', btn: 'Đã xét nghiệm xong' },
+  kham_me: { icon: '🩺', label: 'KHÁM MÊ', btn: 'Khám mê' },
   dang_mo: { icon: '🔪', label: 'ĐANG PHẪU THUẬT', btn: 'Đang phẫu thuật' },
   mo_xong: { icon: '✅', label: 'ĐÃ PHẪU THUẬT XONG', btn: 'Đã phẫu thuật xong' },
   ra_vien: { icon: '🏠', label: 'ĐÃ RA VIỆN', btn: 'Khách ra viện' },
 };
 // Thứ tự hành trình — bấm bước nào thì tin cập nhật chỉ mang các bước CÒN LẠI
-const JOURNEY_ORDER = ['ho_so', 'xn_xong', 'dang_mo', 'mo_xong', 'ra_vien'];
+const JOURNEY_ORDER = ['ho_so', 'xn_xong', 'kham_me', 'dang_mo', 'mo_xong', 'ra_vien'];
 // Vai trò được phép bấm nút hành trình (nếu đã liên kết Telegram trong app)
 const JOURNEY_ROLES = ['dieu_duong', 'admin'];
 // HOẶC: danh sách ID Telegram được phép bấm — secret TELEGRAM_JOURNEY_ALLOWED_IDS
