@@ -1,11 +1,12 @@
 // Hành trình sau chốt mổ — cập nhật từ nút bấm trong nhóm Telegram "Hành trình khách hàng".
 // Dùng chung cho thẻ danh sách lịch hẹn và bảng chi tiết. Không dùng emoji: icon SVG + dấu tích vẽ bằng CSS.
 import React from 'react';
-import { ClipboardList, FlaskConical, Scissors, Home } from 'lucide-react';
+import { ClipboardList, FlaskConical, Stethoscope, Scissors, Home } from 'lucide-react';
 
 export const JOURNEY = {
   ho_so: { label: 'Hoàn thiện hồ sơ - XN', cls: 'e-tone-warning', icon: ClipboardList },
   xn_xong: { label: 'Đã XN xong', cls: 'e-tone-info', icon: FlaskConical },
+  kham_me: { label: 'Khám mê', cls: 'e-tone-peach', icon: Stethoscope },
   dang_mo: { label: 'Đang phẫu thuật', cls: 'e-tone-brand', icon: Scissors },
   mo_xong: { label: 'Đã mổ xong', cls: 'e-tone-success', check: true },
   ra_vien: { label: 'Đã ra viện', cls: 'e-tone-lavender', icon: Home },
