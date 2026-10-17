@@ -1,0 +1,181 @@
+{
+ "title": "Hướng dẫn app cho nhân viên CSKH",
+ "subtitle": "Chăm sóc khách hàng · Bản điện thoại",
+ "chips": ["Hậu phẫu", "CSKH", "Đánh giá", "Hộp thư"],
+ "scenes": [
+  {
+   "id": "intro",
+   "kind": "title",
+   "chapter": "",
+   "lines": [
+    { "sub": "Chào mừng bạn đến với ứng dụng nội bộ Dr Tuấn Hùng." },
+    { "sub": "Video này hướng dẫn nhân viên Chăm sóc khách hàng làm việc trên điện thoại, từng bước một." },
+    { "sub": "Mỗi nút cần bấm sẽ được khoanh sáng để bạn dễ theo dõi." }
+   ]
+  },
+  {
+   "id": "start",
+   "chapter": "Đăng nhập",
+   "shot": "login",
+   "lines": [
+    { "sub": "Mở app, nhập ID nhân sự và mật khẩu được cấp.", "focus": "input[placeholder=\"Nhập ID", "tag": "ID nhân sự" },
+    { "sub": "Bấm Đăng nhập để vào ca làm việc.", "focus": "Đăng nhập", "tag": "Đăng nhập" },
+    { "shot": "home", "sub": "Trang chủ hiện lịch hẹn hôm nay và nhắc bạn chấm công.", "focus": "Lịch hẹn hôm nay của tôi", "tag": "Lịch hẹn hôm nay" },
+    { "shot": "nav", "sub": "Thanh dưới cùng: Lịch hẹn ở bên trái, nút Chấm công ở giữa.", "focus": "nav button[aria-label=\"Chấm công\"]", "tag": "Chấm công" },
+    { "shot": "nav", "sub": "Bấm Tất cả để mở toàn bộ chức năng.", "focus": "nav button:has-text(\"Tất cả\")", "tag": "Tất cả" },
+    { "shot": "all", "sub": "Bốn chức năng chính của CSKH: Hậu phẫu và CSKH, Đánh giá dịch vụ, Khách Bong và Hộp thư đa kênh.", "focus": "Hậu phẫu / CSKH", "tag": "Hậu phẫu / CSKH" },
+    { "shot": "all", "sub": "Có thể gõ tên chức năng vào ô tìm kiếm cho nhanh.", "focus": "input[placeholder=\"Tìm chức năng", "tag": "Tìm chức năng" }
+   ]
+  },
+  {
+   "id": "faceid",
+   "chapter": "Chấm công Face ID",
+   "shot": "home",
+   "lines": [
+    { "sub": "Đầu ca, bấm Chấm công vào ngay trên Trang chủ.", "focus": "Chấm công vào", "tag": "Chấm công vào" },
+    { "shot": "@face-checkin", "sub": "Đưa mặt vào khung tròn, giữ yên vài giây để hệ thống nhận diện." },
+    { "shot": "@face-checkin", "sub": "Thấy báo Check-in thành công là xong." },
+    { "shot": "att", "sub": "Cuối ca, vào màn Chấm công và bấm Check-out.", "focus": "Check-out", "tag": "Check-out" }
+   ]
+  },
+  {
+   "id": "hplist",
+   "chapter": "Danh sách chăm sóc",
+   "shot": "hp_list",
+   "lines": [
+    { "sub": "Mở Hậu phẫu và CSKH. Màn này có hai thẻ.", "focus": "main button:has-text(\"Hậu phẫu\")", "tag": "Hậu phẫu" },
+    { "sub": "Thẻ Hậu phẫu gồm khách mổ chưa đầy một tháng, điều dưỡng theo dõi chính.", "focus": "main button:has-text(\"Hậu phẫu\")", "tag": "Dưới 1 tháng" },
+    { "sub": "Thẻ CSKH gồm khách đã mổ từ một tháng trở lên, đây là phần việc chính của bạn.", "focus": "main button:has-text(\"CSKH\")", "tag": "Từ 1 tháng" },
+    { "sub": "Mục Cần ưu tiên theo dõi gom các ca có rủi ro cao hoặc sắp đến hạn tái khám.", "focus": "Cần ưu tiên theo dõi", "tag": "Ưu tiên" },
+    { "sub": "Tìm nhanh khách bằng tên hoặc số điện thoại.", "focus": "input[placeholder^=\"Tìm tên KH", "tag": "Tìm khách" },
+    { "sub": "Bấm Gọi để gọi khách ngay từ điện thoại.", "focus": "Gọi", "tag": "Gọi" },
+    { "sub": "Bấm Mở nhật ký để xem hồ sơ chăm sóc của khách.", "focus": "Mở nhật ký", "tag": "Mở nhật ký" }
+   ]
+  },
+  {
+   "id": "hpcare",
+   "chapter": "Hồ sơ hậu phẫu",
+   "shot": "hp_care",
+   "lines": [
+    { "sub": "Hồ sơ cho biết khách đang hồi phục thế nào và mức rủi ro.", "focus": "Rủi ro", "tag": "Mức rủi ro" },
+    { "sub": "Hành trình hồi phục hiện các mốc từ ngày mổ đến ngày thứ ba mươi.", "focus": "Hành trình hồi phục", "tag": "Các mốc hồi phục" },
+    { "sub": "Phần cập nhật hậu phẫu do điều dưỡng nhập. Tài khoản CSKH chỉ xem.", "focus": "Bạn chỉ có quyền xem", "tag": "Chỉ xem" },
+    { "sub": "Đọc Nhật ký chăm sóc hậu phẫu trước khi gọi để nắm tình trạng khách.", "focus": "Nhật ký chăm sóc hậu phẫu", "tag": "Đọc trước khi gọi" },
+    { "sub": "Nếu khách đổi số, bấm Sửa để cập nhật số điện thoại.", "focus": "Sửa", "tag": "Sửa số" }
+   ]
+  },
+  {
+   "id": "cskh",
+   "chapter": "Ghi nhật ký CSKH",
+   "shot": "ck_list",
+   "lines": [
+    { "sub": "Sang thẻ CSKH để xem danh sách khách cần chăm sóc.", "focus": "main button:has-text(\"CSKH\")", "tag": "CSKH" },
+    { "sub": "Nhãn Chưa phân loại nghĩa là khách chưa được CSKH đánh giá, hãy ưu tiên gọi.", "focus": "Chưa phân loại", "tag": "Chưa phân loại" },
+    { "sub": "Dùng bộ lọc để xem riêng nhóm khách, ví dụ Gặp vấn đề.", "focus": "main button:has-text(\"Gặp vấn đề\")", "tag": "Lọc nhóm khách" },
+    { "shot": "ck_care", "sub": "Trong hồ sơ, Hồ sơ 360 cho xem toàn bộ lịch sử của khách.", "focus": "Hồ sơ 360", "tag": "Hồ sơ 360" },
+    { "shot": "ck_care", "sub": "Sau mỗi cuộc gọi, kéo xuống phần Thêm mốc CSKH.", "focus": "Phân loại khách hàng", "tag": "Thêm mốc CSKH" },
+    { "shot": "ck_care_fill", "sub": "Bước một: phân loại khách, ví dụ Hài lòng.", "focus": "button:text-is(\"Hài lòng\")", "tag": "Bước 1 · Phân loại" },
+    { "shot": "ck_care_fill", "sub": "Bước hai: chạm các thẻ ghi nhanh như Đã gọi hỏi thăm.", "focus": "+ Đã gọi hỏi thăm", "tag": "Bước 2 · Thẻ nhanh" },
+    { "shot": "ck_care_fill", "sub": "Bước ba: ghi thêm phản hồi của khách. Có thể đính kèm ảnh khách gửi.", "focus": "textarea[placeholder^=\"Ghi chú chăm sóc CSKH", "tag": "Bước 3 · Ghi chú" },
+    { "shot": "ck_care_fill", "sub": "Cuối cùng bấm Lưu mốc CSKH.", "focus": "Lưu mốc CSKH", "tag": "Lưu mốc CSKH" },
+    { "shot": "ck_saved", "sub": "Phân loại mới hiện ngay trên hồ sơ, ghi chú vào nhật ký kèm ngày giờ.", "focus": "span:text-is(\"CSKH: Hài lòng\")", "tag": "Đã lưu" }
+   ]
+  },
+  {
+   "id": "sq",
+   "chapter": "Đánh giá dịch vụ",
+   "shot": "sq_overview",
+   "lines": [
+    { "sub": "Màn Đánh giá dịch vụ tổng hợp phiếu khách chấm điểm sau phẫu thuật.", "focus": "Tổng quan", "tag": "Tổng quan" },
+    { "sub": "Để ý Ticket đang mở và Quá hạn SLA, đây là việc cần xử lý gấp.", "focus": "Ticket đang mở", "tag": "Ticket đang mở" },
+    { "shot": "sq_resp", "sub": "Thẻ Phản hồi cho đọc từng phiếu. Bấm Chỉ tiêu cực để lọc khách chưa hài lòng.", "focus": "Chỉ tiêu cực", "tag": "Chỉ tiêu cực" },
+    { "shot": "sq_detail", "sub": "Mở một phiếu để xem điểm từng khâu, và bấm Tóm tắt bằng AI nếu nhận xét dài.", "focus": "Tóm tắt & phân tích bằng AI", "tag": "Tóm tắt AI" }
+   ]
+  },
+  {
+   "id": "ticket",
+   "chapter": "Xử lý phản hồi",
+   "shot": "sq_tickets",
+   "lines": [
+    { "sub": "Phiếu điểm thấp hoặc khách muốn được liên hệ sẽ tự tạo ticket trong thẻ Xử lý phản hồi.", "focus": "Đang mở", "tag": "Đang mở" },
+    { "sub": "Ticket quá hạn hiện nhãn đỏ và được xếp lên đầu.", "focus": "Quá hạn", "tag": "Quá hạn" },
+    { "shot": "sq_ticket", "sub": "Mở ticket. Nhãn Muốn liên hệ gấp nghĩa là cần gọi khách ngay.", "focus": "Muốn liên hệ gấp", "tag": "Liên hệ gấp" },
+    { "shot": "sq_ticket", "sub": "Chọn người phụ trách ở ô Giao cho.", "focus": "select >> nth=0", "tag": "Giao cho" },
+    { "shot": "sq_ticket", "sub": "Cập nhật Trạng thái, ví dụ Đang liên hệ.", "focus": "select >> nth=1", "tag": "Trạng thái" },
+    { "shot": "sq_ticket", "sub": "Ghi Nguyên nhân gốc vì sao khách chưa hài lòng.", "focus": "textarea >> nth=0", "tag": "Nguyên nhân gốc" },
+    { "shot": "sq_ticket2", "sub": "Ghi Cách khắc phục. Mục này bắt buộc trước khi đóng ticket.", "focus": "textarea >> nth=1", "tag": "Cách khắc phục" },
+    { "shot": "sq_ticket2", "sub": "Mỗi lần gọi khách, thêm Ghi chú xử lý để lưu vào nhật ký.", "focus": "textarea >> nth=-1", "tag": "Ghi chú xử lý" },
+    { "shot": "sq_ticket2", "sub": "Bấm Lưu cập nhật sau mỗi thay đổi.", "focus": "Lưu cập nhật", "tag": "Lưu cập nhật" },
+    { "shot": "sq_ticket2", "sub": "Xử lý xong, bấm Tạo phiếu khảo sát lại và gửi link cho khách xác nhận.", "focus": "Tạo phiếu khảo sát lại", "tag": "Khảo sát lại" },
+    { "shot": "sq_ticket2", "sub": "Khi đã ổn, bấm Đóng ticket.", "focus": "Đóng ticket", "tag": "Đóng ticket" }
+   ]
+  },
+  {
+   "id": "bong",
+   "chapter": "Khách Bong",
+   "shot": "kb_list",
+   "lines": [
+    { "sub": "Khách Bong là khách đã tư vấn nhưng chưa làm dịch vụ.", "focus": "main button:has-text(\"Đang chăm sóc\")", "tag": "Đang chăm sóc" },
+    { "sub": "Đọc Lý do rớt trước khi gọi để tư vấn đúng mong muốn của khách.", "focus": "Lý do rớt", "tag": "Lý do rớt" },
+    { "shot": "kb_care", "sub": "Mở nhật ký khách, kéo xuống Thêm mốc chăm sóc.", "focus": "Thêm mốc chăm sóc", "tag": "Thêm mốc" },
+    { "shot": "kb_care", "sub": "Chọn trạng thái, chạm thẻ nhanh như Đã gọi, không nghe máy.", "focus": "Đã gọi, không nghe máy", "tag": "Thẻ nhanh" },
+    { "shot": "kb_care", "sub": "Rồi bấm Lưu mốc.", "focus": "Lưu mốc", "tag": "Lưu mốc" },
+    { "shot": "kb_care", "sub": "Khách đồng ý quay lại? Bấm Quay lại lịch hẹn.", "focus": "Quay lại lịch hẹn", "tag": "Quay lại lịch hẹn" },
+    { "shot": "kb_revert", "sub": "Chọn ngày giờ hẹn rồi bấm Xác nhận tạo lịch.", "focus": "Xác nhận tạo lịch", "tag": "Tạo lịch" },
+    { "shot": "kb_deposit", "sub": "Khách đặt cọc thì bấm Chốt cọc, nhập số tiền, khách chuyển sang mục Khách cọc.", "focus": "Chốt cọc & chuyển", "tag": "Chốt cọc" }
+   ]
+  },
+  {
+   "id": "inbox",
+   "chapter": "Hộp thư đa kênh",
+   "shot": "ib_list",
+   "lines": [
+    { "sub": "Hộp thư đa kênh gom tin nhắn Messenger của khách.", "focus": "input[placeholder^=\"Tìm tên, SĐT", "tag": "Tìm hội thoại" },
+    { "sub": "Lọc Có SĐT hoặc Chưa gắn khách để biết ai cần hỏi thêm thông tin.", "focus": "main button:has-text(\"Chưa gắn khách\")", "tag": "Chưa gắn khách" },
+    { "sub": "Bấm vào một hội thoại để đọc.", "focus": "Nguyễn Thị Lan", "tag": "Mở hội thoại" },
+    { "shot": "ib_thread", "sub": "Hiện app chỉ để đọc. Muốn trả lời, bấm Mở trên Messenger.", "focus": "Mở trên Messenger", "tag": "Trả lời khách" },
+    { "shot": "ib_thread", "sub": "Bấm Hồ sơ 360 để xem khách đã làm dịch vụ gì trước khi trả lời.", "focus": "Hồ sơ 360", "tag": "Hồ sơ 360" }
+   ]
+  },
+  {
+   "id": "appt",
+   "chapter": "Lịch hẹn & Phẫu thuật",
+   "shot": "appt",
+   "lines": [
+    { "sub": "Trong Lịch hẹn, thẻ Tái khám liệt kê khách hẹn quay lại kiểm tra.", "focus": "main button:has-text(\"Tái khám\")", "tag": "Tái khám" },
+    { "shot": "appt_re", "sub": "Dùng danh sách này để gọi nhắc khách trước ngày tái khám." },
+    { "shot": "pt_list", "sub": "Ở Khách phẫu thuật, bạn nhập viện phí cho ca mổ.", "focus": "Nhập viện phí", "tag": "Nhập viện phí" },
+    { "shot": "pt_fee", "sub": "Nhập số tiền, chọn chuyển khoản hay tiền mặt, tải ảnh bill rồi bấm Lưu.", "focus": "Lưu Viện Phí", "tag": "Lưu viện phí" },
+    { "shot": "pt_vt", "sub": "Báo cáo vật tư: bấm Thêm dòng, chọn vật tư và số lượng, rồi Lưu.", "focus": "Thêm dòng", "tag": "Thêm dòng" }
+   ]
+  },
+  {
+   "id": "daily",
+   "kind": "checklist",
+   "chapter": "Việc mỗi ngày",
+   "items": [
+    "Chấm công vào bằng Face ID",
+    "Xử lý ticket Quá hạn và Khẩn trước",
+    "Gọi khách Chưa phân loại ở thẻ CSKH",
+    "Lưu mốc CSKH sau mỗi cuộc gọi",
+    "Chăm sóc Khách Bong, đọc Hộp thư",
+    "Nhắc lịch tái khám ngày mai"
+   ],
+   "lines": [
+    { "sub": "Tóm lại, mỗi ngày bạn làm theo thứ tự này." },
+    { "sub": "Chấm công, xử lý ticket gấp, rồi gọi khách chưa phân loại." },
+    { "sub": "Gọi xong là lưu mốc ngay, không để dồn cuối ngày." },
+    { "sub": "Sau đó chăm sóc khách Bong, đọc hộp thư, và nhắc lịch tái khám." }
+   ]
+  },
+  {
+   "id": "outro",
+   "kind": "title",
+   "chapter": "",
+   "lines": [
+    { "sub": "Mỗi cuộc gọi được ghi lại là một khách hàng được chăm sóc chu đáo." },
+    { "sub": "Có thắc mắc, bạn hỏi quản lý hoặc admin nhé. Chúc bạn làm việc hiệu quả!" }
+   ]
+  }
+ ]
+}
