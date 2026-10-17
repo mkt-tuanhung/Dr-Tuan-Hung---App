@@ -309,7 +309,7 @@ Trả về DUY NHẤT JSON: {"anh_ro":true,"toc":"...","trang_phuc":"...","loi":
         if (!bkey) return '';
         try {
           const base = (Deno.env.get('BEE_BASE_URL') || 'https://platform.beeknoee.com/v1').replace(/\/+$/, '');
-          const model = Deno.env.get('BEE_MODEL') || 'bee/gpt-5.6-luna';
+          const model = Deno.env.get('BEE_MODEL') || 'bee/gpt-6-luna';
           const res = await fetch(`${base}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bkey}` },
