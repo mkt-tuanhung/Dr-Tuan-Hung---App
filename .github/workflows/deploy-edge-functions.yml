@@ -1,0 +1,55 @@
+# Deploy Supabase Edge Functions từ GitHub (chạy tay: Actions → Deploy Edge Functions → Run workflow).
+# Cần GitHub Secret SUPABASE_ACCESS_TOKEN (Supabase → Account → Access Tokens). Không ghi key vào repo.
+name: Deploy Edge Functions
+
+on:
+  workflow_dispatch:
+    inputs:
+      functions:
+        description: 'Tên function, cách nhau dấu cách (VD: face-attendance telegram-webhook)'
+        required: true
+        type: string
+      bee_model:
+        description: '(Tuỳ chọn) đặt Edge Secret BEE_MODEL, VD bee/gpt-6-luna'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-edge-functions
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: wlblywjdghjwwuumzecc
+  # Các function nhận webhook / gọi từ bên ngoài: phải giữ Verify JWT = OFF
+  NO_VERIFY_JWT: 'notify-telegram schedule-telegram fb-messenger-webhook getfly-webhook telegram-webhook livekit-webhook'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Đặt secret BEE_MODEL
+        if: ${{ inputs.bee_model != '' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BEE_MODEL: ${{ inputs.bee_model }}
+        run: supabase secrets set "BEE_MODEL=$BEE_MODEL" --project-ref "$PROJECT_REF"
+      - name: Deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FUNCTIONS: ${{ inputs.functions }}
+        run: |
+          set -euo pipefail
+          for fn in $FUNCTIONS; do
+            if [ ! -f "supabase/functions/$fn/index.ts" ]; then echo "::error::Không có function $fn"; exit 1; fi
+            flag=""
+            for x in $NO_VERIFY_JWT; do [ "$x" = "$fn" ] && flag="--no-verify-jwt"; done
+            echo "== Deploy $fn $flag"
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api $flag
+          done
