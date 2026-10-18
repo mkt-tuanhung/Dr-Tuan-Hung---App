@@ -1,12 +1,12 @@
 -- ============================================================
--- SỔ TAY CSKH — 7 tập video cẩm nang chăm sóc khách hàng (chạy lại vẫn an toàn)
+-- SỔ TAY CSKH — 10 tập video cẩm nang chăm sóc khách hàng (chạy lại vẫn an toàn)
 --
 -- cskh_handbook_videos   : danh sách tập (tên, mô tả, link video R2, ảnh thumb, thời lượng)
 --                          -> MỌI nhân viên đăng nhập đều xem được; chỉ Admin sửa / tải video.
 -- cskh_handbook_progress : tiến độ xem của từng nhân viên (xem tiếp từ chỗ dừng, đã xem xong)
 --                          -> nhân viên đọc / ghi dòng của chính mình; Admin + Kế toán + Cổ đông xem cả.
 -- Video tải THẲNG lên R2 từ màn "Sổ Tay CSKH" (nút Quản lý video của Admin) — không lưu trong database.
--- Ảnh thumb mặc định nằm trong app: /so-tay-cskh/tap-01.jpg … tap-07.jpg (thumbnail_url để trống).
+-- Ảnh thumb mặc định nằm trong app: /so-tay-cskh/tap-01.jpg … tap-10.jpg (thumbnail_url để trống).
 -- ============================================================
 
 create table if not exists public.cskh_handbook_videos (
@@ -63,7 +63,7 @@ grant select on public.cskh_handbook_videos to authenticated;
 grant insert, update, delete on public.cskh_handbook_videos to authenticated;   -- RLS chỉ cho Admin
 grant select, insert, update on public.cskh_handbook_progress to authenticated;
 
--- 7 tập ban đầu (tên & mô tả theo trang bìa từng video). Chạy lại KHÔNG ghi đè chỉnh sửa của Admin.
+-- Các tập (tên & mô tả theo trang bìa từng video; tập 8–10 thêm 19/10/2026). Chạy lại KHÔNG ghi đè chỉnh sửa của Admin.
 insert into public.cskh_handbook_videos (episode, title, subtitle, duration_sec) values
   (1, 'Vai trò & chuẩn giao tiếp CSKH',            'Đúng phạm vi, đúng lời, đúng lúc: nền móng của mọi ca chăm sóc', 231),
   (2, 'Hành trình khách hàng & phân mức cảnh báo', 'Biết khách đang ở mốc nào, nhận ra lúc nào phải gọi bác sĩ',      268),
@@ -71,7 +71,10 @@ insert into public.cskh_handbook_videos (episode, title, subtitle, duration_sec)
   (4, 'Chăm sóc khách hàng Nâng mũi',               'Về nhà trong ngày, đồng hành đến mốc 12 tháng',                    237),
   (5, 'Chăm sóc khách hàng Nâng ngực',              'Chuẩn chuyên môn, tế nhị trong từng lời hỏi thăm',                 231),
   (6, 'Chăm sóc khách hàng Hút mỡ & tạo hình',      'Đi lại sớm, uống đủ nước, mặc gen đúng, theo dõi sát',             230),
-  (7, 'Chăm sóc khách hàng Căng da mặt',            'Canh 24 giờ đầu, giữ huyết áp, trân trọng từng lời xưng hô',       232)
+  (7, 'Chăm sóc khách hàng Căng da mặt',            'Canh 24 giờ đầu, giữ huyết áp, trân trọng từng lời xưng hô',       232),
+  (8, 'Tình huống thường gặp của Điều dưỡng & CSKH', 'Việc nhỏ mỗi ngày, trả lời đúng, đều tay và ấm áp',              208),
+  (9, 'Xử lý sự cố',                                'Nhận trách nhiệm, khắc phục nhanh, không để lặp lại',             207),
+  (10, 'Chăm lại khách hàng & giới thiệu dịch vụ tinh tế', 'Đồng hành dài lâu: giữ kết nối với khách hàng sau hồi phục', 213)
 on conflict (episode) do nothing;
 
 notify pgrst, 'reload schema';

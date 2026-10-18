@@ -1,10 +1,10 @@
 // ============================================================
-// SỔ TAY CSKH — 7 tập video cẩm nang chăm sóc khách hàng cho TOÀN BỘ nhân viên
+// SỔ TAY CSKH — các tập video cẩm nang chăm sóc khách hàng cho TOÀN BỘ nhân viên
 // - Lưới tập (ảnh thumb dọc 9:16, thời lượng, tiến độ đã xem)
 // - Trình phát riêng: video dọc, play/pause, tua ±10s, thanh tua, tốc độ, toàn màn hình,
 //   xem tiếp từ chỗ dừng, xem >= 90% = hoàn thành, hết tập tự sang tập kế (đếm ngược 5s)
 // - Admin: "Quản lý video" — sửa tên / mô tả, đổi ảnh thumb, tải video THẲNG lên R2
-//   (chọn cả 7 file 1 lần, tự khớp tập theo tên file "Tap01_…", "Tap02_…")
+//   (chọn nhiều file 1 lần, tự khớp tập theo tên file "Tap01_…", "Tap02_…")
 // Bảng: cskh_handbook_videos, cskh_handbook_progress (supabase/so_tay_cskh.sql)
 // ============================================================
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -562,7 +562,7 @@ function ManageDrawer({ open, onClose, videos, meId, onChanged }) {
     const matched = files.map(f => ({ f, ep: episodeFromName(f.name) })).filter(x => known.has(x.ep));
     const skipped = files.length - matched.length;
     if (!matched.length) { toast.error('Không khớp được tập nào — đặt tên file bắt đầu bằng "Tap01", "Tap02"…'); return; }
-    if (skipped) toast.warning(`${skipped} file không khớp tập nào (tên file cần có "Tap01"…"Tap07")`);
+    if (skipped) toast.warning(`${skipped} file không khớp tập nào (tên file cần bắt đầu bằng "Tap01", "Tap02"…)`);
     let ok = 0;
     // Tải lần lượt 2 file 1 lúc — đỡ nghẽn mạng, vẫn nhanh
     const queue = [...matched];
@@ -601,7 +601,7 @@ function ManageDrawer({ open, onClose, videos, meId, onChanged }) {
         <div className="rounded-2xl border border-dashed border-teal-300 bg-teal-50/50 p-4 text-center">
           <Upload className="w-6 h-6 mx-auto text-teal-600" />
           <div className="mt-1.5 text-[14px] font-semibold text-slate-800">Tải lên nhiều video cùng lúc</div>
-          <div className="text-[12.5px] text-slate-500 mt-0.5">Chọn các file "Tap01_…mp4" → "Tap07_…mp4", app tự khớp đúng tập.</div>
+          <div className="text-[12.5px] text-slate-500 mt-0.5">Chọn các file "Tap01_…mp4", "Tap02_…mp4"… (nhiều file 1 lần), app tự khớp đúng tập.</div>
           <button type="button" disabled={busy} onClick={() => bulkRef.current?.click()} className="e-btn e-btn-primary e-btn-sm mt-3"><Upload />Chọn video</button>
           <input ref={bulkRef} type="file" accept="video/*" multiple hidden onChange={(e) => { onBulk(e.target.files); e.target.value = ''; }} />
         </div>
