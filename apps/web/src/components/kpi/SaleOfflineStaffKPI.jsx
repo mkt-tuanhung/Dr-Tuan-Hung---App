@@ -7,7 +7,7 @@ import {
   Wallet, TrendingUp, Coins, ArrowUpRight, Target,
 } from 'lucide-react';
 
-import { computeSaleOffline, isRecheck } from '@/lib/kpiCalc';
+import { computeSaleOffline, isRecheck, saleRevTiersText } from '@/lib/kpiCalc';
 
 const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const fmtM = (n) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '0') + 'đ';
@@ -232,7 +232,7 @@ const SaleOfflineStaffKPI = () => {
         {/* Ghi chú cách tính */}
         <div className="mt-3 e-subtle p-4 text-[12.5px] text-slate-500 space-y-1">
           <div className="font-semibold text-slate-600">Cách tính hoa hồng:</div>
-          <div>• <b>HH doanh thu</b> = (Doanh thu − Upsale) × A%. Bậc A theo tổng doanh thu: &lt;500tr = 1% · 500tr–&lt;1 tỷ = 1.5% · ≥1 tỷ = 2%.</div>
+          <div>• <b>HH doanh thu</b> = (Doanh thu − Upsale) × A%. Bậc A theo tổng doanh thu: {saleRevTiersText({ month, year })}.</div>
           <div>• <b>HH upsale</b> = Σ (upsale từng khách × B%). Bậc B theo upsale mỗi khách: &lt;50tr = 2% · 50tr–&lt;100tr = 4% · ≥100tr = 5%.</div>
           <div>• <b>Tổng hoa hồng</b> = HH doanh thu + HH upsale.</div>
         </div>

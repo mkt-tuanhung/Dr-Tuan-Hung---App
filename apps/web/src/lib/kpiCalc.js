@@ -57,14 +57,25 @@ export const computeTrucPage = (reports = []) => {
   return { phones, interested, messages, spam, rate, hh };
 };
 
-// Hoa hồng doanh thu Sale Offline (bậc thang):
-//   < 500tr  = 1%   |  500tr – < 1 tỷ = 1.5%  |  ≥ 1 tỷ = 2%
-export const saleRevCommissionRate = (rev) => {
+// Hoa hồng doanh thu Sale Offline (bậc thang theo doanh thu cá nhân trong tháng):
+//   từ kỳ lương 10/2026 : < 1 tỷ = 1%  |  ≥ 1 tỷ = 1.5%   (không còn bậc 2%)
+//   đến hết 09/2026     : < 500tr = 1%  |  500tr – < 1 tỷ = 1.5%  |  ≥ 1 tỷ = 2%
+// period = { month, year } của kỳ đang tính; không truyền = áp bảng hiện hành.
+export const SALE_REV_NEW_TIERS_FROM = '2026-10';
+const saleRevOldTiers = (period) => { const k = periodKey(period); return !!k && k < SALE_REV_NEW_TIERS_FROM; };
+export const saleRevCommissionRate = (rev, period) => {
   if (rev <= 0) return 0;
-  if (rev < 500_000_000) return 1;
-  if (rev < 1_000_000_000) return 1.5;
-  return 2;
+  if (saleRevOldTiers(period)) {
+    if (rev < 500_000_000) return 1;
+    if (rev < 1_000_000_000) return 1.5;
+    return 2;
+  }
+  return rev < 1_000_000_000 ? 1 : 1.5;
 };
+// Chữ mô tả bậc thưởng doanh thu cho màn KPI (đúng bảng của kỳ đang xem)
+export const saleRevTiersText = (period) => (saleRevOldTiers(period)
+  ? '<500tr = 1% · 500tr–<1 tỷ = 1.5% · ≥1 tỷ = 2%'
+  : '<1 tỷ = 1% · ≥1 tỷ = 1.5%');
 
 // Lịch tái khám được đánh dấu bằng service bắt đầu "[Tái khám]"
 export const isRecheck = (a) => (a?.service || '').startsWith('[Tái khám]');
@@ -317,7 +328,7 @@ export const computeSaleOffline = (appts = [], surgeries = [], period = null) =>
   const doanhThu = sumBase + upsale;
 
   // Thưởng doanh thu = phần cơ bản × A% (A theo bậc doanh thu cá nhân)
-  const dtRate = saleRevCommissionRate(doanhThu);
+  const dtRate = saleRevCommissionRate(doanhThu, period);
   const hhDoanhThu = Math.round(sumBase * dtRate / 100);
 
   // Thưởng upsale = Σ (upsale từng khách × B% theo bậc upsale của khách đó)
