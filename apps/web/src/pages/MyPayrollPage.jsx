@@ -126,7 +126,7 @@ const MyPayrollPage = () => {
   const tp = targetProfile || profile;
   const savedThisMonth = savedRows.find(r => r.month === month && r.year === year);
   // Tính LIVE từ dữ liệu nguồn; nếu tháng đã CHỐT thì lấy số đã lưu (chính thức).
-  const live = (src && tp?.id) ? computePayrollRow({ staff: tp, ...src, saved: savedThisMonth }) : null;
+  const live = (src && tp?.id) ? computePayrollRow({ staff: tp, ...src, saved: savedThisMonth, period: { month, year } }) : null;
   const detail = !src ? null
     : (savedThisMonth?.status === 'locked' ? { ...savedThisMonth, status: 'locked' }
       : (live ? { ...live, status: 'draft' } : null));

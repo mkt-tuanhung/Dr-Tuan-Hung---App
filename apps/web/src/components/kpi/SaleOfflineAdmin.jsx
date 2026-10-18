@@ -63,7 +63,7 @@ const SaleOfflineAdmin = ({ month, year }) => {
   const rows = staff.map(s => {
     const a = appts.filter(x => x.sale_id === s.id);
     const surg = surgeries.filter(x => x.sale_id === s.id);
-    const m = computeSaleOffline(a, surg);
+    const m = computeSaleOffline(a, surg, { month, year });
     const kpi = kpis.find(k => k.staff_id === s.id) || null;
     const revProgress = kpi?.target_revenue > 0 ? Math.round(m.doanhThu / kpi.target_revenue * 100) : null;
     return { staff: s, kpi, ...m, revProgress };

@@ -120,7 +120,7 @@ const PayrollPage = () => {
       const telePhones = pages.filter(p => p.telesale_id === s.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);
 
       const saleOff = rolesArr.includes('sale_offline')
-        ? computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id))
+        ? computeSaleOffline(appts.filter(a => a.sale_id === s.id && !isRecheck(a)), surg.filter(a => a.sale_id === s.id), { month, year })
         : null;
       const teleOff = rolesArr.includes('telesale')
         ? computeTelesale({ phones: telePhones, appts: appts.filter(a => mineTele(a) && !isRecheck(a)), bongRows: bong.filter(mineTele), cocRows: coc.filter(mineTele), surgRows: surg.filter(mineTele), prior })

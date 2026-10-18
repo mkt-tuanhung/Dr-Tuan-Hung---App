@@ -36,7 +36,7 @@ export async function loadPayrollDetail(staffId, month, year) {
   const savedRows = payRes.data || [];
   const savedThisMonth = savedRows.find(r => r.month === month && r.year === year);
   const live = profile ? computePayrollRow({
-    staff: profile,
+    staff: profile, period: { month, year },
     att: attRes.data || [], appts: apptRes.data || [], surg: surgRes.data || [],
     bong: bongRes.data || [], coc: cocRes.data || [], pages: pageRes.data || [],
     adv: advRes.data || [], salAdv: salRes.data || [], contentWins: winRes.data || [],
