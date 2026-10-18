@@ -34,10 +34,14 @@ export const fetchTelesalePrior = async (ms) => {
 export const PHONE_COMMISSION = 20000; // 20.000đ / 1 SĐT quan tâm (Trực page)
 
 // Thưởng upsale Sale Offline — bậc thang theo upsale CỦA TỪNG KHÁCH:
-//   < 50tr = 3%  |  50tr – < 100tr = 4%  |  ≥ 100tr = 5%
-export const saleUpsaleRate = (u) => {
+//   < 50tr = 2%  |  50tr – < 100tr = 4%  |  ≥ 100tr = 5%
+// Bậc < 50tr: 3% đến hết 09/2026, 2% từ kỳ lương 10/2026 (period = { month, year } của kỳ đang tính;
+// không truyền = áp mức hiện hành). Tháng đã CHỐT lấy số đã lưu nên không bị tính lại.
+export const UPSALE_LOW_2PCT_FROM = '2026-10';
+const periodKey = (p) => (p?.month && p?.year ? `${p.year}-${String(p.month).padStart(2, '0')}` : null);
+export const saleUpsaleRate = (u, period) => {
   if (u <= 0) return 0;
-  if (u < 50_000_000) return 3;
+  if (u < 50_000_000) { const k = periodKey(period); return k && k < UPSALE_LOW_2PCT_FROM ? 3 : 2; }
   if (u < 100_000_000) return 4;
   return 5;
 };
@@ -299,7 +303,7 @@ const saleBaseOf = (a) => {
   return base;
 };
 
-export const computeSaleOffline = (appts = [], surgeries = []) => {
+export const computeSaleOffline = (appts = [], surgeries = [], period = null) => {
   const total = appts.length;                 // Tổng lịch hẹn (mẫu số tỉ lệ chốt)
   const cntPT = surgeries.length;             // Khách phẫu thuật (tử số)
   const cntCoc = appts.filter(a => a.status === 'coc').length;
@@ -319,7 +323,7 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
   // Thưởng upsale = Σ (upsale từng khách × B% theo bậc upsale của khách đó)
   const hhUpsale = surgeries.reduce((s, a) => {
     const u = Number(a.upsale_revenue || 0);
-    return s + Math.round(u * saleUpsaleRate(u) / 100);
+    return s + Math.round(u * saleUpsaleRate(u, period) / 100);
   }, 0);
 
   const tongHH = hhDoanhThu + hhUpsale;
@@ -328,7 +332,7 @@ export const computeSaleOffline = (appts = [], surgeries = []) => {
   const perCustomer = surgeries.map(a => {
     const base = saleBaseOf(a);
     const u = Number(a.upsale_revenue || 0);
-    const upRate = saleUpsaleRate(u);
+    const upRate = saleUpsaleRate(u, period);
     const hhBase = Math.round(base * dtRate / 100);
     const hhUp = Math.round(u * upRate / 100);
     return {
@@ -373,7 +377,7 @@ export const computeOvertime = (records = [], base = 0, D = PAYROLL_STANDARD_DAY
 };
 export const CLIP_APPROVE_BONUS = 500000; // thưởng editor mỗi clip được Ads duyệt chạy Ads
 
-export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], seeding = [], prior = null, saved = null }) => {
+export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong = [], coc = [], pages = [], adv = [], salAdv = [], contentWins = [], partner = [], seeding = [], prior = null, saved = null, period = null }) => {
   const D = PAYROLL_STANDARD_DAYS;
   // Số công = ngày CÓ MẶT (present/muộn/về sớm = 1) + nghỉ nửa ngày (0.5)
   const workingDays = att.filter(a => a.staff_id === staff.id)
@@ -386,7 +390,7 @@ export const computePayrollRow = ({ staff, att = [], appts = [], surg = [], bong
   const overtime = computeOvertime(att.filter(a => a.staff_id === staff.id), staff.base_salary, D).pay;
 
   const commissionForRole = (role) => {
-    if (role === 'sale_offline') return computeSaleOffline(appts.filter(a => a.sale_id === staff.id && !isRecheck(a)), surg.filter(a => a.sale_id === staff.id)).tongHH;
+    if (role === 'sale_offline') return computeSaleOffline(appts.filter(a => a.sale_id === staff.id && !isRecheck(a)), surg.filter(a => a.sale_id === staff.id), period).tongHH;
     if (role === 'telesale') {
       const mine = (a) => a.telesale_id === staff.id || a.telesale_id_2 === staff.id;
       const phones = pages.filter(p => p.telesale_id === staff.id).reduce((x, p) => x + Number(p.total_phones || 0), 0);

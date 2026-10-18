@@ -94,7 +94,7 @@ const SaleOfflineStaffKPI = () => {
   // ---- Tính toán chỉ số (dùng hàm chung với admin) ----
   const ptList = surgeries; // Khách phẫu thuật trong tháng (theo surgery_date)
   const { total, cntPT, cntCoc, cntBong, closeRate, doanhThu, upsale, dtRate, hhDoanhThu, hhUpsale, tongHH }
-    = computeSaleOffline(appts, surgeries);
+    = computeSaleOffline(appts, surgeries, { month, year });
 
   const revProgress = kpi?.target_revenue > 0 ? Math.min(Math.round(doanhThu / kpi.target_revenue * 100), 100) : 0;
   const rateProgress = kpi?.target_close_rate > 0 ? Math.min(Math.round(closeRate / kpi.target_close_rate * 100), 100) : 0;
@@ -233,7 +233,7 @@ const SaleOfflineStaffKPI = () => {
         <div className="mt-3 e-subtle p-4 text-[12.5px] text-slate-500 space-y-1">
           <div className="font-semibold text-slate-600">Cách tính hoa hồng:</div>
           <div>• <b>HH doanh thu</b> = (Doanh thu − Upsale) × A%. Bậc A theo tổng doanh thu: &lt;500tr = 1% · 500tr–&lt;1 tỷ = 1.5% · ≥1 tỷ = 2%.</div>
-          <div>• <b>HH upsale</b> = Σ (upsale từng khách × B%). Bậc B theo upsale mỗi khách: &lt;50tr = 3% · 50tr–&lt;100tr = 4% · ≥100tr = 5%.</div>
+          <div>• <b>HH upsale</b> = Σ (upsale từng khách × B%). Bậc B theo upsale mỗi khách: &lt;50tr = 2% · 50tr–&lt;100tr = 4% · ≥100tr = 5%.</div>
           <div>• <b>Tổng hoa hồng</b> = HH doanh thu + HH upsale.</div>
         </div>
       </div>
