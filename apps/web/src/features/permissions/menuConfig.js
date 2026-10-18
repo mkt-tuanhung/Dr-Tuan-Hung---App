@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
   Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
-  Inbox, PhoneCall, BarChart3, ListTodo, Columns3, BookOpen,
+  Inbox, PhoneCall, BarChart3, ListTodo, Columns3, BookOpen, Library,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -35,6 +35,7 @@ export const FULL_MENU = [
   { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
   { id: 'tasks',      label: 'Công việc & Duyệt', icon: ListTodo, roles: ['all'] },
   { id: 'cskh_handbook', label: 'Sổ Tay CSKH',   icon: BookOpen, roles: ['all'] },
+  { id: 'library',    label: 'Tài liệu',        icon: Library, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
@@ -84,7 +85,7 @@ export const STAFF_GROUPS = [
     'marketing',
   ] },
   { title: 'TÀI CHÍNH', ids: ['reports', 'finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
-  { title: 'ĐÀO TẠO', ids: ['cskh_handbook'] },
+  { title: 'ĐÀO TẠO', ids: ['cskh_handbook', 'library'] },
   { title: 'VẬN HÀNH', ids: ['tasks', 'community', 'meetings', 'minigame'] },
 ];
 
