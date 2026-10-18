@@ -4,7 +4,8 @@ import { nurseOptions, pickList, hasRole } from '@/lib/staffPick';
 import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal, List, LayoutGrid } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal, List, LayoutGrid, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ds';
 import QRCode from 'qrcode';
 import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
 import { parseCSV, downloadCsv } from '@/lib/csv';
@@ -159,6 +160,9 @@ const HauPhauPage = () => {
   const cskhFileRef = React.useRef(null);
   // CSKH: mặc định ẩn Nhật ký Hậu phẫu, bấm để hiện
   const [showHauPhauLog, setShowHauPhauLog] = useState(!isCskh);
+  // Xoá 1 mốc nhật ký hậu phẫu (Admin / Điều dưỡng) — RPC remove_care_note (hau_phau_delete_note.sql)
+  const [delNote, setDelNote] = useState(null);   // { header, preview }
+  const [deletingNote, setDeletingNote] = useState(false);
   // Bổ sung / sửa số điện thoại ngay trong chi tiết chăm sóc
   const [phoneEdit, setPhoneEdit] = useState(false);
   const [phoneVal, setPhoneVal] = useState('');
@@ -550,6 +554,23 @@ const HauPhauPage = () => {
     finally { setImporting(false); }
   };
 
+  // Xoá 1 mốc nhật ký hậu phẫu (xoá ngay trong database, ghi Nhật ký hoạt động)
+  const deleteCareNote = async () => {
+    if (!delNote || !careApp) return;
+    setDeletingNote(true);
+    const { data: n, error } = await supabase.rpc('remove_care_note', { p_id: careApp.id, p_header: delNote.header });
+    setDeletingNote(false);
+    if (error) { toast.error('Không xoá được: ' + error.message); return; }
+    if (!n) { toast.error('Không xoá được — mốc đã thay đổi hoặc bạn không phụ trách ca này.'); setDelNote(null); return; }
+    const { data: fresh } = await supabase.from('customer_appointments').select('post_op_notes').eq('id', careApp.id).maybeSingle();
+    const notes = fresh ? fresh.post_op_notes : careApp.post_op_notes;
+    setCareApp(prev => prev ? { ...prev, post_op_notes: notes } : prev);
+    setSelectedApp(prev => prev ? { ...prev, post_op_notes: notes } : prev);
+    setDelNote(null);
+    toast.success('Đã xoá mốc nhật ký');
+    loadData();
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!canEditHauPhau) return; // CSKH chỉ xem nhật ký hậu phẫu, không ghi
@@ -698,7 +719,7 @@ const HauPhauPage = () => {
 
   // Nhật ký dạng TIMELINE: gom từng mốc [ngày giờ] thành thẻ — giờ + chữ + LƯỚI ẢNH,
   // mốc MỚI NHẤT trên cùng. (Dữ liệu vẫn lưu dạng text cũ nên tương thích ngược.)
-  const renderNotes = (notesString) => {
+  const renderNotes = (notesString, { deletable = false } = {}) => {
     if (!notesString) return null;
     const lines = notesString.split('\n').filter(l => l.trim() !== '');
     const entries = [];
@@ -707,7 +728,7 @@ const HauPhauPage = () => {
     lines.forEach(line => {
       const m = line.match(/^\[(\d{1,2}\/\d{1,2}\/\d{4})(?:\s+(\d{1,2}:\d{2}(?::\d{2})?))?\]\s*(.*)$/);
       let rest = line;
-      if (m) { cur = { date: m[1], time: (m[2] || '').slice(0, 5), texts: [], imgs: [] }; entries.push(cur); rest = m[3] || ''; }
+      if (m) { cur = { date: m[1], time: (m[2] || '').slice(0, 5), texts: [], imgs: [], header: line }; entries.push(cur); rest = m[3] || ''; }
       else if (!cur) { cur = { date: null, time: '', texts: [], imgs: [] }; entries.push(cur); }
       let im; IMG_RE.lastIndex = 0;
       while ((im = IMG_RE.exec(rest))) cur.imgs.push(im[1]);
@@ -732,7 +753,18 @@ const HauPhauPage = () => {
             <span className="absolute left-0 top-1.5 w-2 h-2 rounded-full bg-teal-400" />
             <span className="absolute left-[3.5px] top-4 bottom-0 w-px bg-slate-100" />
             <div className="e-subtle px-3 py-2.5">
-              {en.time && <div className="text-[11px] font-semibold text-slate-400 tabular-nums mb-1">{en.time}</div>}
+              {(en.time || (deletable && en.header)) && (
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[11px] font-semibold text-slate-400 tabular-nums">{en.time}</span>
+                  {deletable && en.header && (
+                    <button type="button" aria-label="Xoá mốc nhật ký" title="Xoá mốc nhật ký"
+                      onClick={() => setDelNote({ header: en.header, preview: [en.date, en.time].filter(Boolean).join(' ') + (en.texts[0] ? ` — ${en.texts[0].slice(0, 80)}` : en.imgs.length ? ` — ${en.imgs.length} ảnh` : '') })}
+                      className="w-8 h-8 -my-1 -mr-1 rounded-lg grid place-items-center text-slate-300 hover:text-danger-600 hover:bg-danger-50 active:scale-95 transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
               {en.texts.map((t, j) => <div key={j} className="text-[13px] text-slate-700 leading-relaxed">{t}</div>)}
               {en.imgs.length > 0 && (
                 <div className={`grid gap-1.5 mt-2 ${en.imgs.length === 1 ? 'grid-cols-2' : 'grid-cols-3'}`}>
@@ -993,10 +1025,14 @@ const HauPhauPage = () => {
           </div>
           {showHauPhauLog && (
             <div className="text-sm text-slate-700 max-h-[40vh] overflow-y-auto pr-1">
-              {careApp.post_op_notes ? renderNotes(careApp.post_op_notes) : <div className="text-slate-400 text-center py-6 text-[13px]">Chưa có ghi chú nào</div>}
+              {careApp.post_op_notes ? renderNotes(careApp.post_op_notes, { deletable: canEditHauPhau }) : <div className="text-slate-400 text-center py-6 text-[13px]">Chưa có ghi chú nào</div>}
             </div>
           )}
         </div>
+        <ConfirmDialog open={!!delNote} danger busy={deletingNote}
+          title="Xoá mốc nhật ký này?"
+          description={<>Mốc <b className="text-slate-700">{delNote?.preview}</b> (kể cả ảnh đính kèm) sẽ bị xoá khỏi nhật ký chăm sóc hậu phẫu. Lần xoá được ghi lại trong Nhật ký hoạt động.</>}
+          confirmLabel="Xoá mốc" onClose={() => !deletingNote && setDelNote(null)} onConfirm={deleteCareNote} />
 
         {/* Nhật ký CSKH — chỉ hiện ở chế độ CSKH (Hậu phẫu không cần) */}
         {isCskhTab && (
