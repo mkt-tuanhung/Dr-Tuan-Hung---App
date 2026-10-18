@@ -21,6 +21,7 @@ import TelesaleStaffKPI from '@/components/kpi/TelesaleStaffKPI.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
 import MinigamePage from '@/pages/MinigamePage.jsx';
 import CskhHandbookPage from '@/features/handbook/CskhHandbookPage.jsx';
+import LibraryPage from '@/features/library/LibraryPage.jsx';
 import MeetingPage from '@/pages/MeetingPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
@@ -445,6 +446,7 @@ const StaffDashboard = () => {
     if (activeTab === 'community') return <CommunityPage />;
     if (activeTab === 'minigame') return <MinigamePage />;
     if (activeTab === 'cskh_handbook') return <CskhHandbookPage />;
+    if (activeTab === 'library') return <LibraryPage />;
     if (activeTab === 'meetings') return <MeetingPage />;
     return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
