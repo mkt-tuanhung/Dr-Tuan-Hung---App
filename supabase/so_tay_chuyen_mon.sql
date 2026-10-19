@@ -7,7 +7,7 @@
 --                         -> nhân viên đọc / ghi dòng của chính mình; Admin + Kế toán + Cổ đông xem cả.
 -- Cùng trình phát với Sổ Tay CSKH (HandbookPage.jsx). Video tải THẲNG lên R2 từ màn "Sổ Tay Chuyên môn"
 -- (nút Quản lý video của Admin, chọn nhiều file "Bai01_…", "Bai02_…" 1 lần).
--- Ảnh thumb mặc định nằm trong app: /so-tay-chuyen-mon/bai-01.jpg … bai-16.jpg (thumbnail_url để trống).
+-- Ảnh thumb mặc định nằm trong app: /so-tay-chuyen-mon/bai-01.jpg … bai-20.jpg (thumbnail_url để trống).
 -- ============================================================
 
 create table if not exists public.pro_handbook_videos (
@@ -65,7 +65,7 @@ grant select on public.pro_handbook_videos to authenticated;
 grant insert, update, delete on public.pro_handbook_videos to authenticated;   -- RLS chỉ cho Admin
 grant select, insert, update on public.pro_handbook_progress to authenticated;
 
--- 16 bài (tên & mô tả theo trang bìa từng video). Chạy lại KHÔNG ghi đè chỉnh sửa của Admin.
+-- Các bài (tên & mô tả theo trang bìa từng video; bài 17–20 thêm 19/10/2026). Chạy lại KHÔNG ghi đè chỉnh sửa của Admin.
 insert into public.pro_handbook_videos (episode, title, subtitle, topic, duration_sec) values
   (1,  'Giải phẫu nền tảng & khớp cắn', 'Hiểu cấu trúc xương mặt trước khi giới thiệu bất kỳ phương pháp nào',            'Xương hàm mặt', 209),
   (2,  'Gọt hàm V-line',                'Thu gọn góc hàm và đường viền hàm dưới bằng ba bước',                            'Xương hàm mặt', 146),
@@ -77,13 +77,27 @@ insert into public.pro_handbook_videos (episode, title, subtitle, topic, duratio
   (8,  'Nhổ răng khôn',                 'Răng số 8 mọc lệch, mọc ngầm: vì sao cần nhổ và nhổ như thế nào',                'Xương hàm mặt', 169),
   (9,  'Bóc cơ cắn',                    'Lấy bớt một phần lớp sâu của cơ cắn để góc hàm thon gọn hơn',                    'Xương hàm mặt', 141),
   (10, 'Căng da mặt',                   'Nâng lớp nâng đỡ sâu, trải da nhẹ nhàng để gương mặt tươi tự nhiên',             'Căng da mặt',   159),
-  (11, 'Nâng mũi',                      'Dựng khung đỡ bằng sụn tự thân, nâng sống mũi hài hoà với gương mặt',             'Mũi & Mắt',     232),
-  (12, 'Phẫu thuật mí mắt',             'Tạo nếp mí tự nhiên; xử lý da thừa, bọng mỡ và sụp mi khi có chỉ định',           'Mũi & Mắt',     242),
+  (11, 'Nâng mũi cấu trúc',             'Sống mũi nhân tạo Softxil hoặc Surgiform, đầu mũi dựng bằng sụn tự thân',         'Mũi',           234),
+  (12, 'Phẫu thuật mí mắt',             'Tạo nếp mí tự nhiên; xử lý da thừa, bọng mỡ và sụp mi khi có chỉ định',           'Mắt',           242),
   (13, 'Nâng ngực',                     'Chọn túi theo nền ngực và độ dày mô; đặt túi đúng mặt phẳng, đúng khoang',        'Ngực',          218),
   (14, 'Các dòng túi ngực',             'Năm dòng túi gel silicone tại phòng khám: cấu tạo, điểm mạnh, điều cần lưu ý',    'Ngực',          222),
   (15, 'Hút mỡ body-jet',               'Tạo đường nét bằng tia nước hình quạt — không phải phương pháp giảm cân',        'Hút mỡ & tạo hình', 194),
-  (16, 'Tạo hình thành bụng',           'Cắt bỏ da – mỡ thừa, khâu phục hồi cân cơ bụng và tạo lại rốn',                   'Hút mỡ & tạo hình', 213)
+  (16, 'Tạo hình thành bụng',           'Cắt bỏ da – mỡ thừa, khâu phục hồi cân cơ bụng và tạo lại rốn',                   'Hút mỡ & tạo hình', 213),
+  (17, 'Nâng mũi cấu trúc sụn sườn',    'Bán phần và toàn phần: khung đỡ bằng sụn sườn tự thân',                         'Mũi',           166),
+  (18, 'Sửa mũi hỏng',                  'Giải phóng mô sẹo, dựng lại khung đỡ đã mất',                                   'Mũi',           161),
+  (19, 'Thu gọn cánh mũi',              'Cắt chêm chân cánh mũi, cắt ngưỡng lỗ mũi hoặc kết hợp',                        'Mũi',           122),
+  (20, 'Đục xương · mài gồ',            'Hạ gồ từng bước, khép mái xương, giữ van mũi',                                  'Mũi',           150)
 on conflict (episode) do nothing;
+
+-- 19/10/2026: Bài 11 làm lại (Nâng mũi cấu trúc · Softxil / Surgiform) + tách nhóm "Mũi & Mắt" thành "Mũi" và "Mắt".
+-- Chỉ đổi khi Admin CHƯA tự sửa (vẫn là giá trị cũ) -> không ghi đè chỉnh sửa tay.
+update public.pro_handbook_videos
+   set title = 'Nâng mũi cấu trúc',
+       subtitle = 'Sống mũi nhân tạo Softxil hoặc Surgiform, đầu mũi dựng bằng sụn tự thân',
+       duration_sec = 234, updated_at = now()
+ where episode = 11 and title = 'Nâng mũi';
+update public.pro_handbook_videos set topic = 'Mũi' where episode = 11 and topic = 'Mũi & Mắt';
+update public.pro_handbook_videos set topic = 'Mắt' where episode = 12 and topic = 'Mũi & Mắt';
 
 notify pgrst, 'reload schema';
 
