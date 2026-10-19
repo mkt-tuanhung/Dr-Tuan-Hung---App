@@ -12,7 +12,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from
 import { toast } from 'sonner';
 import {
   Search, BookOpen, ChevronDown, Users, Clock, FileText, Settings2, Upload, Plus, Loader2,
-  BarChart3, EyeOff, Eye, RefreshCw, CheckCircle2, X,
+  BarChart3, EyeOff, Eye, RefreshCw, CheckCircle2, X, AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -172,7 +172,7 @@ function DocCard({ doc, mine, stat, canSeeTeam, onOpen, onStats }) {
           </div>
           <div className="mt-auto pt-3">
             <div className="flex items-center justify-between text-[12px]">
-              <span className="text-slate-600">{read ? <>Bạn đã đọc <b className="text-slate-800">{read}/{n}</b> trang · {fmtMinutes(mine?.seconds)}</> : 'Bạn chưa đọc tài liệu này'}</span>
+              <span className="text-slate-600">{read ? <>Bạn đã đọc <b className="text-slate-800">{read}/{n}</b> trang · {fmtMinutes(mine?.seconds)}{mine?.opens > 1 ? ` · mở ${mine.opens} lần` : ''}</> : 'Bạn chưa đọc tài liệu này'}</span>
               {read > 0 && <span className="font-semibold text-teal-700 tabular-nums">{pct}%</span>}
             </div>
             <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct >= 100 ? '#10b981' : GOLD }} /></div>
@@ -300,18 +300,22 @@ function SearchResults({ q, docs, onOpen }) {
 // ---------------- Thống kê đọc theo nhân viên ----------------
 function StatsDrawer({ doc, onClose }) {
   const [rows, setRows] = useState(null);
+  const [openId, setOpenId] = useState(null);
   useEffect(() => {
     if (!doc) return undefined;
     let alive = true;
     setRows(null);
     (async () => {
-      const [{ data: staff }, { data: reads }] = await Promise.all([
+      const [{ data: staff }, { data: reads }, { data: vio }] = await Promise.all([
         supabase.from('profiles').select('id, full_name, role, avatar_url').eq('is_active', true).order('full_name'),
         supabase.from('library_reads').select('user_id, pages_seen, seconds, opens, last_page, last_at').eq('doc_id', doc.id),
+        supabase.from('training_violations').select('id, user_id, detail, created_at').eq('module', 'library').eq('ref', doc.id).order('created_at', { ascending: false }).limit(1000),
       ]);
       if (!alive) return;
       const by = Object.fromEntries((reads || []).map(r => [r.user_id, r]));
-      setRows((staff || []).map(s => ({ ...s, r: by[s.id] || null }))
+      const vby = {};
+      (vio || []).forEach(x => { (vby[x.user_id] ||= []).push(x); });
+      setRows((staff || []).map(s => ({ ...s, r: by[s.id] || null, vio: vby[s.id] || [] }))
         .sort((a, b) => (b.r?.pages_seen?.length || 0) - (a.r?.pages_seen?.length || 0) || (b.r?.seconds || 0) - (a.r?.seconds || 0) || (a.full_name || '').localeCompare(b.full_name || '', 'vi')));
     })();
     return () => { alive = false; };
@@ -321,6 +325,7 @@ function StatsDrawer({ doc, onClose }) {
   const readers = rows?.filter(x => x.r?.pages_seen?.length) || [];
   const done = readers.filter(x => n && x.r.pages_seen.length >= n).length;
   const sumSec = readers.reduce((s, x) => s + (x.r.seconds || 0), 0);
+  const vioPeople = rows?.filter(x => x.vio.length).length || 0;
 
   return (
     <Drawer open={!!doc} onClose={onClose} size="lg" title={doc ? `Thống kê đọc · ${doc.title}` : ''}
@@ -329,8 +334,8 @@ function StatsDrawer({ doc, onClose }) {
         <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-teal-600 animate-spin" /></div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {[['Đã đọc', `${readers.length}/${rows.length}`], ['Đọc hết', done], ['TB / người', readers.length ? fmtMinutes(sumSec / readers.length) : '—']].map(([k, v]) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {[['Đã đọc', `${readers.length}/${rows.length}`], ['Đọc hết', done], ['TB / người', readers.length ? fmtMinutes(sumSec / readers.length) : '—'], ['Lật nhanh', vioPeople ? `${vioPeople} người` : '0']].map(([k, v]) => (
               <div key={k} className="rounded-xl bg-slate-50 px-3 py-2.5"><div className="text-[11.5px] text-slate-500">{k}</div><div className="text-[17px] font-bold text-slate-900 tabular-nums">{v}</div></div>
             ))}
           </div>
@@ -345,7 +350,15 @@ function StatsDrawer({ doc, onClose }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13.5px] font-medium text-slate-800 truncate">{x.full_name || '—'}</span>
+                      <span className="min-w-0 flex items-center gap-2">
+                        <span className="text-[13.5px] font-medium text-slate-800 truncate">{x.full_name || '—'}</span>
+                        {x.vio.length > 0 && (
+                          <button type="button" onClick={() => setOpenId(openId === x.id ? null : x.id)}
+                            className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-0.5 hover:bg-amber-100">
+                            <AlertTriangle className="w-3 h-3" />{x.vio.length} lần lật nhanh
+                          </button>
+                        )}
+                      </span>
                       <span className={`shrink-0 text-[12.5px] font-semibold tabular-nums ${pages ? 'text-slate-800' : 'text-slate-400'}`}>{pages}/{n} trang</span>
                     </div>
                     <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 100 ? '#10b981' : GOLD }} /></div>
@@ -353,11 +366,20 @@ function StatsDrawer({ doc, onClose }) {
                       {x.r ? (
                         <>
                           <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{fmtMinutes(x.r.seconds)}</span>
-                          <span>{x.r.opens} lượt mở</span>
+                          <span>mở {x.r.opens} lần</span>
                           <span className="truncate">gần nhất {fmtDate(x.r.last_at)} · trang {x.r.last_page}</span>
                         </>
                       ) : <span>Chưa mở</span>}
                     </div>
+                    {openId === x.id && (
+                      <ul className="mt-1.5 space-y-0.5 rounded-lg bg-amber-50/60 px-2.5 py-2">
+                        {x.vio.map(v => (
+                          <li key={v.id} className="text-[12px] text-slate-700">
+                            <span className="text-slate-400 tabular-nums">{fmtDate(v.created_at)}</span> · lật {v.detail?.flips} lần trong {v.detail?.seconds} giây (trang {v.detail?.from_page} → {v.detail?.to_page}){v.detail?.device ? <span className="text-slate-400"> · {v.detail.device}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </li>
               );

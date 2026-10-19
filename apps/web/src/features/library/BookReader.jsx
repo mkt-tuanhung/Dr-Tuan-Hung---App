@@ -5,17 +5,22 @@
 // - Mục lục theo chương, tìm kiếm trong tài liệu, kéo thanh trang, phóng to, toàn màn hình
 // - Ghi nhận đọc: trang hiển thị >= 3 giây = đã đọc; chỉ đếm thời gian khi app đang mở
 //   và có thao tác trong 2 phút gần nhất -> gửi log_library_reading mỗi 15 giây
+// - Lật nhanh nhiều trang liên tiếp -> cảnh báo + ghi training_violations (Admin xem trong Thống kê)
 // pdf.js chỉ được nạp khi mở trình đọc (file này được lazy-load).
 // ============================================================
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, ChevronLeft, ChevronRight, List, Search, ZoomIn, ZoomOut, Maximize, Minimize, Loader2, BookOpen,
+  X, ChevronLeft, ChevronRight, List, Search, ZoomIn, ZoomOut, Maximize, Minimize, Loader2, BookOpen, AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { loadPdfjs, chapterOf, chapterLabel, normQuery, snippetOf, cleanText } from './libraryUtil';
 
-const SEEN_AFTER_MS = 3000;
+const SEEN_AFTER_MS = 5000;     // trang phải hiển thị >= 5 giây mới tính là đã đọc
+const FAST_FLIPS = 3;           // lật >= 3 lần trong 8 giây = lật nhanh, xem qua loa
+const FAST_WINDOW_MS = 8000;
+const FAST_COOLDOWN_MS = 30000;
 const FLUSH_EVERY_MS = 15000;
 const IDLE_AFTER_MS = 120000;
 const FLIP_MS = 700;
@@ -257,13 +262,36 @@ export default function BookReader({ doc, startPage = 1, onClose }) {
   // Kết thúc lật: ghi trang mới (trừ khi kéo dở rồi thả về) — có hẹn giờ dự phòng nếu lỡ sự kiện transitionend
   const flipRef = useRef(null);
   useEffect(() => { flipRef.current = flip; }, [flip]);
+  // Phát hiện lật nhanh: >= 3 lần lật trong 8 giây -> cảnh báo + ghi nhận (30 giây mới cảnh báo lại)
+  const { profile } = useAuth();
+  const turns = useRef([]);
+  const lastFastWarn = useRef(0);
+  const [fastWarn, setFastWarn] = useState(null);
+  const noteTurn = useCallback((from, to) => {
+    const now = Date.now();
+    turns.current = [...turns.current.filter(t => now - t.at < FAST_WINDOW_MS), { at: now, from, to }];
+    const burst = turns.current;
+    if (burst.length < FAST_FLIPS || now - lastFastWarn.current < FAST_COOLDOWN_MS) return;
+    lastFastWarn.current = now;
+    const secs = Math.max(1, Math.round((now - burst[0].at) / 1000));
+    const info = { from_page: burst[0].from, to_page: to, flips: burst.length, seconds: secs };
+    turns.current = [];
+    setFastWarn(info);
+    if (profile?.id) {
+      supabase.from('training_violations').insert({
+        user_id: profile.id, module: 'library', ref: doc.id, kind: 'fast_flip',
+        detail: { ...info, title: doc.title, device: /iPhone|iPad|Android/i.test(navigator.userAgent) ? 'Điện thoại' : 'Máy tính' },
+      }).then(() => {});
+    }
+  }, [profile?.id, doc.id, doc.title]);
+
   const finishFlip = useCallback(() => {
     const f = flipRef.current;
     if (!f) return;
-    if (!f.cancel) setCur(f.to);
+    if (!f.cancel) { noteTurn(cur, f.to); setCur(f.to); }
     flipRef.current = null;
     setFlip(null);
-  }, []);
+  }, [noteTurn, cur]);
   useEffect(() => {
     if (!flip?.anim) return undefined;
     const t = setTimeout(finishFlip, FLIP_MS + 250);
@@ -275,20 +303,21 @@ export default function BookReader({ doc, startPage = 1, onClose }) {
     setFlip(null);
     setCur(t);
   }, [total]);
-  const next = useCallback(() => { if (zoom) { if (cur < total) setCur(cur + 1); return; } startFlip('next'); }, [zoom, cur, total, startFlip]);
-  const prev = useCallback(() => { if (zoom) { if (cur > 1) setCur(cur - 1); return; } startFlip('prev'); }, [zoom, cur, startFlip]);
+  const next = useCallback(() => { if (zoom) { if (cur < total) { noteTurn(cur, cur + 1); setCur(cur + 1); } return; } startFlip('next'); }, [zoom, cur, total, startFlip, noteTurn]);
+  const prev = useCallback(() => { if (zoom) { if (cur > 1) { noteTurn(cur, cur - 1); setCur(cur - 1); } return; } startFlip('prev'); }, [zoom, cur, startFlip, noteTurn]);
 
   // Phím tắt
   useEffect(() => {
     const onKey = (e) => {
       if (/input|textarea/i.test(e.target?.tagName || '')) return;
+      if (fastWarn) { if (e.key === 'Enter' || e.key === 'Escape') setFastWarn(null); return; }
       if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); next(); }
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
       else if (e.key === 'Escape') { if (panel) setPanel(null); else if (!document.fullscreenElement) onClose(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [next, prev, panel, onClose]);
+  }, [next, prev, panel, onClose, fastWarn]);
 
   // Kéo / vuốt để lật
   const ptr = useRef(null);
@@ -502,6 +531,24 @@ export default function BookReader({ doc, startPage = 1, onClose }) {
             onPick={(p) => { goTo(p); if (stage.w < 1100) setPanel(null); }} />
         )}
       </div>
+
+      {/* Cảnh báo lật nhanh */}
+      {fastWarn && (
+        <div className="absolute inset-0 z-30 bg-black/70 grid place-items-center p-5 text-center" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-[320px] rounded-2xl bg-[#14302C] border border-[#D9B77A]/40 p-5 shadow-2xl">
+            <span className="mx-auto w-12 h-12 rounded-full bg-amber-400/15 grid place-items-center"><AlertTriangle className="w-6 h-6 text-amber-300" /></span>
+            <div className="mt-3 text-[15.5px] font-bold">Bạn đang lật trang quá nhanh</div>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/75">
+              Bạn vừa lật {fastWarn.flips} lần trong {fastWarn.seconds} giây (trang {fastWarn.from_page} → {fastWarn.to_page}).
+              Mỗi trang cần dừng đọc ít nhất 5 giây mới được tính là đã đọc.
+            </p>
+            <p className="mt-2 text-[12px] leading-relaxed text-amber-200/90">Việc lật nhanh, xem qua loa đã được ghi nhận vào tiến độ của bạn.</p>
+            <button type="button" onClick={() => setFastWarn(null)} className="mt-4 w-full h-10 rounded-xl font-semibold text-[14px] text-[#0B2522]" style={{ background: '#D9B77A' }}>
+              Tôi sẽ đọc kỹ
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Thanh dưới */}
       <div className="shrink-0 px-3 sm:px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
