@@ -79,7 +79,7 @@ const readDuration = (file) => new Promise((resolve) => {
 });
 
 const episodeFromName = (name) => {
-  const m = String(name).match(/(?:t[aậ]p|b[aà]i)\s*[_\-\s]?0*(\d{1,2})/i) || String(name).match(/^0*(\d{1,2})\D/);
+  const m = String(name).match(/(?:t[aậ]p|b[aà]i|qt)\s*[_\-\s]?0*(\d{1,2})/i) || String(name).match(/^0*(\d{1,2})\D/);
   return m ? Number(m[1]) : null;
 };
 
