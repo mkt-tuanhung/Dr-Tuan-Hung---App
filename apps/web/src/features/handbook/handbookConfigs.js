@@ -29,3 +29,17 @@ export const PRO_HANDBOOK = {
   filePrefix: 'Bai',
   sqlFile: 'supabase/so_tay_chuyen_mon.sql',
 };
+
+export const PROC_HANDBOOK = {
+  key: 'proc',
+  name: 'Quy Trình Công Việc',
+  unit: 'Quy trình',
+  unitLower: 'quy trình',
+  blurb: 'video hướng dẫn vận hành nội bộ',
+  videosTable: 'proc_handbook_videos',
+  progressTable: 'proc_handbook_progress',
+  folder: 'quy-trinh-cong-viec',
+  thumb: (ep) => `/quy-trinh-cong-viec/qt-${pad2(ep)}.jpg`,
+  filePrefix: 'QT',
+  sqlFile: 'supabase/quy_trinh_cong_viec.sql',
+};

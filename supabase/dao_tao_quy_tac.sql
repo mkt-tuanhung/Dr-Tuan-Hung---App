@@ -19,12 +19,15 @@ alter table public.pro_handbook_progress  add column if not exists views int not
 create table if not exists public.training_violations (
   id          bigserial primary key,
   user_id     uuid not null references public.profiles(id) on delete cascade,
-  module      text not null check (module in ('cskh', 'pro', 'library')),
+  module      text not null check (module in ('cskh', 'pro', 'proc', 'library')),
   ref         text not null,                 -- số tập / bài (video) hoặc id tài liệu
   kind        text not null check (kind in ('seek', 'speed', 'fast_flip')),
   detail      jsonb not null default '{}'::jsonb,
   created_at  timestamptz not null default now()
 );
+-- Bảng có từ trước -> mở rộng danh sách module (thêm 'proc' = Quy Trình Công Việc)
+alter table public.training_violations drop constraint if exists training_violations_module_check;
+alter table public.training_violations add constraint training_violations_module_check check (module in ('cskh', 'pro', 'proc', 'library'));
 create index if not exists training_violations_user_idx on public.training_violations (module, user_id, created_at desc);
 
 alter table public.training_violations enable row level security;
@@ -57,6 +60,10 @@ begin
     returning r.views into n;
   elsif p_book = 'pro' then
     insert into pro_handbook_progress as r (user_id, episode, views) values (auth.uid(), p_episode, 1)
+    on conflict (user_id, episode) do update set views = r.views + 1, updated_at = now()
+    returning r.views into n;
+  elsif p_book = 'proc' then   -- Quy Trình Công Việc (bảng tạo trong quy_trinh_cong_viec.sql)
+    insert into proc_handbook_progress as r (user_id, episode, views) values (auth.uid(), p_episode, 1)
     on conflict (user_id, episode) do update set views = r.views + 1, updated_at = now()
     returning r.views into n;
   else
