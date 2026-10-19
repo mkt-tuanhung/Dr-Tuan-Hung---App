@@ -12,7 +12,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { toast } from 'sonner';
 import {
   BookOpen, Play, Pause, RotateCcw, RotateCw, Maximize, Minimize, CheckCircle2, ChevronLeft,
-  Settings2, Upload, ImagePlus, Loader2, Clock, Film, Users,
+  Settings2, Upload, ImagePlus, Loader2, Clock, Film, Users, Lock, AlertTriangle, Eye, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -34,6 +34,14 @@ const fmtTime = (s) => {
   return `${m}:${pad2(Math.floor(s % 60))}`;
 };
 const thumbOf = (v, cfg) => v.thumbnail_url || cfg.thumb(v.episode);
+const deviceLabel = () => {
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iPhone/iPad';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows/i.test(ua)) return 'Máy tính Windows';
+  if (/Macintosh/i.test(ua)) return 'Máy Mac';
+  return 'Khác';
+};
 const isAdminOf = (p) => [p?.role, p?.role_2].includes('admin');
 const canSeeTeamOf = (p) => [p?.role, p?.role_2].some(r => ['admin', 'accountant', 'shareholder'].includes(r));
 const pctOf = (v, pr) => {
@@ -228,6 +236,7 @@ function HandbookHome() {
                     <div className="text-[11.5px] font-semibold text-teal-700">{cfg.unit} {pad2(v.episode)}</div>
                     <div className="text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">{v.title}</div>
                     {v.subtitle && <div className="text-[12px] text-slate-500 leading-snug line-clamp-2 mt-0.5">{v.subtitle}</div>}
+                    {pr?.views > 0 && <div className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-slate-500"><Eye className="w-3 h-3" />Đã xem {pr.views} lần</div>}
                   </div>
                 </button>
               );
@@ -256,7 +265,8 @@ function WatchView({ video, videos, progress, meId, onSaved, onPick, onBack }) {
         <div className="min-w-0">
           {video.video_url ? (
             <VideoPlayer video={video} startAt={pr?.completed ? 0 : Number(pr?.position_sec) || 0} prevMax={Number(pr?.max_sec) || 0}
-              wasDone={!!pr?.completed} meId={meId} onSaved={onSaved} next={next} onNext={() => next && onPick(next.episode)} />
+              wasDone={!!pr?.completed} meId={meId} onSaved={onSaved} onViews={(n) => onSaved({ episode: video.episode, views: n })}
+              next={next} onNext={() => next && onPick(next.episode)} />
           ) : (
             <div className="relative mx-auto aspect-[9/16] w-full max-w-[min(100%,calc((100dvh-190px)*9/16))] rounded-2xl overflow-hidden bg-slate-900">
               <img src={thumbOf(video, cfg)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
@@ -266,12 +276,12 @@ function WatchView({ video, videos, progress, meId, onSaved, onPick, onBack }) {
             </div>
           )}
           <div className="mt-3 lg:hidden">
-            <EpisodeHeading video={video} done={!!pr?.completed} />
+            <EpisodeHeading video={video} done={!!pr?.completed} views={pr?.views || 0} hasVideo={!!video.video_url} />
           </div>
         </div>
 
         <aside className="min-w-0 space-y-3">
-          <div className="hidden lg:block e-card e-card-pad"><EpisodeHeading video={video} done={!!pr?.completed} /></div>
+          <div className="hidden lg:block e-card e-card-pad"><EpisodeHeading video={video} done={!!pr?.completed} views={pr?.views || 0} hasVideo={!!video.video_url} /></div>
           <div className="e-card overflow-hidden">
             <div className="px-4 pt-3.5 pb-2 text-[13px] font-semibold text-slate-700 flex items-center gap-2"><BookOpen className="w-4 h-4 text-teal-600" />Danh sách {cfg.unitLower}</div>
             <ul className="pb-1.5">
@@ -305,7 +315,7 @@ function WatchView({ video, videos, progress, meId, onSaved, onPick, onBack }) {
   );
 }
 
-function EpisodeHeading({ video, done }) {
+function EpisodeHeading({ video, done, views = 0, hasVideo = false }) {
   const cfg = useContext(HandbookCfg);
   return (
     <div>
@@ -316,18 +326,27 @@ function EpisodeHeading({ video, done }) {
       </div>
       <h2 className="mt-0.5 text-[18px] lg:text-[20px] font-bold text-slate-900 leading-snug">{video.title}</h2>
       {video.subtitle && <p className="mt-1 text-[13.5px] text-slate-600 leading-relaxed">{video.subtitle}</p>}
-      {video.duration_sec > 0 && <div className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-slate-500"><Clock className="w-3.5 h-3.5" />{fmtTime(video.duration_sec)} phút</div>}
+      <div className="mt-2 flex items-center gap-x-3 gap-y-1 flex-wrap text-[12px] text-slate-500">
+        {video.duration_sec > 0 && <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{fmtTime(video.duration_sec)} phút</span>}
+        {views > 0 && <span className="inline-flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />Bạn đã xem {views} lần</span>}
+      </div>
+      {hasVideo && !done && (
+        <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-amber-50 text-amber-800 px-3 py-2 text-[12.5px] leading-snug">
+          <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>Lần xem đầu: xem trọn vẹn ở tốc độ 1x, không tua nhanh. Cố tình tua sẽ bị ghi nhận. Xem xong được tua thoải mái.</span>
+        </div>
+      )}
     </div>
   );
 }
 
 // ---------------- Trình phát video ----------------
-function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, onNext }) {
+function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, onViews, next, onNext }) {
   const cfg = useContext(HandbookCfg);
   const wrapRef = useRef(null);
   const vRef = useRef(null);
   const hideTimer = useRef(null);
-  const st = useRef({ max: prevMax, done: wasDone, lastSave: 0, dirty: false, resumed: false });
+  const st = useRef({ max: prevMax, done: wasDone, lastSave: 0, dirty: false, resumed: false, tickAt: 0, guard: false, viewCounted: false, lastWarn: {} });
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(video.duration_sec || 0);
@@ -339,6 +358,30 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
   const [ended, setEnded] = useState(false);
   const [countdown, setCountdown] = useState(null);
   const [scrub, setScrub] = useState(null);       // đang kéo thanh tua -> giá trị tạm
+  const [locked, setLocked] = useState(!wasDone); // LẦN XEM ĐẦU: không tua vượt đoạn đã xem, không tăng tốc
+  const [warn, setWarn] = useState(null);         // popup cảnh báo vi phạm
+
+  // Ghi vi phạm (tua / tăng tốc ở lần xem đầu) + hiện cảnh báo. Cùng loại trong 4 giây chỉ ghi 1 lần.
+  const violate = useCallback((kind, extra = {}) => {
+    const v = vRef.current;
+    const s = st.current;
+    const now = Date.now();
+    if (now - (s.lastWarn[kind] || 0) < 4000) return;
+    s.lastWarn[kind] = now;
+    v?.pause();
+    setWarn({ kind, ...extra });
+    if (!meId) return;
+    supabase.from('training_violations').insert({
+      user_id: meId, module: cfg.key, ref: String(video.episode), kind,
+      detail: {
+        episode: video.episode, title: video.title,
+        at_sec: Math.floor(s.max), at: fmtTime(s.max),
+        ...(extra.to != null ? { to_sec: Math.floor(extra.to), to: fmtTime(extra.to) } : {}),
+        ...(extra.rate ? { rate: extra.rate } : {}),
+        duration: Math.round(v?.duration || dur), device: deviceLabel(),
+      },
+    }).then(() => {});
+  }, [meId, cfg.key, video.episode, video.title, dur]);
 
   // Lưu tiến độ (upsert dòng của chính mình)
   const save = useCallback(async (force = false) => {
@@ -364,7 +407,7 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
     onSaved(row);
     const { error } = await supabase.from(cfg.progressTable).upsert(row, { onConflict: 'user_id,episode' });
     if (error) { s.dirty = true; return; }
-    if (becameDone) toast.success(`Đã hoàn thành ${cfg.unit} ${pad2(video.episode)}`);
+    if (becameDone) { setLocked(false); toast.success(`Đã hoàn thành ${cfg.unit} ${pad2(video.episode)} — từ giờ có thể tua / xem nhanh`); }
   }, [meId, video.episode, dur, onSaved, cfg]);
 
   const saveRef = useRef(save);
@@ -395,6 +438,7 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
   }, [poke]);
   const seekBy = (d) => { const v = vRef.current; if (!v) return; v.currentTime = Math.max(0, Math.min((v.duration || dur) - 0.2, v.currentTime + d)); poke(); };
   const cycleSpeed = () => {
+    if (locked) { violate('speed', { rate: 'nút tốc độ' }); return; }
     const nx = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
     setSpeed(nx); if (vRef.current) vRef.current.playbackRate = nx; poke();
   };
@@ -449,12 +493,37 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
       }
     }
   };
+  // Chặn tua tới (kể cả thanh tua của trình phát gốc trên iPhone) — chỉ ở lần xem đầu
+  const onSeeking = () => {
+    const v = vRef.current;
+    const s = st.current;
+    if (!v || s.guard) { s.guard = false; return; }
+    if (!locked || !s.resumed) return;
+    if (v.currentTime > s.max + 1.5) {
+      const to = v.currentTime;
+      s.guard = true;
+      v.currentTime = s.max;
+      violate('seek', { to });
+    }
+  };
+  const onRate = () => {
+    const v = vRef.current;
+    if (!v || !locked || v.playbackRate <= 1) return;
+    const rate = v.playbackRate;
+    v.playbackRate = 1; setSpeed(1);
+    violate('speed', { rate: `${rate}x` });
+  };
   const onTime = () => {
     const v = vRef.current;
     if (!v) return;
     setTime(v.currentTime);
     if (!st.current.resumed) return;
-    st.current.max = Math.max(st.current.max, v.currentTime);
+    // "Đã xem tới" chỉ tăng theo phát liên tục (không tính các bước nhảy do tua)
+    const s0 = st.current;
+    const now = Date.now();
+    const allow = Math.max(2.5, ((now - (s0.tickAt || now)) / 1000) * (v.playbackRate || 1) * 1.2 + 1);
+    s0.tickAt = now;
+    if (!v.paused && v.currentTime <= s0.max + allow) s0.max = Math.max(s0.max, v.currentTime);
     if (Math.abs(v.currentTime - (st.current.lastPos ?? -1)) > 0.5) { st.current.dirty = true; st.current.lastPos = v.currentTime; }
     if (v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1));
     save(false);
@@ -463,6 +532,7 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
   const shown = scrub ?? time;
   const pct = dur > 0 ? (shown / dur) * 100 : 0;
   const bufPct = dur > 0 ? Math.min(100, (buffered / dur) * 100) : 0;
+  const maxPct = dur > 0 ? Math.min(100, (st.current.max / dur) * 100) : 0;   // đoạn đã xem (được phép tua trong đoạn này)
   const uiVisible = showUi || !playing || ended;
 
   return (
@@ -481,14 +551,25 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
         onClick={toggle}
         onLoadedMetadata={onLoaded}
         onTimeUpdate={onTime}
-        onPlay={() => { st.current.played = true; setPlaying(true); setEnded(false); poke(); }}
+        onSeeking={onSeeking}
+        onRateChange={onRate}
+        onPlay={() => {
+          const s = st.current;
+          s.played = true; s.tickAt = Date.now();
+          if (!s.viewCounted && meId) {   // mỗi lần bấm xem / xem lại = +1 lượt xem
+            s.viewCounted = true;
+            supabase.rpc('bump_handbook_view', { p_book: cfg.key, p_episode: video.episode }).then(({ data }) => { if (typeof data === 'number') onViews?.(data); });
+          }
+          setPlaying(true); setEnded(false); poke();
+        }}
         onPause={() => { setPlaying(false); setShowUi(true); save(true); }}
         onWaiting={() => setWaiting(true)}
         onPlaying={() => setWaiting(false)}
         onCanPlay={() => setWaiting(false)}
         onEnded={() => {
           setPlaying(false); setEnded(true); setShowUi(true);
-          st.current.max = Math.max(st.current.max, vRef.current?.duration || 0);
+          st.current.viewCounted = false;
+          if (!locked || st.current.max >= (vRef.current?.duration || 0) - 3) st.current.max = Math.max(st.current.max, vRef.current?.duration || 0);
           st.current.dirty = true; save(true);
           if (next?.video_url) setCountdown(NEXT_COUNTDOWN);
         }}
@@ -530,11 +611,30 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
         </div>
       )}
 
+      {/* Cảnh báo vi phạm */}
+      {warn && (
+        <div className="absolute inset-0 z-20 bg-black/75 grid place-items-center p-5 text-center text-white">
+          <div className="w-full max-w-[290px] rounded-2xl bg-[#14302C] border border-[#D9B77A]/40 p-5 shadow-float">
+            <span className="mx-auto w-12 h-12 rounded-full bg-amber-400/15 grid place-items-center"><AlertTriangle className="w-6 h-6 text-amber-300" /></span>
+            <div className="mt-3 text-[15.5px] font-bold">{warn.kind === 'speed' ? 'Không được tăng tốc ở lần xem đầu' : 'Không được tua video ở lần xem đầu'}</div>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/75">
+              Bạn cần xem trọn {cfg.unit} {pad2(video.episode)} một lần ở tốc độ 1x. Xem xong rồi có thể tua, xem nhanh thoải mái.
+            </p>
+            <p className="mt-2 text-[12px] leading-relaxed text-amber-200/90">Hành động này đã được ghi nhận vào tiến độ của bạn.</p>
+            <button type="button" onClick={() => { setWarn(null); vRef.current?.play().catch(() => {}); }}
+              className="mt-4 w-full h-10 rounded-xl font-semibold text-[14px] text-[#0B2522]" style={{ background: '#D9B77A' }}>
+              Tôi đã hiểu, xem tiếp
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Thanh điều khiển */}
       <div className={`absolute inset-x-0 bottom-0 pt-10 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white transition-opacity duration-300 ${uiVisible && !ended ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="relative h-5 flex items-center group/seek">
           <div className="absolute inset-x-0 h-1 rounded-full bg-white/25 overflow-hidden">
             <div className="absolute inset-y-0 left-0 bg-white/35" style={{ width: `${bufPct}%` }} />
+            {locked && <div className="absolute inset-y-0 left-0 bg-[#D9B77A]/45" style={{ width: `${maxPct}%` }} />}
             <div className="absolute inset-y-0 left-0" style={{ width: `${pct}%`, background: '#D9B77A' }} />
           </div>
           <span className="absolute w-3.5 h-3.5 -ml-[7px] rounded-full shadow pointer-events-none" style={{ left: `${pct}%`, background: '#D9B77A' }} />
@@ -555,7 +655,10 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, next, on
           <button type="button" onClick={() => seekBy(10)} aria-label="Tới 10 giây" className="w-9 h-9 grid place-items-center rounded-full hover:bg-white/10"><RotateCw className="w-[18px] h-[18px]" /></button>
           <span className="ml-1 text-[12px] tabular-nums text-white/85 whitespace-nowrap">{fmtTime(shown)} / {fmtTime(dur)}</span>
           <span className="flex-1" />
-          <button type="button" onClick={cycleSpeed} aria-label="Tốc độ phát" className="h-8 min-w-[44px] px-2 rounded-lg text-[12.5px] font-semibold hover:bg-white/10 tabular-nums">{speed}x</button>
+          <button type="button" onClick={cycleSpeed} aria-label="Tốc độ phát" title={locked ? 'Lần xem đầu chỉ xem tốc độ 1x' : 'Tốc độ phát'}
+            className={`h-8 min-w-[44px] px-2 rounded-lg text-[12.5px] font-semibold hover:bg-white/10 tabular-nums inline-flex items-center gap-1 ${locked ? 'text-white/60' : ''}`}>
+            {locked && <Lock className="w-3 h-3" />}{speed}x
+          </button>
           <button type="button" onClick={toggleFs} aria-label="Toàn màn hình" className="w-9 h-9 grid place-items-center rounded-full hover:bg-white/10">
             {isFs ? <Minimize className="w-[18px] h-[18px]" /> : <Maximize className="w-[18px] h-[18px]" />}
           </button>
@@ -708,59 +811,113 @@ function ManageDrawer({ open, onClose, videos, meId, onChanged }) {
 }
 
 // ---------------- Admin / Kế toán / Cổ đông: tiến độ nhân viên ----------------
+const fmtDT = (iso) => (iso ? new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '');
+const violationText = (x, cfg) => {
+  const d = x.detail || {};
+  const ep = `${cfg.unit} ${pad2(d.episode || x.ref)}`;
+  if (x.kind === 'speed') return `${ep} · cố tăng tốc độ${d.rate ? ` (${d.rate})` : ''} lúc ${d.at || '?'}`;
+  return `${ep} · cố tua từ ${d.at || '?'} tới ${d.to || '?'}${d.duration ? ` / ${fmtTime(d.duration)}` : ''}`;
+};
+
 function TeamProgressDrawer({ open, onClose, videos }) {
   const cfg = useContext(HandbookCfg);
   const [rows, setRows] = useState(null);
+  const [openId, setOpenId] = useState(null);
   useEffect(() => {
     if (!open) return;
     let alive = true;
+    setOpenId(null);
     (async () => {
-      const [{ data: staff }, { data: prog }] = await Promise.all([
+      const [{ data: staff }, { data: prog }, { data: vio }] = await Promise.all([
         supabase.from('profiles').select('id, full_name, role, avatar_url').eq('is_active', true).order('full_name'),
-        supabase.from(cfg.progressTable).select('user_id, episode, completed, updated_at'),
+        supabase.from(cfg.progressTable).select('*'),
+        supabase.from('training_violations').select('id, user_id, ref, kind, detail, created_at').eq('module', cfg.key).order('created_at', { ascending: false }).limit(2000),
       ]);
       if (!alive) return;
       const by = {};
       (prog || []).forEach(p => { (by[p.user_id] ||= []).push(p); });
+      const vby = {};
+      (vio || []).forEach(x => { (vby[x.user_id] ||= []).push(x); });
       setRows((staff || []).map(s => {
         const ps = by[s.id] || [];
         const done = new Set(ps.filter(p => p.completed).map(p => p.episode));
-        const last = ps.reduce((m, p) => (p.updated_at > m ? p.updated_at : m), '');
-        return { ...s, done, started: ps.length, last };
+        const views = ps.reduce((n, p) => n + (p.views || 0), 0);
+        return { ...s, done, started: ps.length, views, prog: Object.fromEntries(ps.map(p => [p.episode, p])), vio: vby[s.id] || [] };
       }).sort((a, b) => b.done.size - a.done.size || b.started - a.started || (a.full_name || '').localeCompare(b.full_name || '', 'vi')));
     })();
     return () => { alive = false; };
-  }, [open, cfg.progressTable]);
+  }, [open, cfg.progressTable, cfg.key]);
 
   const total = videos.length;
   const finished = rows?.filter(r => r.done.size >= total && total > 0).length || 0;
+  const vioPeople = rows?.filter(r => r.vio.length).length || 0;
 
   return (
-    <Drawer open={open} onClose={onClose} title={`Tiến độ xem ${cfg.name}`}
-      description={rows ? `${finished}/${rows.length} nhân viên đã xem hết ${total} ${cfg.unitLower}` : 'Đang tải…'}>
+    <Drawer open={open} onClose={onClose} size="lg" title={`Tiến độ xem ${cfg.name}`}
+      description={rows ? `${finished}/${rows.length} nhân viên đã xem hết ${total} ${cfg.unitLower}${vioPeople ? ` · ${vioPeople} người có vi phạm tua` : ''}` : 'Đang tải…'}>
       {!rows ? (
         <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-teal-600 animate-spin" /></div>
       ) : (
         <ul className="divide-y divide-slate-100 -mx-1">
-          {rows.map(r => (
-            <li key={r.id} className="flex items-center gap-3 px-1 py-2.5">
-              <span className="w-9 h-9 shrink-0 rounded-full bg-teal-50 text-teal-700 grid place-items-center overflow-hidden text-[13px] font-semibold">
-                {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : (r.full_name || '?').trim().split(/\s+/).pop()?.[0]}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium text-slate-800 truncate">{r.full_name || '—'}</div>
-                <div className="mt-1 flex gap-1">
-                  {videos.map(v => (
-                    <span key={v.episode} title={`${cfg.unit} ${pad2(v.episode)}`} className={`h-1.5 flex-1 rounded-full ${r.done.has(v.episode) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-                  ))}
-                </div>
-              </div>
-              <span className={`shrink-0 text-[12.5px] font-semibold tabular-nums ${r.done.size >= total ? 'text-emerald-600' : r.done.size ? 'text-slate-700' : 'text-slate-400'}`}>{r.done.size}/{total}</span>
-            </li>
-          ))}
+          {rows.map(r => {
+            const isOpen = openId === r.id;
+            return (
+              <li key={r.id} className="px-1 py-2.5">
+                <button type="button" onClick={() => setOpenId(isOpen ? null : r.id)} className="w-full flex items-center gap-3 text-left">
+                  <span className="w-9 h-9 shrink-0 rounded-full bg-teal-50 text-teal-700 grid place-items-center overflow-hidden text-[13px] font-semibold">
+                    {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : (r.full_name || '?').trim().split(/\s+/).pop()?.[0]}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13.5px] font-medium text-slate-800 truncate">{r.full_name || '—'}</span>
+                      {r.vio.length > 0 && <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-0.5"><AlertTriangle className="w-3 h-3" />{r.vio.length} vi phạm</span>}
+                    </div>
+                    <div className="mt-1 flex gap-1">
+                      {videos.map(v => (
+                        <span key={v.episode} title={`${cfg.unit} ${pad2(v.episode)}`} className={`h-1.5 flex-1 rounded-full ${r.done.has(v.episode) ? 'bg-emerald-500' : r.prog[v.episode] ? 'bg-amber-300' : 'bg-slate-200'}`} />
+                      ))}
+                    </div>
+                    <div className="mt-1 text-[11.5px] text-slate-500">{r.views ? `${r.views} lượt xem` : 'Chưa xem'}</div>
+                  </div>
+                  <span className={`shrink-0 text-[12.5px] font-semibold tabular-nums ${r.done.size >= total ? 'text-emerald-600' : r.done.size ? 'text-slate-700' : 'text-slate-400'}`}>{r.done.size}/{total}</span>
+                  <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="mt-2.5 ml-12 space-y-3">
+                    <div className="rounded-xl border border-slate-100 overflow-hidden">
+                      {videos.map(v => {
+                        const p = r.prog[v.episode];
+                        const pct = p?.completed ? 100 : (v.duration_sec ? Math.min(99, Math.round((Number(p?.max_sec) || 0) / v.duration_sec * 100)) : 0);
+                        return (
+                          <div key={v.episode} className="flex items-center gap-2 px-3 py-1.5 text-[12.5px] odd:bg-slate-50/60">
+                            <span className="w-12 shrink-0 font-semibold text-slate-500 tabular-nums">{cfg.unit} {pad2(v.episode)}</span>
+                            <span className="flex-1 min-w-0 truncate text-slate-700">{v.title}</span>
+                            <span className={`w-16 shrink-0 text-right tabular-nums ${p?.completed ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>{p?.completed ? '✓ xong' : p ? `${pct}%` : '—'}</span>
+                            <span className="w-16 shrink-0 text-right tabular-nums text-slate-500">{p?.views ? `${p.views} lần` : ''}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {r.vio.length > 0 ? (
+                      <div>
+                        <div className="text-[12.5px] font-semibold text-amber-700 mb-1">Nhật ký vi phạm ({r.vio.length})</div>
+                        <ul className="space-y-1">
+                          {r.vio.map(x => (
+                            <li key={x.id} className="flex gap-2 text-[12.5px] text-slate-700">
+                              <span className="shrink-0 text-slate-400 tabular-nums">{fmtDT(x.created_at)}</span>
+                              <span className="min-w-0">{violationText(x, cfg)}{x.detail?.device ? <span className="text-slate-400"> · {x.detail.device}</span> : null}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : <div className="text-[12.5px] text-slate-400">Không có vi phạm tua / tăng tốc.</div>}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </Drawer>
   );
 }
-
