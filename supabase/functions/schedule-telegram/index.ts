@@ -103,19 +103,29 @@ const cleanNotes = (notes?: string | null) =>
   String(notes || '').replace(IMG_RE, '').replace(/\n{2,}/g, '\n').trim();
 
 // Telegram hay từ chối tải ảnh từ URL ngoài (R2) -> server TỰ TẢI ảnh về rồi
-// đẩy thẳng FILE lên nhóm (multipart) — giống nhóm chấm công. Ảnh lỗi thì bỏ qua.
+// đẩy thẳng FILE lên nhóm (multipart) — giống nhóm chấm công.
+// Telegram từ chối ảnh (quá nặng / quá dài / định dạng lạ) -> gửi lại dạng FILE (sendDocument).
+// Mọi lỗi đều ghi log (Edge Functions → schedule-telegram → Logs) để tra lại.
 async function sendPhotos(chatId: string, urls: string[], caption: string) {
   for (let i = 0; i < urls.length; i++) {
     try {
       const res = await fetch(urls[i]);
-      if (!res.ok) continue;
+      if (!res.ok) { console.error('tải ảnh lỗi', res.status, urls[i]); continue; }
       const blob = await res.blob();
-      const fd = new FormData();
-      fd.append('chat_id', chatId);
-      if (i === 0) fd.append('caption', caption);
-      fd.append('photo', new File([blob], `anh-${i + 1}.jpg`, { type: blob.type || 'image/jpeg' }));
-      await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: 'POST', body: fd });
-    } catch { /* bỏ qua ảnh lỗi */ }
+      const ext = (urls[i].split('?')[0].split('.').pop() || 'jpg').toLowerCase();
+      const name = `ho-so-${i + 1}.${ext.length <= 4 ? ext : 'jpg'}`;
+      const post = async (method: 'sendPhoto' | 'sendDocument') => {
+        const fd = new FormData();
+        fd.append('chat_id', chatId);
+        if (i === 0) fd.append('caption', caption);
+        fd.append(method === 'sendPhoto' ? 'photo' : 'document', new File([blob], name, { type: blob.type || 'image/jpeg' }));
+        const r = await fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, { method: 'POST', body: fd });
+        const j = await r.json().catch(() => ({}));
+        if (!j.ok) console.error(method, 'lỗi', j.description || r.status, urls[i]);
+        return !!j.ok;
+      };
+      if (!(await post('sendPhoto'))) await post('sendDocument');
+    } catch (e) { console.error('gửi ảnh lỗi', (e as Error).message, urls[i]); }
   }
 }
 
@@ -140,15 +150,15 @@ Deno.serve(async (req) => {
     const staffLines = line('Telesale phụ trách', esc(teleFull)) + line('Sale phụ trách', esc(saleName));
     const notesClean = cleanNotes(rec.notes);
 
-    // Gom ảnh: ảnh đính kèm trong ghi chú + ảnh hồ sơ tư vấn (tối đa 5)
-    const photos = [
-      ...imgsFromNotes(rec.notes),
-      ...(Array.isArray(rec.consult_image_urls) ? rec.consult_image_urls : []),
-    ].filter((u) => typeof u === 'string' && u.startsWith('http')).slice(0, 5);
+    // Gom ảnh: ảnh đính kèm trong ghi chú + ảnh hồ sơ tư vấn (tối đa 10)
+    const isUrl = (u: unknown) => typeof u === 'string' && u.startsWith('http');
+    const consultNow: string[] = (Array.isArray(rec.consult_image_urls) ? rec.consult_image_urls : []).filter(isUrl);
+    const consultOld: string[] = (Array.isArray(old.consult_image_urls) ? old.consult_image_urls : []).filter(isUrl);
+    const photos = [...imgsFromNotes(rec.notes), ...consultNow].filter(isUrl).slice(0, 10);
     // Gửi ảnh chạy nền sau khi đã trả lời webhook (không bị cắt vì timeout)
-    const queuePhotos = (chatId: string | undefined) => {
-      if (!photos.length || !chatId) return;
-      const task = sendPhotos(chatId, photos, `📎 Ảnh đính kèm — ${rec.customer_name}`);
+    const queuePhotos = (chatId: string | undefined, list: string[] = photos, caption = `📎 Hồ sơ đính kèm — ${rec.customer_name}`) => {
+      if (!list.length || !chatId) return;
+      const task = sendPhotos(chatId, list, caption);
       // deno-lint-ignore no-explicit-any
       const rt: any = globalThis as any;
       if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
@@ -223,6 +233,21 @@ Deno.serve(async (req) => {
         line('Tình trạng', esc(notesClean));
       await send(CHAT_SURGERY, text);
       queuePhotos(CHAT_SURGERY);
+      return new Response('ok');
+    }
+
+    // 1b) HỒ SƠ TƯ VẤN BỔ SUNG cho khách PHẪU THUẬT / TƯ VẤN LÀM LUÔN: ảnh được tải lên SAU lúc báo lịch
+    //     (vd. màn Khách tư vấn lưu ảnh bằng nút "Hồ sơ tư vấn" riêng) -> gửi phần ảnh MỚI lên nhóm Phẫu thuật
+    const addedConsult = consultNow.filter((u) => !consultOld.includes(u));
+    if (type === 'UPDATE' && !isRecheck && addedConsult.length &&
+        (rec.status === 'phau_thuat' || rec.consult_do_now)) {
+      await send(CHAT_SURGERY,
+        `📎 <b>Hồ sơ tư vấn bổ sung</b>` +
+        line('KH', kh) +
+        line('Ngày mổ', dShort(rec.surgery_date || rec.appointment_date)) +
+        line('Số ảnh mới', String(addedConsult.length)) +
+        line('Ghi chú tư vấn', esc(rec.consult_note)));
+      queuePhotos(CHAT_SURGERY, addedConsult.slice(0, 10), `📎 Hồ sơ tư vấn — ${rec.customer_name}`);
       return new Response('ok');
     }
 
