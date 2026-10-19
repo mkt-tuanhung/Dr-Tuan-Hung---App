@@ -41,7 +41,7 @@ import {
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
   AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText,
-  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3, BookOpen, Library,
+  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3, BookOpen, Library, Stethoscope,
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
@@ -52,6 +52,7 @@ import TasksPage from '@/features/work/TasksPage.jsx';
 import SettingsPage from '@/features/settings/SettingsPage.jsx';
 import SchedulePage from '@/features/hr/SchedulePage.jsx';
 import CskhHandbookPage from '@/features/handbook/CskhHandbookPage.jsx';
+import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
@@ -104,6 +105,7 @@ const MENU_GROUPS = [
   ]},
   { title: 'ĐÀO TẠO', color: 'teal', items: [
     { id: 'cskh_handbook', label: 'Sổ Tay CSKH', icon: BookOpen },
+    { id: 'pro_handbook', label: 'Sổ Tay Chuyên môn', icon: Stethoscope },
     { id: 'library', label: 'Tài liệu', icon: Library },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
@@ -725,6 +727,7 @@ const AdminDashboard = () => {
       case 'community': return <CommunityPage />;
       case 'minigame': return <MinigamePage />;
       case 'cskh_handbook': return <CskhHandbookPage />;
+      case 'pro_handbook': return <ProHandbookPage />;
       case 'library': return <LibraryPage />;
       case 'notifications': return <NotificationsPage />;
       case 'content_overview': return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
