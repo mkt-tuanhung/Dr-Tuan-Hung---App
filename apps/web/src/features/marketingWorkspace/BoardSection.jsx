@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Plus, Columns3, Table2, CalendarDays, GanttChartSquare, LayoutDashboard, Images, Map as MapIcon, Archive, Trash2, Paperclip, Link2, ImagePlus, UserPlus, Tag,
+  Plus, Columns3, Table2, CalendarDays, GanttChartSquare, LayoutDashboard, Images, Map as MapIcon, Archive, Trash2, FolderOpen, Paperclip, Link2, ImagePlus, UserPlus, Tag,
   MoreHorizontal, Move, CheckSquare, CalendarClock, ChevronLeft, ChevronRight, Download, RotateCcw, Filter, X,
 } from 'lucide-react';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
@@ -20,6 +20,7 @@ import {
   PRIORITY, BOARD_TEMPLATES, bySort, fmtDate, fmtDateTime, isLate, moveToDate, toLocalInput, fromLocalInput, vnDateOf,
 } from './mwMeta';
 import { Modal, Field, Avatar, AvatarStack, Tone, Skeleton, attempt, BusyButton, Sel } from './mwUi';
+import { KhoSourcePicker, useKhoAccess, KHO_LIST_STATUS } from './KhoSources';
 
 const VIEWS = [
   { id: 'kanban', label: 'Bảng', icon: Columns3 },
@@ -49,14 +50,15 @@ function localSort(tasks, taskId, listId, afterId) {
 }
 
 export function useBoardData(boardId, archived) {
-  const [state, setState] = useState({ loading: true, error: null, lists: [], tasks: [], assignees: [], taskLabels: [], checks: [], atts: [] });
+  const [state, setState] = useState({ loading: true, error: null, lists: [], tasks: [], assignees: [], taskLabels: [], checks: [], atts: [], srcs: [] });
   const load = useCallback(async () => {
     if (!boardId) { setState(s => ({ ...s, loading: false, lists: [], tasks: [] })); return; }
     try {
       const [lists, tasks] = await Promise.all([mwApi.lists([boardId]), mwApi.tasks([boardId], { archived })]);
       const ids = tasks.map(t => t.id);
-      const [assignees, taskLabels, checks, atts] = await Promise.all([mwApi.assignees(ids), mwApi.taskLabels(ids), mwApi.checklist(ids), mwApi.boardAttachments(ids)]);
-      setState({ loading: false, error: null, lists, tasks, assignees, taskLabels, checks, atts });
+      const [assignees, taskLabels, checks, atts, srcs] = await Promise.all([mwApi.assignees(ids), mwApi.taskLabels(ids), mwApi.checklist(ids), mwApi.boardAttachments(ids),
+        mwApi.taskSources(ids).catch(() => [])]);   // v2 chưa cài / không có quyền Kho -> bỏ qua
+      setState({ loading: false, error: null, lists, tasks, assignees, taskLabels, checks, atts, srcs });
     } catch (e) {
       setState(s => ({ ...s, loading: false, error: e }));
     }
@@ -123,6 +125,11 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
     return m;
   }, [data.checks]);
   const labelById = useMemo(() => new Map(labels.map(l => [l.id, l])), [labels]);
+  const srcBy = useMemo(() => {
+    const m = new Map();
+    data.srcs.forEach(x => m.set(x.task_id, (m.get(x.task_id) || 0) + 1));
+    return m;
+  }, [data.srcs]);
   const attBy = useMemo(() => {
     const m = new Map();
     data.atts.forEach(a => { if (!m.has(a.task_id)) m.set(a.task_id, []); m.get(a.task_id).push(a); });
@@ -141,7 +148,7 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
   const hasFilter = q || fAssignee || fLabel || fPriority || fLate;
   const clearFilter = () => { setQ(''); setFAssignee(''); setFLabel(''); setFPriority(''); setFLate(false); };
 
-  const ctx = { staffById, asgBy, lblBy, chkBy, labelById, attBy, doneIds, openTask, perm, labels, memberPeople };
+  const ctx = { staffById, asgBy, lblBy, chkBy, labelById, attBy, srcBy, doneIds, openTask, perm, labels, memberPeople };
 
   // ----- Ghi -----
   const moveTask = async (task, listId, afterId, targetBoard) => {
@@ -187,6 +194,7 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
       ...f.labelIds.map(id => run(mwApi.addTaskLabel(t.id, id))),
       ...f.links.map(url => run(mwApi.addAttachment(t.id, { url, name: url.slice(0, 300) }))),
     ]);
+    for (const p of (f.sources || [])) await run(mwApi.addTaskSource(t.id, p.customerId, p.assetId));
     for (const file of f.images) {
       await run((async () => {
         const sha = await sha256OfFile(file);
@@ -307,6 +315,7 @@ function TaskCard({ t, ctx, onDragStart, onDragEnd, dragging, onMoveSheet }) {
           {t.due_at && <span className={`inline-flex items-center gap-1 ${late ? 'text-danger-600 font-semibold' : ''}`}><CalendarClock className="w-3.5 h-3.5" />{fmtDateTime(t.due_at)}</span>}
           {chk && <span className={`inline-flex items-center gap-1 ${chk[0] === chk[1] ? 'text-success-600' : ''}`}><CheckSquare className="w-3.5 h-3.5" />{chk[0]}/{chk[1]}</span>}
           {atts.length > 0 && <span className="inline-flex items-center gap-1" title={`${atts.length} ảnh / link / tệp`}><Paperclip className="w-3.5 h-3.5" />{atts.length}</span>}
+          {ctx.srcBy.get(t.id) > 0 && <span className="inline-flex items-center gap-1 text-teal-700" title={`${ctx.srcBy.get(t.id)} source Kho Media`}><FolderOpen className="w-3.5 h-3.5" />{ctx.srcBy.get(t.id)}</span>}
           <span className="ml-auto">{people.length ? <AvatarStack people={people} /> : <span className="text-slate-300">Chưa giao</span>}</span>
         </div>
       </div>
@@ -352,6 +361,7 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
               <header className="flex items-center gap-2 px-2 py-1.5 mb-2">
                 <span className={`w-2 h-2 rounded-full ${l.is_done ? 'bg-success-500' : 'bg-teal-500'}`} />
                 <h3 className="text-[13.5px] font-bold text-slate-800 truncate flex-1">{l.name}</h3>
+                {(l.kho_status === 'dang_dung' || l.kho_status === 'da_dung') && <span title={`Thẻ vào cột này -> source Kho Media: ${KHO_LIST_STATUS[l.kho_status]}`}><FolderOpen className="w-3.5 h-3.5 text-teal-600" aria-label={`Cập nhật Kho: ${KHO_LIST_STATUS[l.kho_status]}`} /></span>}
                 <span className={`text-[12px] tabular-nums px-1.5 rounded-full ${overWip ? 'bg-danger-50 text-danger-600 font-semibold' : 'text-slate-400'}`}
                   title={l.wip_limit ? `Giới hạn WIP ${l.wip_limit}` : undefined}>{items.length}{l.wip_limit ? `/${l.wip_limit}` : ''}</span>
                 {ctx.perm.manage && <button type="button" className="e-icon-btn w-7 h-7 hover:!text-danger-600" aria-label={`Xoá cột ${l.name}`} title="Xoá cột" onClick={() => setDelList(l)}><Trash2 className="w-3.5 h-3.5" /></button>}
@@ -408,6 +418,9 @@ function QuickAddForm({ ctx, onCancel, onSubmit }) {
   const [links, setLinks] = useState([]);
   const [link, setLink] = useState('');
   const [images, setImages] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [picker, setPicker] = useState(false);
+  const kho = useKhoAccess();
   const [open, setOpen] = useState({ people: true, tags: false, link: false });
   const [busy, setBusy] = useState(false);
   const previews = useMemo(() => images.map(f => URL.createObjectURL(f)), [images]);
@@ -432,9 +445,9 @@ function QuickAddForm({ ctx, onCancel, onSubmit }) {
     if (!v || busy) return;
     const pending = link.trim() && /^https:\/\/\S+\.\S+/.test(link.trim()) ? [...links, link.trim()] : links;
     setBusy(true);
-    const ok = await onSubmit({ title: v, assignees, labelIds, links: pending, images });
+    const ok = await onSubmit({ title: v, assignees, labelIds, links: pending, images, sources });
     setBusy(false);
-    if (ok) { setTitle(''); setAssignees([]); setLabelIds([]); setLinks([]); setLink(''); setImages([]); }
+    if (ok) { setTitle(''); setAssignees([]); setLabelIds([]); setLinks([]); setLink(''); setImages([]); setSources([]); }
   };
   const avail = ctx.memberPeople.filter(p => !assignees.includes(p.id));
   const toggle = (k) => setOpen(o => ({ ...o, [k]: !o[k] }));
@@ -484,6 +497,16 @@ function QuickAddForm({ ctx, onCancel, onSubmit }) {
           </div>
         </div>
       )}
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {sources.map((p, i) => (
+            <span key={i} className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-teal-50 text-[11.5px] text-teal-800 font-mono">
+              <FolderOpen className="w-3 h-3" />{p.code || 'source'}{p.assetId ? ' · file' : ''}
+              <button type="button" aria-label="Bỏ source" onClick={() => setSources(sources.filter((_, k) => k !== i))}><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
       {images.length > 0 && (
         <div className="grid grid-cols-4 gap-1">
           {previews.map((u, i) => (
@@ -502,7 +525,11 @@ function QuickAddForm({ ctx, onCancel, onSubmit }) {
         <button type="button" className={`e-icon-btn w-8 h-8 ${open.link ? '!text-teal-700 !bg-teal-50' : ''}`} title="Link" aria-label="Link" onClick={() => toggle('link')}><Link2 className="w-4 h-4" /></button>
         <label className="e-icon-btn w-8 h-8 cursor-pointer" title="Thêm ảnh" aria-label="Thêm ảnh"><ImagePlus className="w-4 h-4" />
           <input type="file" accept="image/*" multiple className="sr-only" onChange={pickImages} /></label>
+        {kho && <button type="button" className="e-icon-btn w-8 h-8" title="Gắn source từ Kho Media" aria-label="Gắn source từ Kho Media" onClick={() => setPicker(true)}><FolderOpen className="w-4 h-4" /></button>}
       </div>
+      <KhoSourcePicker open={picker} onClose={() => setPicker(false)} context={{ text: [title, ...labelIds.map(id => ctx.labelById.get(id)?.name)].join(' ') }}
+        already={new Set(sources.filter(p => !p.assetId).map(p => p.customerId))}
+        onPick={(picks) => setSources(prev => [...prev, ...picks.filter(p => !prev.some(x => x.customerId === p.customerId && x.assetId === p.assetId))])} />
       <div className="flex gap-2">
         <button type="submit" className="e-btn e-btn-primary e-btn-sm" disabled={!title.trim() || busy}>{busy ? 'Đang lưu…' : 'Thêm thẻ'}</button>
         <button type="button" className="e-btn e-btn-ghost e-btn-sm" onClick={onCancel} disabled={busy}>Huỷ</button>
@@ -517,13 +544,16 @@ function ListMenu({ list, lists, allTasks, onClose, onDone, onDelete }) {
   const [name, setName] = useState('');
   const [wip, setWip] = useState('');
   const [done, setDone] = useState(false);
-  useEffect(() => { if (list) { setName(list.name); setWip(list.wip_limit || ''); setDone(list.is_done); } }, [list]);
+  const [kho, setKho] = useState('none');
+  useEffect(() => { if (list) { setName(list.name); setWip(list.wip_limit || ''); setDone(list.is_done); setKho(list.kho_status || 'none'); } }, [list]);
   if (!list) return null;
   const idx = lists.findIndex(l => l.id === list.id);
   const save = async () => {
     const w = wip === '' ? null : Number(wip);
     if (w != null && (!Number.isInteger(w) || w < 1 || w > 500)) { toast.error('Giới hạn WIP 1–500'); return; }
-    if (await attempt(() => mwApi.updateList(list.id, { name: name.trim(), wip_limit: w, is_done: done }), 'Đã lưu cột')) { onClose(); onDone(); }
+    const patch = { name: name.trim(), wip_limit: w, is_done: done };
+    if ('kho_status' in list) patch.kho_status = kho;     // cột chỉ có khi đã cài v2
+    if (await attempt(() => mwApi.updateList(list.id, patch), 'Đã lưu cột')) { onClose(); onDone(); }
   };
   const shift = async (dir) => {
     const other = lists[idx + dir];
@@ -540,6 +570,13 @@ function ListMenu({ list, lists, allTasks, onClose, onDone, onDelete }) {
       <Field label="Tên cột" required><input className="e-input" value={name} maxLength={80} onChange={e => setName(e.target.value)} /></Field>
       <Field label="Giới hạn WIP" hint="Số thẻ tối đa trong cột — để trống nếu không giới hạn. Database chặn kéo thêm khi đầy."><input className="e-input" type="number" min={1} max={500} value={wip} onChange={e => setWip(e.target.value)} /></Field>
       <label className="flex items-center gap-2 text-[14px]"><input type="checkbox" className="e-checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> Cột hoàn thành (thẻ vào cột này được tính là xong)</label>
+      {'kho_status' in list && (
+        <Field label="Khi thẻ vào cột này, cập nhật source bên Kho Media" hint="Chỉ cập nhật tiến (Chưa dựng → Đang dựng → Đã dựng), không hạ trạng thái.">
+          <select className="e-input" value={kho} onChange={e => setKho(e.target.value)} aria-label="Cập nhật Kho Media">
+            {Object.entries(KHO_LIST_STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </Field>
+      )}
       <div className="flex flex-wrap gap-2 pt-1">
         <BusyButton className="e-btn e-btn-secondary e-btn-sm" disabled={idx <= 0} onClick={() => shift(-1)}><ChevronLeft /> Sang trái</BusyButton>
         <BusyButton className="e-btn e-btn-secondary e-btn-sm" disabled={idx >= lists.length - 1} onClick={() => shift(1)}>Sang phải <ChevronRight /></BusyButton>

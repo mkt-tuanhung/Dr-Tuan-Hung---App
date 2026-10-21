@@ -180,7 +180,8 @@ export default function MarketingWorkspacePage() {
 
       {openTaskId && (
         <TaskDrawer taskId={openTaskId} onClose={() => setOpenTaskId(null)} profile={profile} workspaces={boot.workspaces || []} myRoles={boot.myRoles}
-          staffById={staffById} onChanged={() => setTaskVersion(v => v + 1)} />
+          staffById={staffById} onChanged={() => setTaskVersion(v => v + 1)}
+          onOpenContent={(id) => { setOpenTaskId(null); go('studio', { content: id }); }} />
       )}
       <NewWorkspaceModal open={newWs} onClose={() => setNewWs(false)} onCreated={(id) => { setWsId(id); setSection('board'); setFocus({}); reloadAll(); }} />
     </div>
