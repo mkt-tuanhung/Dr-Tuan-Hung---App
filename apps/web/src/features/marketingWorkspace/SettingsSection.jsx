@@ -142,10 +142,10 @@ export default function SettingsSection({ ws, perm, profile, staff, staffById, b
           <div className="flex gap-1">{LABEL_COLORS.map(c => <button key={c} type="button" disabled={!perm.manage} onClick={() => setInfo(v => ({ ...v, color: c }))} aria-label={`Màu ${c}`} aria-pressed={info.color === c} className={`w-7 h-7 rounded-full border-2 ${info.color === c ? 'border-slate-800' : 'border-white'}`} style={{ background: c }} />)}</div>
           {perm.manage && (
             <div className="flex flex-wrap gap-2">
-              <BusyButton disabled={!info.name.trim()} onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { name: info.name.trim(), description: info.description.trim() || null, color: info.color }), 'Đã lưu')) reloadAll(); }}>Lưu</BusyButton>
+              <BusyButton disabled={!info.name.trim()} onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { name: info.name.trim(), description: info.description.trim() || null, color: info.color }), 'Đã lưu')) reloadAll(); }}>Lưu thông tin</BusyButton>
               {ws.archived_at
-                ? <BusyButton className="e-btn e-btn-secondary" onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { archived_at: null }), 'Đã khôi phục workspace')) reloadAll(); }}><RotateCcw /> Khôi phục</BusyButton>
-                : <BusyButton className="e-btn e-btn-danger-soft" onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { archived_at: new Date().toISOString() }), 'Đã lưu trữ workspace')) reloadAll(); }}><Archive /> Lưu trữ workspace</BusyButton>}
+                ? <BusyButton className="e-btn e-btn-secondary" onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { archived_at: null }), 'Đã khôi phục workspace')) reloadAll(); }}><RotateCcw /> Hiện lại workspace</BusyButton>
+                : <BusyButton className="e-btn e-btn-ghost text-danger-600" onClick={async () => { if (!window.confirm(`Ẩn workspace “${ws.name}”? Mọi người sẽ không thấy trong danh sách (dữ liệu giữ nguyên, hiện lại được).`)) return; if (await attempt(() => mwApi.updateWorkspace(ws.id, { archived_at: new Date().toISOString() }), 'Đã ẩn workspace')) reloadAll(); }}><Archive /> Ẩn workspace</BusyButton>}
             </div>
           )}
         </div>

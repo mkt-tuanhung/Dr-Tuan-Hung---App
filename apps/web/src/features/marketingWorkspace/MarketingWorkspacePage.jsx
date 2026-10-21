@@ -10,13 +10,14 @@ import {
   LayoutDashboard, Inbox, Columns3, Megaphone, Clapperboard, ShieldCheck, Send, Settings2, MessagesSquare, BookOpen,
   Database, FolderOpen, BarChart3, Workflow, Sparkles, Plus, Lock,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { usePageTitle, ErrorState, EmptyState } from '@/components/ds';
 import { takePendingFocus } from '@/lib/notif';
 import { mwApi } from './mwApi';
 import { MW_TAB, isAdminProfile, hasRole, wsPerm, LABEL_COLORS, bySort } from './mwMeta';
 import { Modal, Field, Skeleton, attempt, BusyButton, Sel } from './mwUi';
-import BoardSection from './BoardSection';
+import BoardSection, { TemplatePicker, createBoardWith, customColsOk, DEFAULT_CUSTOM_COLS } from './BoardSection';
 import TaskDrawer from './TaskDrawer';
 import { Overview, MyTasks } from './HomeSections';
 import SettingsSection from './SettingsSection';
@@ -83,15 +84,16 @@ export default function MarketingWorkspacePage() {
 
   const staffById = useMemo(() => new Map((boot.staff || []).map(s => [s.id, s])), [boot.staff]);
   const activeWs = (boot.workspaces || []).filter(w => !w.archived_at);
-  const ws = (boot.workspaces || []).find(w => w.id === wsId) || activeWs[0] || null;
+  const ws = (boot.workspaces || []).find(w => w.id === wsId) || activeWs[0] || (boot.workspaces || [])[0] || null;
   const perm = useMemo(() => wsPerm(profile, ws, boot.myRoles?.get(ws?.id)), [profile, ws, boot.myRoles]);
 
+  const [wsError, setWsError] = useState(null);
   const loadWs = useCallback(async () => {
     if (!ws) { setBoards([]); setLabels([]); return; }
     try {
       const [b, l] = await Promise.all([mwApi.boards([ws.id]), mwApi.labels([ws.id])]);
-      setBoards(b.sort(bySort)); setLabels(l);
-    } catch { setBoards([]); setLabels([]); }
+      setBoards(b.sort(bySort)); setLabels(l); setWsError(null);
+    } catch (e) { setBoards([]); setLabels([]); setWsError(e); }
   }, [ws]);
   useEffect(() => { loadWs(); }, [loadWs]);
 
@@ -126,7 +128,7 @@ export default function MarketingWorkspacePage() {
 
       {/* Thanh workspace */}
       <div className="flex flex-wrap items-center gap-2">
-        {activeWs.length > 0 ? (
+        {(boot.workspaces || []).length > 0 ? (
           <label className="flex items-center gap-2 min-w-0">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ws?.color || '#087F83' }} />
             <Sel wrapClass="max-w-[280px]" className="!font-semibold" value={ws?.id || ''} onChange={e => { setWsId(e.target.value); setFocus({}); }} aria-label="Chọn workspace">
@@ -138,6 +140,14 @@ export default function MarketingWorkspacePage() {
         {boot.myKinds.size > 0 && <span className="e-badge e-badge-sm e-tone-lavender">Người duyệt</span>}
         {canCreateWs && <button type="button" className="e-btn e-btn-secondary e-btn-sm ml-auto" onClick={() => setNewWs(true)}><Plus /> Workspace mới</button>}
       </div>
+
+      {ws?.archived_at && (
+        <div className="e-alert e-alert-warning text-[13px] flex flex-wrap items-center gap-2">
+          <span><b>Workspace “{ws.name}” đang bị ẩn (lưu trữ)</b> — dữ liệu vẫn còn nguyên.</span>
+          {perm.manage && <BusyButton className="e-btn e-btn-primary e-btn-sm ml-auto" onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { archived_at: null }), 'Đã hiện lại workspace')) reloadAll(); }}>Hiện lại workspace</BusyButton>}
+        </div>
+      )}
+      {wsError && <div className="e-alert e-alert-danger text-[13px]">Không tải được board của workspace: {wsError.message}</div>}
 
       {/* Điều hướng con */}
       <nav className="e-tabs" aria-label="Mục Marketing Workspace">
@@ -172,26 +182,33 @@ export default function MarketingWorkspacePage() {
         <TaskDrawer taskId={openTaskId} onClose={() => setOpenTaskId(null)} profile={profile} workspaces={boot.workspaces || []} myRoles={boot.myRoles}
           staffById={staffById} onChanged={() => setTaskVersion(v => v + 1)} />
       )}
-      <NewWorkspaceModal open={newWs} onClose={() => setNewWs(false)} onCreated={(id) => { setWsId(id); setSection('settings'); reloadAll(); }} />
+      <NewWorkspaceModal open={newWs} onClose={() => setNewWs(false)} onCreated={(id) => { setWsId(id); setSection('board'); setFocus({}); reloadAll(); }} />
     </div>
   );
 }
 
+// Tạo workspace = tạo luôn bảng công việc đầu tiên (theo mẫu cột) -> vào là dùng được ngay
 function NewWorkspaceModal({ open, onClose, onCreated }) {
-  const [f, setF] = useState({ name: '', description: '', color: LABEL_COLORS[0] });
-  useEffect(() => { if (open) setF({ name: '', description: '', color: LABEL_COLORS[0] }); }, [open]);
+  const blank = { name: '', description: '', color: LABEL_COLORS[0], board: 'Sản xuất nội dung', tpl: 'video', cols: DEFAULT_CUSTOM_COLS };
+  const [f, setF] = useState(blank);
+  useEffect(() => { if (open) setF(blank); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const save = async () => {
-    const id = await attempt(() => mwApi.createWorkspace(f.name.trim(), f.description.trim(), f.color), 'Đã tạo workspace — thêm thành viên và board');
-    if (id && id !== true) { onClose(); onCreated(id); }
+    const id = await attempt(() => mwApi.createWorkspace(f.name.trim(), f.description.trim(), f.color));
+    if (!id || id === true) return;
+    const b = await attempt(() => createBoardWith(id, f.board.trim() || 'Bảng công việc', f.tpl, f.cols));
+    toast.success(b ? 'Đã tạo workspace + bảng công việc — thêm thẻ ngay, thêm người ở “Thành viên & cấu hình”' : 'Đã tạo workspace (chưa tạo được bảng — bấm Tạo board)');
+    onClose(); onCreated(id);
   };
   return (
-    <Modal open={open} onClose={onClose} title="Workspace mới" desc="Bạn là chủ workspace. Thêm thành viên ở mục Thành viên & cấu hình." footer={<>
+    <Modal open={open} onClose={onClose} title="Workspace mới" size="max-w-xl" desc="Workspace = 1 nhóm / dự án. Bên trong có các bảng công việc (cột → thẻ việc). Bạn là chủ workspace." footer={<>
       <button type="button" className="e-btn e-btn-secondary" onClick={onClose}>Huỷ</button>
-      <BusyButton disabled={!f.name.trim()} onClick={save}>Tạo</BusyButton>
+      <BusyButton disabled={!f.name.trim() || !customColsOk(f.tpl, f.cols)} onClick={save}>Tạo</BusyButton>
     </>}>
       <Field label="Tên workspace" required><input autoFocus className="e-input" value={f.name} maxLength={120} onChange={e => setF(v => ({ ...v, name: e.target.value }))} placeholder="VD: Marketing Dr Tuấn Hùng" /></Field>
       <Field label="Mô tả"><textarea className="e-textarea" value={f.description} maxLength={2000} onChange={e => setF(v => ({ ...v, description: e.target.value }))} /></Field>
       <div className="flex gap-1">{LABEL_COLORS.map(c => <button key={c} type="button" onClick={() => setF(v => ({ ...v, color: c }))} aria-label={`Màu ${c}`} aria-pressed={f.color === c} className={`w-7 h-7 rounded-full border-2 ${f.color === c ? 'border-slate-800' : 'border-white'}`} style={{ background: c }} />)}</div>
+      <Field label="Bảng công việc đầu tiên"><input className="e-input" value={f.board} maxLength={120} onChange={e => setF(v => ({ ...v, board: e.target.value }))} /></Field>
+      <TemplatePicker tpl={f.tpl} setTpl={(t) => setF(v => ({ ...v, tpl: t }))} cols={f.cols} setCols={(c) => setF(v => ({ ...v, cols: c }))} />
     </Modal>
   );
 }
