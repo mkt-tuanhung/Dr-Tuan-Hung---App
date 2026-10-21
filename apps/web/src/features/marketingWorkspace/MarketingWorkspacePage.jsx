@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   LayoutDashboard, Inbox, Columns3, Megaphone, Clapperboard, ShieldCheck, Send, Settings2, MessagesSquare, BookOpen,
-  Database, FolderOpen, BarChart3, Workflow, Sparkles, Plus, Lock,
+  Database, FolderOpen, BarChart3, Workflow, Sparkles, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -21,6 +21,8 @@ import BoardSection, { TemplatePicker, createBoardWith, customColsOk, DEFAULT_CU
 import TaskDrawer from './TaskDrawer';
 import { Overview, MyTasks } from './HomeSections';
 import SettingsSection from './SettingsSection';
+import { ChatSection, DocsSection } from './CollabSections';
+import { BaseSection, AutomationSection, WsMediaSection, ReportsSection, AiSection } from './MoreSections';
 import ContentStudio, { CampaignsSection } from './ContentStudio';
 import ApprovalCenter from './ApprovalCenter';
 import PublishingQueue from './PublishingQueue';
@@ -29,21 +31,18 @@ const SECTIONS = [
   { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard, needWs: true },
   { id: 'my', label: 'Việc của tôi', icon: Inbox },
   { id: 'board', label: 'Bảng công việc', icon: Columns3, needWs: true },
+  { id: 'chat', label: 'Chat', icon: MessagesSquare, needWs: true },
   { id: 'campaigns', label: 'Chiến dịch', icon: Megaphone, needWs: true },
   { id: 'studio', label: 'Content Studio', icon: Clapperboard, needWs: true },
   { id: 'approvals', label: 'Duyệt', icon: ShieldCheck },
   { id: 'publishing', label: 'Xuất bản', icon: Send, needWs: true },
+  { id: 'docs', label: 'Tài liệu & Wiki', icon: BookOpen, needWs: true },
+  { id: 'base', label: 'Base', icon: Database, needWs: true },
+  { id: 'media', label: 'Kho media', icon: FolderOpen, needWs: true },
+  { id: 'reports', label: 'Báo cáo', icon: BarChart3, needWs: true },
+  { id: 'automation', label: 'Automation', icon: Workflow, needWs: true },
+  { id: 'ai', label: 'Trợ lý AI', icon: Sparkles, needWs: true },
   { id: 'settings', label: 'Thành viên & cấu hình', icon: Settings2, needWs: true },
-];
-// Hiện để người dùng biết lộ trình, nhưng KHOÁ + ghi rõ lý do (không vẽ chức năng giả)
-const LATER = [
-  { id: 'chat', label: 'Chat', icon: MessagesSquare, why: 'Chưa triển khai — dùng bình luận + @nhắc trong thẻ, hoặc Cộng đồng / Phòng họp hiện có.' },
-  { id: 'docs', label: 'Tài liệu & Wiki', icon: BookOpen, why: 'Chưa triển khai — dùng mô tả thẻ / brief, hoặc module Tài liệu hiện có.' },
-  { id: 'base', label: 'Base', icon: Database, why: 'Chưa triển khai — Bảng dữ liệu của board đã sửa trực tiếp + xuất CSV.' },
-  { id: 'media', label: 'Kho media', icon: FolderOpen, why: 'Dùng module Kho Media hiện có (menu Marketing). Tệp bản duyệt lưu ở tab Phiên bản.' },
-  { id: 'reports', label: 'Báo cáo', icon: BarChart3, why: 'Số liệu nội bộ ở Tổng quan. Số liệu mạng xã hội: chưa kết nối nguồn.' },
-  { id: 'automation', label: 'Automation', icon: Workflow, why: 'Chưa triển khai (cần hàng đợi + chống vòng lặp phía server).' },
-  { id: 'ai', label: 'Trợ lý AI', icon: Sparkles, why: 'Chưa triển khai — không cho AI tự duyệt / tự đăng.' },
 ];
 
 const store = { get: (k) => { try { return window.localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { window.localStorage.setItem(k, v); } catch { /* bỏ qua */ } } };
@@ -59,6 +58,7 @@ export default function MarketingWorkspacePage() {
   const [wsId, setWsId] = useState(() => store.get('mw_ws') || '');
   const [boards, setBoards] = useState([]);
   const [labels, setLabels] = useState([]);
+  const [members, setMembers] = useState([]);
   const [openTaskId, setOpenTaskId] = useState(null);
   const [taskVersion, setTaskVersion] = useState(0);
   const [focus, setFocus] = useState({});        // { board, filter, run, content, campaign }
@@ -91,11 +91,17 @@ export default function MarketingWorkspacePage() {
   const loadWs = useCallback(async () => {
     if (!ws) { setBoards([]); setLabels([]); return; }
     try {
-      const [b, l] = await Promise.all([mwApi.boards([ws.id]), mwApi.labels([ws.id])]);
-      setBoards(b.sort(bySort)); setLabels(l); setWsError(null);
+      const [b, l, m] = await Promise.all([mwApi.boards([ws.id]), mwApi.labels([ws.id]), mwApi.members(ws.id)]);
+      setBoards(b.sort(bySort)); setLabels(l); setMembers(m); setWsError(null);
     } catch (e) { setBoards([]); setLabels([]); setWsError(e); }
   }, [ws]);
   useEffect(() => { loadWs(); }, [loadWs]);
+  // thành viên (kể cả chủ) -> dùng cho @nhắc, chọn người trong Base / Automation
+  const memberStaff = useMemo(() => {
+    const ids = new Set(members.map(x => x.user_id));
+    if (ws?.owner_id) ids.add(ws.owner_id);
+    return [...ids].map(id => staffById.get(id)).filter(Boolean);
+  }, [members, ws, staffById]);
 
   // Deep link từ thông báo / NAVIGATE('mkt_workspace#task:<id>')
   useEffect(() => {
@@ -104,6 +110,7 @@ export default function MarketingWorkspacePage() {
       if (id.startsWith('task:')) setOpenTaskId(id.slice(5));
       else if (id.startsWith('approval:')) { setSection('approvals'); setFocus({ run: id.slice(9) }); }
       else if (id.startsWith('content:')) { setSection('studio'); setFocus({ content: id.slice(8) }); }
+      else if (id.startsWith('chat:')) { setWsId(id.slice(5)); setSection('chat'); setFocus({}); }
     };
     const pending = takePendingFocus(MW_TAB);
     if (pending) handle(pending.id);
@@ -156,9 +163,6 @@ export default function MarketingWorkspacePage() {
             <s.icon />{s.label}
           </button>
         ))}
-        {LATER.map(s => (
-          <button key={s.id} type="button" disabled aria-disabled="true" title={s.why} className="e-tab opacity-45 cursor-not-allowed"><s.icon />{s.label}<Lock className="!w-3 !h-3" /></button>
-        ))}
       </nav>
 
       <div key={`${section}-${ws?.id || ''}`} className="motion-safe:animate-page">
@@ -175,7 +179,14 @@ export default function MarketingWorkspacePage() {
                 : section === 'studio' ? <ContentStudio ws={ws} perm={perm} myKinds={boot.myKinds} profile={profile} staffById={staffById} focusContentId={focus.content} campaignFilter={focus.campaign} onClearCampaign={() => setFocus({})} />
                   : section === 'approvals' ? <ApprovalCenter profile={profile} myKinds={boot.myKinds} staffById={staffById} focusRunId={focus.run} />
                     : section === 'publishing' ? <PublishingQueue ws={ws} perm={perm} myKinds={boot.myKinds} profile={profile} staffById={staffById} />
-                      : <SettingsSection ws={ws} perm={perm} profile={profile} staff={boot.staff} staffById={staffById} boards={boards} labels={labels} reloadAll={reloadAll} />}
+                      : section === 'chat' ? <ChatSection ws={ws} perm={perm} profile={profile} staffById={staffById} memberStaff={memberStaff} boards={boards} openTask={setOpenTaskId} />
+                        : section === 'docs' ? <DocsSection ws={ws} perm={perm} staffById={staffById} />
+                          : section === 'base' ? <BaseSection ws={ws} perm={perm} staffById={staffById} memberStaff={memberStaff} />
+                            : section === 'media' ? <WsMediaSection ws={ws} boards={boards} openTask={setOpenTaskId} />
+                              : section === 'reports' ? <ReportsSection ws={ws} boards={boards} staffById={staffById} />
+                                : section === 'automation' ? <AutomationSection ws={ws} perm={perm} boards={boards} labels={labels} staffById={staffById} memberStaff={memberStaff} />
+                                  : section === 'ai' ? <AiSection ws={ws} perm={perm} boards={boards} />
+                                    : <SettingsSection ws={ws} perm={perm} profile={profile} staff={boot.staff} staffById={staffById} boards={boards} labels={labels} reloadAll={reloadAll} />}
       </div>
 
       {openTaskId && (

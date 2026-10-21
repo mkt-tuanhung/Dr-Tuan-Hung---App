@@ -21,19 +21,17 @@ import {
 } from './mwMeta';
 import { Modal, Field, Avatar, AvatarStack, Tone, Skeleton, attempt, BusyButton, Sel } from './mwUi';
 import { KhoSourcePicker, useKhoAccess, KHO_LIST_STATUS } from './KhoSources';
+import { GanttView, BoardDashboard, GalleryView, MapView } from './BoardViews2';
 
 const VIEWS = [
   { id: 'kanban', label: 'Bảng', icon: Columns3 },
   { id: 'table', label: 'Bảng dữ liệu', icon: Table2 },
   { id: 'calendar', label: 'Lịch', icon: CalendarDays },
   { id: 'timeline', label: 'Timeline', icon: GanttChartSquare },
-];
-// Chế độ chưa triển khai: hiện nhưng KHOÁ kèm lý do (không vẽ nút giả)
-const LATER_VIEWS = [
-  { id: 'gantt', label: 'Gantt', icon: GanttChartSquare, why: 'Gantt có phụ thuộc giữa thẻ — chưa triển khai (giai đoạn sau).' },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, why: 'Dùng mục Tổng quan của workspace (số liệu thật).' },
-  { id: 'gallery', label: 'Gallery', icon: Images, why: 'Chưa triển khai.' },
-  { id: 'map', label: 'Map', icon: MapIcon, why: 'Thẻ chưa có trường địa điểm.' },
+  { id: 'gantt', label: 'Gantt', icon: GanttChartSquare },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'gallery', label: 'Gallery', icon: Images },
+  { id: 'map', label: 'Map', icon: MapIcon },
 ];
 
 const storeGet = (k, d) => { try { return window.localStorage.getItem(k) || d; } catch { return d; } };
@@ -239,9 +237,6 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
               <v.icon />{v.label}
             </button>
           ))}
-          {LATER_VIEWS.map(v => (
-            <button key={v.id} type="button" disabled title={v.why} aria-disabled="true" className="e-tab opacity-45 cursor-not-allowed"><v.icon />{v.label}</button>
-          ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput value={q} onChange={setQ} placeholder="Tìm thẻ trong board…" className="w-full sm:w-64" />
@@ -271,7 +266,11 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
             : view === 'kanban' ? <KanbanView lists={lists} tasks={filtered} allTasks={data.tasks} ctx={ctx} onMove={moveTask} onQuickAdd={quickAdd} onMoveSheet={setMoveFor} onReload={data.reload} board={current} />
               : view === 'table' ? <TableView lists={lists} tasks={filtered} ctx={ctx} onPatch={patchTask} onMove={moveTask} allTasks={data.tasks} board={current} />
                 : view === 'calendar' ? <CalendarView tasks={filtered} ctx={ctx} onPatch={patchTask} />
-                  : <TimelineView lists={lists} tasks={filtered} ctx={ctx} />}
+                  : view === 'gantt' ? <GanttView lists={lists} tasks={filtered} ctx={ctx} onPatch={patchTask} />
+                    : view === 'dashboard' ? <BoardDashboard lists={lists} tasks={filtered} ctx={ctx} />
+                      : view === 'gallery' ? <GalleryView lists={lists} tasks={filtered} ctx={ctx} />
+                        : view === 'map' ? <MapView tasks={filtered} ctx={ctx} />
+                          : <TimelineView lists={lists} tasks={filtered} ctx={ctx} />}
 
       <NewBoardModal open={newBoard} onClose={() => setNewBoard(false)} ws={ws} onCreated={async (id) => { await reloadBoards(); setBoardId(id); }} />
       <MoveSheet task={moveFor} onClose={() => setMoveFor(null)} boards={activeBoards} lists={lists} tasks={data.tasks}

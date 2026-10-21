@@ -64,6 +64,7 @@ export const NOTIF_ICON = {
   mw_approval: { Icon: ShieldCheck, cls: 'bg-amber-100 text-amber-600' },
   mw_approved: { Icon: CheckCircle2, cls: 'bg-emerald-100 text-emerald-600' },
   mw_returned: { Icon: RotateCcw, cls: 'bg-rose-100 text-rose-600' },
+  mw_automation: { Icon: KanbanSquare, cls: 'bg-sky-100 text-sky-600' },
 };
 
 export const NOTIF_FALLBACK = { Icon: Bell, cls: 'bg-slate-100 text-slate-500' };
