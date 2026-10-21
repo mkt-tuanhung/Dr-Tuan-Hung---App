@@ -14,7 +14,8 @@ const fmtSize = (n) => {
   return (n / 1024 / 1024).toFixed(1) + ' MB';
 };
 
-export default function ImageLibrary({ me, canWrite }) {
+// canDeleteFolder: được xoá thư mục (Designer / Admin / Editor) — mặc định theo canWrite
+export default function ImageLibrary({ me, canWrite, canDeleteFolder = canWrite }) {
   const [folders, setFolders] = useState([]);
   const [assets, setAssets] = useState([]);
   const [cwd, setCwd] = useState(null);   // thư mục hiện tại; null = gốc
@@ -147,7 +148,7 @@ export default function ImageLibrary({ me, canWrite }) {
                           <div className="text-[11px] text-slate-400">{count} mục</div>
                         </div>
                       </button>
-                      {canWrite && <button onClick={() => delFolder(f)} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-white/90 text-slate-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 grid place-items-center shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>}
+                      {canDeleteFolder && <button onClick={() => delFolder(f)} title="Xoá thư mục" aria-label={`Xoá thư mục ${f.name}`} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-white/90 text-slate-400 hover:text-rose-600 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus:opacity-100 grid place-items-center shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>}
                     </div>
                   );
                 })}
