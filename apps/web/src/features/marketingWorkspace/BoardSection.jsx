@@ -8,17 +8,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Plus, Columns3, Table2, CalendarDays, GanttChartSquare, LayoutDashboard, Images, Map as MapIcon, Archive, Trash2,
+  Plus, Columns3, Table2, CalendarDays, GanttChartSquare, LayoutDashboard, Images, Map as MapIcon, Archive, Trash2, Paperclip, Link2, ImagePlus, UserPlus, Tag,
   MoreHorizontal, Move, CheckSquare, CalendarClock, ChevronLeft, ChevronRight, Download, RotateCcw, Filter, X,
 } from 'lucide-react';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { EmptyState, ErrorState, SearchInput } from '@/components/ds';
 import { vnToday } from '@/lib/vnTime';
-import { mwApi } from './mwApi';
+import { mwApi, sha256OfFile } from './mwApi';
+import { uploadViaPresignWithProgress } from '@/lib/r2Client';
 import {
   PRIORITY, BOARD_TEMPLATES, bySort, fmtDate, fmtDateTime, isLate, moveToDate, toLocalInput, fromLocalInput, vnDateOf,
 } from './mwMeta';
-import { Modal, Field, AvatarStack, Tone, Skeleton, attempt, BusyButton, Sel } from './mwUi';
+import { Modal, Field, Avatar, AvatarStack, Tone, Skeleton, attempt, BusyButton, Sel } from './mwUi';
 
 const VIEWS = [
   { id: 'kanban', label: 'Bảng', icon: Columns3 },
@@ -48,14 +49,14 @@ function localSort(tasks, taskId, listId, afterId) {
 }
 
 export function useBoardData(boardId, archived) {
-  const [state, setState] = useState({ loading: true, error: null, lists: [], tasks: [], assignees: [], taskLabels: [], checks: [] });
+  const [state, setState] = useState({ loading: true, error: null, lists: [], tasks: [], assignees: [], taskLabels: [], checks: [], atts: [] });
   const load = useCallback(async () => {
     if (!boardId) { setState(s => ({ ...s, loading: false, lists: [], tasks: [] })); return; }
     try {
       const [lists, tasks] = await Promise.all([mwApi.lists([boardId]), mwApi.tasks([boardId], { archived })]);
       const ids = tasks.map(t => t.id);
-      const [assignees, taskLabels, checks] = await Promise.all([mwApi.assignees(ids), mwApi.taskLabels(ids), mwApi.checklist(ids)]);
-      setState({ loading: false, error: null, lists, tasks, assignees, taskLabels, checks });
+      const [assignees, taskLabels, checks, atts] = await Promise.all([mwApi.assignees(ids), mwApi.taskLabels(ids), mwApi.checklist(ids), mwApi.boardAttachments(ids)]);
+      setState({ loading: false, error: null, lists, tasks, assignees, taskLabels, checks, atts });
     } catch (e) {
       setState(s => ({ ...s, loading: false, error: e }));
     }
@@ -87,6 +88,20 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
   useEffect(() => { storeSet('mw_view', view); }, [view]);
 
   const data = useBoardData(current?.id, archived);
+  // Thành viên workspace (để giao người thực hiện ngay khi tạo thẻ)
+  const [members, setMembers] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    mwApi.members(ws.id).then(m => { if (alive) setMembers(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, [ws.id]);
+  const memberPeople = useMemo(() => {
+    const order = { editor: 0, manager: 1, owner: 2, viewer: 3 };
+    const ids = new Map(members.map(m => [m.user_id, m.role]));
+    if (ws.owner_id && !ids.has(ws.owner_id)) ids.set(ws.owner_id, 'owner');
+    return [...ids.entries()].filter(([, r]) => r !== 'viewer').sort((a, b) => order[a[1]] - order[b[1]])
+      .map(([id, role]) => ({ ...(staffById.get(id) || { id, full_name: 'Không rõ' }), mwRole: role }));
+  }, [members, ws.owner_id, staffById]);
   // Drawer vừa lưu thẻ -> tải lại board (taskVersion tăng)
   useEffect(() => { if (taskVersion) data.reload(); }, [taskVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -108,6 +123,11 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
     return m;
   }, [data.checks]);
   const labelById = useMemo(() => new Map(labels.map(l => [l.id, l])), [labels]);
+  const attBy = useMemo(() => {
+    const m = new Map();
+    data.atts.forEach(a => { if (!m.has(a.task_id)) m.set(a.task_id, []); m.get(a.task_id).push(a); });
+    return m;
+  }, [data.atts]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -121,7 +141,7 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
   const hasFilter = q || fAssignee || fLabel || fPriority || fLate;
   const clearFilter = () => { setQ(''); setFAssignee(''); setFLabel(''); setFPriority(''); setFLate(false); };
 
-  const ctx = { staffById, asgBy, lblBy, chkBy, labelById, doneIds, openTask, perm };
+  const ctx = { staffById, asgBy, lblBy, chkBy, labelById, attBy, doneIds, openTask, perm, labels, memberPeople };
 
   // ----- Ghi -----
   const moveTask = async (task, listId, afterId, targetBoard) => {
@@ -155,10 +175,28 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
       return false;
     }
   };
-  const quickAdd = async (listId, title) => {
-    const t = await attempt(() => mwApi.createTask(current.id, listId, title));
-    if (t) data.setTasks(ts => [...ts, t]);
-    return !!t;
+  // Thêm thẻ nhanh: tên + người thực hiện + nhãn + link + ảnh (lỗi từng phần không làm mất thẻ đã tạo)
+  const quickAdd = async (listId, f) => {
+    const t = await attempt(() => mwApi.createTask(current.id, listId, f.title));
+    if (!t) return false;
+    data.setTasks(ts => [...ts, t]);
+    const errs = [];
+    const run = (p) => p.catch(e => errs.push(e.message));
+    await Promise.all([
+      ...f.assignees.map(id => run(mwApi.addAssignee(t.id, id))),
+      ...f.labelIds.map(id => run(mwApi.addTaskLabel(t.id, id))),
+      ...f.links.map(url => run(mwApi.addAttachment(t.id, { url, name: url.slice(0, 300) }))),
+    ]);
+    for (const file of f.images) {
+      await run((async () => {
+        const sha = await sha256OfFile(file);
+        const url = await uploadViaPresignWithProgress(file, 'mw-attachments');
+        await mwApi.addAttachment(t.id, { url, name: file.name.slice(0, 300), mime: file.type || null, size_bytes: file.size, sha256: sha });
+      })());
+    }
+    if (errs.length) toast.error(`Đã tạo thẻ nhưng lỗi: ${errs[0]}`);
+    data.reload();
+    return true;
   };
 
   if (!activeBoards.length) {
@@ -239,6 +277,8 @@ function TaskCard({ t, ctx, onDragStart, onDragEnd, dragging, onMoveSheet }) {
   const people = (ctx.asgBy.get(t.id) || []).map(id => ctx.staffById.get(id) || { id, full_name: '?' });
   const lbls = (ctx.lblBy.get(t.id) || []).map(id => ctx.labelById.get(id)).filter(Boolean);
   const chk = ctx.chkBy.get(t.id);
+  const atts = ctx.attBy.get(t.id) || [];
+  const cover = atts.find(a => /^image\//.test(a.mime || ''));
   const late = isLate(t, ctx.doneIds);
   const pr = PRIORITY[t.priority];
   return (
@@ -247,7 +287,8 @@ function TaskCard({ t, ctx, onDragStart, onDragEnd, dragging, onMoveSheet }) {
       onKeyDown={(e) => { if (e.key === 'Enter') ctx.openTask(t.id); if ((e.key === 'm' || e.key === 'M') && ctx.perm.edit) { e.preventDefault(); onMoveSheet(t); } }}
       className={`group relative rounded-2xl bg-white border shadow-soft cursor-pointer transition duration-200 outline-none focus-visible:ring-2 focus-visible:ring-teal-300
         motion-safe:hover:-translate-y-0.5 hover:shadow-card ${late ? 'border-danger-200' : 'border-slate-200/80 hover:border-teal-200'} ${dragging ? 'opacity-40' : ''}`}>
-      {t.cover_color && <div className="h-2 rounded-t-2xl" style={{ background: t.cover_color }} />}
+      {cover ? <img src={cover.url} alt="" loading="lazy" className="w-full h-32 object-cover rounded-t-2xl bg-slate-100" />
+        : t.cover_color && <div className="h-2 rounded-t-2xl" style={{ background: t.cover_color }} />}
       <div className="p-3">
         {lbls.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-1.5">
@@ -265,6 +306,7 @@ function TaskCard({ t, ctx, onDragStart, onDragEnd, dragging, onMoveSheet }) {
           {(t.priority === 'high' || t.priority === 'urgent') && <Tone meta={pr} />}
           {t.due_at && <span className={`inline-flex items-center gap-1 ${late ? 'text-danger-600 font-semibold' : ''}`}><CalendarClock className="w-3.5 h-3.5" />{fmtDateTime(t.due_at)}</span>}
           {chk && <span className={`inline-flex items-center gap-1 ${chk[0] === chk[1] ? 'text-success-600' : ''}`}><CheckSquare className="w-3.5 h-3.5" />{chk[0]}/{chk[1]}</span>}
+          {atts.length > 0 && <span className="inline-flex items-center gap-1" title={`${atts.length} ảnh / link / tệp`}><Paperclip className="w-3.5 h-3.5" />{atts.length}</span>}
           <span className="ml-auto">{people.length ? <AvatarStack people={people} /> : <span className="text-slate-300">Chưa giao</span>}</span>
         </div>
       </div>
@@ -277,7 +319,6 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
   const [drag, setDrag] = useState(null);       // task đang kéo
   const [drop, setDrop] = useState(null);       // { listId, afterId }
   const [adding, setAdding] = useState(null);   // listId đang nhập thẻ nhanh
-  const [title, setTitle] = useState('');
   const [listMenu, setListMenu] = useState(null);
   const [delList, setDelList] = useState(null);
   const [newList, setNewList] = useState(false);
@@ -338,16 +379,9 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
                 ))}
               </div>
               {ctx.perm.edit && (adding === l.id ? (
-                <form className="mt-2 space-y-2" onSubmit={async (e) => { e.preventDefault(); const v = title.trim(); if (!v) return; if (await onQuickAdd(l.id, v)) setTitle(''); }}>
-                  <textarea autoFocus className="e-textarea min-h-[64px]" value={title} onChange={e => setTitle(e.target.value)} placeholder="Tên công việc…" maxLength={300}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form.requestSubmit(); } if (e.key === 'Escape') setAdding(null); }} />
-                  <div className="flex gap-2">
-                    <button type="submit" className="e-btn e-btn-primary e-btn-sm">Thêm thẻ</button>
-                    <button type="button" className="e-btn e-btn-ghost e-btn-sm" onClick={() => { setAdding(null); setTitle(''); }}>Huỷ</button>
-                  </div>
-                </form>
+                <QuickAddForm ctx={ctx} onCancel={() => setAdding(null)} onSubmit={(f) => onQuickAdd(l.id, f)} />
               ) : (
-                <button type="button" onClick={() => { setAdding(l.id); setTitle(''); }}
+                <button type="button" onClick={() => setAdding(l.id)}
                   className="mt-2 w-full flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[13px] text-slate-500 hover:bg-white hover:text-teal-700 transition"><Plus className="w-4 h-4" /> Thêm công việc</button>
               ))}
             </section>
@@ -365,6 +399,118 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
     </div>
   );
 }
+// Form thêm thẻ nhanh trong cột: tên + người thực hiện + nhãn + link + ảnh
+const MAX_IMG_MB = 20;
+function QuickAddForm({ ctx, onCancel, onSubmit }) {
+  const [title, setTitle] = useState('');
+  const [assignees, setAssignees] = useState([]);
+  const [labelIds, setLabelIds] = useState([]);
+  const [links, setLinks] = useState([]);
+  const [link, setLink] = useState('');
+  const [images, setImages] = useState([]);
+  const [open, setOpen] = useState({ people: true, tags: false, link: false });
+  const [busy, setBusy] = useState(false);
+  const previews = useMemo(() => images.map(f => URL.createObjectURL(f)), [images]);
+  useEffect(() => () => previews.forEach(u => URL.revokeObjectURL(u)), [previews]);
+  const addLink = () => {
+    const v = link.trim();
+    if (!v) return;
+    if (!/^https:\/\/\S+\.\S+/.test(v)) { toast.error('Link phải bắt đầu bằng https://'); return; }
+    if (!links.includes(v)) setLinks([...links, v]);
+    setLink('');
+  };
+  const pickImages = (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    const ok = files.filter(f => /^image\//.test(f.type) && f.size <= MAX_IMG_MB * 1048576);
+    if (ok.length < files.length) toast.error(`Chỉ nhận ảnh, tối đa ${MAX_IMG_MB} MB / ảnh`);
+    setImages(v => [...v, ...ok].slice(0, 10));
+  };
+  const submit = async (e) => {
+    e?.preventDefault();
+    const v = title.trim();
+    if (!v || busy) return;
+    const pending = link.trim() && /^https:\/\/\S+\.\S+/.test(link.trim()) ? [...links, link.trim()] : links;
+    setBusy(true);
+    const ok = await onSubmit({ title: v, assignees, labelIds, links: pending, images });
+    setBusy(false);
+    if (ok) { setTitle(''); setAssignees([]); setLabelIds([]); setLinks([]); setLink(''); setImages([]); }
+  };
+  const avail = ctx.memberPeople.filter(p => !assignees.includes(p.id));
+  const toggle = (k) => setOpen(o => ({ ...o, [k]: !o[k] }));
+  return (
+    <form className="mt-2 space-y-2 rounded-xl bg-white border border-teal-200 p-2" onSubmit={submit}>
+      <textarea autoFocus className="e-textarea min-h-[60px]" value={title} onChange={e => setTitle(e.target.value)} placeholder="Tên công việc…" maxLength={300} aria-label="Tên công việc"
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } if (e.key === 'Escape') onCancel(); }} />
+
+      {open.people && (
+        <div className="space-y-1">
+          <div className="flex flex-wrap gap-1">
+            {assignees.map(id => (
+              <span key={id} className="inline-flex items-center gap-1 h-7 pl-0.5 pr-1.5 rounded-full bg-teal-50 text-[12px] text-teal-800">
+                <Avatar person={ctx.staffById.get(id)} size={22} />{ctx.staffById.get(id)?.full_name}
+                <button type="button" aria-label="Bỏ người thực hiện" onClick={() => setAssignees(assignees.filter(x => x !== id))}><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+          </div>
+          {avail.length > 0 ? (
+            <select className="e-input h-9 text-[13px]" value="" aria-label="Thêm người thực hiện" onChange={e => { if (e.target.value) setAssignees([...assignees, e.target.value]); }}>
+              <option value="">+ Người thực hiện…</option>
+              {avail.map(p => <option key={p.id} value={p.id}>{p.full_name}{p.mwRole === 'editor' ? ' · Thực hiện' : p.mwRole === 'manager' ? ' · Quản lý' : ' · Chủ'}</option>)}
+            </select>
+          ) : !assignees.length && <p className="text-[11.5px] text-slate-400">Chưa có thành viên — thêm ở “Thành viên & cấu hình”.</p>}
+        </div>
+      )}
+      {open.tags && (
+        <div className="flex flex-wrap gap-1">
+          {ctx.labels.length === 0 && <span className="text-[11.5px] text-slate-400">Chưa có nhãn — tạo ở “Thành viên & cấu hình”.</span>}
+          {ctx.labels.map(lb => {
+            const on = labelIds.includes(lb.id);
+            return <button key={lb.id} type="button" aria-pressed={on} onClick={() => setLabelIds(on ? labelIds.filter(x => x !== lb.id) : [...labelIds, lb.id])}
+              className={`px-2 h-6 rounded-full text-[11.5px] font-semibold border ${on ? 'text-white border-transparent' : 'bg-white text-slate-600 border-slate-200'}`} style={on ? { background: lb.color } : undefined}>{lb.name}</button>;
+          })}
+        </div>
+      )}
+      {open.link && (
+        <div className="space-y-1">
+          {links.map(u => (
+            <div key={u} className="flex items-center gap-1 text-[12px] text-teal-700"><Link2 className="w-3.5 h-3.5 shrink-0" /><span className="truncate flex-1">{u}</span>
+              <button type="button" aria-label="Bỏ link" onClick={() => setLinks(links.filter(x => x !== u))}><X className="w-3 h-3 text-slate-400" /></button></div>
+          ))}
+          <div className="flex gap-1">
+            <input className="e-input h-9 text-[13px] flex-1" value={link} onChange={e => setLink(e.target.value)} placeholder="https://…" aria-label="Dán link"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLink(); } }} />
+            <button type="button" className="e-btn e-btn-secondary e-btn-sm" onClick={addLink}>Thêm</button>
+          </div>
+        </div>
+      )}
+      {images.length > 0 && (
+        <div className="grid grid-cols-4 gap-1">
+          {previews.map((u, i) => (
+            <div key={u} className="relative">
+              <img src={u} alt="" className="w-full h-14 object-cover rounded-lg" />
+              <button type="button" aria-label="Bỏ ảnh" onClick={() => setImages(images.filter((_, k) => k !== i))}
+                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 grid place-items-center"><X className="w-3 h-3" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-1">
+        <button type="button" className={`e-icon-btn w-8 h-8 ${open.people ? '!text-teal-700 !bg-teal-50' : ''}`} title="Người thực hiện" aria-label="Người thực hiện" onClick={() => toggle('people')}><UserPlus className="w-4 h-4" /></button>
+        <button type="button" className={`e-icon-btn w-8 h-8 ${open.tags ? '!text-teal-700 !bg-teal-50' : ''}`} title="Nhãn" aria-label="Nhãn" onClick={() => toggle('tags')}><Tag className="w-4 h-4" /></button>
+        <button type="button" className={`e-icon-btn w-8 h-8 ${open.link ? '!text-teal-700 !bg-teal-50' : ''}`} title="Link" aria-label="Link" onClick={() => toggle('link')}><Link2 className="w-4 h-4" /></button>
+        <label className="e-icon-btn w-8 h-8 cursor-pointer" title="Thêm ảnh" aria-label="Thêm ảnh"><ImagePlus className="w-4 h-4" />
+          <input type="file" accept="image/*" multiple className="sr-only" onChange={pickImages} /></label>
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" className="e-btn e-btn-primary e-btn-sm" disabled={!title.trim() || busy}>{busy ? 'Đang lưu…' : 'Thêm thẻ'}</button>
+        <button type="button" className="e-btn e-btn-ghost e-btn-sm" onClick={onCancel} disabled={busy}>Huỷ</button>
+      </div>
+    </form>
+  );
+}
+
 const DropLine = () => <div className="h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" aria-hidden="true" />;
 
 function ListMenu({ list, lists, allTasks, onClose, onDone, onDelete }) {
