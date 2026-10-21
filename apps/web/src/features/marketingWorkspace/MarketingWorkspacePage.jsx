@@ -111,6 +111,7 @@ export default function MarketingWorkspacePage() {
       else if (id.startsWith('approval:')) { setSection('approvals'); setFocus({ run: id.slice(9) }); }
       else if (id.startsWith('content:')) { setSection('studio'); setFocus({ content: id.slice(8) }); }
       else if (id.startsWith('chat:')) { setWsId(id.slice(5)); setSection('chat'); setFocus({}); }
+      else if (id.startsWith('ws:')) { const [w, sec] = id.slice(3).split(':'); setWsId(w); setSection(SECTIONS.some(x => x.id === sec) ? sec : 'overview'); setFocus({}); }
     };
     const pending = takePendingFocus(MW_TAB);
     if (pending) handle(pending.id);

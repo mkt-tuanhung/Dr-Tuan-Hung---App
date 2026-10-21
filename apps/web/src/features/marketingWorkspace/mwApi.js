@@ -7,12 +7,12 @@
 // ============================================================
 import { supabase } from '@/lib/supabaseClient';
 
-export const isMissingSchema = (e) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || e.code === '42703'
+export const isMissingSchema = (e) => !!e && (e.missing === true || e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || e.code === '42703'
   || /could not find|does not exist|schema cache/i.test(e.message || ''));
 
 export function mwError(e) {
   if (!e) return null;
-  if (isMissingSchema(e)) return Object.assign(new Error('Chưa cài Marketing Workspace trên database — Admin chạy file supabase/marketing_workspace_v1.sql.'), { missing: true });
+  if (isMissingSchema(e)) return Object.assign(new Error('Database chưa cài đủ Marketing Workspace (thiếu bảng / cột) — Admin chạy lần lượt supabase/marketing_workspace_v1.sql, v2_sources.sql, v3_collab.sql trong SQL Editor.'), { missing: true });
   if (e.code === '42501' || /row-level security|permission denied/i.test(e.message || '')) return Object.assign(new Error(/row-level|permission denied/i.test(e.message || '') ? 'Bạn không có quyền thực hiện thao tác này.' : e.message), { forbidden: true });
   if (e.code === '40001') return Object.assign(new Error(e.message || 'Xung đột chỉnh sửa — hãy tải lại.'), { conflict: true });
   return new Error(e.message || 'Có lỗi xảy ra, thử lại sau.');
@@ -28,7 +28,7 @@ export const mwApi = {
   staff: () => unwrap(supabase.from('profiles').select('id, full_name, role, role_2, avatar_url, is_active, employment_status').order('full_name')),
 
   // ---------- Workspace / thành viên ----------
-  workspaces: () => unwrap(supabase.from('mw_workspaces').select('id, name, description, color, owner_id, archived_at, created_at').order('created_at')),
+  workspaces: () => unwrap(supabase.from('mw_workspaces').select('*').order('created_at')),
   createWorkspace: (name, description, color) => unwrap(supabase.rpc('mw_create_workspace', { p_name: name, p_description: description || null, p_color: color || '#087F83' })),
   updateWorkspace: (id, patch) => one(supabase.from('mw_workspaces').update(patch).eq('id', id).select('id')),
   members: (wsId) => unwrap(supabase.from('mw_members').select('workspace_id, user_id, role, created_at').eq('workspace_id', wsId)),
@@ -42,7 +42,7 @@ export const mwApi = {
   createBoard: (wsId, name, template) => unwrap(supabase.rpc('mw_create_board', { p_ws: wsId, p_name: name, p_template: template })),
   updateBoard: (id, patch) => one(supabase.from('mw_boards').update(patch).eq('id', id).select('id')),
   board: (id) => unwrap(supabase.from('mw_boards').select('id, workspace_id, name, description, template, color, sort_index, archived_at, created_at').eq('id', id).maybeSingle()),
-  workspace: (id) => unwrap(supabase.from('mw_workspaces').select('id, name, description, color, owner_id, archived_at, created_at').eq('id', id).maybeSingle()),
+  workspace: (id) => unwrap(supabase.from('mw_workspaces').select('*').eq('id', id).maybeSingle()),
   lists: (boardIds) => unwrap(supabase.from('mw_lists').select('*').in('board_id', boardIds).order('sort_index')),
   createList: (boardId, name, sortIndex) => unwrap(supabase.from('mw_lists').insert({ board_id: boardId, name, sort_index: sortIndex }).select('id').single()),
   updateList: (id, patch) => one(supabase.from('mw_lists').update(patch).eq('id', id).select('id')),
@@ -105,6 +105,16 @@ export const mwApi = {
   khoSources: () => unwrap(supabase.from('media_customers')
     .select('id, source_id, service, shoot_date, source_type, source_status, tags, no_image, hide_face, source_video_count, source_image_count, created_at')
     .order('created_at', { ascending: false }).limit(600)),
+  // Tìm trên toàn Kho (không giới hạn 600 nguồn gần nhất): theo mã source, dịch vụ, loại — và LỌC theo tên khách
+  // ở server nhưng không trả tên về trình duyệt
+  khoSearch: (q) => {
+    const t = String(q || '').replace(/[,()*%\\]/g, ' ').trim().slice(0, 60);
+    if (t.length < 2) return Promise.resolve([]);
+    return unwrap(supabase.from('media_customers')
+      .select('id, source_id, service, shoot_date, source_type, source_status, tags, no_image, hide_face, source_video_count, source_image_count, created_at')
+      .or(['source_id', 'service', 'source_type', 'customer_name'].map(c => `${c}.ilike.*${t}*`).join(','))
+      .order('created_at', { ascending: false }).limit(100));
+  },
   khoSourcesByIds: (ids) => (ids.length ? unwrap(supabase.from('media_customers')
     .select('id, source_id, service, shoot_date, source_type, source_status, tags, no_image, hide_face, source_video_count, source_image_count, created_at').in('id', ids)) : Promise.resolve([])),
   khoAssets: (customerIds) => (customerIds.length ? unwrap(supabase.from('media_assets')

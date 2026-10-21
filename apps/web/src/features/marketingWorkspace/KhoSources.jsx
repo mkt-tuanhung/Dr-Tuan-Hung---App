@@ -87,6 +87,7 @@ export function KhoSourcePicker({ open, onClose, context, already = new Set(), o
   const [st, setSt] = useState({ loading: true });
   const [q, setQ] = useState('');
   const [svc, setSvc] = useState('');
+  const [autoSvc, setAutoSvc] = useState(false);   // dịch vụ do hệ thống tự chọn theo nội dung thẻ -> bỏ khi người dùng gõ tìm
   const [status, setStatus] = useState('');
   const [shown, setShown] = useState(24);
   const [assets, setAssets] = useState(new Map());     // customerId -> assets[]
@@ -107,22 +108,38 @@ export function KhoSourcePicker({ open, onClose, context, already = new Set(), o
         clips.forEach(c => { if (!clipsBy.has(c.media_customer_id)) clipsBy.set(c.media_customer_id, []); clipsBy.get(c.media_customer_id).push(c); });
         setSt({ loading: false, sources, usageBy, clipsBy });
         const svcs = detectServices(context?.text || '');
-        setSvc(svcs.size === 1 ? [...svcs][0] : '');
+        setSvc(svcs.size === 1 ? [...svcs][0] : ''); setAutoSvc(svcs.size === 1);
       } catch (e) { if (alive) setSt({ loading: false, error: e }); }
     })();
     return () => { alive = false; };
   }, [open, context?.text]);
 
+  // Tìm thêm trên server (nguồn cũ ngoài 600 nguồn gần nhất, tên khách)
+  const [found, setFound] = useState([]);
+  useEffect(() => {
+    const t = q.trim();
+    if (!open || t.length < 2) { setFound([]); return undefined; }
+    let alive = true;
+    const h = setTimeout(() => { mwApi.khoSearch(t).then(r => { if (alive) setFound(r); }).catch(() => {}); }, 300);
+    return () => { alive = false; clearTimeout(h); };
+  }, [q, open]);
+  const allSources = useMemo(() => {
+    const base = st.sources || [];
+    const ids = new Set(base.map(s => s.id));
+    return [...base, ...found.filter(s => !ids.has(s.id))];
+  }, [st.sources, found]);
   const services = useMemo(() => detectServices(context?.text || ''), [context?.text]);
-  const scored = useMemo(() => (st.sources || []).map(s => ({ s, ...scoreSource(s, { services, usageBy: st.usageBy, clipsBy: st.clipsBy, taskId: context?.taskId }) })), [st, services, context?.taskId]);
+  const scored = useMemo(() => allSources.map(s => ({ s, ...scoreSource(s, { services, usageBy: st.usageBy, clipsBy: st.clipsBy, taskId: context?.taskId }) })), [allSources, st.usageBy, st.clipsBy, services, context?.taskId]);
   const suggestions = useMemo(() => scored.filter(x => !x.s.no_image && !already.has(x.s.id)).sort((a, b) => b.score - a.score).slice(0, 6), [scored, already]);
   const filtered = useMemo(() => {
     const t = noDia(q.trim());
+    const serverHit = new Set(found.map(s => s.id));
     return scored.filter(({ s }) =>
       (!svc || (s.service || '').includes(svc)) && (!status || (s.source_status || 'chua_dung') === status)
-      && (!t || noDia([s.source_id, s.service, s.source_type, ...(s.tags || [])].join(' ')).includes(t)))
+      && (!t || serverHit.has(s.id) || noDia([s.source_id, s.service, s.source_type, ...(s.tags || []),
+        s.shoot_date && fmtDate(`${s.shoot_date}T05:00:00Z`), s.shoot_date].filter(Boolean).join(' ')).includes(t)))
       .sort((a, b) => b.score - a.score);
-  }, [scored, svc, status, q]);
+  }, [scored, svc, status, q, found]);
   const visible = filtered.slice(0, shown);
 
   // ảnh thu nhỏ: tải file của các source đang hiện (theo lô nhỏ)
@@ -205,22 +222,25 @@ export function KhoSourcePicker({ open, onClose, context, already = new Set(), o
         : st.error ? <div className="e-alert e-alert-danger text-[13px]">{isMissingSchema(st.error) ? 'Chưa cài phần gắn source — Admin chạy supabase/marketing_workspace_v2_sources.sql.' : st.error.message}</div>
           : (
             <div className="space-y-4">
-              {suggestions.length > 0 && (
+              <div className="sticky -top-4 z-10 -mx-1 px-1 pt-1 pb-2 bg-white space-y-2 border-b border-slate-100">
+                <SearchInput value={q} onChange={(v) => { setQ(v); if (v.trim() && autoSvc) { setSvc(''); setAutoSvc(false); } }} placeholder="Tìm mã source, tên khách, dịch vụ, ngày quay (30/07), nhãn…" className="w-full" />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {SERVICES.map(sv => <button key={sv} type="button" className={`e-chip ${svc === sv ? 'e-chip-active' : ''}`} onClick={() => { setSvc(svc === sv ? '' : sv); setAutoSvc(false); }}>{sv}</button>)}
+                  <select className="e-input h-9 w-auto text-[13px]" value={status} onChange={e => setStatus(e.target.value)} aria-label="Lọc trạng thái Kho">
+                    <option value="">Mọi trạng thái</option>
+                    {Object.entries(KHO_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              {!q.trim() && suggestions.length > 0 && (
                 <section>
                   <h3 className="text-[13.5px] font-bold text-slate-800 mb-1.5 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-amber-500" /> Gợi ý cho thẻ này{services.size ? ` · ${[...services].join(', ')}` : ''}</h3>
                   <div className="grid gap-2">{suggestions.map(x => <SourceRow key={`sg-${x.s.id}`} x={x} compact />)}</div>
                 </section>
               )}
               <section className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <SearchInput value={q} onChange={setQ} placeholder="Tìm mã source, loại, nhãn…" className="flex-1 min-w-[180px]" />
-                  {SERVICES.map(sv => <button key={sv} type="button" className={`e-chip ${svc === sv ? 'e-chip-active' : ''}`} onClick={() => setSvc(svc === sv ? '' : sv)}>{sv}</button>)}
-                  <select className="e-input h-9 w-auto text-[13px]" value={status} onChange={e => setStatus(e.target.value)} aria-label="Lọc trạng thái Kho">
-                    <option value="">Mọi trạng thái</option>
-                    {Object.entries(KHO_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
-                </div>
-                <div className="text-[12px] text-slate-400">{filtered.length} nguồn · xếp theo mức phù hợp</div>
+                <div className="text-[12px] text-slate-400">{q.trim() ? `${filtered.length} kết quả cho “${q.trim()}”` : `${filtered.length} nguồn`} · xếp theo mức phù hợp</div>
+                {q.trim() && !filtered.length && <p className="text-[13px] text-slate-500">Không thấy source nào. Thử mã khác, tên khách hoặc bỏ bớt bộ lọc.</p>}
                 <div className="grid gap-2">{visible.map(x => <SourceRow key={x.s.id} x={x} />)}</div>
                 {filtered.length > shown && <button type="button" className="e-btn e-btn-secondary e-btn-sm" onClick={() => setShown(n => n + 24)}>Xem thêm</button>}
               </section>

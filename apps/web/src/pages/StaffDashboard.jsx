@@ -58,7 +58,7 @@ import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
 import { ROLE_LABELS, FULL_MENU, userCanModule, buildMenuGroups } from '@/features/permissions/menuConfig';
 import { usePermissionOverrides } from '@/features/permissions/usePermissionOverrides';
-import { parseNav, setPendingFocus } from '@/lib/notif';
+import { parseNav, setPendingFocus, readUrlNav, clearUrlNav } from '@/lib/notif';
 import { vnToday } from '@/lib/vnTime';
 
 // Ưu tiên các mục trên thanh dưới (mobile) — nút giữa là Chấm công
@@ -339,13 +339,13 @@ const StaffDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     const q = new URLSearchParams(window.location.search);
-    const t = q.get('tab');
-    const f = q.get('focus');
-    if (f) setPendingFocus({ tab: t || 'overview', id: f });
-    return t || (q.get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview'));
+    const u = readUrlNav();
+    if (u?.focus) setPendingFocus({ tab: u.tab || 'overview', id: u.focus });
+    return u?.tab || (q.get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview'));
   });
 
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
+  useEffect(() => { clearUrlNav(); }, []);
   const [kpiRoleSel, setKpiRoleSel] = useState(null);
   // Nút Face ID giữa thanh dưới: mở Chấm công và bật camera ngay (chỉ khi bấm nút này)
   const [scanReq, setScanReq] = useState(0);
