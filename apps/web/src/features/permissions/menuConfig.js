@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
   Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
-  Inbox, PhoneCall, BarChart3, ListTodo, Columns3, BookOpen, Library, Stethoscope, Workflow,
+  Inbox, PhoneCall, BarChart3, ListTodo, Columns3, BookOpen, Library, Stethoscope, Workflow, KanbanSquare,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -49,6 +49,8 @@ export const FULL_MENU = [
     { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle, roles: ['editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon,  roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder', 'seeding'] },
+    // Chỉ hiện khi Admin bật cờ clinic_settings.mw_enabled (flag) — xem features/marketingWorkspace
+    { id: 'mkt_workspace',  label: 'Marketing Workspace', icon: KanbanSquare, roles: ['marketing', 'media', 'editor', 'designer', 'bac_si', 'admin'], flag: 'mw_enabled' },
   ] },
   { id: 'seeding_rev', label: 'Doanh thu Seeding', icon: Sprout, roles: ['seeding', 'admin', 'accountant', 'shareholder'] },
   { id: 'finance',    label: 'Doanh thu',       icon: Banknote, roles: ['marketing', 'accountant', 'admin', 'shareholder', 'telesale', 'sale_offline'] },

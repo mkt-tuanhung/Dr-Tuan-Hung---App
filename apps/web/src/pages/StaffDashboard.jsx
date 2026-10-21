@@ -42,6 +42,9 @@ import ReportsPage from '@/features/reports/ReportsPage.jsx';
 import CallsPage from '@/features/channels/CallsPage.jsx';
 import InboxPage from '@/features/channels/InboxPage.jsx';
 import TasksPage from '@/features/work/TasksPage.jsx';
+import { useMwEnabled } from '@/features/marketingWorkspace/useMwEnabled';
+// Marketing Workspace: tải riêng (lazy) — chỉ khi mở mục này mới tải mã module
+const MarketingWorkspacePage = React.lazy(() => import('@/features/marketingWorkspace/MarketingWorkspacePage.jsx'));
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
 import SeedingRevenuePage from '@/pages/SeedingRevenuePage.jsx';
@@ -367,7 +370,9 @@ const StaffDashboard = () => {
 
   // Quyền = mặc định theo vai trò + ô Admin ghi đè trong trang Phân quyền
   const overrides = usePermissionOverrides();
-  const roleOk = (m) => userCanModule(profile, m, overrides);
+  // Mục có cờ (flag) chỉ hiện khi Admin bật — cờ tắt thì menu y như trước
+  const mwEnabled = useMwEnabled();
+  const roleOk = (m) => (m.flag !== 'mw_enabled' || mwEnabled) && userCanModule(profile, m, overrides);
   // Menu có nhóm con (dropdown): giữ nhóm nếu có ít nhất 1 mục con được phép
   const allowedMenu = FULL_MENU.map(m => {
     if (m.children) {
@@ -433,6 +438,7 @@ const StaffDashboard = () => {
     if (activeTab === 'calls') return <CallsPage onNavigate={setActiveTab} />;
     if (activeTab === 'inbox') return <InboxPage />;
     if (activeTab === 'tasks') return <TasksPage onNavigate={setActiveTab} />;
+    if (activeTab === 'mkt_workspace') return <React.Suspense fallback={<div className="e-card e-card-pad text-slate-400">Đang tải…</div>}><MarketingWorkspacePage /></React.Suspense>;
     if (activeTab === 'my_payroll') return <MyPayrollPage />;
     if (activeTab === 'content_overview') return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
     if (activeTab === 'content' || activeTab === 'content_kho') return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;

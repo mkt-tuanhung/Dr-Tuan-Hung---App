@@ -1,4 +1,4 @@
-import { Bell, Wallet, MessageCircle, Heart, UserPlus, Clapperboard, Trophy, CheckCircle2 } from 'lucide-react';
+import { Bell, Wallet, MessageCircle, Heart, UserPlus, Clapperboard, Trophy, CheckCircle2, KanbanSquare, AtSign, ShieldCheck, RotateCcw, ListChecks } from 'lucide-react';
 
 // Một số tab đã ĐỔI id khi tách menu Marketing thành dropdown
 // ('content' -> 'content_video' / 'content_kho'...). Các thông báo cũ vẫn
@@ -57,6 +57,13 @@ export const NOTIF_ICON = {
   clip_approved: { Icon: CheckCircle2, cls: 'bg-emerald-100 text-emerald-600' },
   clip_reviewed: { Icon: Clapperboard, cls: 'bg-sky-100 text-sky-600' },
   clip_submitted: { Icon: Clapperboard, cls: 'bg-blue-100 text-blue-600' },
+  // Marketing Workspace (link 'mkt_workspace#task:<id>' / '#approval:<id>')
+  mw_assigned: { Icon: KanbanSquare, cls: 'bg-teal-100 text-teal-700' },
+  mw_check_assigned: { Icon: ListChecks, cls: 'bg-teal-100 text-teal-700' },
+  mw_mention: { Icon: AtSign, cls: 'bg-indigo-100 text-indigo-600' },
+  mw_approval: { Icon: ShieldCheck, cls: 'bg-amber-100 text-amber-600' },
+  mw_approved: { Icon: CheckCircle2, cls: 'bg-emerald-100 text-emerald-600' },
+  mw_returned: { Icon: RotateCcw, cls: 'bg-rose-100 text-rose-600' },
 };
 
 export const NOTIF_FALLBACK = { Icon: Bell, cls: 'bg-slate-100 text-slate-500' };

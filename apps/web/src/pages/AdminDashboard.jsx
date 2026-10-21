@@ -41,7 +41,7 @@ import {
   Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
   AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText,
-  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3, BookOpen, Library, Stethoscope, Workflow,
+  Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3, BookOpen, Library, Stethoscope, Workflow, KanbanSquare,
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
@@ -49,6 +49,8 @@ import ReportsPage from '@/features/reports/ReportsPage.jsx';
 import CallsPage from '@/features/channels/CallsPage.jsx';
 import InboxPage from '@/features/channels/InboxPage.jsx';
 import TasksPage from '@/features/work/TasksPage.jsx';
+import { useMwEnabled } from '@/features/marketingWorkspace/useMwEnabled';
+const MarketingWorkspacePage = React.lazy(() => import('@/features/marketingWorkspace/MarketingWorkspacePage.jsx'));
 import SettingsPage from '@/features/settings/SettingsPage.jsx';
 import SchedulePage from '@/features/hr/SchedulePage.jsx';
 import CskhHandbookPage from '@/features/handbook/CskhHandbookPage.jsx';
@@ -87,6 +89,7 @@ const MENU_GROUPS = [
       { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen },
       { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle },
       { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
+      { id: 'mkt_workspace',  label: 'Marketing Workspace', icon: KanbanSquare, flag: 'mw_enabled' },
     ] },
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
@@ -673,6 +676,7 @@ const AdminDashboard = () => {
 
   useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
   const [pendingLeaves, setPendingLeaves] = useState(0);
+  const mwEnabled = useMwEnabled();
 
   useEffect(() => {
     // Fetch initial count
@@ -751,6 +755,7 @@ const AdminDashboard = () => {
       case 'calls': return <CallsPage onNavigate={setActiveTab} />;
       case 'inbox': return <InboxPage />;
       case 'tasks': return <TasksPage onNavigate={setActiveTab} />;
+      case 'mkt_workspace': return <React.Suspense fallback={<div className="e-card e-card-pad text-slate-400">Đang tải…</div>}><MarketingWorkspacePage /></React.Suspense>;
       case 'settings': return <SettingsPage onNavigate={setActiveTab} />;
       case 'schedule': return <SchedulePage />;
       default: return <ComingSoon label={MENU.find(m => m.id === activeTab)?.label || activeTab} />;
@@ -758,9 +763,11 @@ const AdminDashboard = () => {
   };
 
   // Khung app dùng chung (Ethics BOS): menu nhóm + badge đơn nghỉ chờ duyệt
+  // Mục có cờ (Marketing Workspace) ẩn khi chưa bật — bật ở Cài đặt hệ thống
+  const flagOk = (i) => i.flag !== 'mw_enabled' || mwEnabled;
   const groups = MENU_GROUPS.map(g => ({
     title: g.title,
-    items: g.items.map(i => (i.id === 'hr' ? { ...i, badge: pendingLeaves } : i)),
+    items: g.items.filter(flagOk).map(i => (i.id === 'hr' ? { ...i, badge: pendingLeaves } : i.children ? { ...i, children: i.children.filter(flagOk) } : i)),
   }));
   const bottomItems = MENU.filter(m => ['overview', 'hr', 'kpi'].includes(m.id));
 

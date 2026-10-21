@@ -142,9 +142,10 @@ export default function DesignPreview() {
   }
   if (screen === 'admin' || screen === 'staff') {
     // Toàn bộ dashboard thật; Supabase giả lập ở tầng mạng
-    const prof = screen === 'admin' ? DEMO_PROFILE
-      : { id: 'demo-staff', full_name: 'Trần Mai Anh', employee_id: 'NV0123', role: q.get('role') || 'telesale', role_2: q.get('role2') || null, position: 'Nhân viên', base_salary: 8000000, employment_status: 'official', is_active: true };
-    try { localStorage.setItem('staff_active_tab', 'overview'); localStorage.setItem('admin_active_tab', 'overview'); } catch { /* ignore */ }
+    // uid / name: đóng vai 1 nhân sự cụ thể (test E2E với database cục bộ qua PostgREST)
+    const prof = screen === 'admin' ? { ...DEMO_PROFILE, id: q.get('uid') || DEMO_PROFILE.id, full_name: q.get('name') || DEMO_PROFILE.full_name }
+      : { id: q.get('uid') || 'demo-staff', full_name: q.get('name') || 'Trần Mai Anh', employee_id: 'NV0123', role: q.get('role') || 'telesale', role_2: q.get('role2') || null, position: 'Nhân viên', base_salary: 8000000, employment_status: 'official', is_active: true };
+    try { if (!q.get('tab')) { localStorage.setItem('staff_active_tab', 'overview'); localStorage.setItem('admin_active_tab', 'overview'); } } catch { /* ignore */ }
     return (
       <AuthContext.Provider value={{ user: { id: prof.id }, profile: prof, loading: false, isLoggedIn: true, isAdmin: screen === 'admin', logout: () => {} }}>
         {screen === 'admin' ? <AdminDashboard /> : <StaffDashboard />}
