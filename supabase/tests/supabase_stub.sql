@@ -19,9 +19,10 @@ do $$ begin
   create type user_role as enum ('admin', 'telesale', 'sale_offline', 'cskh', 'truc_page', 'media', 'marketing', 'editor', 'seeding',
     'dieu_duong', 'accountant', 'shareholder', 'bac_si', 'designer');
 exception when duplicate_object then null; end $$;
+do $$ begin create type employment_status as enum ('probation', 'official', 'inactive'); exception when duplicate_object then null; end $$;
 create table if not exists public.profiles (
   id uuid primary key, full_name text, employee_id text, role user_role not null default 'telesale', role_2 user_role,
-  position text, is_active boolean default true, employment_status text default 'official', avatar_url text
+  position text, is_active boolean default true, employment_status employment_status default 'official', avatar_url text
 );
 alter table public.profiles enable row level security;
 drop policy if exists p_read on public.profiles;
