@@ -15,6 +15,17 @@ import { vnToday } from '@/lib/vnTime';
 import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
 import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar, useServerSearch, mergeById, searchOrCond } from '@/features/crm/customerFilters.jsx';
 
+// Ô "Lịch tái khám tiếp theo" (datetime-local) <-> timestamptz, luôn theo giờ Việt Nam
+// (trước đây hiển thị theo giờ UTC -> mỗi lần lưu lại bị lùi 7 tiếng)
+const recheckToInput = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso); if (Number.isNaN(d.getTime())) return '';
+  const v = new Date(d.getTime() + 7 * 3600e3);
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${v.getUTCFullYear()}-${p2(v.getUTCMonth() + 1)}-${p2(v.getUTCDate())}T${p2(v.getUTCHours())}:${p2(v.getUTCMinutes())}`;
+};
+const recheckFromInput = (v) => (v ? new Date(`${v}:00+07:00`).toISOString() : null);
+
 const IMPORT_HEADERS = ['ngay_mo', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'ma_dieu_duong', 'ghi_chu'];
 const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
   '2026-05-10,Nguyễn Thị A,0901234567,Nâng mũi,NV010,Khách cũ chăm sóc lại\n' +
@@ -460,7 +471,7 @@ const HauPhauPage = () => {
       recheck_date: vnToday(),
       recheck_time: '09:00',
       warning_signs: Array.isArray(app.warning_signs) ? app.warning_signs : [],
-      next_recheck: app.next_recheck_at ? new Date(app.next_recheck_at).toISOString().slice(0, 16) : '',
+      next_recheck: recheckToInput(app.next_recheck_at),
     });
     setCskhForm({ cskh_status: app.cskh_status || 'Bình thường', cskh_notes: '' });
   };
@@ -585,6 +596,37 @@ const HauPhauPage = () => {
     loadData();
   };
 
+  // Tạo / dời lịch ở module Tái khám từ ngày giờ điều dưỡng chọn trong nhật ký hậu phẫu.
+  // Đã có lịch tái khám sắp tới của khách đúng NGÀY đó (hoặc đúng ngày hẹn cũ) -> dời / sửa giờ lịch đó, không tạo trùng.
+  const pushRecheck = async (app, newRe, oldRe) => {
+    const [d, t] = newRe.split('T');
+    const oldDay = oldRe ? oldRe.split('T')[0] : null;
+    const label = `${d.split('-').reverse().join('/')} ${t}`;
+    try {
+      if (app.phone) {
+        const { data: ups } = await supabase.from('customer_appointments').select('id, appointment_date')
+          .eq('phone', app.phone).like('service', '[Tái khám]%').eq('status', 'scheduled').gte('appointment_date', vnToday())
+          .order('appointment_date');
+        const target = (ups || []).find(r => r.appointment_date === d) || (oldDay ? (ups || []).find(r => r.appointment_date === oldDay) : null);
+        if (target) {
+          const { data: mv } = await supabase.from('customer_appointments')
+            .update({ appointment_date: d, appointment_time: t }).eq('id', target.id).select('id');
+          if (mv?.length) { toast.success(`Đã dời lịch tái khám sang ${label} (mục Tái khám)`); return; }
+        }
+      }
+      const note = [form.post_op_notes.trim(), `Trạng thái: ${form.post_op_status}`,
+        (form.warning_signs || []).length ? `Dấu hiệu: ${form.warning_signs.join(', ')}` : ''].filter(Boolean).join(' · ');
+      const { error: rcErr } = await supabase.rpc('create_recheck_appointment', {
+        p_parent_id: app.id, p_recheck_date: d, p_recheck_time: t || null,
+        p_notes: `[Hẹn từ nhật ký hậu phẫu] ${note}`,
+      });
+      if (rcErr) toast.error('Chưa tạo được lịch tái khám: ' + rcErr.message);
+      else toast.success(`Đã tạo lịch tái khám ${label} trong mục Tái khám`);
+    } catch (err) {
+      toast.error('Chưa tạo được lịch tái khám: ' + err.message);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!canEditHauPhau) return; // CSKH chỉ xem nhật ký hậu phẫu, không ghi
@@ -606,7 +648,7 @@ const HauPhauPage = () => {
       .update({
         post_op_status: form.post_op_status,
         warning_signs: form.warning_signs || [],
-        next_recheck_at: form.next_recheck ? new Date(form.next_recheck).toISOString() : null,
+        next_recheck_at: recheckFromInput(form.next_recheck),
       })
       .eq('id', selectedApp.id)
       .select('id');
@@ -617,7 +659,11 @@ const HauPhauPage = () => {
     if (error) toast.error(error.message);
     else if (!updRows?.length) { toast.error('Không lưu được — tài khoản của bạn không có quyền cập nhật ca này.'); setSaving(false); return; }
     else {
-      if (form.post_op_status === 'Tái khám') {
+      // Chọn "Lịch tái khám tiếp theo" (mới / đổi ngày giờ) -> đẩy thẳng sang module Lịch tái khám
+      const newRe = form.next_recheck;
+      const oldRe = recheckToInput(selectedApp.next_recheck_at);
+      if (newRe && newRe !== oldRe) await pushRecheck(selectedApp, newRe, oldRe);
+      if (form.post_op_status === 'Tái khám' && !newRe) {
         if (!form.recheck_date) {
           toast.error('Vui lòng chọn ngày tái khám.');
         } else {
@@ -991,12 +1037,15 @@ const HauPhauPage = () => {
                 <span className="w-9 h-9 rounded-full bg-lavender-50 text-lavender-600 grid place-items-center shrink-0"><CalendarClock className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[13.5px] font-semibold text-slate-800 leading-tight">Lịch tái khám tiếp theo</div>
-                  <div className="text-[12px] text-slate-400">Bỏ trống nếu chưa hẹn</div>
+                  <div className="text-[12px] text-slate-400">Chọn ngày giờ → tự tạo lịch ở mục Tái khám. Bỏ trống nếu chưa hẹn</div>
                 </div>
                 {form.next_recheck && <button type="button" onClick={() => setForm({ ...form, next_recheck: '' })} className="shrink-0 w-7 h-7 grid place-items-center rounded-full text-slate-400 hover:bg-white hover:text-danger-600"><X className="w-4 h-4" /></button>}
               </div>
               <input type="datetime-local" value={form.next_recheck} onChange={e => setForm({ ...form, next_recheck: e.target.value })} style={{ maxWidth: '100%' }} className="e-input mt-2.5 block min-w-0 appearance-none box-border" />
-              {st === 'Tái khám' && (
+              {form.next_recheck && form.next_recheck !== recheckToInput(careApp.next_recheck_at) && (
+                <div className="mt-2 text-[12px] font-medium text-lavender-700">Khi bấm Lưu: lịch tái khám {form.next_recheck.slice(0, 10).split('-').reverse().join('/')} lúc {form.next_recheck.slice(11, 16)} sẽ lên mục Lịch hẹn → Tái khám.</div>
+              )}
+              {st === 'Tái khám' && !form.next_recheck && (
                 <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-200">
                   <div className="min-w-0"><label className="e-label">Ngày tái khám (tạo lịch)</label><input type="date" value={form.recheck_date} onChange={e => setForm({ ...form, recheck_date: e.target.value })} style={{ maxWidth: '100%' }} className="e-input block min-w-0 appearance-none box-border" /></div>
                   <div className="min-w-0"><label className="e-label">Giờ hẹn</label><input type="time" value={form.recheck_time} onChange={e => setForm({ ...form, recheck_time: e.target.value })} style={{ maxWidth: '100%' }} className="e-input block min-w-0 appearance-none box-border" /></div>
