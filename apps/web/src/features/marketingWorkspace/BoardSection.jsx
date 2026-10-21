@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Plus, Columns3, Table2, CalendarDays, GanttChartSquare, LayoutDashboard, Images, Map as MapIcon, Archive,
+  Plus, Columns3, Table2, CalendarDays, GanttChartSquare, LayoutDashboard, Images, Map as MapIcon, Archive, Trash2,
   MoreHorizontal, Move, CheckSquare, CalendarClock, ChevronLeft, ChevronRight, Download, RotateCcw, Filter, X,
 } from 'lucide-react';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
@@ -279,6 +279,7 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
   const [adding, setAdding] = useState(null);   // listId đang nhập thẻ nhanh
   const [title, setTitle] = useState('');
   const [listMenu, setListMenu] = useState(null);
+  const [delList, setDelList] = useState(null);
   const [newList, setNewList] = useState(false);
 
   const colTasks = (listId) => tasks.filter(t => t.list_id === listId).sort(bySort);
@@ -312,6 +313,7 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
                 <h3 className="text-[13.5px] font-bold text-slate-800 truncate flex-1">{l.name}</h3>
                 <span className={`text-[12px] tabular-nums px-1.5 rounded-full ${overWip ? 'bg-danger-50 text-danger-600 font-semibold' : 'text-slate-400'}`}
                   title={l.wip_limit ? `Giới hạn WIP ${l.wip_limit}` : undefined}>{items.length}{l.wip_limit ? `/${l.wip_limit}` : ''}</span>
+                {ctx.perm.manage && <button type="button" className="e-icon-btn w-7 h-7 hover:!text-danger-600" aria-label={`Xoá cột ${l.name}`} title="Xoá cột" onClick={() => setDelList(l)}><Trash2 className="w-3.5 h-3.5" /></button>}
                 {ctx.perm.manage && <button type="button" className="e-icon-btn w-7 h-7" aria-label={`Tuỳ chọn cột ${l.name}`} onClick={() => setListMenu(l)}><MoreHorizontal className="w-4 h-4" /></button>}
               </header>
               <div className="space-y-2 min-h-[24px]">
@@ -357,21 +359,21 @@ function KanbanView({ lists, tasks, allTasks, ctx, onMove, onQuickAdd, onMoveShe
           </button>
         )}
       </div>
-      <ListMenu list={listMenu} lists={lists} allTasks={allTasks} onClose={() => setListMenu(null)} onDone={onReload} />
+      <ListMenu list={listMenu} lists={lists} allTasks={allTasks} onClose={() => setListMenu(null)} onDone={onReload} onDelete={(l) => { setListMenu(null); setDelList(l); }} />
+      <DeleteListModal list={delList} lists={lists} allTasks={allTasks} onClose={() => setDelList(null)} onDone={onReload} />
       <NewListModal open={newList} onClose={() => setNewList(false)} board={board} lists={lists} onDone={onReload} />
     </div>
   );
 }
 const DropLine = () => <div className="h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" aria-hidden="true" />;
 
-function ListMenu({ list, lists, allTasks, onClose, onDone }) {
+function ListMenu({ list, lists, allTasks, onClose, onDone, onDelete }) {
   const [name, setName] = useState('');
   const [wip, setWip] = useState('');
   const [done, setDone] = useState(false);
   useEffect(() => { if (list) { setName(list.name); setWip(list.wip_limit || ''); setDone(list.is_done); } }, [list]);
   if (!list) return null;
   const idx = lists.findIndex(l => l.id === list.id);
-  const count = allTasks.filter(t => t.list_id === list.id).length;
   const save = async () => {
     const w = wip === '' ? null : Number(wip);
     if (w != null && (!Number.isInteger(w) || w < 1 || w > 500)) { toast.error('Giới hạn WIP 1–500'); return; }
@@ -384,10 +386,6 @@ function ListMenu({ list, lists, allTasks, onClose, onDone }) {
       : (lists[idx + 2] ? (Number(other.sort_index) + Number(lists[idx + 2].sort_index)) / 2 : Number(other.sort_index) + 1024);
     if (await attempt(() => mwApi.updateList(list.id, { sort_index: pos }))) { onClose(); onDone(); }
   };
-  const archive = async () => {
-    if (count) { toast.error('Cột còn thẻ — chuyển hoặc lưu trữ các thẻ trước'); return; }
-    if (await attempt(() => mwApi.updateList(list.id, { archived_at: new Date().toISOString() }), 'Đã lưu trữ cột')) { onClose(); onDone(); }
-  };
   return (
     <Modal open onClose={onClose} title={`Cột “${list.name}”`} footer={<>
       <button type="button" className="e-btn e-btn-secondary" onClick={onClose}>Đóng</button>
@@ -399,8 +397,45 @@ function ListMenu({ list, lists, allTasks, onClose, onDone }) {
       <div className="flex flex-wrap gap-2 pt-1">
         <BusyButton className="e-btn e-btn-secondary e-btn-sm" disabled={idx <= 0} onClick={() => shift(-1)}><ChevronLeft /> Sang trái</BusyButton>
         <BusyButton className="e-btn e-btn-secondary e-btn-sm" disabled={idx >= lists.length - 1} onClick={() => shift(1)}>Sang phải <ChevronRight /></BusyButton>
-        <BusyButton className="e-btn e-btn-danger-soft e-btn-sm ml-auto" onClick={archive}><Archive /> Lưu trữ cột</BusyButton>
+        <button type="button" className="e-btn e-btn-danger-soft e-btn-sm ml-auto" disabled={lists.length <= 1} onClick={() => onDelete(list)}><Trash2 /> Xoá cột</button>
       </div>
+    </Modal>
+  );
+}
+
+// Xoá cột (chủ bảng / quản lý / Admin — DB kiểm tra quyền). Cột còn thẻ -> chuyển thẻ sang cột khác trước.
+// Cột bị gỡ khỏi bảng (archived_at) chứ không xoá vật lý: thẻ đã lưu trữ + lịch sử vẫn giữ nguyên.
+function DeleteListModal({ list, lists, allTasks, onClose, onDone }) {
+  const others = list ? lists.filter(l => l.id !== list.id) : [];
+  const [target, setTarget] = useState('');
+  useEffect(() => { if (list) setTarget(lists.find(l => l.id !== list.id)?.id || ''); }, [list, lists]);
+  if (!list) return null;
+  const cards = allTasks.filter(t => t.list_id === list.id).sort(bySort);
+  const run = async () => {
+    try {
+      let after = allTasks.filter(t => t.list_id === target).sort(bySort).at(-1)?.id || null;
+      for (const t of cards) {                       // chuyển lần lượt, giữ thứ tự
+        await mwApi.moveTask(t.id, target, after, t.version);
+        after = t.id;
+      }
+      await mwApi.updateList(list.id, { archived_at: new Date().toISOString() });
+      toast.success(cards.length ? `Đã xoá cột “${list.name}” và chuyển ${cards.length} thẻ` : `Đã xoá cột “${list.name}”`);
+      onClose(); onDone();
+    } catch (e) { toast.error(e.message); onDone(); }
+  };
+  return (
+    <Modal open onClose={onClose} title={`Xoá cột “${list.name}”?`} footer={<>
+      <button type="button" className="e-btn e-btn-secondary" onClick={onClose}>Huỷ</button>
+      <BusyButton className="e-btn e-btn-danger" disabled={!others.length || (cards.length > 0 && !target)} onClick={run}><Trash2 /> Xoá cột</BusyButton>
+    </>}>
+      {!others.length ? <p className="text-[13.5px] text-slate-600">Bảng phải còn ít nhất 1 cột.</p>
+        : cards.length ? (
+          <Field label={`Cột đang có ${cards.length} thẻ — chuyển sang cột`} required>
+            <select className="e-input" aria-label="Chuyển thẻ sang cột" value={target} onChange={e => setTarget(e.target.value)}>
+              {others.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </Field>
+        ) : <p className="text-[13.5px] text-slate-600">Cột trống — xoá khỏi bảng.</p>}
     </Modal>
   );
 }
