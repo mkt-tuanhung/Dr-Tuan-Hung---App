@@ -8,7 +8,7 @@ import QRCode from 'qrcode';
 import { Bars, Donut, STATUS_COLORS, OUTCOME_COLORS } from '@/components/report/ReportViz.jsx';
 import { maskPhone, phoneView } from '@/lib/phoneMask';
 import PipelineBoard from '@/features/crm/PipelineBoard.jsx';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
 import { useGetflyNotes, GetflyNotesList } from '@/features/crm/GetflyNotes.jsx';
 import { surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote } from 'lucide-react';
@@ -552,7 +552,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                           <div className="flex items-center gap-3">
                             <span className="w-10 h-10 rounded-full bg-teal-600 text-white grid place-items-center text-[12px] font-bold shrink-0">{initials(r.customer_name)}</span>
                             <div className="min-w-0">
-                              <div className="font-semibold text-slate-900 truncate max-w-[200px]">{r.customer_name || '(Chưa có tên)'}</div>
+                              <CustomerName phone={r.phone} name={r.customer_name} className="block font-semibold text-slate-900 truncate max-w-[200px]">{r.customer_name || '(Chưa có tên)'}</CustomerName>
                               <div className="text-[11.5px] text-slate-400 flex items-center gap-1.5">
                                 {isToday ? <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold whitespace-nowrap"><Sparkles className="w-3 h-3" />Mới hôm nay</span> : <span className="whitespace-nowrap">Về {fmtD(arrivedAt(r))}</span>}
                                 {r.getfly_code && <><span>·</span><span className="truncate max-w-[90px]">{r.getfly_code}</span></>}
@@ -604,7 +604,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                 <span className="w-11 h-11 rounded-full bg-teal-600 text-white grid place-items-center text-[12px] font-bold shrink-0">{initials(r.customer_name)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <div className="font-bold text-slate-900 text-[14.5px] truncate">{r.customer_name || '(Chưa có tên)'}</div>
+                    <CustomerName phone={r.phone} name={r.customer_name} className="block font-bold text-slate-900 text-[14.5px] truncate">{r.customer_name || '(Chưa có tên)'}</CustomerName>
                     {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
                   </div>
                   <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5">
@@ -1074,7 +1074,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
             <span className="w-[72px] h-[72px] lg:w-[92px] lg:h-[92px] rounded-full bg-teal-50 text-teal-700 ring-[6px] ring-teal-100/70 grid place-items-center text-[26px] lg:text-[32px] font-bold shrink-0">{initialsOf(row.customer_name)}</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-[20px] lg:text-[22px] font-bold text-slate-900 leading-tight">{row.customer_name || '(Chưa có tên)'}</h2>
+                <h2 className="text-[20px] lg:text-[22px] font-bold text-slate-900 leading-tight"><CustomerName phone={row.phone} name={row.customer_name}>{row.customer_name || '(Chưa có tên)'}</CustomerName></h2>
                 <select value={row.status || 'tiep_can'} onChange={e => changeStatus(e.target.value)} disabled={!canWrite} title="Giai đoạn khách hàng"
                   className={`text-[11.5px] font-bold rounded-full px-2.5 py-1 outline-none border-0 cursor-pointer disabled:cursor-default ${STATUS[row.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
                   {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Banknote, TrendingUp, Search, Calendar as CalendarIcon, CheckCircle, Image as ImageIcon, X, ChevronLeft, ChevronRight, Pencil, Loader2, UserRound } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { vnToday } from '@/lib/vnTime';
+import { CustomerName } from '@/features/crm/Customer360.jsx';
 
 const VienPhiPage = ({ isNested = false }) => {
   const { profile } = useAuth();
@@ -214,7 +215,7 @@ const VienPhiPage = ({ isNested = false }) => {
                   <div className="flex items-start gap-3">
                     <span className="e-avatar w-11 h-11"><UserRound className="w-5 h-5" /></span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[15px] text-slate-900 truncate">{app.customer_name}</div>
+                      <CustomerName phone={app.phone} name={app.customer_name} className="block font-semibold text-[15px] text-slate-900 truncate" />
                       <div className="text-[12px] text-slate-500">{app.phone || 'Không có SĐT'}</div>
                     </div>
                     <span className={`e-badge e-badge-sm shrink-0 ${app.hospital_fee_method === 'cash' ? 'e-tone-brand' : 'e-tone-lavender'}`}>
@@ -262,7 +263,7 @@ const VienPhiPage = ({ isNested = false }) => {
                         <div className="flex items-center gap-3">
                           <span className="e-avatar w-9 h-9"><UserRound className="w-4 h-4" /></span>
                           <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 truncate">{app.customer_name}</div>
+                            <CustomerName phone={app.phone} name={app.customer_name} className="block font-semibold text-slate-900 truncate" />
                             <div className="text-slate-500 text-[12px] mt-0.5">{app.phone || 'Không có SĐT'}</div>
                           </div>
                         </div>

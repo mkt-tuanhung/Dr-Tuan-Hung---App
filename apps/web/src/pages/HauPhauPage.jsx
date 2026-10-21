@@ -4,7 +4,7 @@ import { nurseOptions, pickList, hasRole } from '@/lib/staffPick';
 import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
-import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, Search, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal, List, LayoutGrid, Trash2 } from 'lucide-react';
+import { Clock, MessageCircle, X, CheckCircle, Calendar, Phone, Image as ImageIcon, Loader2, UserPlus, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Upload, Download, QrCode, Copy, Printer, Star, Share2, Users, CalendarClock, ShieldCheck, Heart, Activity, AlertTriangle, ClipboardList, CircleDot, Check, Headset, SlidersHorizontal, List, LayoutGrid, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ds';
 import QRCode from 'qrcode';
 import { uploadToR2, R2_PUBLIC_URL } from '@/lib/r2Client';
@@ -12,7 +12,8 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import MediaCustomerButton from '@/components/MediaCustomerButton.jsx';
 import { vnToday } from '@/lib/vnTime';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
+import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar, useServerSearch, mergeById, searchOrCond } from '@/features/crm/customerFilters.jsx';
 
 const IMPORT_HEADERS = ['ngay_mo', 'ten_khach_hang', 'so_dien_thoai', 'dich_vu', 'ma_dieu_duong', 'ghi_chu'];
 const IMPORT_TEMPLATE = IMPORT_HEADERS.join(',') + '\n' +
@@ -123,7 +124,8 @@ const HauPhauPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [mainTab, setMainTab] = useState('hau_phau'); // 'hau_phau' (<1 tháng) | 'cskh' (≥1 tháng)
-  const [searchQuery, setSearchQuery] = useState('');
+  // Tìm tên / SĐT + lọc dịch vụ, nhóm dịch vụ
+  const filters = useCustomerFilters();
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('hp_view_mode') || 'list'); // 'list' | 'card'
   useEffect(() => { localStorage.setItem('hp_view_mode', viewMode); }, [viewMode]);
 
@@ -281,6 +283,18 @@ const HauPhauPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments', loadData);
+
+  // Tìm trên máy chủ: thấy cả ca cũ hơn khoảng đã tải (cùng quy tắc xem như danh sách)
+  const searchExtra = useServerSearch(filters.q, async (safe, digitsOnly) => {
+    const { data } = await supabase.from('customer_appointments')
+      .select('*, hau_phau:profiles!hau_phau_id(full_name)')
+      .eq('status', 'phau_thuat').not('hau_phau_id', 'is', null).or(searchOrCond(safe, digitsOnly))
+      .order('surgery_date', { ascending: false }).limit(100);
+    let rows = (data || []).filter(d => d.hau_phau_id);
+    if (!canSeeAll && profile?.id) rows = rows.filter(d => d.hau_phau_id === profile.id || (d.additional_hau_phau_ids || []).includes(profile.id));
+    return rows;
+  });
+  const allCustomers = mergeById(customers, searchExtra);
 
   // Tạo (hoặc lấy lại) phiếu đánh giá dịch vụ → QR gửi khách.
   // Ở bước hậu phẫu mới đủ TOÀN BỘ nhân sự đã chăm khách (bác sĩ, phụ mổ,
@@ -688,9 +702,9 @@ const HauPhauPage = () => {
   // Phân loại theo tuổi ca mổ: <1 tháng = Hậu phẫu, ≥1 tháng = CSKH
   const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
   const isOldCase = (c) => c.surgery_date && new Date(c.surgery_date) < oneMonthAgo;
-  const mainTabCustomers = customers.filter(c => mainTab === 'cskh' ? isOldCase(c) : !isOldCase(c));
-  const hauPhauCount = customers.filter(c => !isOldCase(c)).length;
-  const cskhCount = customers.filter(c => isOldCase(c)).length;
+  const mainTabCustomers = allCustomers.filter(c => mainTab === 'cskh' ? isOldCase(c) : !isOldCase(c));
+  const hauPhauCount = allCustomers.filter(c => !isOldCase(c)).length;
+  const cskhCount = allCustomers.filter(c => isOldCase(c)).length;
 
   // Tab lọc: Hậu phẫu theo trạng thái hậu phẫu; CSKH theo phân loại khách
   const isCskhTab = mainTab === 'cskh';
@@ -698,15 +712,8 @@ const HauPhauPage = () => {
   const statusOf = (c) => isCskhTab ? (c.cskh_status || '') : (c.post_op_status || 'Đang theo dõi');
   const statusCountOf = (id) => id === 'all' ? mainTabCustomers.length : mainTabCustomers.filter(c => statusOf(c) === id).length;
 
-  let filteredCustomers = activeTab === 'all' ? mainTabCustomers : mainTabCustomers.filter(c => statusOf(c) === activeTab);
-
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    filteredCustomers = filteredCustomers.filter(c => 
-      (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
-      (c.phone && c.phone.toLowerCase().includes(q))
-    );
-  }
+  const tabFiltered = activeTab === 'all' ? mainTabCustomers : mainTabCustomers.filter(c => statusOf(c) === activeTab);
+  const filteredCustomers = applyCustomerFilters(tabFiltered, filters);
 
   const groupedCustomers = filteredCustomers.reduce((acc, app) => {
     const date = app.surgery_date 
@@ -831,7 +838,7 @@ const HauPhauPage = () => {
         <div className="lg:hidden flex items-center gap-3">
           <button type="button" onClick={() => setCareApp(null)} className="e-icon-btn shrink-0"><ChevronLeft className="w-5 h-5" /></button>
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold text-slate-900 truncate">{careApp.customer_name}</div>
+            <CustomerName phone={careApp.phone} name={careApp.customer_name} className="block text-[15px] font-semibold text-slate-900 truncate" />
             <div className="inline-flex items-center gap-1.5 text-[12px] text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-teal-500" /> {careApp.post_op_status || 'Đang theo dõi'}</div>
           </div>
         </div>
@@ -847,7 +854,7 @@ const HauPhauPage = () => {
             <span className="e-avatar w-16 h-16 text-xl">{initialsOf(careApp.customer_name)}</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-[20px] font-bold text-slate-900 leading-tight">{careApp.customer_name}</h2>
+                <h2 className="text-[20px] font-bold text-slate-900 leading-tight"><CustomerName phone={careApp.phone} name={careApp.customer_name} /></h2>
                 <span className={`e-badge border ${STATUS_STYLE[careApp.post_op_status || 'Đang theo dõi']}`}>{careApp.post_op_status || 'Đang theo dõi'}</span>
                 {careApp.cskh_status && <span className={`e-badge border ${CSKH_STATUS_STYLE[careApp.cskh_status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>CSKH: {careApp.cskh_status}</span>}
               </div>
@@ -1325,12 +1332,8 @@ const HauPhauPage = () => {
 
       {/* Thanh công cụ: tìm kiếm + chế độ xem + lọc trạng thái */}
       <div className="e-card-flat p-3 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="e-search flex-1 min-w-0">
-            <Search />
-            <input type="text" placeholder="Tìm tên KH hoặc số điện thoại…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full" />
-          </div>
+        <div className="flex items-start gap-3">
+          <CustomerFilterBar f={filters} rows={mainTabCustomers} count={filteredCustomers.length} className="flex-1 min-w-0" />
           {/* Toggle Danh sách / Thẻ — chỉ desktop */}
           <div className="hidden lg:inline-flex e-seg shrink-0">
             {[
@@ -1369,11 +1372,11 @@ const HauPhauPage = () => {
           </div>
           <div className="flex gap-3 overflow-x-auto -mx-1 px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
             {priority.map(({ c, cd, risk }) => (
-              <button key={c.id} type="button" onClick={() => openCare(c)} className="shrink-0 w-64 text-left rounded-xl border border-slate-200 bg-white p-3 hover:border-teal-300 hover:shadow-soft transition">
+              <div key={c.id} role="button" tabIndex={0} onClick={() => openCare(c)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCare(c); } }} className="cursor-pointer shrink-0 w-64 text-left rounded-xl border border-slate-200 bg-white p-3 hover:border-teal-300 hover:shadow-soft transition">
                 <div className="flex items-center gap-2.5">
                   <span className="e-avatar w-9 h-9 text-xs">{initialsOf(c.customer_name)}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-900 text-[14px] truncate">{c.customer_name}</div>
+                    <CustomerName phone={c.phone} name={c.customer_name} className="block font-semibold text-slate-900 text-[14px] truncate" />
                     <div className="text-[12px] text-slate-400 truncate tabular-nums">{c.phone || '—'}</div>
                   </div>
                   <span className={`e-badge e-badge-sm ${risk === 'Cao' ? 'e-tone-danger' : risk === 'Trung bình' ? 'e-tone-warning' : 'e-tone-success'}`}>{risk}</span>
@@ -1382,7 +1385,7 @@ const HauPhauPage = () => {
                   <span className="text-slate-500 truncate">{c.service || '—'}</span>
                   <span className={`font-semibold shrink-0 ${cd ? (cd.over ? 'text-danger-600' : 'text-warning-600') : 'text-danger-600'}`}>{cd ? cd.txt : 'Nguy cơ cao'}</span>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </div>
@@ -1426,16 +1429,16 @@ const HauPhauPage = () => {
                     return (
                       <tr key={app.id}>
                         <td className="py-2.5">
-                          <button type="button" onClick={() => openCare(app)} className="flex items-center gap-3 text-left group">
+                          <div role="button" tabIndex={0} onClick={() => openCare(app)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCare(app); } }} className="flex items-center gap-3 text-left group cursor-pointer">
                             <span className="e-avatar w-10 h-10 text-xs">{initialsOf(app.customer_name)}</span>
                             <div className="min-w-0">
-                              <div className="font-semibold text-slate-900 truncate group-hover:text-teal-700">{app.customer_name}</div>
+                              <CustomerName phone={app.phone} name={app.customer_name} className="block font-semibold text-slate-900 truncate" />
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className="text-[12px] text-slate-400 tabular-nums">{app.phone || '—'}</span>
                                 <span className={`e-badge e-badge-sm border ${stCls}`}>{st}</span>
                               </div>
                             </div>
-                          </button>
+                          </div>
                         </td>
                         <td className="text-slate-600">{app.service || '—'}</td>
                         <td className="text-slate-600">{app.hau_phau?.full_name || <span className="text-slate-300">Chưa phân công</span>}</td>
@@ -1472,13 +1475,13 @@ const HauPhauPage = () => {
               return (
                 <div key={app.id} className="e-card p-4 flex flex-col gap-3.5 transition hover:border-teal-100 hover:shadow-float">
                   <div className="flex items-start gap-3">
-                    <button type="button" onClick={() => openCare(app)} className="flex items-center gap-3 text-left min-w-0 flex-1 group">
+                    <div role="button" tabIndex={0} onClick={() => openCare(app)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCare(app); } }} className="flex items-center gap-3 text-left min-w-0 flex-1 group cursor-pointer">
                       <span className="e-avatar w-11 h-11 text-sm">{initialsOf(app.customer_name)}</span>
                       <div className="min-w-0">
-                        <div className="text-[15px] font-semibold text-slate-900 truncate group-hover:text-teal-700">{app.customer_name}</div>
+                        <CustomerName phone={app.phone} name={app.customer_name} className="block text-[15px] font-semibold text-slate-900 truncate" />
                         <div className="text-[12px] text-slate-400 truncate tabular-nums">{app.phone || '—'}</div>
                       </div>
-                    </button>
+                    </div>
                     <span className={`e-badge e-badge-sm shrink-0 ${riskCls}`}>{risk}</span>
                   </div>
 
@@ -1533,7 +1536,7 @@ const HauPhauPage = () => {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <h4 className="text-[15px] font-semibold text-slate-900 truncate leading-tight">{app.customer_name}</h4>
+                                <h4 className="text-[15px] font-semibold text-slate-900 truncate leading-tight"><CustomerName phone={app.phone} name={app.customer_name} className="truncate" /></h4>
                                 <div className="text-slate-400 text-[12px] mt-0.5 flex items-center gap-1 tabular-nums"><Phone className="w-3 h-3" /> {app.phone || <span className="italic text-slate-300">Chưa có SĐT</span>}</div>
                               </div>
                               <span className={`e-badge e-badge-sm border shrink-0 ${stCls}`}>{st}</span>

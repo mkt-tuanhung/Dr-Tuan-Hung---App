@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { Calendar, ArrowUpCircle, RotateCcw, X, MessageCircle, Phone, ChevronLeft, Wallet, UserX } from 'lucide-react';
 import ConsultButton from '@/components/ConsultButton.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
-import { phoneFor } from '@/lib/phoneMask';
+import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 import { vnToday } from '@/lib/vnTime';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
+import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar } from '@/features/crm/customerFilters.jsx';
 
 const CARE_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -35,6 +36,8 @@ const KhachBongPage = ({ isNested = false }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  // Tìm tên / SĐT + lọc dịch vụ, nhóm dịch vụ
+  const filters = useCustomerFilters();
 
   // Trang chăm sóc riêng + modal hành động
   const [careApp, setCareApp] = useState(null);
@@ -192,7 +195,8 @@ const KhachBongPage = ({ isNested = false }) => {
     setShowSurgeryModal(true);
   };
 
-  const filteredCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.care_status || 'Đang chăm sóc') === activeTab);
+  const tabCustomers = activeTab === 'all' ? customers : customers.filter(c => (c.care_status || 'Đang chăm sóc') === activeTab);
+  const filteredCustomers = applyCustomerFilters(tabCustomers, filters, { allowPhone: !isSaleOffline(profile) });
 
   const groupedCustomers = filteredCustomers.reduce((acc, app) => {
     const date = app.updated_at ? new Date(app.updated_at).toLocaleDateString('vi-VN') : 'Không rõ';
@@ -238,7 +242,7 @@ const KhachBongPage = ({ isNested = false }) => {
               <span className="e-avatar w-14 h-14 ring-4 ring-teal-50/70"><UserX className="w-6 h-6" /></span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-[20px] font-bold text-slate-900 leading-tight truncate">{careApp.customer_name}</h2>
+                  <h2 className="text-[20px] font-bold text-slate-900 leading-tight truncate"><CustomerName phone={careApp.phone} name={careApp.customer_name} className="truncate" /></h2>
                   <span className={`e-badge e-badge-sm ${STATUS_STYLE[careApp.care_status || 'Đang chăm sóc']}`}>
                     {careApp.care_status || 'Đang chăm sóc'}
                   </span>
@@ -332,10 +336,12 @@ const KhachBongPage = ({ isNested = false }) => {
             ))}
           </div>
 
+          <CustomerFilterBar f={filters} rows={customers} allowPhone={!isSaleOffline(profile)} count={filteredCustomers.length} />
+
           {loading ? (
             <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="e-card e-empty py-16 text-[13px] font-medium text-slate-400">Không có khách hàng nào trong mục này</div>
+            <div className="e-card e-empty py-16 text-[13px] font-medium text-slate-400">{filters.active ? 'Không có khách khớp tìm kiếm / bộ lọc' : 'Không có khách hàng nào trong mục này'}</div>
           ) : (
             <div className="space-y-5">
               {Object.entries(groupedCustomers).map(([date, apps]) => (
@@ -352,13 +358,14 @@ const KhachBongPage = ({ isNested = false }) => {
                       const st = app.care_status || 'Đang chăm sóc';
                       const noteCount = app.care_notes ? app.care_notes.split('\n').filter(l => /^\[\d/.test(l.trim())).length : 0;
                       return (
-                        <button key={app.id} type="button" onClick={() => openCare(app)}
-                          className="w-full text-left rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex flex-col gap-2.5 transition hover:border-teal-100 hover:shadow-card focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-teal-500/25">
+                        <div key={app.id} role="button" tabIndex={0} onClick={() => openCare(app)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCare(app); } }}
+                          className="cursor-pointer w-full text-left rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex flex-col gap-2.5 transition hover:border-teal-100 hover:shadow-card focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-teal-500/25">
                           {/* Đầu thẻ: avatar + tên + SĐT */}
                           <div className="flex items-start gap-3 w-full">
                             <span className="e-avatar w-12 h-12 bg-danger-50 text-danger-600"><UserX className="w-5 h-5" /></span>
                             <div className="min-w-0 flex-1 pt-0.5">
-                              <h4 className="text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</h4>
+                              <h4 className="text-[15px] font-semibold text-slate-900 truncate"><CustomerName phone={app.phone} name={app.customer_name} className="truncate" /></h4>
                               <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1 truncate"><Phone className="w-3.5 h-3.5 shrink-0" /> {phoneFor(app.phone, profile)}</div>
                             </div>
                             <span className={`e-badge e-badge-sm shrink-0 ${STATUS_STYLE[st]}`}>{st}</span>
@@ -374,7 +381,7 @@ const KhachBongPage = ({ isNested = false }) => {
                             <span className="flex items-center gap-1 whitespace-nowrap"><MessageCircle className="w-3 h-3" /> {noteCount} mốc</span>
                           </div>
                           <span className="text-[12.5px] text-teal-700 font-semibold">Mở nhật ký →</span>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

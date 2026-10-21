@@ -5,7 +5,7 @@ import LoadOlderBar, { ymdShift } from '@/components/LoadOlderBar.jsx';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { 
-  ClipboardList, Edit, CheckCircle, Search, Save, Calendar as CalendarIcon, Phone,
+  ClipboardList, Edit, CheckCircle, Save, Calendar as CalendarIcon, Phone,
   Clock, Activity, Banknote, UserCheck, ShieldCheck, X, Image as ImageIcon, PackageOpen, Plus, Trash2, Loader2, Ban
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -14,7 +14,8 @@ import { uploadToR2 } from '@/lib/r2Client';
 import MoDoiTacPage from '@/pages/MoDoiTacPage.jsx';
 import { Handshake, Stethoscope } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
+import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar, useServerSearch, mergeById, searchOrCond } from '@/features/crm/customerFilters.jsx';
 
 const KhachPhauThuatPage = ({ setActiveTab }) => {
   const { profile } = useAuth();
@@ -23,7 +24,8 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
   const [customers, setCustomers] = useState([]);
   const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Tìm tên / SĐT + lọc dịch vụ, nhóm dịch vụ
+  const filters = useCustomerFilters();
 
   // Modal Phân công
   const [showNurseModal, setShowNurseModal] = useState(false);
@@ -95,6 +97,20 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
 
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments,inventory_transactions,inventory_items', loadData);
+
+  // Tìm trên máy chủ: thấy cả ca mổ cũ hơn khoảng đã tải
+  const searchExtra = useServerSearch(filters.q, async (safe, digitsOnly) => {
+    const { data } = await supabase.from('customer_appointments')
+      .select('*, profiles!customer_appointments_created_by_fkey(full_name), telesale:telesale_id(full_name), sale:sale_id(full_name)')
+      .eq('status', 'phau_thuat').or(searchOrCond(safe, digitsOnly))
+      .order('surgery_date', { ascending: false }).limit(100);
+    const rows = data || [];
+    if (!rows.length) return rows;
+    const { data: tr } = await supabase.from('inventory_transactions').select('reference_id')
+      .in('reference_id', rows.map(a => a.id)).eq('type', 'export');
+    const used = new Set((tr || []).map(t => t.reference_id));
+    return rows.map(a => ({ ...a, has_materials: used.has(a.id) }));
+  });
 
   const openModal = (app, initialTab = 'phu_mo') => {
     setSelectedApp(app);
@@ -292,14 +308,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
     return new Intl.NumberFormat('vi-VN').format(numbers);
   };
 
-  let filteredCustomers = customers;
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    filteredCustomers = filteredCustomers.filter(c => 
-      (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
-      (c.phone && c.phone.toLowerCase().includes(q))
-    );
-  }
+  const filteredCustomers = applyCustomerFilters(mergeById(customers, searchExtra), filters);
 
   const groupedCustomers = filteredCustomers.reduce((acc, app) => {
     const date = app.surgery_date 
@@ -321,23 +330,14 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
       {moduleTab === 'doi_tac' && <MoDoiTacPage />}
 
       {moduleTab === 'noi_bo' && (<>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="e-page-desc">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="e-search w-full sm:w-72 shrink-0">
-            <Search />
-            <input 
-              type="text" 
-              placeholder="Tìm tên KH hoặc số điện thoại..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <div className="e-badge e-tone-brand h-10 px-4 rounded-xl tabular-nums hidden sm:inline-flex">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="e-page-desc">Quản lý lịch mổ và phân công điều dưỡng, hậu phẫu</p>
+          <div className="e-badge e-tone-brand h-10 px-4 rounded-xl tabular-nums hidden sm:inline-flex shrink-0">
             {filteredCustomers.length} Khách
           </div>
         </div>
+        <CustomerFilterBar f={filters} rows={customers} count={filteredCustomers.length} />
       </div>
 
       {loading ? (
@@ -348,6 +348,9 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
          </div>
       ) : (
         <div className="space-y-6">
+          {filteredCustomers.length === 0 && (
+            <div className="e-card py-12 text-center text-[13px] text-slate-400">Không có khách khớp tìm kiếm / bộ lọc</div>
+          )}
           {Object.entries(groupedCustomers).map(([date, apps]) => (
             <section key={date} className="space-y-3">
               {/* Tiêu đề nhóm ngày mổ */}
@@ -370,7 +373,7 @@ const KhachPhauThuatPage = ({ setActiveTab }) => {
                       <div className="flex items-start gap-3">
                         <span className="e-avatar w-11 h-11 text-[15px] before:content-[attr(data-av)]" data-av={(app.customer_name || '?').trim().split(/\s+/).pop().charAt(0).toUpperCase()} />
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-[15px] font-semibold text-slate-900 leading-snug truncate">{app.customer_name}</h4>
+                          <h4 className="text-[15px] font-semibold text-slate-900 leading-snug truncate"><CustomerName phone={app.phone} name={app.customer_name} className="truncate" /></h4>
                           <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{app.service}</div>
                           <Customer360Button phone={app.phone} name={app.customer_name} className="mt-1 -ml-2.5 !h-7" />
                         </div>

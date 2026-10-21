@@ -4,7 +4,7 @@ import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, Clock, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, Search, MessageCircle, UserCheck, List, BarChart2 } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Phone, User, Activity, Edit, Trash2, Clock, CalendarDays, Stethoscope, Wallet, Ban, Link as LinkIcon, FileText, ImagePlus, Loader2, MessageCircle, UserCheck, List, BarChart2 } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
@@ -15,6 +15,8 @@ import { isRecheck } from '@/features/appointments/calendarUtils';
 import { JOURNEY, JourneyLabel } from '@/features/appointments/journey';
 import { vnToday } from '@/lib/vnTime';
 import { ExpectedSurgeryField, planOf, surgeryPlanPatch, surgeryPlanError } from '@/features/appointments/surgeryPlan.jsx';
+import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar } from '@/features/crm/customerFilters.jsx';
+import { CustomerName } from '@/features/crm/Customer360.jsx';
 
 // ===== Tải lịch theo khoảng ngày (giảm băng thông) =====
 const APPT_WINDOW_DAYS = 7;   // lần đầu: từ 7 ngày trước + mọi lịch sắp tới
@@ -67,7 +69,10 @@ const AppointmentManagementPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Tìm (tên / SĐT) + lọc dịch vụ, nhóm dịch vụ — dùng chung cho Lịch, Danh sách, Tái khám
+  const filters = useCustomerFilters();
+  const searchQuery = filters.q;
+  const setSearchQuery = filters.setQ;
   
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -295,14 +300,7 @@ const AppointmentManagementPage = () => {
     const rechecks = [];
     const dates = [];
 
-    let filteredApps = appointments;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filteredApps = filteredApps.filter(c =>
-        (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
-        (!isSaleOffline(profile) && c.phone && c.phone.toLowerCase().includes(q))
-      );
-    }
+    const filteredApps = applyCustomerFilters(appointments, filters, { allowPhone: !isSaleOffline(profile) });
 
     // Danh sách lịch hẹn: giữ TẤT CẢ để xem lịch sắp tới (không lọc theo tháng)
     filteredApps.forEach(app => {
@@ -374,7 +372,9 @@ const AppointmentManagementPage = () => {
     const tr = { total: _pct(cur.total, prev.total), pt: _pct(cur.pt, prev.pt), coc: _pct(cur.coc, prev.coc), bong: _pct(cur.bong, prev.bong), bill: _pct(cur.bill, prev.bill), deposit: _pct(cur.deposit, prev.deposit) };
 
     return { groupedByDate: groups, recheckAppointments: rechecks, stats: st, chartData: cd, pieData: pd, trends: tr };
-  }, [appointments, searchQuery, statsRows]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [appointments, searchQuery, filters.service, filters.group, statsRows]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Lịch (calendar) dùng cùng bộ lọc
+  const calendarApps = useMemo(() => applyCustomerFilters(appointments, filters, { allowPhone: !isSaleOffline(profile) }), [appointments, filters, profile]);
 
   // Actions
   const handleCreateSubmit = async (e) => {
@@ -737,8 +737,11 @@ const AppointmentManagementPage = () => {
         <>
           {/* ===== LỊCH (Ethics BOS) ===== */}
           {activeViewTab === 'calendar' && (
+            <CustomerFilterBar f={filters} rows={appointments} allowPhone={!isSaleOffline(profile)} count={calendarApps.length} className="mb-3" />
+          )}
+          {activeViewTab === 'calendar' && (
             <ResourceCalendar
-              appointments={appointments}
+              appointments={calendarApps}
               staffList={staffList}
               selectedId={drawerId}
               onOpen={(app) => setDrawerId(app.id)}
@@ -822,16 +825,8 @@ const AppointmentManagementPage = () => {
           )}
 
           {(activeViewTab === 'appointments' || activeViewTab === 'rechecks') && (
-            <div className="e-search w-full sm:w-80">
-              <Search className="w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Tìm tên KH hoặc số điện thoại..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white shadow-soft focus:ring-[3px] focus:ring-teal-500/20"
-              />
-            </div>
+            <CustomerFilterBar f={filters} rows={appointments} allowPhone={!isSaleOffline(profile)}
+              count={activeViewTab === 'rechecks' ? recheckAppointments.length : listCount} />
           )}
 
           {/* Tab Content */}
@@ -862,7 +857,7 @@ const AppointmentManagementPage = () => {
                             <div className="flex items-start gap-3">
                               <User className="w-12 h-12 p-3 rounded-full bg-lavender-50 text-lavender-600 shrink-0" />
                               <div className="min-w-0 flex-1 pt-0.5">
-                                <span className="block text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</span>
+                                <CustomerName phone={app.phone} name={app.customer_name} className="block text-[15px] font-semibold text-slate-900 truncate" />
                                 <div className="flex items-center gap-1.5 mt-0.5 text-[12px] text-slate-500 tabular-nums min-w-0">
                                   <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                   <span>{app.appointment_time?.substring(0,5) || '--:--'}</span>
@@ -933,7 +928,7 @@ const AppointmentManagementPage = () => {
                           <div className="flex items-start gap-3">
                             <User className="w-12 h-12 p-3 rounded-full bg-teal-50 text-teal-700 shrink-0" />
                             <div className="min-w-0 flex-1 pt-0.5">
-                              <div className="text-[15px] font-semibold text-slate-900 truncate">{app.customer_name}</div>
+                              <CustomerName phone={app.phone} name={app.customer_name} className="block text-[15px] font-semibold text-slate-900 truncate" />
                               {app.phone && (isSaleOffline(profile)
                                 ? <span className="text-[12px] text-slate-500 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {phoneFor(app.phone, profile)}</span>
                                 : <a href={`tel:${app.phone}`} className="text-[12px] text-slate-500 hover:text-teal-700 flex items-center gap-1 mt-0.5"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>)}
