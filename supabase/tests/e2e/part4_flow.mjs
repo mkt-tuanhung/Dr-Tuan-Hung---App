@@ -1,0 +1,46 @@
+import { launch, close, openAs, shot, check, sql, U } from './lib.mjs';
+await launch();
+const { ctx, page } = await openAs(U.admin, { tab: 'mkt_workspace' });
+
+check(await page.getByText('Marketing Workspace', { exact: true }).count() > 0, 'Menu Marketing Workspace hiện luôn (không cần bật)');
+await page.getByRole('button', { name: 'Workspace mới' }).first().click();
+const m = page.getByRole('dialog', { name: 'Workspace mới' });
+await m.getByPlaceholder('VD: Marketing Dr Tuấn Hùng').fill('Order Ads');
+await m.locator('input').nth(1).fill('Order Ads');
+await m.getByRole('button', { name: /Tự đặt cột/ }).click();
+await m.getByLabel('Tên cột 1').fill('Nhận order');
+await m.getByLabel('Tên cột 2').fill('Đang làm creative');
+await m.getByLabel('Tên cột 3').fill('Chờ duyệt');
+await m.getByRole('button', { name: 'Thêm cột' }).click();
+await m.getByLabel('Tên cột 4').fill('Đã chạy ads');
+await shot(page, 'fix_01_new_workspace_custom_cols');
+await m.getByRole('button', { name: 'Tạo', exact: true }).click();
+await page.waitForTimeout(2500);
+const cols = sql("select string_agg(l.name || case when l.is_done then '✓' else '' end, ' | ' order by l.sort_index) from mw_lists l join mw_boards b on b.id = l.board_id where b.name = 'Order Ads' and l.archived_at is null");
+check(cols === 'Nhận order | Đang làm creative | Chờ duyệt | Đã chạy ads✓', `Board tạo kèm workspace với cột tự đặt: ${cols}`);
+check(await page.locator('section[aria-label="Nhận order"]').count() === 1, 'Vào thẳng Bảng công việc, thấy cột ngay');
+await shot(page, 'fix_02_board_after_create');
+// Ẩn workspace -> banner + hiện lại
+page.on('dialog', d => d.accept());
+await page.getByRole('button', { name: 'Thành viên & cấu hình' }).click();
+await page.getByRole('button', { name: 'Ẩn workspace' }).click();
+await page.waitForTimeout(1200);
+check(await page.getByText(/đang bị ẩn/).count() > 0, 'Workspace bị ẩn -> có cảnh báo rõ ràng, vẫn chọn được');
+await page.getByRole('button', { name: 'Hiện lại workspace' }).first().click();
+await page.waitForTimeout(1200);
+check(sql("select archived_at is null from mw_workspaces where name = 'Order Ads'") === 't', 'Hiện lại workspace');
+// Board mới tự đặt cột trong workspace có sẵn
+await page.getByRole('button', { name: 'Bảng công việc' }).click();
+await page.getByRole('button', { name: 'Board mới' }).click();
+const d = page.getByRole('dialog', { name: 'Tạo board' });
+await d.getByPlaceholder('VD: Video tháng 11').fill('Thiết kế banner');
+await d.getByRole('button', { name: /Tự đặt cột/ }).click();
+await d.getByLabel('Tên cột 1').fill('Brief');
+await d.getByLabel('Xoá cột 3').click();
+await d.getByLabel('Tên cột 2').fill('Xong');
+await d.getByRole('button', { name: 'Tạo board' }).click();
+await page.waitForTimeout(2000);
+const c2 = sql("select string_agg(l.name, ' | ' order by l.sort_index) from mw_lists l join mw_boards b on b.id = l.board_id where b.name = 'Thiết kế banner' and l.archived_at is null");
+check(c2 === 'Brief | Xong', `Board mới 2 cột tự đặt: ${c2}`);
+await shot(page, 'fix_03_board_two_custom_cols');
+await ctx.close(); await close();

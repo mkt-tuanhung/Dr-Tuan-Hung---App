@@ -165,7 +165,7 @@ export default function BoardSection({ ws, boards, perm, staffById, labels, open
     return (
       <div className="e-card">
         <EmptyState icon={Columns3} title="Workspace chưa có board"
-          description={perm.manage ? 'Tạo board theo mẫu (Sản xuất video, Thiết kế, Chiến dịch…) để bắt đầu.' : 'Quản lý workspace chưa tạo board nào.'}
+          description={perm.manage ? 'Bảng công việc = các cột (VD Ý tưởng → Kịch bản → Quay → Dựng → Đăng) chứa thẻ việc. Bấm Tạo board, chọn mẫu cột, rồi thêm thẻ và giao người.' : 'Quản lý workspace chưa tạo bảng công việc nào.'}
           action={perm.manage && <button type="button" className="e-btn e-btn-primary" onClick={() => setNewBoard(true)}><Plus /> Tạo board</button>} />
         <NewBoardModal open={newBoard} onClose={() => setNewBoard(false)} ws={ws} onCreated={async (id) => { await reloadBoards(); setBoardId(id); }} />
       </div>
@@ -422,32 +422,82 @@ function NewListModal({ open, onClose, board, lists, onDone }) {
   );
 }
 
+// Tạo board: theo mẫu cột (RPC mw_create_board) hoặc TỰ ĐẶT cột.
+// Tự đặt: tạo board mẫu "Trống" rồi đổi tên / thêm / ẩn cột theo danh sách người dùng nhập
+// (quản lý được sửa cột qua REST — không cần thêm SQL). Cột cuối = cột hoàn thành.
+export async function createBoardWith(wsId, name, tpl, cols) {
+  if (tpl !== 'custom') return mwApi.createBoard(wsId, name, tpl);
+  const names = cols.map(c => c.trim()).filter(Boolean);
+  const id = await mwApi.createBoard(wsId, name, 'custom');
+  const lists = (await mwApi.lists([id])).sort(bySort);
+  for (let i = 0; i < Math.max(names.length, lists.length); i += 1) {
+    const isDone = i === names.length - 1;
+    if (i < names.length && lists[i]) await mwApi.updateList(lists[i].id, { name: names[i], is_done: isDone });
+    else if (i < names.length) await mwApi.createList(id, names[i], (i + 1) * 1024).then(r => (isDone ? mwApi.updateList(r.id, { is_done: true }) : null));
+    else await mwApi.updateList(lists[i].id, { archived_at: new Date().toISOString() });
+  }
+  return id;
+}
+
+// Chọn mẫu cột hoặc tự đặt cột
+export function TemplatePicker({ tpl, setTpl, cols, setCols }) {
+  const custom = tpl === 'custom';
+  return (
+    <div className="space-y-2.5">
+      <span className="e-label">Cột của bảng</span>
+      <div className="grid sm:grid-cols-2 gap-2">
+        <button type="button" onClick={() => setTpl('custom')} aria-pressed={custom}
+          className={`text-left rounded-xl border p-3 transition sm:col-span-2 ${custom ? 'border-teal-500 bg-teal-50' : 'border-dashed border-slate-300 hover:border-teal-300'}`}>
+          <div className="text-[13.5px] font-semibold text-slate-800">✏️ Tự đặt cột</div>
+          <div className="text-[12px] text-slate-500 mt-0.5">Tự gõ tên từng cột theo quy trình của team (thêm / sửa / xoá cột lúc nào cũng được)</div>
+        </button>
+        {BOARD_TEMPLATES.map(t => (
+          <button key={t.id} type="button" onClick={() => setTpl(t.id)} aria-pressed={tpl === t.id}
+            className={`text-left rounded-xl border p-3 transition ${tpl === t.id ? 'border-teal-500 bg-teal-50' : 'border-slate-200 hover:border-teal-300'}`}>
+            <div className="text-[13.5px] font-semibold text-slate-800">{t.label}</div>
+            <div className="text-[12px] text-slate-500 mt-0.5">{t.desc}</div>
+          </button>
+        ))}
+      </div>
+      {custom && (
+        <div className="rounded-xl border border-teal-200 bg-teal-50/40 p-3 space-y-2">
+          {cols.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-6 text-[12px] text-slate-400 tabular-nums text-right">{i + 1}</span>
+              <input className="e-input flex-1" value={c} maxLength={80} placeholder={`Tên cột ${i + 1}`} aria-label={`Tên cột ${i + 1}`}
+                onChange={e => setCols(cols.map((x, k) => (k === i ? e.target.value : x)))} />
+              <button type="button" className="e-icon-btn w-9 h-9" aria-label={`Xoá cột ${i + 1}`} disabled={cols.length <= 1}
+                onClick={() => setCols(cols.filter((_, k) => k !== i))}><X className="w-4 h-4" /></button>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <button type="button" className="e-btn e-btn-secondary e-btn-sm" disabled={cols.length >= 30} onClick={() => setCols([...cols, ''])}><Plus /> Thêm cột</button>
+            <span className="text-[12px] text-slate-500">Cột cuối được tính là “hoàn thành”.</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+export const DEFAULT_CUSTOM_COLS = ['Cần làm', 'Đang làm', 'Hoàn thành'];
+export const customColsOk = (tpl, cols) => tpl !== 'custom' || cols.some(c => c.trim());
+
 export function NewBoardModal({ open, onClose, ws, onCreated }) {
   const [name, setName] = useState('');
   const [tpl, setTpl] = useState('video');
-  useEffect(() => { if (open) { setName(''); setTpl('video'); } }, [open]);
+  const [cols, setCols] = useState(DEFAULT_CUSTOM_COLS);
+  useEffect(() => { if (open) { setName(''); setTpl('video'); setCols(DEFAULT_CUSTOM_COLS); } }, [open]);
   const save = async () => {
-    const id = await attempt(() => mwApi.createBoard(ws.id, name.trim(), tpl), 'Đã tạo board');
+    const id = await attempt(() => createBoardWith(ws.id, name.trim(), tpl, cols), 'Đã tạo board');
     if (id) { onClose(); onCreated?.(id); }
   };
   return (
     <Modal open={open} onClose={onClose} title="Tạo board" desc={`Trong workspace “${ws.name}”`} size="max-w-xl" footer={<>
       <button type="button" className="e-btn e-btn-secondary" onClick={onClose}>Huỷ</button>
-      <BusyButton onClick={save} disabled={!name.trim()}>Tạo board</BusyButton>
+      <BusyButton onClick={save} disabled={!name.trim() || !customColsOk(tpl, cols)}>Tạo board</BusyButton>
     </>}>
       <Field label="Tên board" required><input autoFocus className="e-input" value={name} maxLength={120} onChange={e => setName(e.target.value)} placeholder="VD: Video tháng 11" /></Field>
-      <div>
-        <span className="e-label">Mẫu cột</span>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {BOARD_TEMPLATES.map(t => (
-            <button key={t.id} type="button" onClick={() => setTpl(t.id)} aria-pressed={tpl === t.id}
-              className={`text-left rounded-xl border p-3 transition ${tpl === t.id ? 'border-teal-500 bg-teal-50' : 'border-slate-200 hover:border-teal-300'}`}>
-              <div className="text-[13.5px] font-semibold text-slate-800">{t.label}</div>
-              <div className="text-[12px] text-slate-500 mt-0.5">{t.desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <TemplatePicker tpl={tpl} setTpl={setTpl} cols={cols} setCols={setCols} />
     </Modal>
   );
 }

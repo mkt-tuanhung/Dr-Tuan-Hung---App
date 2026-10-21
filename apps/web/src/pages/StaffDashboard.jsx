@@ -42,7 +42,6 @@ import ReportsPage from '@/features/reports/ReportsPage.jsx';
 import CallsPage from '@/features/channels/CallsPage.jsx';
 import InboxPage from '@/features/channels/InboxPage.jsx';
 import TasksPage from '@/features/work/TasksPage.jsx';
-import { useMwEnabled } from '@/features/marketingWorkspace/useMwEnabled';
 // Marketing Workspace: tải riêng (lazy) — chỉ khi mở mục này mới tải mã module
 const MarketingWorkspacePage = React.lazy(() => import('@/features/marketingWorkspace/MarketingWorkspacePage.jsx'));
 import MyPayrollPage from '@/pages/MyPayrollPage.jsx';
@@ -370,9 +369,7 @@ const StaffDashboard = () => {
 
   // Quyền = mặc định theo vai trò + ô Admin ghi đè trong trang Phân quyền
   const overrides = usePermissionOverrides();
-  // Mục có cờ (flag) chỉ hiện khi Admin bật — cờ tắt thì menu y như trước
-  const mwEnabled = useMwEnabled();
-  const roleOk = (m) => (m.flag !== 'mw_enabled' || mwEnabled) && userCanModule(profile, m, overrides);
+  const roleOk = (m) => userCanModule(profile, m, overrides);
   // Menu có nhóm con (dropdown): giữ nhóm nếu có ít nhất 1 mục con được phép
   const allowedMenu = FULL_MENU.map(m => {
     if (m.children) {

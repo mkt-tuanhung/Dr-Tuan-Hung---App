@@ -7,11 +7,11 @@
    - Chạy lại nhiều lần vẫn an toàn (idempotent).
    - Không tạo / sửa bảng cũ ngoài: thêm cột `clinic_settings.mw_enabled boolean default false`.
    - Không cần Edge Function mới; **không** đổi Verify JWT của function nào.
-3. App › **Cài đặt hệ thống › Marketing Workspace › Bật module** (hoặc mở module khi đang tắt → nút *Bật module* — chỉ Admin thấy).
-4. Mở **Marketing › Marketing Workspace** → *Workspace mới* → mục **Thành viên & cấu hình**:
+3. Menu **Marketing › Marketing Workspace** hiện ngay (không cần bật). Ai thấy menu do trang **Phân quyền** quyết định.
+4. *Workspace mới* → nhập tên + chọn mẫu cột **hoặc tự đặt cột** → tạo luôn bảng công việc đầu tiên. Sau đó mục **Thành viên & cấu hình**:
    - Thêm thành viên từ danh sách nhân sự (Quản lý / Thực hiện / Chỉ xem).
    - Cấp **Người duyệt**: bác sĩ (Chuyên môn y khoa), Marketing / thương hiệu, Pháp lý & consent, Người đăng bài.
-   - Tạo nhãn; tạo board theo mẫu (Sản xuất video 12 cột, Thiết kế, Chiến dịch, SEO, Quảng cáo, Sự kiện, Trống).
+   - Tạo nhãn; thêm board khác theo mẫu hoặc tự đặt cột.
 5. Nếu người làm **Pháp lý & consent** có vai trò không thấy menu mặc định (VD CSKH): **Cài đặt hệ thống › Phân quyền** → cột vai trò đó → bật ô *Marketing Workspace*.
 
 ## 2. Quy trình hằng ngày
@@ -30,7 +30,7 @@
 
 | Mức | Cách | Dữ liệu |
 |---|---|---|
-| Tắt module | Cài đặt hệ thống › Marketing Workspace › *Tắt module* — hoặc SQL `update clinic_settings set mw_enabled = false;` | Giữ nguyên; menu ẩn với mọi người, app y như trước |
+| Ẩn menu | Phân quyền › bỏ ô *Marketing Workspace* cho các vai trò | Giữ nguyên dữ liệu |
 | Gỡ hẳn | Chạy `supabase/marketing_workspace_v1_rollback.sql` | **Xoá** mọi bảng / hàm `mw_*`, cột `mw_enabled`, quyền menu `mkt_workspace`, thông báo `mw_%` — sao lưu trước |
 | Frontend | Revert commit thêm `features/marketingWorkspace` (menu tự ẩn khi cờ / cột không còn) | |
 
@@ -39,7 +39,7 @@
 | Triệu chứng | Nguyên nhân / xử lý |
 |---|---|
 | “Chưa cài Marketing Workspace…” | Chưa chạy `marketing_workspace_v1.sql` |
-| Menu không hiện | Cờ đang tắt; hoặc vai trò chưa được cấp ô *Marketing Workspace* trong Phân quyền |
+| Menu không hiện | Vai trò chưa được cấp ô *Marketing Workspace* trong Phân quyền |
 | Thấy module nhưng trống | Chưa là thành viên workspace nào → nhờ Quản lý thêm |
 | “Thẻ vừa được người khác thay đổi…” | Khoá lạc quan: người khác sửa trước — app đã tải bản mới, thao tác lại |
 | “Cột đã đạt giới hạn N thẻ (WIP)” | Tăng WIP ở menu cột hoặc chuyển bớt thẻ |
