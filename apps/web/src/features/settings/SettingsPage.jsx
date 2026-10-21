@@ -11,6 +11,7 @@
 //   Phân quyền ................. nhúng PermissionsPage
 //   Face ID .................... nhúng FaceIdAdminPanel
 //   Tích hợp ................... trạng thái chỉ xem (không hiện khoá bí mật)
+//   Marketing Workspace ........ bật / tắt cờ clinic_settings.mw_enabled (RPC mw_set_enabled)
 //   Nhật ký hoạt động .......... nhúng AuditLogPage
 //
 // Tiêu đề trang: AuditLogPage tự gọi usePageTitle('Nhật ký hoạt động'), và khi bị gỡ
@@ -20,7 +21,7 @@
 // tiêu đề sau khi trang con dọn dẹp.
 // ============================================================
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Building2, CalendarClock, Clock, ShieldCheck, ScanFace, Blocks, History, Info } from 'lucide-react';
+import { Building2, CalendarClock, Clock, ShieldCheck, ScanFace, Blocks, History, Info, KanbanSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { usePageTitle, PermissionDenied, ErrorState, AlertStrip, ConfirmDialog } from '@/components/ds';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
@@ -30,6 +31,7 @@ import { useClinicSettings, isAdminProfile, SectionHeader } from './settingsShar
 import { ClinicInfoSection, WorkHoursSection } from './ClinicSections.jsx';
 import ShiftsSection from './ShiftsSection.jsx';
 import IntegrationsSection from './IntegrationsSection.jsx';
+import MarketingWorkspaceToggle from './MarketingWorkspaceToggle.jsx';
 
 const TITLE = 'Cài đặt hệ thống';
 const STORAGE_KEY = 'th_settings_section';
@@ -43,6 +45,7 @@ const SECTIONS = [
   { key: 'permissions', label: 'Phân quyền', desc: 'Vai trò × chức năng', icon: ShieldCheck, bare: true },
   { key: 'faceid', label: 'Face ID', desc: 'Khuôn mặt chấm công', icon: ScanFace },
   { key: 'integrations', label: 'Tích hợp', desc: 'Facebook, Telegram, thông báo…', icon: Blocks },
+  { key: 'mkt_ws', label: 'Marketing Workspace', desc: 'Bật / tắt module (thử nghiệm)', icon: KanbanSquare },
   { key: 'audit', label: 'Nhật ký hoạt động', desc: 'Ai sửa gì, lúc nào, vì sao', icon: History, bare: true },
 ];
 const isSection = (k) => SECTIONS.some(s => s.key === k);
@@ -117,6 +120,7 @@ function SettingsContent({ onNavigate, profile }) {
         </div>
       );
       case 'integrations': return <IntegrationsSection settings={settings} />;
+      case 'mkt_ws': return <MarketingWorkspaceToggle onNavigate={onNavigate} />;
       case 'audit': return (
         <div className="space-y-4">
           <div className="e-card e-card-pad">

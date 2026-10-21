@@ -4,14 +4,15 @@ import { supabase } from '@/lib/supabaseClient';
 // Token lưu trong nội dung: @[Tên](staff:uuid) hoặc @[Tên](cust:uuid)
 export const MENTION_RE = /@\[([^\]]+)\]\((staff|cust):([0-9a-fA-F-]+)\)/g;
 
-export default function MentionInput({ value, onChange, onEnter, placeholder, staff = [], className }) {
+// allowCustomer=false: tắt tra cứu khách (#SĐT) — dùng ở module không được chạm dữ liệu bệnh nhân (Marketing Workspace)
+export default function MentionInput({ value, onChange, onEnter, placeholder, staff = [], className, allowCustomer = true }) {
   const ref = useRef(null);
   const [drop, setDrop] = useState(null); // { items, start }
   const [active, setActive] = useState(0);
 
   const detect = async (text, caret) => {
     const before = text.slice(0, caret);
-    const mCust = before.match(/#(\d*)$/);          // # + SĐT khách
+    const mCust = allowCustomer ? before.match(/#(\d*)$/) : null;   // # + SĐT khách
     const mStaff = before.match(/@([^\s@#]*)$/);    // @ + tên nhân sự
     if (mCust) {
       const q = mCust[1];

@@ -1,0 +1,81 @@
+PASS T01 anon không đọc được workspace (permission denied for table mw_workspaces)
+PASS T01 tài khoản đã nghỉ không tạo được workspace (Chưa đăng nhập hoặc tài khoản đã khoá)
+PASS Vai trò media không tự tạo workspace (Chỉ Admin hoặc Marketing được tạo workspace)
+PASS Không chèn workspace trực tiếp (phải qua RPC) (new row violates row-level security policy for table "mw_workspaces")
+PASS Board mẫu video có 12 cột
+PASS Không thêm nhân sự đã nghỉ vào workspace (Nhân sự không tồn tại hoặc đã nghỉ)
+PASS Không gỡ được chủ workspace (Không thể gỡ / hạ quyền chủ workspace)
+PASS T02 người ngoài không thấy workspace khác (không lộ metadata)
+PASS T02 người ngoài không thấy board
+PASS T02 người ngoài không tạo thẻ trong workspace khác (new row violates row-level security policy for table "mw_tasks")
+PASS T04 tạo thẻ: người tạo do DB đặt
+PASS T02 thành viên ws1 không thấy thẻ ws2
+PASS T05 sắp xếp lại trong cột giữ đúng thứ tự
+PASS T05 kéo đồng thời: bản cũ bị từ chối (Xung đột: thẻ vừa được người khác thay đổi, hãy tải lại)
+PASS Chuyển cột lưu vào DB
+PASS Nhật ký ghi lần chuyển cột
+PASS T06 chuyển thẻ sang board khác cùng workspace
+PASS Không đổi board bằng PATCH trực tiếp (Chuyển thẻ sang board khác phải dùng chức năng Di chuyển)
+PASS Cột đạt giới hạn WIP thì chặn chuyển (Cột đã đạt giới hạn 1 thẻ (WIP))
+PASS Vào cột "Đã đăng" (is_done) -> ghi thời điểm hoàn thành
+PASS T09 đổi hạn trên lịch = sửa đúng 1 thẻ (không nhân bản), lưu UTC
+PASS Người phụ trách phải là thành viên workspace (Người được giao phải là thành viên workspace)
+PASS Giao việc gửi đúng 1 thông báo
+PASS T11 @nhắc tên chỉ báo người có quyền xem (người ngoài không nhận)
+PASS Không sửa được bình luận của người khác
+PASS Người xem (viewer) không bình luận được (new row violates row-level security policy for table "mw_comments")
+PASS Người xem không sửa thẻ
+PASS Người xem vẫn đọc được thẻ
+PASS T07 checklist có người phụ trách / hạn / người hoàn thành
+PASS Chỉ Admin cấp quyền duyệt (new row violates row-level security policy for table "mw_reviewers")
+PASS Trình duyệt không tự đặt "approved" (Trạng thái duyệt / xuất bản chỉ đổi qua quy trình duyệt)
+PASS Không tạo nội dung ở trạng thái "published" (Trạng thái này chỉ do hệ thống duyệt đặt)
+PASS Gửi duyệt cần có kịch bản / tệp (Cần ít nhất 1 phiên bản kịch bản hoặc tệp media trước khi gửi duyệt)
+PASS Phiên bản đã lưu không sửa được (bất biến)
+PASS Phiên bản không xoá được
+PASS Gửi duyệt -> in_review
+PASS T13 duyệt tuần tự: chuyên môn -> marketing -> kiểm duyệt
+PASS Không tạo bản ghi duyệt trực tiếp (permission denied for table mw_approval_runs)
+PASS Không sửa bước duyệt trực tiếp (permission denied for table mw_approval_steps)
+PASS Người không có quyền chuyên môn không duyệt được (Bạn không được cấp quyền duyệt loại này)
+PASS Admin KHÔNG mặc nhiên duyệt chuyên môn (Bạn không được cấp quyền duyệt loại này)
+PASS Người duyệt chuyên môn chỉ thấy nội dung được gửi duyệt, không thấy thẻ công việc
+PASS Trả lại bắt buộc ghi lý do (Cần ghi lý do khi trả lại / từ chối)
+PASS Duyệt đủ 3 bước -> approved
+PASS Không tự đặt "published" bằng PATCH (Trạng thái xuất bản chỉ đổi qua chức năng Lên lịch / Xác minh)
+PASS Không tạo bài ở trạng thái đã đăng (Bài đăng mới phải ở trạng thái Nháp)
+PASS Đủ điều kiện -> lên lịch đăng (thủ công)
+PASS T20 link bằng chứng phải là URL (Link bằng chứng không hợp lệ)
+PASS Nộp link bằng chứng đăng thủ công
+PASS T20 người nộp link không tự xác minh (Người nộp link không tự xác minh được — cần người khác kiểm tra)
+PASS T20 "Đã đăng" chỉ sau khi người khác xác minh bằng chứng
+PASS T15 caption mới -> duyệt cũ mất hiệu lực
+PASS T15 lịch đăng chưa đăng bị khoá
+PASS Bài đã đăng giữ nguyên lịch sử
+PASS Lên lịch lại khi chưa duyệt lại -> vẫn bị chặn, có lý do
+PASS Tệp mới khi đang duyệt -> lượt duyệt bị vô hiệu
+PASS Không duyệt được lượt đã vô hiệu (Bước này không còn chờ duyệt)
+PASS T16 thiếu consent -> không duyệt bước kiểm duyệt được (Chưa có consent đã xác minh, còn hạn cho nội dung này)
+PASS Biên tập viên không tự xác minh consent
+PASS Chỉ compliance xác minh consent (Chỉ người kiểm duyệt (compliance) xác minh consent)
+PASS Consent hợp lệ -> duyệt đủ
+PASS Lên lịch nội dung có consent
+PASS Compliance (không là thành viên) không xem được lịch đăng
+PASS Thu hồi consent -> lịch đăng bị khoá ngay
+PASS Không lên lịch lại được khi consent đã thu hồi
+PASS Gate không lộ thông tin cho người ngoài
+PASS Người ngoài không lên lịch được (không lộ bài tồn tại) (Không tìm thấy bài đăng)
+PASS mw_log không gọi trực tiếp được (permission denied for function mw_log)
+PASS Nhật ký không ghi tay được (permission denied for table mw_activity)
+PASS Chỉ Admin bật module (Chỉ Admin bật / tắt Marketing Workspace)
+PASS Admin bật module
+PASS T14 Nội dung không cần duyệt y khoa -> bước Marketing rồi Pháp lý (bỏ bước bác sĩ)
+PASS T14 Bác sĩ không thấy nội dung không gửi tới bước y khoa
+PASS Compliance không xác minh consent của nội dung chưa gửi duyệt tới mình (Consent không tồn tại)
+PASS Compliance không thu hồi consent của nội dung không được xem
+PASS Checklist thêm / hoàn thành có nhật ký
+PASS Gắn / gỡ nhãn có nhật ký (kể cả xoá nhãn dây chuyền)
+PASS Xoá workspace (service) dây chuyền sạch, không lỗi nhật ký
+==== ALL MARKETING WORKSPACE SQL TESTS PASSED ====
+PASS T25 rollback xoá sạch bảng mw_*
+PASS T25 cài lại sau rollback

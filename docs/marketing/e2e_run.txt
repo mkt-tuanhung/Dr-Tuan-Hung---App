@@ -1,0 +1,53 @@
+PASS FLAG tắt: nhân sự Marketing KHÔNG thấy menu Marketing Workspace
+PASS FLAG: Admin bật module ở Cài đặt hệ thống (RPC mw_set_enabled)
+PASS T04 Admin tạo workspace (RPC mw_create_workspace)
+PASS S19 Thêm 4 thành viên từ danh sách nhân sự có sẵn (+ chủ)
+PASS S19 Admin cấp 4 người duyệt (y khoa / marketing / pháp lý / người đăng)
+PASS Admin KHÔNG tự động là người duyệt y khoa
+PASS FLAG bật: nhân sự Marketing thấy menu
+PASS T04 Tạo board mẫu Sản xuất video (12 cột)
+PASS T04 Thêm 3 thẻ vào cột (lưu DB)
+PASS Bình luận Marketing KHÔNG tra cứu khách hàng (#SĐT bị tắt)
+PASS S04 Giao việc lưu DB
+PASS S04 Hạn lưu đúng giờ VN
+PASS T04 Người được giao nhận thông báo thật (link deep link)
+PASS T11 @nhắc thành viên -> 1 thông báo
+PASS T07 Giao mục checklist -> thông báo
+PASS S04 Lịch sử (audit) ghi mọi thay đổi
+BOARD 0ad846e1-830e-496b-b0d5-dbb95fc0aa6b
+PASS P0 Việc của tôi hiện thẻ được giao (web)
+PASS T05 Kéo thả thẻ sang cột khác -> lưu DB (RPC mw_move_task)
+PASS T05 Phiên bản thẻ tăng sau khi di chuyển
+PASS T05 Di chuyển bằng bàn phím lên ĐẦU cột (thứ tự: Gợi ý chuỗi chủ đề 30 ngày hàm mặt | 5 sự thật về gọt hàm)
+PASS T05 Tải lại trang: thứ tự giữ nguyên
+PASS S05 Sửa ô Ưu tiên trong Bảng dữ liệu -> lưu DB
+PASS T09 Kéo thẻ trên Lịch sang ngày 28 -> hạn 2026-10-28 17:00 (giữ 17:00)
+PASS T09 Bảng Kanban hiện hạn mới, không nhân bản thẻ
+PASS RBAC Người chỉ xem không có nút Thêm công việc
+PASS RBAC Người chỉ xem không sửa được thẻ (RLS)
+PASS T02 Người ngoài workspace KHÔNG thấy workspace / board / thẻ (RLS)
+PASS Deep link thông báo mkt_workspace#task:<id> mở đúng thẻ
+PASS Mobile 360px: trang không tràn ngang (0px)
+PASS Mobile 390px: trang không tràn ngang (0px)
+PASS S08 Tạo chiến dịch (lưu DB)
+PASS S09 Tạo nội dung (mặc định cần duyệt y khoa, có consent)
+PASS S09/S11 Tệp media lưu đúng sha256 tính trong trình duyệt
+PASS Consent lưu MÃ hồ sơ (chưa xác minh)
+PASS T13 Gửi duyệt -> lượt duyệt chờ bước 1 (bác sĩ)
+PASS T13 Bác sĩ nhận thông báo chờ duyệt
+PASS T13 Duyệt tuần tự: Pháp lý chưa được duyệt khi bác sĩ chưa duyệt
+PASS T13 Bác sĩ duyệt bước chuyên môn
+PASS T16 Pháp lý: chưa xác minh consent -> server từ chối duyệt bước Pháp lý
+PASS T13 Đủ 3 bước -> nội dung Đã duyệt
+PASS S12 Lên lịch đăng thủ công khi đủ gate
+PASS T15 Sửa caption sau khi duyệt -> lượt duyệt MẤT HIỆU LỰC
+PASS T15 Lịch đăng đang chờ bị CHẶN ngay
+PASS T15 Nội dung chuyển Cần sửa
+PASS T15 Bài đăng gắn caption cũ không đăng được (gate: Caption của bài đăng khác caption đã duyệt)
+PASS S12 Bài đăng caption v2 đã duyệt -> lên lịch được
+PASS T20 Nộp link bằng chứng -> Chờ xác minh (CHƯA tính là đã đăng)
+PASS T20 Người nộp link không tự xác minh được
+PASS T20 Người khác xác minh -> Đã đăng (có người + thời điểm)
+PASS Nội dung chuyển Đã đăng
+PASS Mobile 390px Trung tâm duyệt không tràn ngang (0px)
+PASS Audit: duyệt / consent / phiên bản / xuất bản đều ghi nhật ký
