@@ -9,7 +9,7 @@ import { X, Phone, CalendarDays, Clock, Link as LinkIcon, User, Wallet, Receipt,
 import { toneOf, parseYMD, fmtDayTitle, timeToMin, minToTime, durationOf, isRecheck, fmtVND } from './calendarUtils';
 import { phoneFor, isSaleOffline } from '@/lib/phoneMask';
 import { JOURNEY, JourneyLabel } from './journey';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
 
 
 const Row = ({ icon: Icon, label, value, strong }) => (
@@ -49,7 +49,7 @@ export default function AppointmentDrawer({ app, onClose, actions, profile }) {
               <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: tone.bg, color: tone.text }}>
                 <span className="w-2 h-2 rounded-full" style={{ background: tone.bar }} />{tone.label}
               </span>
-              <h3 className="mt-2 text-[20px] font-bold text-slate-900 leading-tight truncate">{app.customer_name || 'Khách'}</h3>
+              <h3 className="mt-2 text-[20px] font-bold text-slate-900 leading-tight truncate"><CustomerName phone={app.phone} name={app.customer_name} className="truncate">{app.customer_name || 'Khách'}</CustomerName></h3>
               {app.phone && (
                 isSaleOffline(profile)
                   ? <div className="mt-1 text-[14px] text-slate-500 flex items-center gap-1.5"><Phone className="w-4 h-4" />{phoneFor(app.phone, profile)}</div>

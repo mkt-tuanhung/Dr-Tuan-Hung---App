@@ -3,17 +3,23 @@
 //   const { openCustomer } = useCustomer360();
 //   openCustomer(phone, { name })   // VD: từ Lịch hẹn, Khách cọc, Phẫu thuật, Hậu phẫu…
 // Dữ liệu: RPC get_customer_360 (supabase/customer_360.sql) — quyền xem + che SĐT
-// kiểm tra trên máy chủ. Hồ sơ chỉ để XEM; sửa vẫn làm ở màn nghiệp vụ.
+// kiểm tra trên máy chủ. Tab "Hành trình" = pipeline theo giai đoạn (C360Pipeline);
+// Admin sửa được mọi thông tin ngay trong hồ sơ (C360Editors).
+//   <CustomerName phone name /> — tên khách bấm được, mở hồ sơ ở bất kỳ màn nào
 // ============================================================
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Phone, CalendarDays, Wallet, Stethoscope, Image as ImageIcon, Mic, Smile, History, PhoneCall,
-  MessageSquare, HandCoins, Activity, UserX, Check, ExternalLink, Sparkles, StickyNote,
+  MessageSquare, HandCoins, Activity, UserX, Check, ExternalLink, Sparkles, StickyNote, Route, Pencil,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Drawer, EmptyState, ErrorState, PermissionDenied } from '@/components/ds';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
 import { APPT_TONE, isRecheck } from '@/features/appointments/calendarUtils';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { isSaleOffline } from '@/lib/phoneMask';
+import C360Pipeline from './C360Pipeline.jsx';
+import { EditApptModal, EditLeadModal, EditCustomerModal } from './C360Editors.jsx';
 
 const LEAD_STATUS = {
   tiep_can: 'Tiếp cận', nong: 'Nóng', tiem_nang: 'Tiềm năng', da_hen_lich: 'Đã hẹn lịch', coc: 'Cọc',
@@ -25,6 +31,7 @@ const OUTCOME = {
 };
 const JOURNEY = ['Tiếp cận', 'Hẹn tư vấn', 'Đặt cọc', 'Phẫu thuật', 'Hậu phẫu'];
 const TABS = [
+  { id: 'pipeline', label: 'Hành trình', icon: Route },
   { id: 'timeline', label: 'Dòng thời gian', icon: History },
   { id: 'treatments', label: 'Lịch hẹn & liệu trình', icon: Stethoscope },
   { id: 'payments', label: 'Thanh toán', icon: Wallet },
@@ -51,7 +58,7 @@ export function Customer360Provider({ children }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <Customer360Drawer target={target} onClose={() => setTarget(null)} />
+      <Customer360Drawer target={target} onClose={() => setTarget(null)} onRetarget={setTarget} />
     </Ctx.Provider>
   );
 }
@@ -65,6 +72,20 @@ export function Customer360Button({ phone, name, className = '', label = 'Hồ s
       onClick={(e) => { e.stopPropagation(); openCustomer(phone, { name }); }}
       className={`e-btn e-btn-ghost e-btn-sm h-8 px-2.5 ${className}`}>
       <Sparkles /> {label}
+    </button>
+  );
+}
+
+// Tên khách bấm được -> mở Hồ sơ 360 (dùng ở mọi thẻ / bảng). Không có SĐT -> chữ thường.
+export function CustomerName({ phone, name, className = '', children }) {
+  const { openCustomer } = useCustomer360();
+  const label = children ?? name ?? '';
+  if (!phone) return <span className={className}>{label}</span>;
+  return (
+    <button type="button" title="Mở hồ sơ khách hàng 360"
+      onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCustomer(phone, { name }); }}
+      className={`text-left max-w-full cursor-pointer hover:text-teal-700 hover:underline decoration-teal-300 underline-offset-2 ${className}`}>
+      {label}
     </button>
   );
 }
@@ -102,19 +123,22 @@ const Kv = ({ label, children }) => (
   <div className="min-w-0"><div className="e-kv-label">{label}</div><div className="e-kv-value truncate">{children}</div></div>
 );
 
-function Customer360Drawer({ target, onClose }) {
+function Customer360Drawer({ target, onClose, onRetarget }) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const [state, setState] = useState({ loading: false, error: null, data: null });
-  const [tab, setTab] = useState('timeline');
+  const [tab, setTab] = useState('pipeline');
+  const [edit, setEdit] = useState(null); // { kind: 'appt' | 'lead' | 'customer', row? }
   const [lightbox, setLightbox] = useState(null); // { images, index }
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (quiet = false) => {
     if (!target) return;
-    setState({ loading: true, error: null, data: null });
+    if (!quiet) setState({ loading: true, error: null, data: null });
     const { data, error } = await supabase.rpc('get_customer_360', { p_phone: target.phone });
     setState({ loading: false, error, data });
   }, [target]);
 
-  useEffect(() => { if (target) { setTab('timeline'); load(); } }, [target, load]);
+  useEffect(() => { if (target) { setTab('pipeline'); setEdit(null); load(); } }, [target, load]);
 
   const d = state.data;
   const appts = useMemo(() => d?.appointments || [], [d]);
@@ -166,7 +190,10 @@ function Customer360Drawer({ target, onClose }) {
               {lead?.telesale_id && <span>Telesale: {who(lead.telesale_id)}</span>}
             </div>
           </div>
-          {!d.phone_masked && d.phone && <a href={`tel:${d.phone}`} className="e-btn e-btn-secondary e-btn-sm shrink-0"><PhoneCall /> Gọi</a>}
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+            {!d.phone_masked && d.phone && <a href={`tel:${d.phone}`} className="e-btn e-btn-secondary e-btn-sm"><PhoneCall /> Gọi</a>}
+            {isAdmin && <button type="button" onClick={() => setEdit({ kind: 'customer' })} className="e-btn e-btn-secondary e-btn-sm"><Pencil /> Sửa</button>}
+          </div>
         </div>
 
         {/* Chỉ số */}
@@ -200,6 +227,14 @@ function Customer360Drawer({ target, onClose }) {
             </button>
           ))}
         </div>
+
+        {tab === 'pipeline' && (
+          <C360Pipeline d={d} appts={appts} lead={lead} who={who} jIdx={jIdx} canEdit={isAdmin}
+            canSeeConsult={!isSaleOffline(profile)}
+            onEditAppt={(a) => setEdit({ kind: 'appt', row: { ...a, customer_name: a.customer_name || name } })}
+            onEditLead={() => setEdit({ kind: 'lead', row: { ...lead, customer_name: lead?.customer_name || name } })}
+            onOpenImages={(images, index) => setLightbox({ images, index })} />
+        )}
 
         {tab === 'timeline' && (timeline.length === 0 ? <EmptyState title="Chưa có hoạt động" icon={History} /> : (
           <ol className="relative ml-4 border-l-[1.5px] border-slate-200 space-y-3.5 py-1">
@@ -333,10 +368,16 @@ function Customer360Drawer({ target, onClose }) {
 
   return (
     <>
-      <Drawer open={!!target} onClose={onClose} size="lg" title={d?.found ? name : (target?.name || 'Hồ sơ khách hàng')}
-        description="Hồ sơ khách hàng 360 · chỉ xem, chỉnh sửa ở màn nghiệp vụ">
+      <Drawer open={!!target} onClose={onClose} size="lg" zClass="z-[65]" title={d?.found ? name : (target?.name || 'Hồ sơ khách hàng')}
+        description={isAdmin ? 'Hồ sơ khách hàng 360 · Admin bấm biểu tượng bút để sửa' : 'Hồ sơ khách hàng 360 · chỉ xem, chỉnh sửa ở màn nghiệp vụ'}>
         {body}
       </Drawer>
+      {isAdmin && edit?.kind === 'appt' && <EditApptModal appt={edit.row} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(true); }} />}
+      {isAdmin && edit?.kind === 'lead' && <EditLeadModal lead={edit.row} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(true); }} />}
+      {isAdmin && edit?.kind === 'customer' && d?.found && (
+        <EditCustomerModal name={name} phone={d.phone} appts={appts} lead={lead} onClose={() => setEdit(null)}
+          onSaved={(ph, nm) => { setEdit(null); if (ph !== d.phone) onRetarget({ phone: ph, name: nm }); else load(true); }} />
+      )}
       {lightbox && <ImageLightbox images={lightbox.images} index={lightbox.index} onClose={() => setLightbox(null)} />}
     </>
   );

@@ -13,7 +13,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
 import { QUESTIONS, STAFF_ROLE_LABELS, RATING_LABELS, npsGroup, SENTIMENT_STYLE } from '@/lib/serviceReviewQuestions';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
 
 const SENTIMENTS = ['rất tích cực', 'tích cực', 'trung lập', 'tiêu cực', 'rất tiêu cực'];
 
@@ -667,7 +667,7 @@ function TicketDetailModal({ ticket, staffList, onClose, onSave, onResurvey, res
       <div className="e-modal max-w-lg rounded-b-none sm:rounded-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="e-modal-header items-center">
           <div className="min-w-0">
-            <h3 className="e-modal-title truncate">{ticket.customer_name || 'Khách'}</h3>
+            <h3 className="e-modal-title truncate"><CustomerName phone={resp.invitation?.phone} name={ticket.customer_name}>{ticket.customer_name || 'Khách'}</CustomerName></h3>
             <p className="text-[12.5px] text-slate-500 mt-0.5 tabular-nums">{resp.invitation?.service || '—'}{resp.invitation?.phone ? ` · ${resp.invitation.phone}` : ''}</p>
             <Customer360Button phone={resp.invitation?.phone} name={ticket.customer_name} className="mt-1 -ml-2.5 !h-7" />
           </div>

@@ -19,13 +19,13 @@ function useEscClose(open, onClose) {
   }, [open, onClose]);
 }
 
-export function Drawer({ open, onClose, title, description, size = 'md', footer, children }) {
+export function Drawer({ open, onClose, title, description, size = 'md', footer, children, zClass = 'z-50' }) {
   const panelRef = useRef(null);
   useEscClose(open, onClose);
   useEffect(() => { if (open) panelRef.current?.focus(); }, [open]);
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50">
+    <div className={`fixed inset-0 ${zClass}`}>
       <div className="e-modal-backdrop" onClick={onClose} />
       <aside ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
         className={`e-drawer outline-none ${size === 'lg' ? 'e-drawer-lg' : ''}`}>

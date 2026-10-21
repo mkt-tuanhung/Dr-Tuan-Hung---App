@@ -10,6 +10,7 @@ import FinanceAdsSummary from '@/components/FinanceAdsSummary.jsx';
 import FinanceHospitalFeeSummary from '@/components/FinanceHospitalFeeSummary.jsx';
 import { Banknote, Wallet, Users, TrendingUp, Calendar as CalendarIcon, Filter, Search, X, Upload, Download, Pencil, Trash2, ChevronLeft, ChevronRight, CircleDollarSign, Undo2, PiggyBank, ReceiptText, Plus, Phone, StickyNote } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
+import { CustomerName } from '@/features/crm/Customer360.jsx';
 
 const COLORS = ['#067B7F', '#3CA7A9', '#76C2C3', '#F4B183', '#A99BE0', '#B8C4CC'];
 
@@ -550,7 +551,7 @@ const FinanceManagementPage = () => {
                         {cocList.map(c => (
                           <div key={c.id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 px-4 py-3 bg-white">
                             <div className="flex-1 min-w-0 max-sm:basis-full">
-                              <div className="text-[14px] font-semibold text-slate-900 truncate">{c.customer_name} <span className="font-normal text-slate-400 text-[12px]">· {c.phone}</span></div>
+                              <div className="text-[14px] font-semibold text-slate-900 truncate"><CustomerName phone={c.phone} name={c.customer_name} /> <span className="font-normal text-slate-400 text-[12px]">· {c.phone}</span></div>
                               <div className="text-[12px] text-slate-500 truncate">Cọc ngày {String(c.deposit_date).slice(0,10).split('-').reverse().join('/')}{c.service ? ` · ${c.service}` : ''}</div>
                             </div>
                             {c.status === 'phau_thuat'
@@ -579,7 +580,7 @@ const FinanceManagementPage = () => {
                           <div key={r.id} className="px-4 py-3 bg-white">
                             <div className="flex max-sm:flex-col sm:items-center gap-1.5 sm:gap-3">
                               <div className="flex-1 min-w-0">
-                                <div className="text-[14px] font-semibold text-slate-900 truncate">{r.customer_name} <span className="font-normal text-slate-400 text-[12px]">· {r.phone}</span></div>
+                                <div className="text-[14px] font-semibold text-slate-900 truncate"><CustomerName phone={r.phone} name={r.customer_name} /> <span className="font-normal text-slate-400 text-[12px]">· {r.phone}</span></div>
                                 <div className="text-[12px] text-slate-500 truncate">Mổ {String(r.surgery_date || '').slice(0,10).split('-').reverse().join('/')} · Cọc {r.deposit_date ? String(r.deposit_date).slice(0,10).split('-').reverse().join('/') : '?'}{r.service ? ` · ${r.service}` : ''}</div>
                               </div>
                               <div className="shrink-0 sm:text-right">
@@ -736,7 +737,7 @@ const FinanceManagementPage = () => {
                     {revenueData.map(r => (
                       <tr key={r.id}>
                         <td className="min-w-[180px]">
-                          <div className="text-[14px] font-semibold !text-slate-900 truncate max-w-[240px]">{r.customer_name}</div>
+                          <CustomerName phone={r.phone} name={r.customer_name} className="block text-[14px] font-semibold !text-slate-900 truncate max-w-[240px]" />
                           <div className="text-[12px] text-slate-500 flex items-center gap-1 tabular-nums">
                             <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> {new Date(r.surgery_date).toLocaleDateString('vi-VN')}
                           </div>
@@ -806,7 +807,7 @@ const FinanceManagementPage = () => {
             <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
-                <div className="text-[17px] font-bold text-slate-900 break-words">{sheet.customer_name}</div>
+                <div className="text-[17px] font-bold text-slate-900 break-words"><CustomerName phone={sheet.phone} name={sheet.customer_name} /></div>
                 <div className="text-[13px] text-slate-500 mt-0.5">{sheet.surgery_date ? new Date(sheet.surgery_date).toLocaleDateString('vi-VN') : '—'}</div>
               </div>
               <button onClick={() => setSheet(null)} className="e-icon-btn w-9 h-9 shrink-0" aria-label="Đóng"><X className="w-4 h-4" /></button>

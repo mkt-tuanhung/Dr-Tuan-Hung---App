@@ -8,6 +8,7 @@
 // ============================================================
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays, Clock, User } from 'lucide-react';
+import { CustomerName } from '@/features/crm/Customer360.jsx';
 import {
   toYMD, parseYMD, addDays, sameYMD, weekDays, monthGrid, WD_SHORT, wdLabel,
   timeToMin, minToTime, durationOf, isRecheck, toneOf, APPT_TONE, STAFF_COLORS,
@@ -428,7 +429,10 @@ export default function ResourceCalendar({
         const t = toneOf(a);
         const start = timeToMin(a.appointment_time);
         return (
-          <button key={a.id} onClick={() => onOpen(a)} className="w-full flex gap-3 text-left">
+          // div thay vì button: bên trong có nút tên khách (mở Hồ sơ 360) — không lồng button
+          <div key={a.id} role="button" tabIndex={0} onClick={() => onOpen(a)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(a); } }}
+            className="w-full flex gap-3 text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded-2xl">
             <div className="w-12 shrink-0 pt-3 text-right">
               <div className="text-[13px] font-bold text-slate-800 tabular-nums">{start != null ? minToTime(start) : '--:--'}</div>
               {start != null && <div className="text-[11px] text-slate-400 tabular-nums">{minToTime(start + durationOf(a))}</div>}
@@ -436,7 +440,7 @@ export default function ResourceCalendar({
             <div className={`flex-1 min-w-0 rounded-2xl px-3.5 py-3 shadow-soft ${selectedId === a.id ? 'ring-2 ring-teal-600' : ''}`}
               style={{ background: t.bg, borderLeft: `4px solid ${t.bar}` }}>
               <div className="flex items-center justify-between gap-2">
-                <div className="font-bold text-slate-900 truncate">{a.customer_name || 'Khách'}</div>
+                <CustomerName phone={a.phone} name={a.customer_name} className="block font-bold text-slate-900 truncate min-w-0">{a.customer_name || 'Khách'}</CustomerName>
                 <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/70" style={{ color: t.text }}>{t.label}</span>
               </div>
               <div className="text-[12.5px] mt-0.5 truncate" style={{ color: t.text }}>{(a.service || '').replace('[Tái khám] ', '') || 'Chưa chọn dịch vụ'}</div>
@@ -444,7 +448,7 @@ export default function ResourceCalendar({
                 <div className="flex items-center gap-1 text-[12px] text-slate-500 mt-1"><User className="w-3.5 h-3.5" />{a.sale}</div>
               )}
             </div>
-          </button>
+          </div>
         );
       })}
     </div>

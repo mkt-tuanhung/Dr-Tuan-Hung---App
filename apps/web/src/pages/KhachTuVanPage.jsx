@@ -5,13 +5,14 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
-import { UserCheck, CalendarDays, Search, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
+import { UserCheck, CalendarDays, X, Mic, FileText, ClipboardCheck, Phone, ImagePlus, Loader2, Play, Trash2, RotateCcw, Check, ChevronDown, ZoomIn, ChevronLeft, ChevronRight, Users, CreditCard, Activity, Star, TrendingUp, TrendingDown, SlidersHorizontal, Trophy } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder.jsx';
 import MoneyInput from '@/components/MoneyInput.jsx';
 import ImageLightbox from '@/components/ImageLightbox.jsx';
 import { vnToday } from '@/lib/vnTime';
 import { ExpectedSurgeryField, planOf, surgeryPlanPatch, surgeryPlanError, surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
-import { Customer360Button } from '@/features/crm/Customer360.jsx';
+import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
+import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar } from '@/features/crm/customerFilters.jsx';
 
 // Lưới ảnh bấm được -> mở popup xem/zoom
 const Thumbs = ({ urls = [], size = 'h-20 w-20', wrapClass = 'flex flex-wrap gap-2' }) => {
@@ -70,7 +71,8 @@ const KhachTuVanPage = () => {
   const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
   const didLoad = useRef(false);
-  const [search, setSearch] = useState('');
+  // Tìm tên / SĐT + lọc dịch vụ, nhóm dịch vụ
+  const filters = useCustomerFilters();
   const [evalFor, setEvalFor] = useState(null);
   const [consultFor, setConsultFor] = useState(null);
   const [recFor, setRecFor] = useState(null);
@@ -88,7 +90,7 @@ const KhachTuVanPage = () => {
   const loadData = useCallback(async () => {
     if (!didLoad.current) setLoading(true);
     const { data } = await supabase.from('customer_appointments')
-      .select('id, customer_name, phone, service, status, surgery_type, surgery_date, expected_surgery_date, expected_surgery_plan, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls, appointment_date, created_at')
+      .select('id, customer_name, phone, service, service_group, status, surgery_type, surgery_date, expected_surgery_date, expected_surgery_plan, revenue, upsale_revenue, deposit_date, deposit_amount, notes, consult_note, consult_image_urls, appointment_date, created_at')
       .or('status.in.(coc,bong,phau_thuat),consult_received.eq.true')
       .order('created_at', { ascending: false }).limit(500);
     setRows(data || []);
@@ -121,8 +123,7 @@ const KhachTuVanPage = () => {
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeReload('customer_appointments,consult_recordings', loadData);
 
-  const q = search.trim().toLowerCase();
-  const visible = rows.filter(r => !q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q))
+  const visible = applyCustomerFilters(rows, filters).slice()
     .sort((a, b) => {
       const ka = a.appointment_date || (a.created_at || '').slice(0, 10);
       const kb = b.appointment_date || (b.created_at || '').slice(0, 10);
@@ -250,11 +251,7 @@ const KhachTuVanPage = () => {
 
       {/* Thanh công cụ: tìm kiếm + bộ lọc */}
       <div className="e-toolbar">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.75} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên hoặc số điện thoại…" className="w-full h-10 pl-9 pr-9 rounded-xl border border-slate-200 bg-slate-50 text-[14px] text-slate-900 placeholder:text-slate-400 outline-none transition focus:bg-white focus:border-teal-400" />
-          {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-700"><X className="w-4 h-4" /></button>}
-        </div>
+        <CustomerFilterBar f={filters} rows={rows} count={visible.length} className="flex-1 min-w-0" />
         <div className="relative shrink-0">
           <button onClick={() => setFilterOpen(o => !o)} className="e-btn e-btn-secondary">
             <SlidersHorizontal className="w-4 h-4 text-slate-500" /> Bộ lọc <ChevronDown className={`w-4 h-4 text-slate-400 transition ${filterOpen ? 'rotate-180' : ''}`} />
@@ -287,15 +284,16 @@ const KhachTuVanPage = () => {
                     const dur = fmtHrMin(rs.reduce((s, x) => s + (x.duration_sec || 0), 0));
                     const active = selected?.id === r.id;
                     return (
-                      <button key={r.id} onClick={() => { setSelectedId(r.id); setSheetFor(r); }}
-                        className={`e-card-flat w-full text-left p-4 flex items-start gap-3 transition ${active ? 'border-teal-400 ring-1 ring-teal-400 shadow-card' : 'hover:border-teal-100 hover:shadow-card'}`}>
+                      <div key={r.id} role="button" tabIndex={0} onClick={() => { setSelectedId(r.id); setSheetFor(r); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(r.id); setSheetFor(r); } }}
+                        className={`e-card-flat w-full text-left p-4 flex items-start gap-3 transition cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${active ? 'border-teal-400 ring-1 ring-teal-400 shadow-card' : 'hover:border-teal-100 hover:shadow-card'}`}>
                         <div className={`e-avatar w-11 h-11 text-[14px] ${avTone(r.customer_name)}`}>
                           {initials(r.customer_name)}
                         </div>
                         <div className="min-w-0 flex-1">
                           {/* Hàng 1: TÊN khách — riêng 1 hàng, nổi bật, đầy đủ */}
                           <div className="flex items-start justify-between gap-2">
-                            <div className="font-semibold text-slate-900 text-[15px] leading-snug break-words flex-1 min-w-0">{r.customer_name}</div>
+                            <div className="font-semibold text-slate-900 text-[15px] leading-snug break-words flex-1 min-w-0"><CustomerName phone={r.phone} name={r.customer_name} /></div>
                             <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 mt-0.5" />
                           </div>
                           {/* Hàng 2: SĐT · thời lượng */}
@@ -309,7 +307,7 @@ const KhachTuVanPage = () => {
                             {rs.length > 0 && <span className="ml-auto inline-flex items-center gap-1 h-[22px] px-2 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800"><Mic className="w-3.5 h-3.5" /> {rs.length} ghi âm</span>}
                           </div>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
           </div>
@@ -763,7 +761,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
           </button>
           <div className="e-avatar w-11 h-11 text-[14px]">{initials(r.customer_name)}</div>
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-slate-900 truncate leading-tight">{r.customer_name}</div>
+            <CustomerName phone={r.phone} name={r.customer_name} className="block text-[15px] font-semibold text-slate-900 truncate leading-tight" />
             <div className="text-[12px] text-slate-500 flex items-center gap-2 mt-1 tabular-nums">
               <span>{maskPhone(r.phone)}</span>
               <span className={`e-badge e-badge-sm ${ST[r.status]?.cls || 'bg-slate-100 text-slate-600'}`}>{ST[r.status]?.label || r.status}</span>
@@ -884,7 +882,7 @@ const CustomerDetail = ({ r, rs, canWrite, isAdmin, me, onConsult, onRec, onEval
       <div className="e-avatar w-14 h-14 text-[18px]">{initials(r.customer_name)}</div>
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-[18px] font-[650] text-slate-900 leading-tight">{r.customer_name}</h3>
+          <h3 className="text-[18px] font-[650] text-slate-900 leading-tight"><CustomerName phone={r.phone} name={r.customer_name} /></h3>
           <span className={`e-badge e-badge-sm shrink-0 ${ST[r.status]?.cls || 'bg-slate-100 text-slate-600'}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{ST[r.status]?.label || r.status}</span>
           <Customer360Button phone={r.phone} name={r.customer_name} className="!h-7" />
         </div>
