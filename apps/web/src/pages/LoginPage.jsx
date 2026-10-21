@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -8,6 +8,17 @@ import { Loader2, Stethoscope, ShieldCheck, ShieldAlert, MonitorSmartphone, Phon
 
 const ROLE_ROUTES = { admin: '/admin-dashboard' };
 const getRoute = (role) => ROLE_ROUTES[role] || '/staff-dashboard';
+// Giữ link mở đúng mục (?tab=…&focus=…, từ Telegram / thông báo) qua bước đăng nhập
+const keepNav = (...searches) => {
+  for (const src of searches) {
+    const q = new URLSearchParams(src || '');
+    if (!q.get('tab')) continue;
+    const k = new URLSearchParams({ tab: q.get('tab') });
+    if (q.get('focus')) k.set('focus', q.get('focus'));
+    return `?${k}`;
+  }
+  return '';
+};
 const ADMIN_PHONE = '0879232666';
 
 const LoginPage = ({ adminMode = false }) => {
@@ -19,6 +30,7 @@ const LoginPage = ({ adminMode = false }) => {
 
   const { login, verifyMfa, logout, isLoggedIn, profile, mfaRequired, deviceApprovalRequired, recheckDevice, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Khi chờ duyệt thiết bị: lắng nghe realtime + poll để tự vào khi admin duyệt
   useEffect(() => {
@@ -38,8 +50,8 @@ const LoginPage = ({ adminMode = false }) => {
       logout();
       return;
     }
-    navigate(getRoute(profile.role), { replace: true });
-  }, [loading, mfaRequired, deviceApprovalRequired, isLoggedIn, profile, adminMode, navigate, logout]);
+    navigate(getRoute(profile.role) + keepNav(location.search, location.state?.from?.search), { replace: true });
+  }, [loading, mfaRequired, deviceApprovalRequired, isLoggedIn, profile, adminMode, navigate, logout, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

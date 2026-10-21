@@ -42,6 +42,8 @@ export default function SettingsSection({ ws, perm, profile, staff, staffById, b
   const [lbl, setLbl] = useState({ name: '', color: LABEL_COLORS[0] });
   const [info, setInfo] = useState({ name: ws.name, description: ws.description || '', color: ws.color });
   useEffect(() => { setInfo({ name: ws.name, description: ws.description || '', color: ws.color }); }, [ws]);
+  const [tgOn, setTgOn] = useState(!!ws.tg_media);
+  useEffect(() => { setTgOn(!!ws.tg_media); }, [ws]);
 
   if (err) return <div className="e-card"><ErrorState description={err.message} onRetry={load} /></div>;
   if (!members) return <div className="e-card e-card-pad"><Skeleton rows={6} /></div>;
@@ -140,6 +142,13 @@ export default function SettingsSection({ ws, perm, profile, staff, staffById, b
           <Field label="Tên" required><input className="e-input" value={info.name} disabled={!perm.manage} maxLength={120} onChange={e => setInfo(v => ({ ...v, name: e.target.value }))} /></Field>
           <Field label="Mô tả"><textarea className="e-textarea" value={info.description} disabled={!perm.manage} maxLength={2000} onChange={e => setInfo(v => ({ ...v, description: e.target.value }))} /></Field>
           <div className="flex gap-1">{LABEL_COLORS.map(c => <button key={c} type="button" disabled={!perm.manage} onClick={() => setInfo(v => ({ ...v, color: c }))} aria-label={`Màu ${c}`} aria-pressed={info.color === c} className={`w-7 h-7 rounded-full border-2 ${info.color === c ? 'border-slate-800' : 'border-white'}`} style={{ background: c }} />)}</div>
+          {'tg_media' in ws && (
+            <label className="flex items-start gap-2 text-[13px] text-slate-600">
+              <input type="checkbox" className="e-checkbox mt-0.5" checked={tgOn} disabled={!perm.manage}
+                onChange={async e => { const on = e.target.checked; setTgOn(on); if (await attempt(() => mwApi.updateWorkspace(ws.id, { tg_media: on }), on ? 'Đã bật báo về nhóm Telegram Media' : 'Đã tắt báo về nhóm Telegram Media')) reloadAll(); else setTgOn(!on); }} />
+              <span>Báo mọi thay đổi của workspace về <b>nhóm Telegram Media</b> (order mới, chuyển cột, giao việc, @nhắc tên, chat, duyệt…)</span>
+            </label>
+          )}
           {perm.manage && (
             <div className="flex flex-wrap gap-2">
               <BusyButton disabled={!info.name.trim()} onClick={async () => { if (await attempt(() => mwApi.updateWorkspace(ws.id, { name: info.name.trim(), description: info.description.trim() || null, color: info.color }), 'Đã lưu')) reloadAll(); }}>Lưu thông tin</BusyButton>

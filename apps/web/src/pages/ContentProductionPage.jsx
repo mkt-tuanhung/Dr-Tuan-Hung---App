@@ -403,6 +403,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const [videoFrom, setVideoFrom] = useState('');   // lọc ngày dựng từ
   const [videoTo, setVideoTo] = useState('');       // lọc ngày dựng đến
   const [focusClipId, setFocusClipId] = useState(null); // clip cần focus khi mở từ thông báo (luôn hiện dù đang lọc)
+  const [focusStoreId, setFocusStoreId] = useState(null); // source Kho cần focus khi mở từ thông báo / Telegram
   const [addOpen, setAddOpen] = useState(false);
   const [scanningAll, setScanningAll] = useState(false);
   const [winRule, setWinRule] = useState(null);      // định nghĩa Ads Win
@@ -449,6 +450,12 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     setSearch(''); setVideoScore(''); setVideoService(''); setVideoFrom(''); setVideoTo('');
     setFocusClipId(id);
     setTimeout(() => setFocusClipId(null), 6000);
+  });
+  useFocusHighlight('content_kho', 'kho-', !loading, (id) => {
+    // Mở chế độ Quản lý nguồn + ép hiện đúng source để cuộn tới
+    setKhoMode('sources'); setKhoPhase('all');
+    setFocusStoreId(id);
+    setTimeout(() => setFocusStoreId(null), 6000);
   });
 
   const clipsOf = (storeId) => clips.filter(c => c.media_customer_id === storeId);
@@ -728,7 +735,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   const q = search.trim().toLowerCase();
   // Giai đoạn của 1 media (suy từ tiến độ): đã duyệt / chờ duyệt / đang dựng
   const phaseOf = (s) => { const p = progressOf(s.id, s.source_status); return p === 100 ? 'da_duyet' : p >= 75 ? 'cho_duyet' : 'dang_dung'; };
-  const phaseBase = stores.filter(s =>
+  const phaseBase = stores.filter(s => s.id === focusStoreId || (
     // Kho media CHỈ hiện khách có SOURCE gốc do Media up (có link nguồn).
     // Thẻ do Editor tự tạo khi up video (không có source) sẽ không lẫn vào đây — clip nằm ở Video Ads.
     (s.source_links || []).length > 0 &&
@@ -740,9 +747,9 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
     // Tồn đọng: chưa dựng clip nào & đã quá N ngày kể từ khi thêm nguồn
     (!khoStale || (clipsOf(s.id).length === 0 && staleAgeDays(s) >= khoStale)) &&
     (!khoTag || (s.tags || []).includes(khoTag)) &&
-    (!khoUndone || clipsOf(s.id).length === 0));
+    (!khoUndone || clipsOf(s.id).length === 0)));
   const phaseCount = (id) => id === 'all' ? phaseBase.length : phaseBase.filter(s => phaseOf(s) === id).length;
-  const visStores = khoPhase === 'all' ? phaseBase : phaseBase.filter(s => phaseOf(s) === khoPhase);
+  const visStores = khoPhase === 'all' ? phaseBase : phaseBase.filter(s => s.id === focusStoreId || phaseOf(s) === khoPhase);
   const allTags = [...new Set(stores.flatMap(s => s.tags || []))].sort();
   // Clip cho Ads duyệt: tháng này (theo submitted_at) hoặc chưa xong
   const reviewClips = clips.filter(c => {
@@ -920,17 +927,17 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
         ) : khoView === 'card' ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {visStores.map(s => (
-              <StoreCard key={s.id} s={s} clipCount={clipsOf(s.id).length} thumb={null} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+              <div key={s.id} id={`kho-${s.id}`} className="grid rounded-2xl"><StoreCard s={s} clipCount={clipsOf(s.id).length} thumb={null} progress={progressOf(s.id, s.source_status)} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => openSource(s)}
-                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} /></div>
             ))}
           </div>
         ) : (
           <div className="e-card divide-y divide-slate-100 overflow-hidden">
             {visStores.map(s => (
-              <StoreRow key={s.id} s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
+              <div key={s.id} id={`kho-${s.id}`}><StoreRow s={s} clipCount={clipsOf(s.id).length} me={me} canAddMedia={canAddMedia} canEdit={canEdit}
                 onClips={() => setClipsModal({ store: s, clips: clipsOf(s.id) })} onViewSource={() => openSource(s)}
-                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} />
+                onEditSource={() => setEditSource(s)} onLink={() => setLinkFor(s)} onBuild={() => setBuildFor(s)} onScore={() => setScoreFor(s)} onRescan={() => rescanStore(s)} onDelete={() => delStore(s)} /></div>
             ))}
           </div>
         )

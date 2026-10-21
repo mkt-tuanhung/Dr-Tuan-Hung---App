@@ -14,7 +14,9 @@ $P -d "$DB" -f marketing_workspace_v2_sources.sql >/dev/null 2>&1
 $P -d "$DB" -f marketing_workspace_v2_sources.sql >/dev/null 2>&1   # v2 chạy lại: an toàn
 $P -d "$DB" -f marketing_workspace_v3_collab.sql >/dev/null 2>&1
 $P -d "$DB" -f marketing_workspace_v3_collab.sql >/dev/null 2>&1   # v3 chạy lại: an toàn
-cat tests/marketing_workspace_v1.test.sql tests/marketing_workspace_v2.test.sql tests/marketing_workspace_v3.test.sql | $P -t -d "$DB" 2>&1 | sed -n 's/^.*NOTICE:  //p; s/^.*ERROR:  /ERROR: /p; /ALL MARKETING/p'
+$P -d "$DB" -f media_telegram_notify.sql >/dev/null 2>&1
+$P -d "$DB" -f media_telegram_notify.sql >/dev/null 2>&1   # chạy lại: an toàn
+cat tests/marketing_workspace_v1.test.sql tests/marketing_workspace_v2.test.sql tests/marketing_workspace_v3.test.sql tests/media_telegram.test.sql | $P -t -d "$DB" 2>&1 | sed -n 's/^.*NOTICE:  //p; s/^.*ERROR:  /ERROR: /p; /ALL MARKETING/p; /ALL MEDIA/p'
 # Gỡ bỏ (rollback) phải chạy sạch, sau đó cài lại được
 $P -d "$DB" -f marketing_workspace_v1_rollback.sql >/dev/null 2>&1 || { echo "FAIL rollback"; exit 1; }
 left=$($P -t -d "$DB" -c "select count(*) from pg_tables where schemaname='public' and tablename like 'mw\_%'")

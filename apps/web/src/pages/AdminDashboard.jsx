@@ -33,7 +33,7 @@ import MeetingPage from '@/pages/MeetingPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
-import { parseNav, setPendingFocus } from '@/lib/notif';
+import { parseNav, setPendingFocus, readUrlNav, clearUrlNav } from '@/lib/notif';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -667,14 +667,14 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     const q = new URLSearchParams(window.location.search);
-    const t = q.get('tab');
-    const f = q.get('focus');
-    if (f) setPendingFocus({ tab: t || 'overview', id: f });
-    return t || (q.get('meeting') ? 'meetings' : (localStorage.getItem('admin_active_tab') || 'overview'));
+    const u = readUrlNav();
+    if (u?.focus) setPendingFocus({ tab: u.tab || 'overview', id: u.focus });
+    return u?.tab || (q.get('meeting') ? 'meetings' : (localStorage.getItem('admin_active_tab') || 'overview'));
   });
   const [hrInitialTab, setHrInitialTab] = useState('staff');
 
   useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
+  useEffect(() => { clearUrlNav(); }, []);
   const [pendingLeaves, setPendingLeaves] = useState(0);
 
   useEffect(() => {

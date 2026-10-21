@@ -30,6 +30,27 @@ export function parseNav(detail) {
   return { tab, focus: rest.length ? rest.join('#') : null };
 }
 
+// Link mở app từ ngoài (Telegram, thông báo đẩy): ?tab=<tab>[#id]&focus=<id> -> { tab, focus } | null
+export function readUrlNav() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    const raw = q.get('tab');
+    if (!raw) return null;
+    const { tab, focus } = parseNav(resolveNotifLink(raw));
+    return { tab, focus: q.get('focus') || focus || null };
+  } catch { return null; }
+}
+// Bỏ ?tab / ?focus khỏi thanh địa chỉ sau khi đã mở (tải lại trang không mở lại)
+export function clearUrlNav() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (!q.has('tab') && !q.has('focus')) return;
+    q.delete('tab'); q.delete('focus');
+    const rest = q.toString();
+    window.history.replaceState(window.history.state, '', window.location.pathname + (rest ? `?${rest}` : '') + window.location.hash);
+  } catch { /* bỏ qua */ }
+}
+
 // ----- Deep focus: nhớ item cần focus khi chuyển trang -----
 // (trang đích có thể mount sau khi NAVIGATE bắn ra nên cần "hàng chờ")
 let pendingFocus = null;

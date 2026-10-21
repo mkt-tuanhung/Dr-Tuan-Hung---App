@@ -4,6 +4,7 @@
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
   if not exists (select 1 from pg_roles where rolname = 'authenticator') then create role authenticator login password 'authpass' noinherit; end if;
 end $$;
 grant anon, authenticated to authenticator;
@@ -89,3 +90,9 @@ drop policy if exists clip_select on public.media_clips;
 create policy clip_select on public.media_clips for select using (
   editor_id = auth.uid() or public.current_user_role()::text in ('media','editor','marketing','admin','accountant','shareholder'));
 grant select on public.media_clips to authenticated;
+alter table public.media_clips add column if not exists stage text default 'submitted', add column if not exists approved_to_run boolean default false,
+  add column if not exists ads_id uuid, add column if not exists editor_note text, add column if not exists ads_feedback text,
+  add column if not exists fb_status text, add column if not exists ads_auto_status text, add column if not exists ads_page_name text,
+  add column if not exists ads_run_at timestamptz, add column if not exists video_version text, add column if not exists video_format text,
+  add column if not exists platform text, add column if not exists video_goal text, add column if not exists thumb_links jsonb default '[]'::jsonb;
+alter table public.media_customers add column if not exists source_types text[] not null default '{}', add column if not exists media_in_charge text;
