@@ -91,6 +91,8 @@ export const mwApi = {
   addComment: (taskId, body) => unwrap(supabase.from('mw_comments').insert({ task_id: taskId, body }).select('id').single()),
   editComment: (id, body) => one(supabase.from('mw_comments').update({ body }).eq('id', id).select('id')),
   deleteComment: (id) => one(supabase.from('mw_comments').update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id')),
+  // Ảnh / link của nhiều thẻ (hiện ảnh bìa + số đính kèm trên bảng)
+  boardAttachments: (taskIds) => (taskIds.length ? unwrap(supabase.from('mw_attachments').select('task_id, url, mime, name, created_at').in('task_id', taskIds).order('created_at').limit(5000)) : Promise.resolve([])),
   attachments: (taskId) => unwrap(supabase.from('mw_attachments').select('id, url, name, mime, size_bytes, sha256, uploaded_by, created_at').eq('task_id', taskId).order('created_at')),
   addAttachment: (taskId, a) => unwrap(supabase.from('mw_attachments').insert({ task_id: taskId, ...a }).select('id').single()),
   deleteAttachment: (id) => one(supabase.from('mw_attachments').delete().eq('id', id).select('id')),
