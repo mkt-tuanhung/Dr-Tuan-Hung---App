@@ -82,14 +82,15 @@ const MENU_GROUPS = [
       { id: 'khach_phau_thuat', label: 'Khách phẫu thuật', icon: Activity },
       { id: 'hau_phau', label: 'Hậu phẫu / CSKH', icon: ClipboardList },
     ] },
-    { id: 'marketing', label: 'Marketing', icon: Clapperboard, children: [
-      { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard },
-      { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2 },
-      { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen },
-      { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle },
-      { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
-      { id: 'mkt_workspace',  label: 'Marketing Workspace', icon: KanbanSquare },
-    ] },
+  ]},
+  // Marketing: nhóm lớn riêng (không nằm trong Khách hàng)
+  { title: 'MARKETING', color: 'rose', items: [
+    { id: 'content_overview', label: 'Tổng quan Marketing', icon: LayoutDashboard },
+    { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2 },
+    { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen },
+    { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle },
+    { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
+    { id: 'mkt_workspace',  label: 'Marketing Workspace', shortLabel: 'Workspace', icon: KanbanSquare },
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
     { id: 'hr', label: 'Quản lý Nhân sự', shortLabel: 'Nhân sự', icon: Users },

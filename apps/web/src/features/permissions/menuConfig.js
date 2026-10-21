@@ -44,7 +44,7 @@ export const FULL_MENU = [
   // Lối tắt mở Data khách hàng ở chế độ Pipeline — dùng CHUNG quyền với data_kh (sameAs), không có ô riêng trong ma trận
   { id: 'crm_pipeline', label: 'Pipeline khách hàng', icon: Columns3, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'], sameAs: 'data_kh' },
   { id: 'marketing',  label: 'Marketing', icon: Clapperboard, children: [
-    { id: 'content_overview', label: 'Tổng quan', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
+    { id: 'content_overview', label: 'Tổng quan Marketing', icon: LayoutDashboard, roles: ['marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'ads_report',     label: 'Chi phí Ads', icon: BarChart2,  roles: ['marketing', 'admin', 'accountant'] },
     { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen, roles: ['media', 'editor', 'designer', 'marketing', 'admin', 'accountant', 'shareholder'] },
     { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle, roles: ['editor', 'marketing', 'admin', 'accountant', 'shareholder'] },
@@ -85,8 +85,9 @@ export const STAFF_GROUPS = [
     'appointments',
     { id: 'grp_channels', label: 'Inbox & Tổng đài', icon: Inbox, ids: ['inbox', 'calls'] },
     { id: 'grp_clinic', label: 'Phẫu thuật', icon: Activity, ids: ['khach_phau_thuat', 'mo_doi_tac', 'hau_phau'] },
-    'marketing',
   ] },
+  // Marketing là 1 nhóm lớn riêng; flat = hiện thẳng các mục con (không lồng thêm mục cha "Marketing")
+  { title: 'MARKETING', flat: true, ids: ['marketing'] },
   { title: 'TÀI CHÍNH', ids: ['reports', 'finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
   { title: 'ĐÀO TẠO', ids: ['cskh_handbook', 'pro_handbook', 'proc_handbook', 'library'] },
   { title: 'VẬN HÀNH', ids: ['tasks', 'community', 'meetings', 'minigame'] },
@@ -103,12 +104,12 @@ export const buildMenuGroups = (allowedMenu) => {
   return [
     ...STAFF_GROUPS.map(g => ({
       title: g.title,
-      items: g.ids.map(x => {
-        if (typeof x === 'string') return find(x);
+      items: g.ids.flatMap(x => {
+        if (typeof x === 'string') { const m = find(x); return g.flat && m?.children ? m.children : [m]; }
         const kids = x.ids.map(find).filter(Boolean);
-        if (!kids.length) return null;
-        if (kids.length === 1) return kids[0];
-        return { id: x.id, label: x.label, icon: x.icon, children: kids };
+        if (!kids.length) return [];
+        if (kids.length === 1) return [kids[0]];
+        return [{ id: x.id, label: x.label, icon: x.icon, children: kids }];
       }).filter(Boolean),
     })),
     { title: 'KHÁC', items: allowedMenu.filter(m => !grouped.has(m.id)) },
