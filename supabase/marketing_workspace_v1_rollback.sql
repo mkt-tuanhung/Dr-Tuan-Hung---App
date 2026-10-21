@@ -6,6 +6,14 @@
 -- (menu ẩn, dữ liệu giữ nguyên) — KHÔNG cần chạy file này.
 -- ============================================================
 begin;
+-- v2 (gắn source Kho Media): không đụng dữ liệu Kho, chỉ gỡ liên kết + kịch bản order
+drop table if exists public.mw_task_scenes, public.mw_task_sources cascade;
+drop trigger if exists mw_content_src on public.mw_contents;
+drop trigger if exists mw_task_kho on public.mw_tasks;
+drop trigger if exists mw_list_kho_default on public.mw_lists;
+drop function if exists public.mw_scene_guard(), public.mw_content_src(), public.mw_source_after(), public.mw_source_guard(),
+  public.mw_task_kho_trg(), public.mw_apply_kho_status(uuid), public.mw_list_kho_default(), public.mw_guess_kho_status(text, boolean),
+  public.mw_can_use_kho() cascade;
 drop function if exists public.mw_set_enabled(boolean), public.mw_cancel_publication(uuid), public.mw_verify_publication(uuid, boolean, text),
   public.mw_submit_publish_proof(uuid, text), public.mw_schedule_publication(uuid, timestamptz), public.mw_can_publish(uuid),
   public.mw_publication_gate(uuid), public.mw_verify_consent(uuid), public.mw_review_step(uuid, text, text), public.mw_consent_ok(uuid),

@@ -79,3 +79,13 @@ Hàm nội bộ (`mw_log`, `mw_notify`, các hàm kiểm tra quyền) **không**
 | `publication.scheduled/blocked/proof_submitted/verified/verification_failed/cancelled` | — | |
 
 Realtime (Supabase publication): `mw_tasks, mw_lists, mw_comments, mw_checklist_items, mw_task_assignees, mw_approval_steps, mw_publications, mw_contents` — giao diện tải lại qua `useRealtimeReload`.
+
+## 4. v2 — Gắn source Kho Media + kịch bản order (`supabase/marketing_workspace_v2_sources.sql`)
+
+| Bảng / hàm | Quyền | Ghi chú |
+|---|---|---|
+| `mw_task_sources` (task ↔ `media_customers` / `media_assets`) | xem / gắn / gỡ: thành viên workspace **và** có quyền Kho (`mw_can_use_kho`: Media, Editor, Marketing, Admin) | chỉ lưu liên kết; nguồn `no_image` bị từ chối; file phải thuộc nguồn; ghi nhật ký `source.added/removed` |
+| `mw_task_scenes` (cảnh: tên, nội dung, `source_ref`, `clip_from`/`clip_to` dạng mm:ss) | xem: thành viên; sửa: edit | `source_ref` phải là source của chính thẻ |
+| `mw_lists.kho_status` (`none` / `dang_dung` / `da_dung`) | quản lý cột | tự đoán theo tên cột khi tạo; thẻ vào cột -> trigger cập nhật `media_customers.source_status` **chỉ tiến**; ghi nhật ký `kho.source_status` |
+| `mw_contents` tạo từ thẻ có source | edit | trigger tự bật `consent_required` |
+| `mw_apply_kho_status` | nội bộ (không cấp cho trình duyệt) | |

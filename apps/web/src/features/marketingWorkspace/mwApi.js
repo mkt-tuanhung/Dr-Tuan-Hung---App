@@ -43,7 +43,7 @@ export const mwApi = {
   updateBoard: (id, patch) => one(supabase.from('mw_boards').update(patch).eq('id', id).select('id')),
   board: (id) => unwrap(supabase.from('mw_boards').select('id, workspace_id, name, description, template, color, sort_index, archived_at, created_at').eq('id', id).maybeSingle()),
   workspace: (id) => unwrap(supabase.from('mw_workspaces').select('id, name, description, color, owner_id, archived_at, created_at').eq('id', id).maybeSingle()),
-  lists: (boardIds) => unwrap(supabase.from('mw_lists').select('id, board_id, name, sort_index, wip_limit, is_done, archived_at').in('board_id', boardIds).order('sort_index')),
+  lists: (boardIds) => unwrap(supabase.from('mw_lists').select('*').in('board_id', boardIds).order('sort_index')),
   createList: (boardId, name, sortIndex) => unwrap(supabase.from('mw_lists').insert({ board_id: boardId, name, sort_index: sortIndex }).select('id').single()),
   updateList: (id, patch) => one(supabase.from('mw_lists').update(patch).eq('id', id).select('id')),
   labels: (wsIds) => unwrap(supabase.from('mw_labels').select('id, workspace_id, name, color').in('workspace_id', wsIds).order('name')),
@@ -98,6 +98,31 @@ export const mwApi = {
   deleteAttachment: (id) => one(supabase.from('mw_attachments').delete().eq('id', id).select('id')),
   activity: (taskId) => unwrap(supabase.from('mw_activity').select('id, action, entity, entity_id, detail, actor_id, created_at').eq('task_id', taskId).order('created_at', { ascending: false }).limit(200)),
   wsActivity: (wsIds, since) => unwrap(supabase.from('mw_activity').select('id, workspace_id, task_id, action, entity, entity_id, detail, actor_id, created_at').in('workspace_id', wsIds).gte('created_at', since).order('created_at', { ascending: false }).limit(1000)),
+
+  // ---------- Kho Media (v2: supabase/marketing_workspace_v2_sources.sql) ----------
+  // Chỉ đọc cột cần cho việc chọn source — KHÔNG lấy tên / SĐT khách
+  canUseKho: async () => { const { data, error } = await supabase.rpc('mw_can_use_kho'); return !error && !!data; },
+  khoSources: () => unwrap(supabase.from('media_customers')
+    .select('id, source_id, service, shoot_date, source_type, source_status, tags, no_image, hide_face, source_video_count, source_image_count, created_at')
+    .order('created_at', { ascending: false }).limit(600)),
+  khoSourcesByIds: (ids) => (ids.length ? unwrap(supabase.from('media_customers')
+    .select('id, source_id, service, shoot_date, source_type, source_status, tags, no_image, hide_face, source_video_count, source_image_count, created_at').in('id', ids)) : Promise.resolve([])),
+  khoAssets: (customerIds) => (customerIds.length ? unwrap(supabase.from('media_assets')
+    .select('id, media_customer_id, name, kind, mime, duration_ms, drive_id, thumb_link, web_link, created_time').in('media_customer_id', customerIds).order('created_time').limit(3000)) : Promise.resolve([])),
+  // customerIds = null -> 3000 clip gần nhất (để chấm điểm gợi ý)
+  khoClips: (customerIds) => {
+    let q = supabase.from('media_clips').select('id, media_customer_id, title, win, score, fb_spend, fb_purchases, ad_status');
+    if (customerIds) { if (!customerIds.length) return Promise.resolve([]); q = q.in('media_customer_id', customerIds); } else q = q.order('created_at', { ascending: false });
+    return unwrap(q.limit(3000));
+  },
+  sourceUsage: () => unwrap(supabase.from('mw_task_sources').select('task_id, media_customer_id').limit(10000)),
+  taskSources: (taskIds) => (taskIds.length ? unwrap(supabase.from('mw_task_sources').select('id, task_id, media_customer_id, media_asset_id, note, created_at').in('task_id', taskIds).order('created_at')) : Promise.resolve([])),
+  addTaskSource: (taskId, customerId, assetId) => unwrap(supabase.from('mw_task_sources').insert({ task_id: taskId, media_customer_id: customerId, media_asset_id: assetId || null }).select('id').single()),
+  removeTaskSource: (id) => one(supabase.from('mw_task_sources').delete().eq('id', id).select('id')),
+  scenes: (taskId) => unwrap(supabase.from('mw_task_scenes').select('*').eq('task_id', taskId).order('sort_index')),
+  addScene: (row) => unwrap(supabase.from('mw_task_scenes').insert(row).select('*').single()),
+  updateScene: (id, patch) => one(supabase.from('mw_task_scenes').update(patch).eq('id', id).select('*')),
+  deleteScene: (id) => one(supabase.from('mw_task_scenes').delete().eq('id', id).select('id')),
 
   // ---------- Marketing ----------
   reviewers: () => unwrap(supabase.from('mw_reviewers').select('user_id, kind, created_at')),

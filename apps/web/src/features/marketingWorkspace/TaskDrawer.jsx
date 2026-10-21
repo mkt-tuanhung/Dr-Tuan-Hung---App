@@ -19,9 +19,11 @@ import {
   MAX_UPLOAD_MB, ALLOWED_MIME, wsPerm,
 } from './mwMeta';
 import { Avatar, Field, Skeleton, Spinner, attempt, BusyButton, Sel } from './mwUi';
+import { TaskSourcesPanel } from './KhoSources';
 
 const TABS = [
   { id: 'desc', label: 'Mô tả' },
+  { id: 'source', label: 'Source & kịch bản' },
   { id: 'check', label: 'Checklist' },
   { id: 'files', label: 'Đính kèm' },
   { id: 'comments', label: 'Bình luận' },
@@ -42,7 +44,7 @@ function CommentBody({ body }) {
   return <p className="text-[13.5px] text-slate-700 whitespace-pre-wrap break-words">{parts}</p>;
 }
 
-export default function TaskDrawer({ taskId, onClose, profile, workspaces, myRoles, staffById, onChanged }) {
+export default function TaskDrawer({ taskId, onClose, profile, workspaces, myRoles, staffById, onChanged, onOpenContent }) {
   const [st, setSt] = useState({ loading: true, error: null });
   const [tab, setTab] = useState('desc');
   const { task, board, ws, lists, members, labels, assignees, watchers, taskLabels, checks, comments, files, activity } = st;
@@ -193,6 +195,8 @@ export default function TaskDrawer({ taskId, onClose, profile, workspaces, myRol
                 ))}
               </div>
               {tab === 'desc' && <DescEditor task={task} disabled={!perm.edit} onSave={(v) => patch({ description: v })} />}
+              {tab === 'source' && <TaskSourcesPanel task={task} ws={ws} perm={perm} labelNames={labels.filter(l => taskLabels.includes(l.id)).map(l => l.name)}
+                onChanged={() => { changed(); refresh('files'); }} onOpenContent={onOpenContent} />}
               {tab === 'check' && <Checklist task={task} checks={checks} disabled={!perm.edit} members={memberStaff} staffById={staffById} onDone={() => refresh('checks')} />}
               {tab === 'files' && <Attachments task={task} files={files} perm={perm} profile={profile} staffById={staffById} onDone={() => refresh('files')} />}
               {tab === 'comments' && <Comments task={task} comments={comments} perm={perm} profile={profile} staffById={staffById} members={memberStaff} onDone={() => refresh('comments')} />}

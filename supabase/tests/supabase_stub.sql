@@ -48,3 +48,44 @@ insert into public.clinic_settings (id) values (true) on conflict do nothing;
 
 create table if not exists public.role_permissions (role text, module text, granted boolean, primary key (role, module));
 grant select on public.role_permissions to authenticated;
+
+-- ---------- Kho Media (rút gọn từ ads_production.sql / media_assets.sql) ----------
+create or replace function public.current_user_role() returns user_role language sql stable security definer set search_path = public as $$
+  select role from profiles where id = auth.uid();
+$$;
+grant execute on function public.current_user_role() to authenticated;
+create table if not exists public.media_customers (
+  id uuid primary key default gen_random_uuid(), customer_name text, customer_phone text, media_id uuid references public.profiles(id),
+  source_links jsonb default '[]'::jsonb, note text, source_id text, service text, shoot_date date, source_type text,
+  source_status text default 'chua_dung', tags text[] not null default '{}', no_image boolean not null default false,
+  hide_face boolean not null default false, source_video_count int default 0, source_image_count int default 0,
+  created_at timestamptz default now(), updated_at timestamptz default now()
+);
+alter table public.media_customers enable row level security;
+drop policy if exists mc_select on public.media_customers;
+create policy mc_select on public.media_customers for select using (
+  public.current_user_role()::text in ('media','editor','marketing','admin','accountant','shareholder','dieu_duong','cskh') or media_id = auth.uid());
+drop policy if exists mc_write on public.media_customers;
+create policy mc_write on public.media_customers for all using (
+  media_id = auth.uid() or public.current_user_role()::text in ('media','editor','dieu_duong','cskh','marketing','admin'))
+  with check (media_id = auth.uid() or public.current_user_role()::text in ('media','editor','dieu_duong','cskh','marketing','admin'));
+grant select, insert, update, delete on public.media_customers to authenticated;
+create table if not exists public.media_assets (
+  id uuid primary key default gen_random_uuid(), drive_id text not null unique, media_customer_id uuid references public.media_customers(id) on delete cascade,
+  name text, kind text, mime text, size_bytes bigint not null default 0, duration_ms int, folder text, web_link text, thumb_link text,
+  created_time timestamptz, favorite boolean not null default false
+);
+alter table public.media_assets enable row level security;
+drop policy if exists ma_read on public.media_assets;
+create policy ma_read on public.media_assets for select to authenticated using (true);
+grant select on public.media_assets to authenticated;
+create table if not exists public.media_clips (
+  id uuid primary key default gen_random_uuid(), media_customer_id uuid not null references public.media_customers(id) on delete cascade,
+  editor_id uuid references public.profiles(id), title text, win boolean, score int default 0, fb_spend numeric not null default 0,
+  fb_purchases int not null default 0, ad_status text, clip_links jsonb default '[]'::jsonb, created_at timestamptz default now()
+);
+alter table public.media_clips enable row level security;
+drop policy if exists clip_select on public.media_clips;
+create policy clip_select on public.media_clips for select using (
+  editor_id = auth.uid() or public.current_user_role()::text in ('media','editor','marketing','admin','accountant','shareholder'));
+grant select on public.media_clips to authenticated;
