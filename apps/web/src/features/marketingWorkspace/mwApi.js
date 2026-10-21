@@ -24,14 +24,6 @@ const one = async (q) => { const rows = await unwrap(q); if (!rows?.length) thro
 const TASK_COLS = 'id, board_id, list_id, title, description, priority, start_at, due_at, sort_index, version, cover_color, estimate_hours, completed_at, created_by, archived_at, created_at, updated_at';
 
 export const mwApi = {
-  // ---------- Cờ module ----------
-  async enabled() {
-    const { data, error } = await supabase.from('clinic_settings').select('mw_enabled').maybeSingle();
-    if (error) return false;
-    return !!data?.mw_enabled;
-  },
-  setEnabled: (on) => unwrap(supabase.rpc('mw_set_enabled', { p_on: on })),
-
   // ---------- Nhân sự (dùng bảng profiles có sẵn) ----------
   staff: () => unwrap(supabase.from('profiles').select('id, full_name, role, role_2, avatar_url, is_active, employment_status').order('full_name')),
 

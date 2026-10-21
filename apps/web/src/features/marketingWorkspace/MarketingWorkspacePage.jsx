@@ -1,7 +1,7 @@
 // ============================================================
 // MARKETING WORKSPACE (v1) — trang module trong khung app hiện có (tab 'mkt_workspace').
 // KHÔNG có router / shell riêng: dùng AppShell + phiên đăng nhập + bảng profiles + thông báo của app.
-// Bật bằng cờ clinic_settings.mw_enabled (Admin, mục Cấu hình) + quyền menu 'mkt_workspace' (trang Phân quyền).
+// Ai thấy menu: quyền 'mkt_workspace' trong trang Phân quyền (mặc định Marketing, Media, Editor, Designer, Bác sĩ, Admin).
 // Deep link: thông báo link 'mkt_workspace#task:<id>' / 'mkt_workspace#approval:<run id>'.
 // Dữ liệu & quyền: supabase/marketing_workspace_v1.sql (RLS + RPC). Xem docs/marketing/*.
 // ============================================================
@@ -11,12 +11,11 @@ import {
   Database, FolderOpen, BarChart3, Workflow, Sparkles, Plus, Lock,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { usePageTitle, ErrorState, EmptyState, PermissionDenied } from '@/components/ds';
+import { usePageTitle, ErrorState, EmptyState } from '@/components/ds';
 import { takePendingFocus } from '@/lib/notif';
 import { mwApi } from './mwApi';
 import { MW_TAB, isAdminProfile, hasRole, wsPerm, LABEL_COLORS, bySort } from './mwMeta';
 import { Modal, Field, Skeleton, attempt, BusyButton, Sel } from './mwUi';
-import { announceMwEnabled } from './useMwEnabled';
 import BoardSection from './BoardSection';
 import TaskDrawer from './TaskDrawer';
 import { Overview, MyTasks } from './HomeSections';
@@ -70,11 +69,11 @@ export default function MarketingWorkspacePage() {
   // Tải nền: cờ module, nhân sự, workspace được xem, vai trò của tôi, quyền duyệt của tôi
   const loadBoot = useCallback(async () => {
     try {
-      const [enabled, staff, workspaces, mine, reviewers] = await Promise.all([
-        mwApi.enabled(), mwApi.staff(), mwApi.workspaces(), mwApi.myMemberships(profile.id), mwApi.reviewers(),
+      const [staff, workspaces, mine, reviewers] = await Promise.all([
+        mwApi.staff(), mwApi.workspaces(), mwApi.myMemberships(profile.id), mwApi.reviewers(),
       ]);
       setBoot({
-        loading: false, error: null, enabled, staff, workspaces,
+        loading: false, error: null, staff, workspaces,
         myRoles: new Map(mine.map(m => [m.workspace_id, m.role])),
         myKinds: new Set(reviewers.filter(r => r.user_id === profile.id).map(r => r.kind)),
       });
@@ -118,21 +117,12 @@ export default function MarketingWorkspacePage() {
   if (boot.error) {
     return <div className="e-card"><ErrorState title={boot.error.missing ? 'Chưa cài Marketing Workspace' : 'Không tải được Marketing Workspace'} description={boot.error.message} onRetry={loadBoot} /></div>;
   }
-  if (!boot.enabled && !admin) {
-    return <div className="e-card"><PermissionDenied title="Marketing Workspace chưa bật" description="Admin bật module trong Marketing Workspace › Thành viên & cấu hình." /></div>;
-  }
 
   const sec = SECTIONS.find(s => s.id === section) || SECTIONS[0];
   const needWsMissing = sec.needWs && !ws;
 
   return (
     <div className="space-y-4">
-      {!boot.enabled && admin && (
-        <div className="e-alert e-alert-warning text-[13px] flex flex-wrap items-center gap-2">
-          <span><b>Module đang TẮT</b> — chỉ Admin thấy trang này; nhân sự chưa thấy menu.</span>
-          <BusyButton className="e-btn e-btn-primary e-btn-sm ml-auto" onClick={async () => { if (await attempt(() => mwApi.setEnabled(true), 'Đã bật Marketing Workspace')) { announceMwEnabled(true); loadBoot(); } }}>Bật module</BusyButton>
-        </div>
-      )}
 
       {/* Thanh workspace */}
       <div className="flex flex-wrap items-center gap-2">
@@ -175,8 +165,7 @@ export default function MarketingWorkspacePage() {
                 : section === 'studio' ? <ContentStudio ws={ws} perm={perm} myKinds={boot.myKinds} profile={profile} staffById={staffById} focusContentId={focus.content} campaignFilter={focus.campaign} onClearCampaign={() => setFocus({})} />
                   : section === 'approvals' ? <ApprovalCenter profile={profile} myKinds={boot.myKinds} staffById={staffById} focusRunId={focus.run} />
                     : section === 'publishing' ? <PublishingQueue ws={ws} perm={perm} myKinds={boot.myKinds} profile={profile} staffById={staffById} />
-                      : <SettingsSection ws={ws} perm={perm} profile={profile} staff={boot.staff} staffById={staffById} boards={boards} labels={labels} reloadAll={reloadAll}
-                        enabled={boot.enabled} onToggleEnabled={async () => { if (await attempt(() => mwApi.setEnabled(!boot.enabled), boot.enabled ? 'Đã tắt module' : 'Đã bật module')) { announceMwEnabled(!boot.enabled); loadBoot(); } }} />}
+                      : <SettingsSection ws={ws} perm={perm} profile={profile} staff={boot.staff} staffById={staffById} boards={boards} labels={labels} reloadAll={reloadAll} />}
       </div>
 
       {openTaskId && (

@@ -49,7 +49,6 @@ import ReportsPage from '@/features/reports/ReportsPage.jsx';
 import CallsPage from '@/features/channels/CallsPage.jsx';
 import InboxPage from '@/features/channels/InboxPage.jsx';
 import TasksPage from '@/features/work/TasksPage.jsx';
-import { useMwEnabled } from '@/features/marketingWorkspace/useMwEnabled';
 const MarketingWorkspacePage = React.lazy(() => import('@/features/marketingWorkspace/MarketingWorkspacePage.jsx'));
 import SettingsPage from '@/features/settings/SettingsPage.jsx';
 import SchedulePage from '@/features/hr/SchedulePage.jsx';
@@ -89,7 +88,7 @@ const MENU_GROUPS = [
       { id: 'content_kho',    label: 'Kho Media',   icon: FolderOpen },
       { id: 'content_video',  label: 'Video Ads',   icon: PlayCircle },
       { id: 'content_images', label: 'Hình Ảnh',    icon: ImageIcon },
-      { id: 'mkt_workspace',  label: 'Marketing Workspace', icon: KanbanSquare, flag: 'mw_enabled' },
+      { id: 'mkt_workspace',  label: 'Marketing Workspace', icon: KanbanSquare },
     ] },
   ]},
   { title: 'NHÂN SỰ', color: 'violet', items: [
@@ -676,7 +675,6 @@ const AdminDashboard = () => {
 
   useEffect(() => { localStorage.setItem('admin_active_tab', activeTab); }, [activeTab]);
   const [pendingLeaves, setPendingLeaves] = useState(0);
-  const mwEnabled = useMwEnabled();
 
   useEffect(() => {
     // Fetch initial count
@@ -763,11 +761,9 @@ const AdminDashboard = () => {
   };
 
   // Khung app dùng chung (Ethics BOS): menu nhóm + badge đơn nghỉ chờ duyệt
-  // Mục có cờ (Marketing Workspace) ẩn khi chưa bật — bật ở Cài đặt hệ thống
-  const flagOk = (i) => i.flag !== 'mw_enabled' || mwEnabled;
   const groups = MENU_GROUPS.map(g => ({
     title: g.title,
-    items: g.items.filter(flagOk).map(i => (i.id === 'hr' ? { ...i, badge: pendingLeaves } : i.children ? { ...i, children: i.children.filter(flagOk) } : i)),
+    items: g.items.map(i => (i.id === 'hr' ? { ...i, badge: pendingLeaves } : i)),
   }));
   const bottomItems = MENU.filter(m => ['overview', 'hr', 'kpi'].includes(m.id));
 

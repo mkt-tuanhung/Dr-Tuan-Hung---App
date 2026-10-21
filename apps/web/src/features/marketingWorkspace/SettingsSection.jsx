@@ -2,11 +2,11 @@
 // MARKETING WORKSPACE — THÀNH VIÊN & CẤU HÌNH (S19 + một phần S20)
 // - Thành viên workspace: thêm từ danh sách nhân sự CÓ SẴN (bảng profiles) — không tạo tài khoản mới.
 // - Người duyệt (bác sĩ / marketing / pháp lý-consent / người đăng): CHỈ Admin cấp. Admin không tự động là người duyệt y khoa.
-// - Nhãn, board (đổi tên / lưu trữ / khôi phục), thông tin workspace, bật / tắt module (Admin).
+// - Nhãn, board (đổi tên / lưu trữ / khôi phục), thông tin workspace.
 // Database kiểm tra lại mọi thao tác (RLS + trigger) — ẩn nút chỉ để dễ dùng.
 // ============================================================
 import React, { useCallback, useEffect, useState } from 'react';
-import { Trash2, Plus, ShieldCheck, Users, Tag, Columns3, Settings2, Power, Archive, RotateCcw } from 'lucide-react';
+import { Trash2, Plus, ShieldCheck, Users, Tag, Columns3, Settings2, Archive, RotateCcw } from 'lucide-react';
 import { ErrorState } from '@/components/ds';
 import { mwApi } from './mwApi';
 import { WS_ROLES, REVIEWER_KIND, LABEL_COLORS, isAdminProfile, describeActivity, fmtDateTime } from './mwMeta';
@@ -23,7 +23,7 @@ const Card = ({ icon: Icon, title, desc, children, action }) => (
   </section>
 );
 
-export default function SettingsSection({ ws, perm, profile, staff, staffById, boards, labels, reloadAll, enabled, onToggleEnabled }) {
+export default function SettingsSection({ ws, perm, profile, staff, staffById, boards, labels, reloadAll }) {
   const [members, setMembers] = useState(null);
   const [reviewers, setReviewers] = useState(null);
   const [activity, setActivity] = useState([]);
@@ -151,14 +151,6 @@ export default function SettingsSection({ ws, perm, profile, staff, staffById, b
         </div>
       </Card>
 
-      {admin && (
-        <Card icon={Power} title="Bật / tắt Marketing Workspace" desc="Tắt: menu ẩn với mọi nhân sự, dữ liệu giữ nguyên. Có thể bật lại bất cứ lúc nào.">
-          <div className="flex items-center gap-3">
-            <Tone meta={{ tone: enabled ? 'e-tone-success' : 'e-tone-neutral', label: enabled ? 'Đang bật' : 'Đang tắt' }} />
-            <BusyButton className={`e-btn ${enabled ? 'e-btn-danger-soft' : 'e-btn-primary'}`} onClick={onToggleEnabled}>{enabled ? 'Tắt module' : 'Bật module'}</BusyButton>
-          </div>
-        </Card>
-      )}
 
       <Card icon={ShieldCheck} title="Nhật ký quản trị 30 ngày" desc="Thành viên, board, duyệt, consent, xuất bản — chỉ ghi thêm, không sửa / xoá được.">
         <ol className="space-y-2 max-h-[360px] overflow-y-auto">
