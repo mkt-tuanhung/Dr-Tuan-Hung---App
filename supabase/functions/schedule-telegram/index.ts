@@ -23,6 +23,8 @@ const CHAT_SURGERY = Deno.env.get('TELEGRAM_SURGERY_CHAT_ID') || CHAT_MAIN;   //
 const CHAT_JOURNEY = Deno.env.get('TELEGRAM_JOURNEY_CHAT_ID');                // nhóm HÀNH TRÌNH KHÁCH HÀNG (chưa set -> bỏ qua) (chưa set -> về nhóm tư vấn)
 // nhóm CHĂM SÓC HẬU PHẪU (tháng đầu sau mổ): nhật ký + ảnh của điều dưỡng, cảnh báo rủi ro / tình trạng
 const CHAT_POSTOP = Deno.env.get('TELEGRAM_POSTOP_CHAT_ID') || '-5448812418';
+// nhóm CHĂM SÓC KHÁCH HÀNG: ghi chú / nhật ký CSKH (+ ảnh) và phân loại khách
+const CHAT_CSKH = Deno.env.get('TELEGRAM_CSKH_CHAT_ID') || '-5461485486';
 const SECRET = Deno.env.get('WEBHOOK_SECRET');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -275,6 +277,61 @@ function handlePostOp(type: string, rec: any, old: any) {
   }
 }
 
+// ============================================================
+// NHẬT KÝ CSKH -> nhóm CHAT_CSKH
+//  a) CSKH lưu mốc (cskh_notes có mốc mới): nội dung + ảnh + phân loại khách. App nối nhật ký trước,
+//     lưu phân loại sau -> chờ vài giây rồi đọc lại để 1 tin có đúng phân loại vừa chọn.
+//  b) Chỉ đổi phân loại khách (không kèm ghi chú) -> tin đổi phân loại.
+// ============================================================
+const CSKH_HEAD: Record<string, string> = {
+  'Không hài lòng': '🔴 <b>CSKH — KHÁCH KHÔNG HÀI LÒNG, CẦN XỬ LÝ</b>',
+  'Gặp vấn đề': '🔴 <b>CSKH — KHÁCH GẶP VẤN ĐỀ, CẦN XỬ LÝ</b>',
+  'Tiềm năng': '🟣 <b>CSKH — KHÁCH TIỀM NĂNG</b>',
+  'Hài lòng': '🟢 <b>CSKH — KHÁCH HÀI LÒNG</b>',
+};
+// deno-lint-ignore no-explicit-any
+const cskhHeader = (rec: any, cls: string | null) => {
+  const n = dayAfter(rec.surgery_date);
+  return (CSKH_HEAD[cls || ''] || '🔵 <b>CSKH — CẬP NHẬT CHĂM SÓC KHÁCH HÀNG</b>') +
+    line('KH', `<b>${esc(rec.customer_name)}</b>${rec.phone ? ' ' + esc(rec.phone) : ''}`) +
+    line('Dịch vụ', esc(String(rec.service || '').replace('[Tái khám] ', ''))) +
+    line('Ngày mổ', rec.surgery_date ? `${dFull(rec.surgery_date)}${n != null && n >= 0 ? ` (${n} ngày sau mổ)` : ''}` : '') +
+    line('Phân loại khách', esc(cls || 'Chưa phân loại')) +
+    line('Hậu phẫu', esc(rec.post_op_status));
+};
+
+// deno-lint-ignore no-explicit-any
+function handleCskh(type: string, rec: any, old: any) {
+  if (!CHAT_CSKH || type !== 'UPDATE' || rec.status !== 'phau_thuat') return;
+  if (String(rec.service || '').startsWith('[Tái khám]')) return;
+
+  const added = addedNotes(rec.cskh_notes, old.cskh_notes);
+  if (added) {
+    runLater((async () => {
+      await new Promise((r) => setTimeout(r, 4000));   // chờ app lưu xong phân loại khách
+      const { data: cur } = await supabase.from('customer_appointments').select('cskh_status').eq('id', rec.id).maybeSingle();
+      const cls = cur ? cur.cskh_status : rec.cskh_status;
+      const imgs = imgsFromNotes(added);
+      const text = cleanNotes(added).replace(/^\[([^\]]+)\]\s*/, '');
+      const at = (added.match(/^\[([^\]]+)\]/) || [])[1] || '';
+      await send(CHAT_CSKH, cskhHeader(rec, cls) +
+        (cls !== (old.cskh_status ?? null) ? `\n- Đổi phân loại: ${esc(old.cskh_status || 'Chưa phân loại')} → <b>${esc(cls || 'Chưa phân loại')}</b>` : '') +
+        `\n\n📝 <b>Nhật ký CSKH${at ? ` (${esc(at)})` : ''}:</b>\n${esc(text || '(chỉ có ảnh)')}` +
+        (imgs.length ? `\n📷 ${imgs.length} ảnh đính kèm bên dưới` : ''));
+      if (imgs.length) await sendPhotos(CHAT_CSKH, imgs.slice(0, 10), `📷 Ảnh CSKH — ${rec.customer_name}`);
+    })().catch((e) => console.error('CSKH: gửi nhật ký lỗi', (e as Error).message)));
+    return;
+  }
+
+  if ((rec.cskh_status || null) !== (old.cskh_status || null)) {
+    // Bước 2 của cùng 1 lần lưu (vừa nối nhật ký) -> tin nhật ký ở trên đã gồm phân loại mới
+    if (Date.now() - lastEntryAt(rec.cskh_notes) < 120000) return;
+    runLater(send(CHAT_CSKH, cskhHeader(rec, rec.cskh_status) +
+      `\n\n🔄 <b>Đổi phân loại:</b> ${esc(old.cskh_status || 'Chưa phân loại')} → <b>${esc(rec.cskh_status || 'Chưa phân loại')}</b>`)
+      .catch((e) => console.error('CSKH: gửi phân loại lỗi', (e as Error).message)));
+  }
+}
+
 Deno.serve(async (req) => {
   if (SECRET && req.headers.get('x-webhook-secret') !== SECRET) {
     return new Response('unauthorized', { status: 401 });
@@ -288,6 +345,8 @@ Deno.serve(async (req) => {
 
     // Hậu phẫu tháng đầu -> nhóm chăm sóc hậu phẫu (chạy nền, KHÔNG chặn các nhánh dưới)
     try { handlePostOp(type, rec, old); } catch (e) { console.error('hậu phẫu lỗi', (e as Error).message); }
+    // Nhật ký CSKH -> nhóm chăm sóc khách hàng (chạy nền)
+    try { handleCskh(type, rec, old); } catch (e) { console.error('CSKH lỗi', (e as Error).message); }
 
     const isRecheck = String(rec.service || '').startsWith('[Tái khám]');
     const serviceClean = String(rec.service || '').replace('[Tái khám] ', '');
