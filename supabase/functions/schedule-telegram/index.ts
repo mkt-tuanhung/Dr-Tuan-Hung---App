@@ -21,6 +21,8 @@ const CHAT_MAIN = Deno.env.get('TELEGRAM_SCHEDULE_CHAT_ID');            // nhóm
 const CHAT_RECHECK = Deno.env.get('TELEGRAM_RECHECK_CHAT_ID') || CHAT_MAIN;   // nhóm TÁI KHÁM (chưa set -> về nhóm tư vấn)
 const CHAT_SURGERY = Deno.env.get('TELEGRAM_SURGERY_CHAT_ID') || CHAT_MAIN;   // nhóm PHẪU THUẬT
 const CHAT_JOURNEY = Deno.env.get('TELEGRAM_JOURNEY_CHAT_ID');                // nhóm HÀNH TRÌNH KHÁCH HÀNG (chưa set -> bỏ qua) (chưa set -> về nhóm tư vấn)
+// nhóm CHĂM SÓC HẬU PHẪU (tháng đầu sau mổ): nhật ký + ảnh của điều dưỡng, cảnh báo rủi ro / tình trạng
+const CHAT_POSTOP = Deno.env.get('TELEGRAM_POSTOP_CHAT_ID') || '-5448812418';
 const SECRET = Deno.env.get('WEBHOOK_SECRET');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -129,6 +131,150 @@ async function sendPhotos(chatId: string, urls: string[], caption: string) {
   }
 }
 
+// ============================================================
+// HẬU PHẪU THÁNG ĐẦU -> nhóm CHAT_POSTOP
+//  a) Điều dưỡng lưu mốc chăm sóc (nhật ký post_op_notes có mốc mới): nội dung + ảnh + trạng thái,
+//     dấu hiệu cảnh báo, mức rủi ro. App lưu 2 bước (nối nhật ký rồi mới đổi trạng thái) ->
+//     chờ vài giây rồi ĐỌC LẠI dòng mới nhất để 1 tin có đủ trạng thái/cảnh báo vừa chọn.
+//  b) Chỉ đổi trạng thái / dấu hiệu cảnh báo / lịch tái khám (không kèm ghi chú) -> tin cập nhật tình trạng.
+//  c) Hoàn thành mốc hồi phục (care_milestones) -> tin báo mốc.
+// Ca mổ quá 1 tháng (đã sang CSKH) không gửi.
+// ============================================================
+const MS_LABEL: Record<string, string> = { d0: 'Ngày phẫu thuật', d1: 'Ngày 1', d2: 'Ngày 2', d7: 'Ngày 7', d14: 'Ngày 14', d30: 'Ngày 30' };
+const surgeryDay = (d?: string | null) => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00+07:00`) : null);
+const inFirstMonth = (d?: string | null) => {
+  const s = surgeryDay(d);
+  if (!s) return true;                       // chưa có ngày mổ -> vẫn coi là hậu phẫu (giống màn Hậu phẫu)
+  const lim = new Date(); lim.setMonth(lim.getMonth() - 1);
+  return s >= lim;
+};
+const dayAfter = (d?: string | null) => {
+  const s = surgeryDay(d);
+  return s ? Math.floor((Date.now() - s.getTime()) / 86400000) : null;
+};
+const signsOf = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
+const riskOf = (status: string, signs: string[]) =>
+  status === 'Có biến chứng' || signs.length >= 3 ? 'cao' : signs.length >= 1 ? 'tb' : 'thap';
+const RISK_HEAD: Record<string, string> = {
+  cao: '🔴 <b>CẢNH BÁO RỦI RO CAO — HẬU PHẪU</b>',
+  tb: '🟠 <b>HẬU PHẪU — CẦN THEO DÕI SÁT</b>',
+  thap: '🟢 <b>HẬU PHẪU — CẬP NHẬT CHĂM SÓC</b>',
+};
+const dtVN = (iso?: string | null) => {
+  if (!iso) return '';
+  const t = new Date(new Date(iso).getTime() + 7 * 3600 * 1000);
+  return `${t.getUTCHours()}h${String(t.getUTCMinutes()).padStart(2, '0')} ngày ${t.getUTCDate()}/${t.getUTCMonth() + 1}`;
+};
+// Phần nhật ký MỚI nối thêm (app nối vào cuối); không khớp -> lấy mốc cuối cùng
+const addedNotes = (now?: string | null, before?: string | null) => {
+  const n = String(now || ''), o = String(before || '');
+  if (n === o) return '';
+  if (o && n.startsWith(o)) return n.slice(o.length).trim();
+  const lines = n.split('\n');
+  const idx = lines.map((l, i) => (/^\[\d/.test(l.trim()) ? i : -1)).filter((i) => i >= 0).pop();
+  return idx == null ? n.trim() : lines.slice(idx).join('\n').trim();
+};
+// Thời điểm mốc nhật ký cuối "[21/10/2026 10:05:03]" (giờ VN) -> ms
+const lastEntryAt = (notes?: string | null) => {
+  const all = [...String(notes || '').matchAll(/\[(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\]/g)];
+  const m = all.pop();
+  if (!m) return 0;
+  const [, d, mo, y, h, mi, se] = m;
+  return Date.UTC(+y, +mo - 1, +d, +h - 7, +mi, +(se || 0));
+};
+const runLater = (task: Promise<unknown>) => {
+  // deno-lint-ignore no-explicit-any
+  const rt: any = globalThis as any;
+  if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
+};
+
+// deno-lint-ignore no-explicit-any
+async function postOpHeader(rec: any, status: string, signs: string[], nextRecheck: string | null, nurseId: string | null) {
+  const nurse = await nameOf(nurseId);
+  const n = dayAfter(rec.surgery_date);
+  return RISK_HEAD[riskOf(status, signs)] +
+    line('KH', `<b>${esc(rec.customer_name)}</b>${rec.phone ? ' ' + esc(rec.phone) : ''}`) +
+    line('Dịch vụ', esc(String(rec.service || '').replace('[Tái khám] ', ''))) +
+    line('Ngày mổ', rec.surgery_date ? `${dShort(rec.surgery_date)}${n != null && n >= 0 ? ` (ngày thứ ${n} sau mổ)` : ''}` : '') +
+    line('Tình trạng', esc(status || 'Đang theo dõi')) +
+    (signs.length ? `\n- ⚠️ Dấu hiệu cảnh báo: <b>${esc(signs.join(', '))}</b>` : '') +
+    line('Tái khám tiếp theo', dtVN(nextRecheck)) +
+    line('Điều dưỡng phụ trách', esc(nurse));
+}
+
+// deno-lint-ignore no-explicit-any
+function handlePostOp(type: string, rec: any, old: any) {
+  if (!CHAT_POSTOP || type !== 'UPDATE' || rec.status !== 'phau_thuat') return;
+  if (String(rec.service || '').startsWith('[Tái khám]') || !inFirstMonth(rec.surgery_date)) return;
+
+  // a) Mốc nhật ký mới (nội dung + ảnh)
+  const added = addedNotes(rec.post_op_notes, old.post_op_notes);
+  if (added) {
+    runLater((async () => {
+      await new Promise((r) => setTimeout(r, 4000));   // chờ app lưu xong trạng thái / cảnh báo
+      const { data: cur } = await supabase.from('customer_appointments')
+        .select('post_op_status, warning_signs, next_recheck_at, hau_phau_id').eq('id', rec.id).maybeSingle();
+      const st = cur?.post_op_status ?? rec.post_op_status ?? 'Đang theo dõi';
+      const sg = signsOf(cur?.warning_signs ?? rec.warning_signs);
+      const imgs = imgsFromNotes(added);
+      const text = cleanNotes(added).replace(/^\[([^\]]+)\]\s*/, '');
+      const at = (added.match(/^\[([^\]]+)\]/) || [])[1] || '';
+      const msg = (await postOpHeader(rec, st, sg, cur?.next_recheck_at ?? rec.next_recheck_at, cur?.hau_phau_id ?? rec.hau_phau_id)) +
+        `\n\n📝 <b>Ghi chú chăm sóc${at ? ` (${esc(at)})` : ''}:</b>\n${esc(text || '(chỉ có ảnh)')}` +
+        (imgs.length ? `\n📷 ${imgs.length} ảnh đính kèm bên dưới` : '');
+      await send(CHAT_POSTOP, msg);
+      if (imgs.length) await sendPhotos(CHAT_POSTOP, imgs.slice(0, 10), `📷 Ảnh hậu phẫu — ${rec.customer_name}`);
+    })().catch((e) => console.error('hậu phẫu: gửi nhật ký lỗi', (e as Error).message)));
+    return;
+  }
+
+  // b) Đổi trạng thái / dấu hiệu cảnh báo / lịch tái khám (không kèm ghi chú mới)
+  const stNow = rec.post_op_status || 'Đang theo dõi', stOld = old.post_op_status || 'Đang theo dõi';
+  const sgNow = signsOf(rec.warning_signs), sgOld = signsOf(old.warning_signs);
+  const signsChanged = JSON.stringify([...sgNow].sort()) !== JSON.stringify([...sgOld].sort());
+  const recheckChanged = (rec.next_recheck_at || '') !== (old.next_recheck_at || '');
+  if (stNow !== stOld || signsChanged || recheckChanged) {
+    // Vừa lưu kèm ghi chú (bước 2 của cùng 1 lần lưu) -> tin nhật ký ở trên đã gồm trạng thái mới
+    if (Date.now() - lastEntryAt(rec.post_op_notes) < 120000) return;
+    const newSigns = sgNow.filter((x) => !sgOld.includes(x));
+    runLater((async () => {
+      const msg = (await postOpHeader(rec, stNow, sgNow, rec.next_recheck_at, rec.hau_phau_id)) +
+        `\n\n🔄 <b>Cập nhật tình trạng:</b>` +
+        (stNow !== stOld ? `\n- Trạng thái: ${esc(stOld)} → <b>${esc(stNow)}</b>` : '') +
+        (newSigns.length ? `\n- Dấu hiệu mới: <b>${esc(newSigns.join(', '))}</b>` : '') +
+        (signsChanged && !sgNow.length ? '\n- Đã hết dấu hiệu cảnh báo' : '') +
+        (recheckChanged ? `\n- Lịch tái khám: ${rec.next_recheck_at ? dtVN(rec.next_recheck_at) : 'đã bỏ'}` : '');
+      await send(CHAT_POSTOP, msg);
+    })().catch((e) => console.error('hậu phẫu: gửi tình trạng lỗi', (e as Error).message)));
+    return;
+  }
+
+  // c) Mốc hồi phục vừa hoàn thành / sửa ghi chú mốc
+  // deno-lint-ignore no-explicit-any
+  const msNow: any[] = Array.isArray(rec.care_milestones) ? rec.care_milestones : [];
+  // deno-lint-ignore no-explicit-any
+  const msOld: any[] = Array.isArray(old.care_milestones) ? old.care_milestones : [];
+  const changed = msNow.filter((m) => {
+    const o = msOld.find((x) => x?.key === m?.key) || {};
+    return m?.key && ((m.done && !o.done) || (m.done && (m.note || '') !== (o.note || '')));
+  });
+  if (changed.length) {
+    runLater((async () => {
+      for (const m of changed) {
+        const nurse = await nameOf(m.nurse_id);
+        await send(CHAT_POSTOP,
+          `✅ <b>HOÀN THÀNH MỐC ${esc((MS_LABEL[m.key] || m.key).toUpperCase())} — HẬU PHẪU</b>` +
+          line('KH', `<b>${esc(rec.customer_name)}</b>${rec.phone ? ' ' + esc(rec.phone) : ''}`) +
+          line('Ngày mổ', dShort(rec.surgery_date)) +
+          line('Tình trạng', esc(stNow)) +
+          (sgNow.length ? `\n- ⚠️ Dấu hiệu cảnh báo: <b>${esc(sgNow.join(', '))}</b>` : '') +
+          line('Điều dưỡng', esc(nurse)) +
+          line('Ghi chú mốc', esc(m.note)));
+      }
+    })().catch((e) => console.error('hậu phẫu: gửi mốc lỗi', (e as Error).message)));
+  }
+}
+
 Deno.serve(async (req) => {
   if (SECRET && req.headers.get('x-webhook-secret') !== SECRET) {
     return new Response('unauthorized', { status: 401 });
@@ -139,6 +285,9 @@ Deno.serve(async (req) => {
     const rec = payload.record ?? {};
     const old = payload.old_record ?? {};
     if (!rec?.customer_name) return new Response('skip');
+
+    // Hậu phẫu tháng đầu -> nhóm chăm sóc hậu phẫu (chạy nền, KHÔNG chặn các nhánh dưới)
+    try { handlePostOp(type, rec, old); } catch (e) { console.error('hậu phẫu lỗi', (e as Error).message); }
 
     const isRecheck = String(rec.service || '').startsWith('[Tái khám]');
     const serviceClean = String(rec.service || '').replace('[Tái khám] ', '');
