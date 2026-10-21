@@ -915,7 +915,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       ) : tab === 'overview' ? (
         <AdsOverview clips={clips} stores={stores} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} />
       ) : tab === 'images' ? (
-        <ImageLibrary me={me} canWrite={canDesign} />
+        <ImageLibrary me={me} canWrite={canDesign} canDeleteFolder={canDesign || canEdit} />
       ) : tab === 'kho' && khoMode === 'library' ? (
         <MediaVault assets={assets} storeOf={storeOf} builtCustomerIds={builtCustomerIds} scanning={scanningFiles} onScan={scanAllFiles}
           onToggleFav={toggleFav} canAddMedia={canAddMedia} onAddMedia={() => setAddOpen(true)} onManageSources={() => setKhoMode('sources')} />
