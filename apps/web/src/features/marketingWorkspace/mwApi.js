@@ -21,7 +21,7 @@ const unwrap = async (q) => { const { data, error } = await q; if (error) throw 
 // UPDATE phải trả về đúng 1 dòng — RLS chặn thì Supabase không báo lỗi mà trả 0 dòng
 const one = async (q) => { const rows = await unwrap(q); if (!rows?.length) throw Object.assign(new Error('Không lưu được: bạn không có quyền hoặc dữ liệu đã thay đổi.'), { forbidden: true }); return rows[0]; };
 
-const TASK_COLS = 'id, board_id, list_id, title, description, priority, start_at, due_at, sort_index, version, cover_color, estimate_hours, completed_at, created_by, archived_at, created_at, updated_at';
+const TASK_COLS = '*';   // '*' để chịu được cột thêm ở bản sau (location — v3)
 
 export const mwApi = {
   // ---------- Nhân sự (dùng bảng profiles có sẵn) ----------
@@ -123,6 +123,43 @@ export const mwApi = {
   addScene: (row) => unwrap(supabase.from('mw_task_scenes').insert(row).select('*').single()),
   updateScene: (id, patch) => one(supabase.from('mw_task_scenes').update(patch).eq('id', id).select('*')),
   deleteScene: (id) => one(supabase.from('mw_task_scenes').delete().eq('id', id).select('id')),
+
+  // ---------- v3: Chat / Wiki / Base / Automation (supabase/marketing_workspace_v3_collab.sql) ----------
+  messages: (wsId, before) => {
+    let q = supabase.from('mw_messages').select('id, workspace_id, author_id, body, reply_to, task_id, edited_at, deleted_at, created_at').eq('workspace_id', wsId).order('created_at', { ascending: false }).limit(100);
+    if (before) q = q.lt('created_at', before);
+    return unwrap(q);
+  },
+  sendMessage: (wsId, body, replyTo) => unwrap(supabase.from('mw_messages').insert({ workspace_id: wsId, body, reply_to: replyTo || null }).select('id').single()),
+  updateMessage: (id, patch) => one(supabase.from('mw_messages').update(patch).eq('id', id).select('id')),
+  docs: (wsId) => unwrap(supabase.from('mw_docs').select('id, workspace_id, parent_id, title, sort_index, version, updated_by, updated_at, archived_at').eq('workspace_id', wsId).order('sort_index').limit(1000)),
+  doc: (id) => unwrap(supabase.from('mw_docs').select('*').eq('id', id).maybeSingle()),
+  createDoc: (row) => unwrap(supabase.from('mw_docs').insert(row).select('*').single()),
+  updateDoc: async (id, patch, version) => {
+    const rows = await unwrap(supabase.from('mw_docs').update(patch).eq('id', id).eq('version', version).select('*'));
+    if (!rows?.length) throw Object.assign(new Error('Trang vừa được người khác sửa (hoặc bạn không có quyền). Đã tải bản mới nhất.'), { conflict: true });
+    return rows[0];
+  },
+  docVersions: (id) => unwrap(supabase.from('mw_doc_versions').select('id, version, title, body, author_id, created_at').eq('doc_id', id).order('version', { ascending: false }).limit(100)),
+  searchDocs: (wsId, term) => unwrap(supabase.from('mw_docs').select('id, title, parent_id').eq('workspace_id', wsId).or(`title.ilike.%${term.replace(/[%,()]/g, ' ')}%,body.ilike.%${term.replace(/[%,()]/g, ' ')}%`).limit(30)),
+  bases: (wsId) => unwrap(supabase.from('mw_bases').select('*').eq('workspace_id', wsId).order('created_at')),
+  createBase: (row) => unwrap(supabase.from('mw_bases').insert(row).select('*').single()),
+  updateBase: (id, patch) => one(supabase.from('mw_bases').update(patch).eq('id', id).select('*')),
+  baseRows: (baseId) => unwrap(supabase.from('mw_base_rows').select('*').eq('base_id', baseId).order('sort_index').limit(5000)),
+  addBaseRow: (row) => unwrap(supabase.from('mw_base_rows').insert(row).select('*').single()),
+  updateBaseRow: (id, patch) => one(supabase.from('mw_base_rows').update(patch).eq('id', id).select('*')),
+  deleteBaseRow: (id) => one(supabase.from('mw_base_rows').delete().eq('id', id).select('id')),
+  automations: (wsId) => unwrap(supabase.from('mw_automations').select('*').eq('workspace_id', wsId).order('created_at')),
+  createAutomation: (row) => unwrap(supabase.from('mw_automations').insert(row).select('*').single()),
+  updateAutomation: (id, patch) => one(supabase.from('mw_automations').update(patch).eq('id', id).select('*')),
+  deleteAutomation: (id) => one(supabase.from('mw_automations').delete().eq('id', id).select('id')),
+  automationRuns: (ids) => (ids.length ? unwrap(supabase.from('mw_automation_runs').select('*').in('automation_id', ids).order('created_at', { ascending: false }).limit(200)) : Promise.resolve([])),
+  aiSuggest: async (body) => {
+    const { data, error } = await supabase.functions.invoke('mw-ai', { body });
+    if (error) throw new Error(/not found|404|Failed to send/i.test(error.message || '') ? 'Chưa triển khai Edge Function mw-ai (Admin deploy theo hướng dẫn).' : error.message);
+    if (data?.error) throw new Error(data.error);
+    return data;
+  },
 
   // ---------- Marketing ----------
   reviewers: () => unwrap(supabase.from('mw_reviewers').select('user_id, kind, created_at')),

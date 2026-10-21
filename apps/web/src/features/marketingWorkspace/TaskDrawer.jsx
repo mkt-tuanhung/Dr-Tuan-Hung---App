@@ -139,6 +139,11 @@ export default function TaskDrawer({ taskId, onClose, profile, workspaces, myRol
                 <Field label="Hạn">
                   <input type="datetime-local" className="e-input" disabled={!perm.edit} value={toLocalInput(task.due_at)} onChange={e => patch({ due_at: fromLocalInput(e.target.value) })} />
                 </Field>
+                {'location' in task && (
+                  <Field label="Địa điểm (view Map)">
+                    <TextField value={task.location} disabled={!perm.edit} placeholder="VD: Studio Q.1, TP.HCM" onSave={(v) => patch({ location: v })} />
+                  </Field>
+                )}
                 <Field label="Ước lượng (giờ)">
                   <NumberField value={task.estimate_hours} disabled={!perm.edit} onSave={(v) => patch({ estimate_hours: v })} />
                 </Field>
@@ -238,6 +243,15 @@ function TitleEditor({ task, disabled, onSave }) {
       onChange={e => setV(e.target.value)}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
       onBlur={() => { const t = v.trim(); if (t && t !== task.title) onSave(t); else setV(task.title); }} />
+  );
+}
+
+function TextField({ value, disabled, placeholder, onSave }) {
+  const [v, setV] = useState(value ?? '');
+  useEffect(() => { setV(value ?? ''); }, [value]);
+  return (
+    <input className="e-input" value={v} disabled={disabled} placeholder={placeholder} maxLength={300}
+      onChange={e => setV(e.target.value)} onBlur={() => { const t = v.trim(); if (t !== (value || '')) onSave(t || null); }} />
   );
 }
 
