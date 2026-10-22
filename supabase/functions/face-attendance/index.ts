@@ -18,6 +18,27 @@ import {
 
 const fmtHM = (t: string) => t.slice(0, 5);
 
+const ROLE_VI: Record<string, string> = {
+  telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
+  media: 'Media', marketing: 'Marketing', editor: 'Editor', seeding: 'Seeding',
+  dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin', bac_si: 'Bác sĩ',
+};
+
+// Card Telegram NHÓM CHẤM CÔNG — dùng chung cho nhân sự tự chấm (Face ID) và Admin chấm công hộ
+const attendanceCard = (o: { action: string; repeated: boolean; name: string; roleTxt: string; time: string; date: string; lateMinutes: number; warning?: string | null }) => {
+  const [yy, mm, dd] = o.date.split('-');
+  const lines = [
+    o.action === 'CHECK_IN' ? '✅ CHECK-IN THÀNH CÔNG' : (o.repeated ? '🔁 CẬP NHẬT GIỜ RA' : '🚪 CHECK-OUT THÀNH CÔNG'),
+    `👤 ${o.name}`,
+    `🏢 ${o.roleTxt}`,
+    `🕒 ${o.time} — ${dd}/${mm}/${yy}`,
+  ];
+  // Công ty 1 cơ sở -> không hiện dòng địa điểm; CHỈ cảnh báo khi sai vị trí/mạng
+  if (o.warning) lines.push(`📍 ⚠️ ${o.warning}`);
+  if (o.action === 'CHECK_IN' && o.lateMinutes > 0) lines.push(`⏰ Đi muộn ${o.lateMinutes} phút`);
+  return lines.join('\n');
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
@@ -39,6 +60,49 @@ Deno.serve(async (req) => {
     if (!user) return json({ accepted: false, errorCode: 'UNAUTHORIZED' }, 401);
 
     const body = await req.json();
+
+    // ---------- ADMIN CHẤM CÔNG HỘ: gửi thông báo Y NHƯ nhân sự tự chấm ----------
+    // App (Quản lý chấm công) gọi sau khi Admin lưu giờ vào / giờ ra cho nhân sự trong NGÀY HÔM NAY.
+    // Server tự đọc lại bản ghi attendance (không tin giờ client gửi) -> thông báo cá nhân + Telegram nhóm.
+    if (body?.mode === 'ADMIN_NOTIFY') {
+      const { data: me } = await db.from('profiles').select('role, role_2').eq('id', user.id).single();
+      if (![me?.role, me?.role_2].includes('admin')) return json({ ok: false, message: 'Chỉ Admin được chấm công hộ' }, 403);
+      const staffId = String(body?.staffId || '');
+      const date = String(body?.date || '');
+      const act = body?.action === 'CHECK_OUT' ? 'CHECK_OUT' : 'CHECK_IN';
+      const { data: rec } = await db.from('attendance').select('check_in, check_out').eq('staff_id', staffId).eq('date', date).maybeSingle();
+      const t = String((act === 'CHECK_IN' ? rec?.check_in : rec?.check_out) || '');
+      if (!t) return json({ ok: false, message: 'Bản ghi chưa có giờ để thông báo' }, 400);
+      const time = t.length === 5 ? `${t}:00` : t.slice(0, 8);
+      let late = 0;
+      const cfgA = await loadFaceConfig(db);
+      if (act === 'CHECK_IN' && cfgA) {
+        const [wh, wm] = String(cfgA.work_start).split(':').map(Number);
+        const [h, m] = time.split(':').map(Number);
+        late = Math.max(0, h * 60 + m - (wh * 60 + wm + Number(cfgA.late_grace_min || 0)));
+      }
+      const repeatedOut = act === 'CHECK_OUT' && !!body?.repeated;
+      const actLabelA = act === 'CHECK_IN' ? 'check-in' : (repeatedOut ? 'cập nhật giờ ra' : 'check-out');
+      await db.from('notifications').insert({
+        user_id: staffId, type: 'attendance',
+        title: `Bạn đã ${actLabelA} lúc ${fmtHM(time)}.${act === 'CHECK_IN' && late > 0 ? ` Đi muộn ${late} phút.` : ''}`,
+        body: 'Phương thức: Admin chấm công hộ',
+        link: 'attendance',
+      });
+      const tgTokenA = Deno.env.get('TELEGRAM_BOT_TOKEN');
+      const tgChatA = Deno.env.get('TELEGRAM_ATTENDANCE_CHAT_ID');
+      if (tgTokenA && tgChatA) {
+        const { data: prof } = await db.from('profiles').select('full_name, role, role_2').eq('id', staffId).single();
+        const roleTxt = [prof?.role, prof?.role_2].filter(Boolean).map((r) => ROLE_VI[r as string] || r).join(' · ') || '—';
+        const text = attendanceCard({ action: act, repeated: repeatedOut, name: prof?.full_name || 'Nhân sự', roleTxt, time, date, lateMinutes: late });
+        await fetch(`https://api.telegram.org/bot${tgTokenA}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: tgChatA, text }),
+        }).catch(() => {});
+      }
+      return json({ ok: true });
+    }
+
     const requestId = String(body?.requestId || '');
     const action = body?.action === 'CHECK_OUT' ? 'CHECK_OUT' : 'CHECK_IN';
     if (!requestId || requestId.length < 8 || requestId.length > 64) {
@@ -124,7 +188,9 @@ Deno.serve(async (req) => {
     }
     const officeIps: string[] = Array.isArray(cfg.office_ips) ? cfg.office_ips : [];
     const ip = body?.ip ? String(body.ip) : null;
-    const wifiVerified = officeIps.length === 0 ? true : (!!ip && officeIps.includes(ip));
+    let wifiVerified = officeIps.length === 0 ? true : (!!ip && officeIps.includes(ip));
+    // Admin TẠM TẮT kiểm tra vị trí / Wi-Fi (face_config.location_rule = 'off') -> mọi lần chấm đều tính hợp lệ
+    if (cfg.location_rule === 'off') { gpsVerified = true; wifiVerified = true; }
     audit.gps_verified = gpsVerified; audit.gps_distance_m = gpsDistance; audit.wifi_verified = wifiVerified;
 
     let locationWarning: string | null = null;
@@ -197,28 +263,13 @@ Deno.serve(async (req) => {
     const tgToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const tgChat = Deno.env.get('TELEGRAM_ATTENDANCE_CHAT_ID');
     if (tgToken && tgChat) {
-      const ROLE_VI: Record<string, string> = {
-        telesale: 'Telesale', sale_offline: 'Sale Offline', cskh: 'CSKH', truc_page: 'Trực Page',
-        media: 'Media', marketing: 'Marketing', editor: 'Editor', seeding: 'Seeding',
-        dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin', bac_si: 'Bác sĩ',
-      };
       const { data: prof } = await db.from('profiles').select('full_name, role, role_2').eq('id', user.id).single();
       const name = prof?.full_name || 'Nhân sự';
       const roleTxt = [prof?.role, prof?.role_2].filter(Boolean).map((r) => ROLE_VI[r as string] || r).join(' · ') || '—';
-      const [yy, mm, dd] = date.split('-');
-      const title = action === 'CHECK_IN'
-        ? '✅ CHECK-IN THÀNH CÔNG'
-        : (repeated ? '🔁 CẬP NHẬT GIỜ RA' : '🚪 CHECK-OUT THÀNH CÔNG');
-      const lines = [
-        title,
-        `👤 ${name}`,
-        `🏢 ${roleTxt}`,
-        `🕒 ${time} — ${dd}/${mm}/${yy}`,
-      ];
-      // Công ty 1 cơ sở -> không hiện dòng địa điểm; CHỈ cảnh báo khi sai vị trí/mạng
-      if (!gpsVerified && !wifiVerified) lines.push(`📍 ⚠️ ${locationWarning || 'Ngoài văn phòng'}`);
-      if (action === 'CHECK_IN' && lateMinutes > 0) lines.push(`⏰ Đi muộn ${lateMinutes} phút`);
-      const baseCaption = lines.join('\n');
+      const baseCaption = attendanceCard({
+        action, repeated, name, roleTxt, time, date, lateMinutes,
+        warning: !gpsVerified && !wifiVerified ? (locationWarning || 'Ngoài văn phòng') : null,
+      });
       const sendText = (cap: string) => fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: tgChat, text: cap }),
