@@ -107,6 +107,7 @@ const toLocalVN = (iso) => { // ISO -> 'YYYY-MM-DDTHH:mm' giờ Việt Nam
   return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())}T${pad(v.getUTCHours())}:${pad(v.getUTCMinutes())}`;
 };
 const toInput = (f, v) => {
+  if (f.type === 'staff_multi') return Array.isArray(v) ? [...v] : [];
   if (v == null) return '';
   if (f.type === 'date') return String(v).slice(0, 10);
   if (f.type === 'time') return String(v).slice(0, 5);
@@ -114,6 +115,7 @@ const toInput = (f, v) => {
   return String(v);
 };
 const fromInput = (f, s) => {
+  if (f.type === 'staff_multi') return Array.isArray(s) ? s : [];
   const t = typeof s === 'string' ? s.trim() : s;
   if (t === '' || t == null) return null;
   if (f.type === 'number') { const n = Number(String(t).replace(/[^\d.-]/g, '')); return Number.isFinite(n) ? n : null; }
@@ -122,11 +124,11 @@ const fromInput = (f, s) => {
 };
 
 let staffCache = null;
-function useStaff() {
+export function useStaff() {
   const [list, setList] = useState(staffCache || []);
   useEffect(() => {
     if (staffCache) return;
-    supabase.from('profiles').select('id, full_name, role, is_active, employment_status').order('full_name')
+    supabase.from('profiles').select('id, full_name, role, role_2, position, is_active, employment_status').order('full_name')
       .then(({ data }) => { staffCache = data || []; setList(staffCache); });
   }, []);
   return list;
@@ -154,8 +156,59 @@ function ModalShell({ title, subtitle, onClose, footer, children }) {
   );
 }
 
+const activeStaff = (staff, keep = []) => staff.filter(s => (s.is_active !== false && s.employment_status !== 'inactive') || keep.includes(s.id));
+const staffLabel = (s) => `${s.full_name}${s.is_active === false || s.employment_status === 'inactive' ? ' (đã nghỉ)' : ''}`;
+const hasRoleIn = (s, roles) => !roles?.length || roles.includes(s.role) || roles.includes(s.role_2);
+
+// Ô chọn NHIỀU nhân sự (VD: hậu phẫu phụ trách thêm) — chip + chọn thêm
+function StaffMulti({ value, onChange, staff, roles }) {
+  const ids = Array.isArray(value) ? value : [];
+  const byId = Object.fromEntries(staff.map(s => [s.id, s]));
+  const rest = activeStaff(staff).filter(s => !ids.includes(s.id));
+  const pri = rest.filter(s => hasRoleIn(s, roles));
+  const other = rest.filter(s => !hasRoleIn(s, roles));
+  return (
+    <div className="space-y-2">
+      {ids.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {ids.map(id => (
+            <span key={id} className="inline-flex items-center gap-1 rounded-full bg-teal-50 text-teal-800 text-[12.5px] font-medium pl-2.5 pr-1 py-0.5">
+              {byId[id]?.full_name || id}
+              <button type="button" aria-label="Bỏ" onClick={() => onChange(ids.filter(x => x !== id))} className="w-5 h-5 grid place-items-center rounded-full hover:bg-teal-100"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+      <select className="e-input max-lg:!h-11 max-lg:!text-[16px]" value="" onChange={e => e.target.value && onChange([...ids, e.target.value])}>
+        <option value="">+ Thêm người…</option>
+        {pri.length > 0 && other.length > 0 ? (
+          <>
+            <optgroup label="Đúng bộ phận">{pri.map(s => <option key={s.id} value={s.id}>{staffLabel(s)}</option>)}</optgroup>
+            <optgroup label="Bộ phận khác">{other.map(s => <option key={s.id} value={s.id}>{staffLabel(s)}</option>)}</optgroup>
+          </>
+        ) : rest.map(s => <option key={s.id} value={s.id}>{staffLabel(s)}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function FieldInput({ f, value, onChange, staff, current }) {
   const cls = 'e-input max-lg:!h-11 max-lg:!text-[16px]';
+  if (f.type === 'staff_multi') return <StaffMulti value={value} onChange={onChange} staff={staff} roles={f.roles} />;
+  if (f.type === 'staff' && f.roles?.length) {
+    // Người đúng bộ phận lên trước, các bộ phận khác xếp sau (vẫn chọn được khi cần)
+    const list = activeStaff(staff, [current]);
+    const pri = list.filter(s => hasRoleIn(s, f.roles));
+    const other = list.filter(s => !hasRoleIn(s, f.roles));
+    return (
+      <select className={cls} value={value} onChange={e => onChange(e.target.value)}>
+        <option value="">— Trống —</option>
+        {value && !list.some(s => s.id === value) && <option value={value}>{value}</option>}
+        <optgroup label="Đúng bộ phận">{pri.map(s => <option key={s.id} value={s.id}>{staffLabel(s)}</option>)}</optgroup>
+        {other.length > 0 && <optgroup label="Bộ phận khác">{other.map(s => <option key={s.id} value={s.id}>{staffLabel(s)}</option>)}</optgroup>}
+      </select>
+    );
+  }
   if (f.type === 'textarea') return <textarea className="e-textarea max-lg:!text-[16px]" rows={f.rows || 3} value={value} onChange={e => onChange(e.target.value)} />;
   if (f.type === 'select' || f.type === 'staff') {
     let options = f.options || [];
@@ -182,7 +235,7 @@ function FormEditor({ title, subtitle, row, sections, onClose, onSave, note }) {
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const fields = shown.flatMap(s => s.fields);
-  const changed = fields.filter(f => String(form[f.key] ?? '') !== String(initial[f.key] ?? ''));
+  const changed = fields.filter(f => String(form[f.key] ?? '') !== String(initial[f.key] ?? ''));   // mảng: so theo 'a,b'
 
   const save = async () => {
     const miss = fields.find(f => f.required && !String(form[f.key] || '').trim());
@@ -284,5 +337,44 @@ export function EditCustomerModal({ name, phone, appts, lead, onClose, onSaved }
           <input className="e-input max-lg:!h-11 max-lg:!text-[16px]" inputMode="tel" value={f.phone} onChange={e => setF(p => ({ ...p, phone: e.target.value }))} /></label>
       </div>
     </ModalShell>
+  );
+}
+
+// ---------- NHÂN SỰ PHỤ TRÁCH (khung "Nhân sự phụ trách" trong Hồ sơ 360) ----------
+const LEAD_TEAM = [{ title: 'Phụ trách khách hàng', fields: [
+  { key: 'truc_page_id', label: 'Trực page', type: 'staff', roles: ['truc_page'] },
+  { key: 'telesale_id', label: 'Telesale', type: 'staff', roles: ['telesale'] },
+] }];
+const APPT_TEAM_SALES = { title: 'Kinh doanh', fields: [
+  { key: 'sale_id', label: 'Sale Offline', type: 'staff', roles: ['sale_offline'] },
+  { key: 'telesale_id', label: 'Telesale', type: 'staff', roles: ['telesale'] },
+  { key: 'telesale_id_2', label: 'Telesale 2', type: 'staff', roles: ['telesale'] },
+] };
+const APPT_TEAM_CASE = [
+  { title: 'Ca phẫu thuật', fields: [
+    { key: 'bac_si_id', label: 'Bác sĩ', type: 'staff', roles: ['bac_si'] },
+    { key: 'phu_mo_1_id', label: 'Phụ mổ 1', type: 'staff', roles: ['dieu_duong'] },
+    { key: 'phu_mo_2_id', label: 'Phụ mổ 2', type: 'staff', roles: ['dieu_duong'] },
+    { key: 'phu_mo_3_id', label: 'Phụ mổ 3', type: 'staff', roles: ['dieu_duong'] },
+    { key: 'truc_dem_id', label: 'Trực đêm', type: 'staff', roles: ['dieu_duong'] },
+    { key: 'truc_dem_id_2', label: 'Trực đêm 2', type: 'staff', roles: ['dieu_duong'] },
+  ] },
+  { title: 'Hậu phẫu & CSKH', fields: [
+    { key: 'hau_phau_id', label: 'Điều dưỡng hậu phẫu (chính)', type: 'staff', roles: ['dieu_duong', 'cskh'] },
+    { key: 'additional_hau_phau_ids', label: 'Hậu phẫu / CSKH phụ trách thêm', type: 'staff_multi', roles: ['dieu_duong', 'cskh'], span: 2 },
+  ] },
+];
+
+export function EditTeamModal({ scope, row, canSales = true, onClose, onSaved }) {
+  const isLead = scope === 'lead';
+  const sections = isLead ? LEAD_TEAM : [...(canSales ? [APPT_TEAM_SALES] : []), ...APPT_TEAM_CASE];
+  const label = String(row.service || '').replace(/^\[Tái khám\]\s*/i, '') || 'lịch hẹn';
+  return (
+    <FormEditor title={isLead ? 'Sửa phụ trách khách hàng' : `Sửa nhân sự phụ trách · ${label}`} subtitle={row.customer_name}
+      row={row} sections={sections} onClose={onClose}
+      onSave={async (patch) => {
+        try { await updateRow(isLead ? 'marketing_data' : 'customer_appointments', row.id, patch); toast.success('Đã lưu nhân sự phụ trách'); onSaved(); }
+        catch (e) { toast.error(`Lưu thất bại: ${e.message}`); }
+      }} />
   );
 }

@@ -19,7 +19,8 @@ import { APPT_TONE, isRecheck } from '@/features/appointments/calendarUtils';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { isSaleOffline } from '@/lib/phoneMask';
 import C360Pipeline from './C360Pipeline.jsx';
-import { EditApptModal, EditLeadModal, EditCustomerModal } from './C360Editors.jsx';
+import { EditApptModal, EditLeadModal, EditCustomerModal, EditTeamModal, useStaff } from './C360Editors.jsx';
+import C360Team from './C360Team.jsx';
 
 const LEAD_STATUS = {
   tiep_can: 'Tiếp cận', nong: 'Nóng', tiem_nang: 'Tiềm năng', da_hen_lich: 'Đã hẹn lịch', coc: 'Cọc',
@@ -126,6 +127,10 @@ const Kv = ({ label, children }) => (
 function Customer360Drawer({ target, onClose, onRetarget }) {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  // Trưởng bộ phận điều dưỡng sửa được nhân sự ca mổ / hậu phẫu (Admin sửa tất cả)
+  const isHeadNurse = [profile?.role, profile?.role_2].includes('dieu_duong') && profile?.position === 'Trưởng bộ phận';
+  const canEditCase = isAdmin || isHeadNurse;
+  const staff = useStaff();
   const [state, setState] = useState({ loading: false, error: null, data: null });
   const [tab, setTab] = useState('pipeline');
   const [edit, setEdit] = useState(null); // { kind: 'appt' | 'lead' | 'customer', row? }
@@ -143,7 +148,8 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
   const d = state.data;
   const appts = useMemo(() => d?.appointments || [], [d]);
   const names = d?.names;
-  const who = useCallback((id) => (id ? names?.[id] || '—' : '—'), [names]);
+  const staffName = useMemo(() => Object.fromEntries(staff.map(s => [s.id, s.full_name])), [staff]);
+  const who = useCallback((id) => (id ? names?.[id] || staffName[id] || '—' : '—'), [names, staffName]);
   const lead = d?.lead;
   const name = lead?.customer_name || appts[0]?.customer_name || target?.name || 'Khách hàng';
 
@@ -211,6 +217,12 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
             </div>
           ))}
         </div>
+
+        {/* Nhân sự phụ trách: khách hàng + từng ca */}
+        <C360Team lead={lead} appts={appts} who={who} staff={staff}
+          canEditLead={isAdmin} canEditCase={canEditCase}
+          onEditLead={() => setEdit({ kind: 'team_lead', row: { ...lead, customer_name: lead?.customer_name || name } })}
+          onEditAppt={(a) => setEdit({ kind: 'team_appt', row: { ...a, customer_name: a.customer_name || name } })} />
 
         {/* Hành trình */}
         <ol className="e-steps" style={{ gridTemplateColumns: `repeat(${JOURNEY.length}, minmax(0, 1fr))` }} aria-label="Hành trình khách hàng">
@@ -378,6 +390,8 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
         <EditCustomerModal name={name} phone={d.phone} appts={appts} lead={lead} onClose={() => setEdit(null)}
           onSaved={(ph, nm) => { setEdit(null); if (ph !== d.phone) onRetarget({ phone: ph, name: nm }); else load(true); }} />
       )}
+      {isAdmin && edit?.kind === 'team_lead' && <EditTeamModal scope="lead" row={edit.row} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(true); }} />}
+      {canEditCase && edit?.kind === 'team_appt' && <EditTeamModal scope="appt" row={edit.row} canSales={isAdmin} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(true); }} />}
       {lightbox && <ImageLightbox images={lightbox.images} index={lightbox.index} onClose={() => setLightbox(null)} />}
     </>
   );
