@@ -203,7 +203,7 @@ export default function IntegrationsSection({ settings }) {
       lines: fc ? [
         ['Nhân sự đã đăng ký mặt', faceActive.count ?? '—'],
         ['Kiểm tra người thật (liveness)', fc.require_liveness ? 'Bật' : 'Tắt'],
-        ['Sai vị trí', fc.location_rule === 'require' ? 'Từ chối ghi công' : 'Ghi công + cảnh báo'],
+        ['Sai vị trí', fc.location_rule === 'off' ? 'Đang tắt kiểm tra (luôn hợp lệ)' : fc.location_rule === 'require' ? 'Từ chối ghi công' : 'Ghi công + cảnh báo'],
         ['IP văn phòng', Array.isArray(fc.office_ips) ? fc.office_ips.length : 0],
       ] : [['Cấu hình', faceMissing ? 'Chưa chạy face_attendance.sql' : '—']],
       foot: 'Quản lý khuôn mặt từng nhân sự ở mục Face ID.',

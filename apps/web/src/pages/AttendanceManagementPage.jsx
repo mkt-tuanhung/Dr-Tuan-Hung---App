@@ -43,6 +43,13 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const [selectedCells, setSelectedCells] = useState(new Set());
   // Ethics D06: xem theo tháng (bảng công) hoặc theo ngày (bảng công ngày + cần xử lý)
   const [view, setView] = useState('month');
+  // Admin TẠM TẮT kiểm tra vị trí / Wi-Fi (face_config.location_rule = 'off') -> không gắn cờ "vị trí bất thường"
+  const [locationOff, setLocationOff] = useState(false);
+  useEffect(() => {
+    supabase.from('face_config').select('location_rule').eq('id', 1).maybeSingle()
+      .then(({ data }) => setLocationOff(data?.location_rule === 'off'));
+  }, []);
+  const isOdd = (a) => !locationOff && (a.location_status === 'outside' || a.location_status === 'unknown' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address)));
   const [selDay, setSelDay] = useState(today.getDate());
 
   const loadData = useCallback(async ({ silent = false } = {}) => {
@@ -331,9 +338,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     }).length,
   };
 
-  const violations = attendance.filter(a => 
-    a.location_status === 'outside' || a.location_status === 'unknown' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address))
-  ).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const violations = attendance.filter(isOdd).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const openEdit = (staffId, day) => {
     const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
@@ -344,6 +349,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
       status: record?.status || 'present',
       check_in: record?.check_in || '',
       check_out: record?.check_out || '',
+      orig_check_in: record?.check_in || '',     // để biết Admin vừa chấm hộ giờ vào / giờ ra mới
+      orig_check_out: record?.check_out || '',
       overtime_hours: record?.overtime_hours ?? '',
       late_early_hours: record?.late_early_hours ?? '',
       note: record?.note || '',
@@ -420,6 +427,19 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     }
   };
 
+  // Admin chấm công HỘ trong ngày hôm nay -> gửi thông báo y như nhân sự tự chấm
+  // (thông báo cá nhân + Telegram nhóm Chấm công). Máy chủ tự đọc lại giờ đã lưu.
+  const notifyAdminCheck = (m) => {
+    if (m.date !== vnToday()) return;
+    const hm = (t) => String(t || '').slice(0, 5);
+    const calls = [];
+    if (m.check_in && hm(m.check_in) !== hm(m.orig_check_in)) calls.push({ action: 'CHECK_IN' });
+    if (m.check_out && hm(m.check_out) !== hm(m.orig_check_out)) calls.push({ action: 'CHECK_OUT', repeated: !!m.orig_check_out });
+    calls.reduce((p, c) => p.then(() => supabase.functions.invoke('face-attendance', {
+      body: { mode: 'ADMIN_NOTIFY', staffId: m.staffId, date: m.date, ...c },
+    }).then(({ error }) => { if (error) toast.error('Đã lưu nhưng chưa gửi được thông báo chấm công'); })), Promise.resolve());
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -446,6 +466,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         if (error) throw error;
       }
       toast.success('Đã lưu chấm công');
+      notifyAdminCheck(editModal);
       setEditModal(null);
       loadData();
     } catch (err) {
@@ -652,7 +673,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
           daysInMonth={daysInMonth}
           onDay={(d) => setSelDay(Math.min(daysInMonth, Math.max(1, d)))}
           onEdit={openEdit}
-          isOddLocation={(a) => a.location_status === 'outside' || a.location_status === 'unknown' || (a.ip_address && !OFFICE_IPS.includes(a.ip_address))}
+          isOddLocation={isOdd}
         />
       ) : view === 'day' ? (
         <div className="flex items-center justify-center h-40 xl:col-span-2 xl:order-3">
@@ -724,7 +745,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                                 record.status === 'absent' ? <X className="w-4 h-4 text-danger-500" strokeWidth={2.5} /> :
                                 record.status === 'late' ? <Clock className="w-4 h-4 text-warning-500" strokeWidth={2.5} /> :
                                 <span className="text-[10px] font-bold text-lavender-600">{record.status === 'leave' ? 'NP' : 'ND'}</span>}
-                                {(record.location_status === 'outside' || record.location_status === 'unknown' || (record.ip_address && !OFFICE_IPS.includes(record.ip_address))) && (
+                                {isOdd(record) && (
                                   <span className="absolute top-0 -right-1 w-2 h-2 bg-danger-500 rounded-full border border-white" title="Chấm công sai vị trí hoặc sai mạng"></span>
                                 )}
                               </>

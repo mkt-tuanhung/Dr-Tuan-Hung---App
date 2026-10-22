@@ -5,7 +5,7 @@
 // ============================================================
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Building2, CalendarClock, Info, Plus, Trash2, Wifi, Copy } from 'lucide-react';
+import { Building2, CalendarClock, Info, Plus, Trash2, Wifi, Copy, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { getPublicIP } from '@/lib/geo';
 import { AlertStrip } from '@/components/ds';
@@ -140,6 +140,17 @@ export function WorkHoursSection({ settings, readOnly, onDirtyChange }) {
     supabase.from('face_config').select('work_start, late_grace_min, office_ips, location_rule').eq('id', 1).maybeSingle()
       .then(({ data }) => setFace(data || null));
   }, []);
+  // Công tắc TẠM TẮT kiểm tra vị trí / Wi-Fi (face_config.location_rule: 'off' <-> 'warn')
+  const [locSaving, setLocSaving] = useState(false);
+  const toggleLocationOff = async () => {
+    const next = face?.location_rule === 'off' ? 'warn' : 'off';
+    setLocSaving(true);
+    const { data, error } = await supabase.from('face_config').update({ location_rule: next }).eq('id', 1).select('location_rule');
+    setLocSaving(false);
+    if (error || !data?.length) { toast.error('Không lưu được: ' + (error?.message || 'cần quyền Admin')); return; }
+    setFace(f => ({ ...f, location_rule: next }));
+    toast.success(next === 'off' ? 'Đã TẮT kiểm tra vị trí & Wi‑Fi — mọi lần chấm công đều hợp lệ' : 'Đã BẬT lại kiểm tra vị trí & Wi‑Fi');
+  };
   const dirty = !same(form, base);
   useReportDirty(dirty, onDirtyChange);
 
@@ -279,8 +290,26 @@ export function WorkHoursSection({ settings, readOnly, onDirtyChange }) {
           <div className="flex items-center gap-2 font-semibold text-slate-700 mb-1"><Info className="w-4 h-4 text-teal-600" />Đang áp dụng cho chấm công Face ID (bảng face_config)</div>
           Giờ vào ca <b>{String(face.work_start || '').slice(0, 5) || '—'}</b> · ân hạn <b>{face.late_grace_min ?? 0} phút</b> ·
           {' '}{Array.isArray(face.office_ips) ? face.office_ips.length : 0} IP văn phòng ·
-          {' '}sai vị trí: <b>{face.location_rule === 'require' ? 'từ chối ghi công' : 'vẫn ghi công + cảnh báo'}</b>.
+          {' '}sai vị trí: <b>{face.location_rule === 'off' ? 'ĐANG TẮT kiểm tra — mọi lần chấm đều hợp lệ' : face.location_rule === 'require' ? 'từ chối ghi công' : 'vẫn ghi công + cảnh báo'}</b>.
           <div className="text-[12px] text-slate-400 mt-1">Cấu hình này nằm riêng trong face_config, không đổi theo các ô ở trên.</div>
+        </div>
+      )}
+
+      {face && !readOnly && (
+        <div className={`mt-3 flex items-center gap-3 rounded-xl border px-4 py-3 ${face.location_rule === 'off' ? 'border-amber-200 bg-amber-50/70' : 'border-slate-200 bg-white'}`}>
+          <MapPin className={`w-5 h-5 shrink-0 ${face.location_rule === 'off' ? 'text-amber-600' : 'text-teal-600'}`} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[14px] font-semibold text-slate-800">Tạm tắt kiểm tra vị trí & Wi‑Fi khi chấm công</div>
+            <div className="text-[12.5px] text-slate-500">
+              {face.location_rule === 'off'
+                ? 'Đang tắt: mọi lần check-in / check-out đều tính hợp lệ, không cảnh báo sai vị trí hay sai Wi‑Fi.'
+                : 'Bật lên khi cần: nhân sự chấm công ở đâu cũng tính hợp lệ (Face ID và bấm nút).'}
+            </div>
+          </div>
+          <button type="button" role="switch" aria-checked={face.location_rule === 'off'} aria-label="Tạm tắt kiểm tra vị trí và Wi-Fi" disabled={locSaving} onClick={toggleLocationOff}
+            className={`relative shrink-0 w-11 h-6 rounded-full transition ${face.location_rule === 'off' ? 'bg-amber-500' : 'bg-slate-300'} disabled:opacity-60`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${face.location_rule === 'off' ? 'left-[22px]' : 'left-0.5'}`} />
+          </button>
         </div>
       )}
 

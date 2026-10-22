@@ -70,6 +70,12 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
   const [showOtForm, setShowOtForm] = useState(false);
   const [otForm, setOtForm] = useState({ date: todayStr, ranges: [{ from: '', to: '' }] });
   const [locationInfo, setLocationInfo] = useState(null); // { lat, lng, distance, inOffice, ip }
+  // Admin TẠM TẮT kiểm tra vị trí / Wi-Fi (face_config.location_rule = 'off') -> mọi lần chấm đều hợp lệ
+  const [locationOff, setLocationOff] = useState(false);
+  useEffect(() => {
+    supabase.from('face_config').select('location_rule').eq('id', 1).maybeSingle()
+      .then(({ data }) => setLocationOff(data?.location_rule === 'off'));
+  }, []);
 
   // ---- Chấm công KHUÔN MẶT (FACE_AI) ----
   const [faceMode, setFaceMode] = useState(null);      // null | 'CHECK_IN' | 'CHECK_OUT'
@@ -142,8 +148,8 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
         const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
         lat = pos.lat; lng = pos.lng; ip = ipAddr;
         const dist = calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-        const isGpsValid = dist <= OFFICE_RADIUS_M;
-        const isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
+        const isGpsValid = locationOff || dist <= OFFICE_RADIUS_M;
+        const isIpValid = locationOff || OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
         
         location_status = isGpsValid ? 'in_office' : 'outside';
         setLocationInfo({ lat, lng, distance: Math.round(dist), inOffice: isGpsValid, ip: ipAddr });
@@ -156,8 +162,11 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
           warningMsg = `Sai mạng Wi-Fi`;
         }
       } catch (gpsErr) {
-        toast.warning('Không lấy được vị trí — chấm công không có GPS');
-        warningMsg = 'Không bật định vị GPS hoặc lỗi mạng';
+        if (locationOff) location_status = 'in_office';
+        else {
+          toast.warning('Không lấy được vị trí — chấm công không có GPS');
+          warningMsg = 'Không bật định vị GPS hoặc lỗi mạng';
+        }
       }
 
       const { error } = await supabase.from('attendance').insert({
@@ -197,8 +206,8 @@ const AttendancePage = ({ autoScan = 0, onAutoScanDone }) => {
         const [pos, ipAddr] = await Promise.all([getLocation(), getPublicIP()]);
         lat = pos.lat; lng = pos.lng; ip = ipAddr;
         dist = calcDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-        isGpsValid = dist <= OFFICE_RADIUS_M;
-        isIpValid = OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
+        isGpsValid = locationOff || dist <= OFFICE_RADIUS_M;
+        isIpValid = locationOff || OFFICE_IPS.length === 0 || OFFICE_IPS.includes(ipAddr);
         
         if (!isGpsValid && !isIpValid) {
           warningMsg = `Sai vị trí (${Math.round(dist)}m) và sai mạng Wi-Fi`;
