@@ -1,8 +1,10 @@
 // ============================================================
 // media-telegram: gửi thông báo về NHÓM TELEGRAM MEDIA
-//   - Marketing Workspace: order mới, chuyển cột, giao việc, bình luận / @nhắc tên, chat, duyệt, xuất bản…
-//   - Editor up clip mới · clip được duyệt · clip lên Ads
-//   - Media thêm source / file mới vào Kho Media
+// MỌI thay đổi, mỗi thay đổi 1 câu "<Vai trò> <Tên> đã …":
+//   - Marketing Workspace: order mới, chuyển trạng thái (cột), giao việc, bình luận / @nhắc tên, chat, checklist,
+//     tệp, trạng thái nội dung, duyệt, xuất bản…
+//   - Clip: up mới, Ads duyệt / cần sửa / hoàn tất, duyệt chạy, Đang chạy / Tạm dừng, trạng thái Facebook, đăng bài, Win, điểm
+//   - Kho Media: source mới, đổi trạng thái source, file mới
 // Trigger trong DB chỉ ghi hàng đợi public.media_tg_outbox (supabase/media_telegram_notify.sql);
 // cron 'media-tg-1min' gọi hàm này mỗi phút KHI có tin chờ. Tin cùng thẻ / cùng source trong 1 lượt gom thành 1 tin.
 // Mỗi tin có nút "🔎 Xem chi tiết" mở app đúng mục (/?tab=…&focus=…).
@@ -30,6 +32,12 @@ const richText = (s: unknown, n: number) => esc(cut(String(s ?? '').replace(/@\[
   .replace(/\u0001([^\u0002]*)\u0002?/g, '<b>@$1</b>');
 const cleanName = (s: unknown) => String(s || '').replace(/^[\d.\-/\s]+/, '').trim() || String(s || '');
 const link = (tab: string, focus?: string | null) => `${APP_URL}/?tab=${encodeURIComponent(tab)}${focus ? `&focus=${encodeURIComponent(focus)}` : ''}`;
+// Tin quá dài (Telegram tối đa 4096 ký tự): cắt theo DÒNG để không vỡ thẻ HTML
+const fitHtml = (t: string) => {
+  if (t.length <= 4000) return t;
+  const head = t.slice(0, 3900);
+  return head.slice(0, Math.max(0, head.lastIndexOf('\n'))) + '\n… (còn nữa — mở app để xem)';
+};
 const isHttps = (u: unknown) => typeof u === 'string' && /^https:\/\/\S+$/.test(u);
 const vnTime = (iso?: string | null) => {
   if (!iso) return '';
@@ -43,8 +51,19 @@ const FIELD: Record<string, string> = { title: 'tên thẻ', description: 'mô t
 const PRIORITY: Record<string, string> = { low: 'Thấp', normal: 'Thường', high: 'Cao', urgent: 'Gấp' };
 const STEP: Record<string, string> = { medical: 'Y khoa', marketing: 'Marketing', compliance: 'Pháp lý', publisher: 'Người đăng' };
 const VKIND: Record<string, string> = { script: 'kịch bản', asset: 'tệp dựng', caption: 'caption' };
-const KHO: Record<string, string> = { dang_dung: 'Đang dựng', da_dung: 'Đã dùng', chua_dung: 'Chưa dùng' };
 const SOURCE_TYPE: Record<string, string> = { truoc_pt: 'Trước PT', sau_pt: 'Sau PT', beauty: 'Beauty', feedback: 'Feedback', tai_kham: 'Tái khám' };
+// Nhãn trạng thái — khớp app (ContentProductionPage, mwMeta)
+const ROLE: Record<string, string> = { telesale: 'Telesale', sale_offline: 'Sale', cskh: 'CSKH', truc_page: 'Trực page', media: 'Media', marketing: 'Marketing', editor: 'Editor', seeding: 'Seeding', dieu_duong: 'Điều dưỡng', accountant: 'Kế toán', shareholder: 'Cổ đông', admin: 'Admin', bac_si: 'Bác sĩ', designer: 'Designer' };
+const SRC_STATUS: Record<string, string> = { chua_dung: 'Chưa dựng', dang_dung: 'Đang dựng', da_dung: 'Đã dựng', loi: 'Source lỗi', can_bo_sung: 'Cần bổ sung' };
+const STAGE: Record<string, string> = { submitted: 'Chờ Ads duyệt', revision: 'Cần sửa', approved: 'Đã duyệt', done: 'Hoàn tất' };
+const AD_STATUS: Record<string, string> = { dang_chay: 'Đang chạy', tam_dung: 'Tạm dừng', chua_chay: 'Chưa chạy' };
+const AUTO_STATUS: Record<string, string> = { queued: 'Chờ tạo chiến dịch', created: 'Đã tạo chiến dịch', failed: 'Tạo chiến dịch lỗi' };
+const POST_STATUS: Record<string, string> = { queued: 'Chờ đăng', posted: 'Đã đăng', failed: 'Đăng lỗi' };
+const RESULT: Record<string, string> = { tot: 'Tốt', trung_binh: 'Trung bình', kem: 'Kém' };
+const FB_REVIEW = ['IN_PROCESS', 'PENDING_REVIEW', 'PREAPPROVED', 'PENDING_BILLING_INFO', 'WITH_ISSUES'];
+const fbLabel = (v: unknown) => (!v ? 'Chưa có' : v === 'ACTIVE' ? 'Đang chạy' : FB_REVIEW.includes(String(v)) ? 'Đang duyệt' : v === 'PAUSED' || v === 'CAMPAIGN_PAUSED' || v === 'ADSET_PAUSED' ? 'Tạm dừng' : `Đã tắt (${String(v)})`);
+const CONTENT_STATUS: Record<string, string> = { idea: 'Ý tưởng', brief: 'Brief', scripting: 'Viết kịch bản', production: 'Sản xuất', editing: 'Dựng / chỉnh sửa', in_review: 'Đang duyệt', revision_required: 'Cần sửa', rejected: 'Bị từ chối', approved: 'Đã duyệt', published: 'Đã đăng', archived: 'Lưu trữ' };
+const lbl = (m: Record<string, string>, v: unknown) => (v == null || v === '' ? 'Chưa có' : m[String(v)] || String(v));
 
 type Row = { id: number; kind: string; group_key: string | null; actor_id: string | null; payload: any; created_at: string };
 type Msg = { rows: Row[]; text: string; buttons: { text: string; url: string }[] };
@@ -53,7 +72,7 @@ async function tg(chatId: string, text: string, buttons: { text: string; url: st
   const r = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      chat_id: chatId, text: cut(text, 4000), parse_mode: 'HTML', disable_web_page_preview: true,
+      chat_id: chatId, text: fitHtml(text), parse_mode: 'HTML', disable_web_page_preview: true,
       ...(buttons.length ? { reply_markup: { inline_keyboard: [buttons.slice(0, 2)] } } : {}),
     }),
   });
@@ -72,34 +91,37 @@ const byId = async (table: string, cols: string, ids: unknown[]) => {
   }
   return out;
 };
+const groupBy = (rows: Row[], key: (r: Row) => string) => {
+  const m = new Map<string, Row[]>();
+  for (const r of rows) { const k = key(r); m.set(k, [...(m.get(k) || []), r]); }
+  return m;
+};
 
 // ================= Dựng tin =================
+// Mỗi thay đổi = 1 câu: "<Vai trò> <Tên> đã …" (VD: Content Ngoan đã tạo yêu cầu order mới: …)
 async function build(rows: Row[]): Promise<Msg[]> {
-  const P = (k: string) => rows.filter(r => r.kind === k);
+  const P = (...k: string[]) => rows.filter(r => k.includes(r.kind));
   const mw = P('mw'), chat = P('mw_chat');
-  const clipRows = [...P('clip_new'), ...P('clip_approved'), ...P('clip_running')];
-  const srcRows = P('kho_source'), fileRows = P('kho_file');
+  const clipRows = P('clip_new', 'clip_status', 'clip_approved', 'clip_running');
+  const khoRows = P('kho_source', 'kho_status', 'kho_file');
 
   // ---- nạp dữ liệu 1 lần ----
   const commentIds = mw.filter(r => r.payload.entity === 'comment' && r.payload.action === 'created').map(r => r.payload.entity_id);
   const comments = await byId('mw_comments', 'id, body, deleted_at', commentIds);
-  const taskIds = mw.map(r => r.payload.task_id);
-  const tasks = await byId('mw_tasks', '*', taskIds);
+  const tasks = await byId('mw_tasks', '*', mw.map(r => r.payload.task_id));
   const boards = await byId('mw_boards', 'id, name, workspace_id', [...tasks.values()].map(t => t.board_id));
   const lists = await byId('mw_lists', 'id, name', [...tasks.values()].map(t => t.list_id));
   const wss = await byId('mw_workspaces', 'id, name', [...mw, ...chat].map(r => r.payload.workspace_id));
   const labels = await byId('mw_labels', 'id, name', mw.filter(r => r.payload.entity === 'label').map(r => r.payload.entity_id));
-  const contentIds = mw.map(r => r.payload.detail?.content_id);
-  const contents = await byId('mw_contents', 'id, title', contentIds);
+  const contents = await byId('mw_contents', 'id, title', mw.map(r => r.payload.detail?.content_id));
   const assignees = new Map<string, string[]>();
   if (tasks.size) {
     const { data } = await db.from('mw_task_assignees').select('task_id, user_id').in('task_id', [...tasks.keys()]);
     for (const a of data || []) assignees.set(a.task_id, [...(assignees.get(a.task_id) || []), a.user_id]);
   }
   const clips = await byId('media_clips', '*', clipRows.map(r => r.payload.clip_id));
-  const srcIds = [...srcRows.map(r => r.payload.source_id), ...fileRows.map(r => r.payload.source_id), ...[...clips.values()].map(c => c.media_customer_id)];
-  const sources = await byId('media_customers', '*', srcIds);
-  const peopleIds = [
+  const sources = await byId('media_customers', '*', [...khoRows.map(r => r.payload.source_id), ...[...clips.values()].map(c => c.media_customer_id)]);
+  const people = await byId('profiles', 'id, full_name, role, position', [
     ...rows.map(r => r.actor_id),
     ...mw.filter(r => ['assignee', 'member'].includes(r.payload.entity)).map(r => r.payload.entity_id),
     ...[...assignees.values()].flat(),
@@ -107,183 +129,196 @@ async function build(rows: Row[]): Promise<Msg[]> {
     ...chat.flatMap(r => mentionIds(r.payload.body)),
     ...[...clips.values()].flatMap(c => [c.editor_id, c.ads_id]),
     ...[...sources.values()].map(s => s.media_id),
-  ];
-  const people = await byId('profiles', 'id, full_name', peopleIds);
-  const who = (id?: string | null) => (id ? people.get(id)?.full_name || 'Nhân sự' : 'Hệ thống');
+  ]);
+  const name = (id?: string | null) => (id ? people.get(id)?.full_name || 'Nhân sự' : '');
+  // "Editor Vũ Minh Sỹ" — chức danh (position) nếu có, không thì vai trò
+  const who = (id?: string | null, fallback = 'Hệ thống') => {
+    const p = id ? people.get(id) : null;
+    if (!p) return `<b>${fallback}</b>`;
+    const pos = String(p.position || '').trim();
+    const role = pos && pos.length <= 20 && !/outsource/i.test(pos) ? pos : ROLE[String(p.role)] || '';
+    return `<b>${esc([role, p.full_name].filter(Boolean).join(' '))}</b>`;
+  };
+  const B = (s: unknown) => `<b>${esc(s)}</b>`;
   const msgs: Msg[] = [];
 
   // ---- Marketing Workspace: gom theo thẻ (hoặc theo workspace + loại) ----
-  const groups = new Map<string, Row[]>();
-  for (const r of mw) groups.set(r.group_key || String(r.id), [...(groups.get(r.group_key || String(r.id)) || []), r]);
-  for (const [, g] of groups) {
+  for (const [, g] of groupBy(mw, r => r.group_key || String(r.id))) {
     const p0 = g[0].payload;
     const ws = wss.get(p0.workspace_id);
     const t = p0.task_id ? tasks.get(p0.task_id) : null;
+    const T = B(t?.title || g.find(r => r.payload.detail?.title)?.payload.detail.title || 'thẻ');
     const mentioned = new Set<string>();
     let isNew = false;
     const lines = g.map(r => {
       const p = r.payload, d = p.detail || {};
-      const k = `${p.entity}.${p.action}`;
-      let s: string;
-      switch (k) {
-        case 'task.created': isNew = true; s = `tạo order mới “${esc(d.title)}”`; break;
-        case 'task.moved': s = `chuyển cột <b>${esc(d.from || '?')}</b> → <b>${esc(d.to || '?')}</b>`; break;
-        case 'task.archived': s = 'lưu trữ thẻ'; break;
-        case 'task.restored': s = 'khôi phục thẻ'; break;
-        case 'task.updated': s = `sửa ${(d.fields || []).map((f: string) => FIELD[f] || f).join(', ')}${d.due_at ? ` → ${vnTime(d.due_at)}` : ''}`; break;
-        case 'assignee.added': mentioned.add(p.entity_id); s = `giao việc cho <b>${esc(who(p.entity_id))}</b>`; break;
-        case 'assignee.removed': s = `bỏ giao ${esc(who(p.entity_id))}`; break;
-        case 'label.added': s = `gắn nhãn “${esc(labels.get(p.entity_id)?.name || '')}”`; break;
-        case 'label.removed': s = `gỡ nhãn “${esc(labels.get(p.entity_id)?.name || '')}”`; break;
-        case 'checklist.added': s = `thêm checklist “${esc(d.title)}”`; break;
-        case 'checklist.checked': s = `✔ xong “${esc(d.title)}”`; break;
-        case 'checklist.unchecked': s = `bỏ xong “${esc(d.title)}”`; break;
-        case 'checklist.updated': s = `sửa checklist “${esc(d.title)}”`; break;
+      const A = p.auto ? '<b>Automation (tự động)</b>' : who(r.actor_id);
+      switch (`${p.entity}.${p.action}`) {
+        case 'task.created': isNew = true; return `🆕 ${A} đã tạo yêu cầu order mới: ${B(d.title)}`;
+        case 'task.moved': return `🔄 ${A} đã chuyển trạng thái ${T} từ ${esc(d.from || '?')} thành ${B(d.to || '?')}`;
+        case 'task.archived': return `🗄 ${A} đã lưu trữ ${T}`;
+        case 'task.restored': return `♻️ ${A} đã khôi phục ${T}`;
+        case 'task.updated': return `✏️ ${A} đã sửa ${(d.fields || []).map((f: string) => FIELD[f] || f).join(', ')} của ${T}${d.due_at ? ` → ${vnTime(d.due_at)}` : ''}`;
+        case 'assignee.added': mentioned.add(p.entity_id); return `👤 ${A} đã giao ${T} cho ${B(name(p.entity_id))}`;
+        case 'assignee.removed': return `👤 ${A} đã bỏ giao ${T} cho ${esc(name(p.entity_id))}`;
+        case 'label.added': return `🏷 ${A} đã gắn nhãn “${esc(labels.get(p.entity_id)?.name || '')}” cho ${T}`;
+        case 'label.removed': return `🏷 ${A} đã gỡ nhãn “${esc(labels.get(p.entity_id)?.name || '')}” khỏi ${T}`;
+        case 'checklist.added': return `☑️ ${A} đã thêm việc “${esc(d.title)}” vào ${T}`;
+        case 'checklist.checked': return `✅ ${A} đã hoàn thành “${esc(d.title)}” trong ${T}`;
+        case 'checklist.unchecked': return `↩️ ${A} đã bỏ hoàn thành “${esc(d.title)}” trong ${T}`;
+        case 'checklist.updated': return `☑️ ${A} đã sửa việc “${esc(d.title)}” trong ${T}`;
         case 'comment.created': {
           const c = comments.get(p.entity_id);
           mentionIds(c?.body).forEach(id => mentioned.add(id));
-          s = c && !c.deleted_at ? `bình luận: “${richText(c.body, 300)}”` : 'bình luận';
-          break;
+          return `💬 ${A} đã bình luận ở ${T}${c && !c.deleted_at ? `: “${richText(c.body, 300)}”` : ''}`;
         }
-        case 'comment.edited': s = 'sửa bình luận'; break;
-        case 'comment.deleted': s = 'xoá bình luận'; break;
-        case 'attachment.added': s = `đính kèm “${esc(d.name)}”`; break;
-        case 'attachment.removed': s = `gỡ tệp “${esc(d.name)}”`; break;
-        case 'source.added': s = `gắn source Kho <b>${esc(d.code || '')}</b>`; break;
-        case 'source.removed': s = 'gỡ source Kho'; break;
-        case 'kho.source_status': s = `cập nhật ${d.count || ''} source Kho → <b>${esc(KHO[d.status] || d.status)}</b>`; break;
-        case 'workspace.created': s = `tạo workspace “${esc(d.name)}”`; break;
-        case 'board.created': s = `tạo board “${esc(d.name)}”`; break;
-        case 'member.insert': mentioned.add(p.entity_id); s = `thêm thành viên <b>${esc(who(p.entity_id))}</b>`; break;
-        case 'member.update': s = `đổi vai trò ${esc(who(p.entity_id))}`; break;
-        case 'member.delete': s = `gỡ thành viên ${esc(who(p.entity_id))}`; break;
-        case 'content_version.created': s = `thêm ${VKIND[d.kind] || esc(d.kind)} v${esc(d.revision)} cho “${esc(contents.get(d.content_id)?.title || '')}”${d.invalidated_runs ? ' — duyệt cũ mất hiệu lực' : ''}`; break;
-        case 'consent.created': s = 'thêm hồ sơ consent'; break;
-        case 'consent.revoked': s = '⚠️ thu hồi consent'; break;
-        case 'consent.verified': s = 'xác minh consent'; break;
-        case 'consent.updated': s = 'cập nhật consent'; break;
-        case 'approval.submitted': s = `gửi duyệt “${esc(contents.get(d.content_id)?.title || '')}”`; break;
-        case 'approval_step.approve': s = `✅ duyệt bước ${STEP[d.kind] || esc(d.kind)}`; break;
-        case 'approval_step.revision': s = `✏️ yêu cầu sửa (${STEP[d.kind] || esc(d.kind)}): ${esc(cut(d.note || '', 200))}`; break;
-        case 'approval_step.reject': s = `⛔ từ chối (${STEP[d.kind] || esc(d.kind)}): ${esc(cut(d.note || '', 200))}`; break;
-        case 'publication.scheduled': s = `lên lịch đăng ${vnTime(d.at)}`; break;
-        case 'publication.blocked': s = `⛔ chặn đăng: ${esc(d.reason)}`; break;
-        case 'publication.proof_submitted': s = 'nộp link bằng chứng đã đăng'; break;
-        case 'publication.verified': s = '✅ xác minh bài đã đăng'; break;
-        case 'publication.verification_failed': s = `xác minh không đạt: ${esc(d.note)}`; break;
-        case 'publication.cancelled': s = 'huỷ bài đăng'; break;
-        default: s = `${esc(p.entity)} · ${esc(p.action)}`;
+        case 'comment.edited': return `💬 ${A} đã sửa bình luận ở ${T}`;
+        case 'comment.deleted': return `💬 ${A} đã xoá bình luận ở ${T}`;
+        case 'attachment.added': return `📎 ${A} đã đính kèm “${esc(d.name)}” vào ${T}`;
+        case 'attachment.removed': return `📎 ${A} đã gỡ tệp “${esc(d.name)}” khỏi ${T}`;
+        case 'source.added': return `🎞 ${A} đã gắn source Kho ${B(d.code || '')} vào ${T}`;
+        case 'source.removed': return `🎞 ${A} đã gỡ source Kho khỏi ${T}`;
+        case 'kho.source_status': return null;   // đã báo ở tin trạng thái source Kho
+        case 'content.status': return `🎬 ${A} đã chuyển trạng thái nội dung ${B(d.title)} từ ${esc(lbl(CONTENT_STATUS, d.from))} thành ${B(lbl(CONTENT_STATUS, d.to))}`;
+        case 'workspace.created': return `🗂 ${A} đã tạo workspace ${B(d.name)}`;
+        case 'board.created': return `🗂 ${A} đã tạo board ${B(d.name)}`;
+        case 'member.insert': mentioned.add(p.entity_id); return `👥 ${A} đã thêm thành viên ${B(name(p.entity_id))}`;
+        case 'member.update': return `👥 ${A} đã đổi vai trò của ${esc(name(p.entity_id))}`;
+        case 'member.delete': return `👥 ${A} đã gỡ thành viên ${esc(name(p.entity_id))}`;
+        case 'content_version.created': return `🆙 ${A} đã thêm ${VKIND[d.kind] || esc(d.kind)} v${esc(d.revision)} cho ${B(contents.get(d.content_id)?.title || '')}${d.invalidated_runs ? ' — duyệt cũ mất hiệu lực' : ''}`;
+        case 'consent.created': return `📄 ${A} đã thêm hồ sơ consent`;
+        case 'consent.revoked': return `⚠️ ${A} đã thu hồi consent`;
+        case 'consent.verified': return `📄 ${A} đã xác minh consent`;
+        case 'consent.updated': return `📄 ${A} đã cập nhật consent`;
+        case 'approval.submitted': return `🛡️ ${A} đã gửi duyệt ${B(contents.get(d.content_id)?.title || '')}`;
+        case 'approval_step.approve': return `✅ ${A} đã duyệt bước ${STEP[d.kind] || esc(d.kind)}`;
+        case 'approval_step.revision': return `✏️ ${A} đã yêu cầu sửa (${STEP[d.kind] || esc(d.kind)}): ${esc(cut(d.note || '', 200))}`;
+        case 'approval_step.reject': return `⛔ ${A} đã từ chối (${STEP[d.kind] || esc(d.kind)}): ${esc(cut(d.note || '', 200))}`;
+        case 'publication.scheduled': return `📅 ${A} đã lên lịch đăng ${vnTime(d.at)}`;
+        case 'publication.blocked': return `⛔ Bài đăng bị chặn: ${esc(d.reason)}`;
+        case 'publication.proof_submitted': return `🔗 ${A} đã nộp link bằng chứng đã đăng`;
+        case 'publication.verified': return `✅ ${A} đã xác minh bài đã đăng`;
+        case 'publication.verification_failed': return `⚠️ ${A} đã đánh dấu xác minh không đạt: ${esc(d.note)}`;
+        case 'publication.cancelled': return `🚫 ${A} đã huỷ bài đăng`;
+        default: return `• ${A} ${esc(p.entity)} · ${esc(p.action)}`;
       }
-      return `• <b>${esc(who(r.actor_id))}</b> ${s}`;
-    });
-    let head: string, focus: string;
-    const where = [ws?.name].filter(Boolean).map(esc).join('');
+    }).filter(Boolean) as string[];
+    if (!lines.length) continue;
+    const where = esc(ws?.name || '');
+    const shown = [...lines.slice(0, 20), lines.length > 20 ? `… và ${lines.length - 20} thay đổi khác` : ''].filter(Boolean);
     if (t) {
       const b = boards.get(t.board_id);
-      head = isNew ? '🆕 <b>ORDER NỘI DUNG MỚI</b>' : mentioned.size ? '🏷️ <b>CÓ NGƯỜI ĐƯỢC NHẮC TÊN / GIAO VIỆC</b>' : '📋 <b>CẬP NHẬT WORKSPACE</b>';
-      const ass = (assignees.get(t.id) || []).map(who);
+      const ass = (assignees.get(t.id) || []).map(name);
       const info = [
-        `📌 <b>${esc(t.title)}</b>`,
-        `🗂 ${where}${b ? ` › ${esc(b.name)}` : ''}${lists.get(t.list_id) ? ` › <b>${esc(lists.get(t.list_id).name)}</b>` : ''}`,
+        `🗂 ${where}${b ? ` › ${esc(b.name)}` : ''}${lists.get(t.list_id) ? ` › Trạng thái: <b>${esc(lists.get(t.list_id).name)}</b>` : ''}`,
         ass.length ? `👤 Thực hiện: ${ass.map(esc).join(', ')}` : '',
         t.due_at ? `⏰ Hạn: ${vnTime(t.due_at)}` : '',
         t.priority && t.priority !== 'normal' ? `⚡ Ưu tiên: ${PRIORITY[t.priority] || esc(t.priority)}` : '',
         isNew && t.description ? `📝 ${richText(t.description, 400)}` : '',
+        mentioned.size ? `🔔 Nhắc / giao: ${[...mentioned].map(id => B(name(id))).join(', ')}` : '',
       ].filter(Boolean);
-      focus = `task:${t.id}`;
-      msgs.push({ rows: g, text: [head, ...info, '', ...lines.slice(-20), lines.length > 20 ? `… và ${lines.length - 20} thay đổi khác` : '',
-        mentioned.size ? `\n🔔 Nhắc / giao: ${[...mentioned].map(id => `<b>${esc(who(id))}</b>`).join(', ')}` : ''].filter(Boolean).join('\n'),
-        buttons: [{ text: '🔎 Xem chi tiết', url: link('mkt_workspace', focus) }] });
+      msgs.push({ rows: g, text: [...shown, '', ...info].join('\n'), buttons: [{ text: '🔎 Xem chi tiết', url: link('mkt_workspace', `task:${t.id}`) }] });
     } else {
       const d = p0.detail || {};
-      focus = p0.entity === 'approval' ? `approval:${p0.entity_id}` : p0.entity === 'approval_step' && d.run_id ? `approval:${d.run_id}`
+      const focus = p0.entity === 'approval' ? `approval:${p0.entity_id}` : p0.entity === 'approval_step' && d.run_id ? `approval:${d.run_id}`
         : d.content_id ? `content:${d.content_id}` : p0.entity === 'publication' ? `ws:${p0.workspace_id}:publishing` : `ws:${p0.workspace_id}`;
-      head = p0.entity.startsWith('approval') ? '🛡️ <b>DUYỆT NỘI DUNG</b>' : p0.entity === 'publication' ? '📣 <b>XUẤT BẢN</b>' : '📋 <b>CẬP NHẬT WORKSPACE</b>';
-      msgs.push({ rows: g, text: [head, `🗂 ${where}`, '', ...lines.slice(-20)].join('\n'), buttons: [{ text: '🔎 Xem chi tiết', url: link('mkt_workspace', focus) }] });
+      msgs.push({ rows: g, text: [...shown, '', `🗂 ${where}`].join('\n'), buttons: [{ text: '🔎 Xem chi tiết', url: link('mkt_workspace', focus) }] });
     }
   }
 
   // ---- Chat workspace ----
-  const chatGroups = new Map<string, Row[]>();
-  for (const r of chat) chatGroups.set(r.payload.workspace_id, [...(chatGroups.get(r.payload.workspace_id) || []), r]);
-  for (const [wsId, g] of chatGroups) {
+  for (const [wsId, g] of groupBy(chat, r => r.payload.workspace_id)) {
     const ment = new Set(g.flatMap(r => mentionIds(r.payload.body)));
     msgs.push({ rows: g, text: [
-      ment.size ? '🏷️ <b>CHAT — CÓ NGƯỜI ĐƯỢC NHẮC TÊN</b>' : '💬 <b>CHAT WORKSPACE</b>',
-      `🗂 ${esc(wss.get(wsId)?.name || '')}`, '',
-      ...g.slice(-15).map(r => `• <b>${esc(who(r.actor_id))}</b>: ${richText(r.payload.body, 300)}`),
-      ment.size ? `\n🔔 Nhắc: ${[...ment].map(id => `<b>${esc(who(id))}</b>`).join(', ')}` : '',
+      ...g.slice(-15).map(r => `💬 ${who(r.actor_id)} đã nhắn trong chat ${B(wss.get(wsId)?.name || '')}: “${richText(r.payload.body, 300)}”`),
+      ment.size ? `\n🔔 Nhắc: ${[...ment].map(id => B(name(id))).join(', ')}` : '',
     ].filter(Boolean).join('\n'), buttons: [{ text: '💬 Mở chat', url: link('mkt_workspace', `chat:${wsId}`) }] });
   }
 
-  // ---- Clip ----
-  const srcLine = (s: any) => (s ? `🎞 Source: <b>${esc(s.source_id || cleanName(s.customer_name))}</b>${s.source_id && s.customer_name ? ` — ${esc(cleanName(s.customer_name))}` : ''}${s.service ? ` · ${esc(s.service)}` : ''}` : '');
-  for (const r of clipRows) {
-    const c = clips.get(r.payload.clip_id);
+  // ---- Clip: up mới + mọi thay đổi trạng thái, gom theo clip ----
+  const srcName = (s: any) => (s ? esc(s.source_id || cleanName(s.customer_name)) : '');
+  const srcLine = (s: any) => (s ? `🎞 Source: <b>${srcName(s)}</b>${s.source_id && s.customer_name ? ` — ${esc(cleanName(s.customer_name))}` : ''}${s.service ? ` · ${esc(s.service)}` : ''}` : '');
+  for (const [, g] of groupBy(clipRows, r => String(r.payload.clip_id))) {
+    const c = clips.get(String(g[0].payload.clip_id));
     if (!c) continue;
     const s = sources.get(c.media_customer_id);
     const meta = [c.video_version, c.video_format, c.platform, c.video_goal].filter(Boolean).map(esc).join(' · ');
+    const C = `<b>${esc(c.title || 'clip')}</b>`;
+    const lines = g.map(r => {
+      const A = who(r.actor_id);
+      if (r.kind === 'clip_new') return `🎬 ${who(r.actor_id || c.editor_id)} đã up clip mới: ${C}${meta ? ` (${meta})` : ''}`;
+      if (r.kind === 'clip_approved') return `✅ ${A} đã duyệt clip ${C}`;
+      if (r.kind === 'clip_running') return `🚀 Clip ${C} đã lên Ads`;
+      const { field: f, from, to } = r.payload;
+      switch (f) {
+        case 'stage': return `🔄 ${A} đã chuyển trạng thái clip ${C} từ ${esc(lbl(STAGE, from))} thành ${B(lbl(STAGE, to))}`;
+        case 'approved_to_run': return to ? `▶️ ${A} đã duyệt cho chạy Ads clip ${C}` : `⏸ ${A} đã bỏ duyệt chạy Ads clip ${C}`;
+        case 'ad_status': return `🚀 ${A} đã chuyển trạng thái Ads của clip ${C} từ ${esc(lbl(AD_STATUS, from))} thành ${B(lbl(AD_STATUS, to))}`;
+        case 'fb_status': return `📡 Facebook: chiến dịch của clip ${C} chuyển từ ${esc(fbLabel(from))} thành ${B(fbLabel(to))}`;
+        case 'ads_auto_status': return `⚙️ Chiến dịch tự động của clip ${C}: ${B(lbl(AUTO_STATUS, to))}${to === 'failed' && c.ads_error ? ` — ${esc(cut(String(c.ads_error), 200))}` : ''}`;
+        case 'post_status': return `📣 Đăng bài clip ${C}: ${B(lbl(POST_STATUS, to))}`;
+        case 'result_status': return `📊 ${A} đã đánh giá kết quả clip ${C}: ${B(lbl(RESULT, to))}`;
+        case 'win': return to === true ? `🏆 ${A} đã đánh dấu clip ${C} là ${B('WIN')}` : from === true ? `${A} đã bỏ WIN của clip ${C}` : null;
+        case 'score': return to == null ? null : `⭐ ${A} đã chấm clip ${C}: ${B(`${to}/10`)}`;
+        default: return `🔄 ${A} đã đổi ${esc(f)} của clip ${C}: ${esc(from)} → ${B(to)}`;
+      }
+    }).filter(Boolean) as string[];
+    if (!lines.length) continue;
     const first = (c.clip_links || []).find(isHttps);
-    const name = esc(c.title || 'Clip');
-    let text: string;
-    if (r.kind === 'clip_new') {
-      text = ['🎬 <b>EDITOR UP CLIP MỚI</b>', `📹 <b>${name}</b>${meta ? ` (${meta})` : ''}`, srcLine(s), `✂️ Editor: <b>${esc(who(c.editor_id || r.actor_id))}</b>`,
-        (c.clip_links || []).length > 1 ? `🔗 ${(c.clip_links || []).length} link clip` : '',
-        c.editor_note ? `📝 ${richText(c.editor_note, 300)}` : '', 'Ads vào chấm / duyệt nhé!'].filter(Boolean).join('\n');
-    } else if (r.kind === 'clip_approved') {
-      text = ['✅ <b>VIDEO ĐÃ ĐƯỢC DUYỆT</b>', `📹 <b>${name}</b>${meta ? ` (${meta})` : ''}`, srcLine(s),
-        `✂️ Editor: ${esc(who(c.editor_id))} · Duyệt: <b>${esc(who(r.actor_id || c.ads_id))}</b>`,
-        c.win ? '🏆 WIN' : c.score ? `⭐ Điểm: ${c.score}/10` : '',
-        c.approved_to_run ? '▶️ Đã duyệt chạy Ads' : '', c.ads_feedback ? `💬 ${richText(c.ads_feedback, 300)}` : ''].filter(Boolean).join('\n');
-    } else {
-      text = ['🚀 <b>VIDEO ĐÃ LÊN ADS</b>', `📹 <b>${name}</b>${meta ? ` (${meta})` : ''}`, srcLine(s),
-        `✂️ Editor: ${esc(who(c.editor_id))}${c.ads_id ? ` · Ads: <b>${esc(who(c.ads_id))}</b>` : ''}`,
-        c.ads_page_name ? `📄 Page: ${esc(c.ads_page_name)}` : '', c.fb_status ? `📡 Facebook: ${esc(c.fb_status)}` : '',
-        c.ads_run_at ? `🕒 Chạy từ: ${vnTime(c.ads_run_at)}` : ''].filter(Boolean).join('\n');
-    }
-    msgs.push({ rows: [r], text, buttons: [{ text: '🔎 Xem chi tiết', url: link('content_video', c.id) }, ...(first ? [{ text: '▶️ Mở video', url: first }] : [])] });
+    const scored = g.some(r => ['score', 'win', 'stage', 'result_status'].includes(r.payload.field));
+    msgs.push({ rows: g, text: [...lines, '', srcLine(s),
+      `✂️ Editor: ${esc(name(c.editor_id) || '—')}${c.ads_id ? ` · Ads: ${esc(name(c.ads_id))}` : ''}`,
+      `📌 Hiện tại: ${lbl(STAGE, c.stage)}${c.approved_to_run ? ' · đã duyệt chạy' : ''}${c.ad_status ? ` · Ads ${lbl(AD_STATUS, c.ad_status)}` : ''}${c.fb_status ? ` · FB ${fbLabel(c.fb_status)}` : ''}`,
+      g.some(r => r.kind === 'clip_new') && c.editor_note ? `📝 ${richText(c.editor_note, 300)}` : '',
+      scored && c.ads_feedback ? `💬 Ads góp ý: ${richText(c.ads_feedback, 300)}` : '',
+    ].filter(Boolean).join('\n'), buttons: [{ text: '🔎 Xem chi tiết', url: link('content_video', c.id) }, ...(first ? [{ text: '▶️ Mở video', url: first }] : [])] });
   }
 
-  // ---- Kho Media: source mới (+ file của chính source đó) ----
-  const filesBySrc = new Map<string, Row[]>();
-  for (const r of fileRows) { const k = String(r.payload.source_id || 'none'); filesBySrc.set(k, [...(filesBySrc.get(k) || []), r]); }
+  // ---- Kho Media: source mới / đổi trạng thái source / file mới, gom theo source ----
   const fileSummary = (fs: Row[]) => {
     const v = fs.filter(f => f.payload.kind === 'video').length, i = fs.filter(f => f.payload.kind === 'image').length, o = fs.length - v - i;
     return [v && `${v} video`, i && `${i} ảnh`, o && `${o} tệp`].filter(Boolean).join(' · ');
   };
-  for (const r of srcRows) {
-    const s = sources.get(r.payload.source_id);
-    if (!s) continue;
-    const fs = filesBySrc.get(String(s.id)) || [];
-    filesBySrc.delete(String(s.id));
-    const drive = (s.source_links || []).find(isHttps);
-    const types = (s.source_types || []).map((x: string) => SOURCE_TYPE[x] || x);
-    msgs.push({ rows: [r, ...fs], text: [
-      '📥 <b>MEDIA THÊM SOURCE MỚI VÀO KHO</b>',
-      `🎞 <b>${esc(s.source_id || cleanName(s.customer_name))}</b>`,
-      s.customer_name ? `👤 Khách: ${esc(cleanName(s.customer_name))}` : '',
-      s.service ? `💉 Dịch vụ: ${esc(s.service)}` : '', s.shoot_date ? `📅 Ngày quay: ${vnDate(s.shoot_date)}` : '',
-      `📸 Media: <b>${esc(who(s.media_id || r.actor_id))}</b>${s.media_in_charge ? ` (+ ${esc(s.media_in_charge)})` : ''}`,
-      types.length ? `🏷 Loại: ${types.map(esc).join(', ')}` : '', (s.tags || []).length ? `#️⃣ ${(s.tags || []).map(esc).join(', ')}` : '',
-      fs.length ? `📂 ${fileSummary(fs)}` : (s.source_video_count || s.source_image_count) ? `📂 ${s.source_video_count || 0} video · ${s.source_image_count || 0} ảnh` : '',
-      s.no_image ? '⛔ <b>KHÔNG ĐƯỢC SỬ DỤNG HÌNH ẢNH</b>' : '', s.hide_face ? '🙈 Phải che mặt' : '',
-      s.note ? `📝 ${richText(s.note, 300)}` : '',
-    ].filter(Boolean).join('\n'), buttons: [{ text: '🔎 Xem trong Kho', url: link('content_kho', s.id) }, ...(drive ? [{ text: '📂 Mở Drive', url: drive }] : [])] });
-  }
-  // ---- Kho Media: file mới vào source có sẵn ----
-  const fileGroups = [...filesBySrc.entries()];
-  const fileMsg = (sid: string, fs: Row[]) => {
+  const khoGroups = [...groupBy(khoRows, r => String(r.payload.source_id || 'none')).entries()];
+  const fileOnly = khoGroups.filter(([, g]) => g.every(r => r.kind === 'kho_file'));
+  const bulk = fileOnly.length > 6;   // quét Drive hàng loạt -> 1 tin tổng hợp
+  for (const [sid, g] of khoGroups) {
+    if (bulk && fileOnly.some(([k]) => k === sid)) continue;
     const s = sources.get(sid);
-    return [`📂 <b>+${fs.length} FILE MỚI VÀO KHO</b> — ${s ? `<b>${esc(s.source_id || cleanName(s.customer_name))}</b>` : 'chưa gắn source'} (${fileSummary(fs)})`,
-      ...fs.slice(0, 5).map(f => `• ${esc(cut(String(f.payload.name || ''), 80))}`), fs.length > 5 ? `… và ${fs.length - 5} file khác` : ''].filter(Boolean).join('\n');
-  };
-  if (fileGroups.length > 6) {   // quét Drive hàng loạt -> 1 tin tổng hợp
-    const total = fileGroups.reduce((n, [, fs]) => n + fs.length, 0);
-    msgs.push({ rows: fileGroups.flatMap(([, fs]) => fs), text: [`📂 <b>+${total} FILE MỚI VÀO KHO MEDIA</b> (${fileGroups.length} source)`,
-      ...fileGroups.slice(0, 15).map(([sid, fs]) => { const s = sources.get(sid); return `• ${s ? esc(s.source_id || cleanName(s.customer_name)) : 'chưa gắn source'}: ${fileSummary(fs)}`; }),
-      fileGroups.length > 15 ? `… và ${fileGroups.length - 15} source khác` : ''].filter(Boolean).join('\n'), buttons: [{ text: '🔎 Mở Kho Media', url: link('content_kho') }] });
-  } else {
-    for (const [sid, fs] of fileGroups) msgs.push({ rows: fs, text: fileMsg(sid, fs), buttons: [{ text: '🔎 Xem trong Kho', url: link('content_kho', sid !== 'none' ? sid : null) }] });
+    const S = s ? `<b>${srcName(s)}</b>` : 'chưa gắn source';
+    const fs = g.filter(r => r.kind === 'kho_file');
+    const lines: string[] = [];
+    let isNew = false;
+    for (const r of g) {
+      if (r.kind === 'kho_source') { isNew = true; lines.push(`📥 ${who(r.actor_id || s?.media_id)} đã thêm source mới vào Kho Media: ${S}`); }
+      if (r.kind === 'kho_status') lines.push(`🔄 ${who(r.actor_id)} đã chuyển trạng thái source ${S} từ ${esc(lbl(SRC_STATUS, r.payload.from))} thành ${B(lbl(SRC_STATUS, r.payload.to))}`);
+    }
+    if (fs.length) {
+      const actors = [...new Set(fs.map(f => f.actor_id))];
+      lines.push(`📂 ${actors.length === 1 ? who(actors[0]) : '<b>Media</b>'} đã thêm ${fs.length} file mới vào source ${S} (${fileSummary(fs)})${isNew ? '' : ':'}`);
+      if (!isNew) lines.push(...fs.slice(0, 5).map(f => `   • ${esc(cut(String(f.payload.name || ''), 80))}`), ...(fs.length > 5 ? [`   … và ${fs.length - 5} file khác`] : []));
+    }
+    if (!lines.length) continue;
+    const drive = (s?.source_links || []).find(isHttps);
+    const types = (s?.source_types || []).map((x: string) => SOURCE_TYPE[x] || x);
+    const info = s ? [
+      s.customer_name ? `👤 Khách: ${esc(cleanName(s.customer_name))}` : '',
+      [s.service && `💉 ${esc(s.service)}`, s.shoot_date && `📅 Quay ${vnDate(s.shoot_date)}`].filter(Boolean).join(' · '),
+      isNew ? `📸 Media: ${esc(name(s.media_id) || '—')}${s.media_in_charge ? ` (+ ${esc(s.media_in_charge)})` : ''}` : '',
+      isNew && types.length ? `🏷 Loại: ${types.map(esc).join(', ')}` : '', isNew && (s.tags || []).length ? `#️⃣ ${(s.tags || []).map(esc).join(', ')}` : '',
+      isNew && !fs.length && (s.source_video_count || s.source_image_count) ? `📂 ${s.source_video_count || 0} video · ${s.source_image_count || 0} ảnh` : '',
+      `📌 Trạng thái: ${lbl(SRC_STATUS, s.source_status || 'chua_dung')}`,
+      s.no_image ? '⛔ <b>KHÔNG ĐƯỢC SỬ DỤNG HÌNH ẢNH</b>' : '', s.hide_face ? '🙈 Phải che mặt' : '',
+      isNew && s.note ? `📝 ${richText(s.note, 300)}` : '',
+    ].filter(Boolean) : [];
+    msgs.push({ rows: g, text: [...lines, ...(info.length ? ['', ...info] : [])].join('\n'),
+      buttons: [{ text: '🔎 Xem trong Kho', url: link('content_kho', s ? s.id : null) }, ...(drive ? [{ text: '📂 Mở Drive', url: drive }] : [])] });
+  }
+  if (bulk) {
+    const total = fileOnly.reduce((n, [, g]) => n + g.length, 0);
+    msgs.push({ rows: fileOnly.flatMap(([, g]) => g), text: [`📂 <b>+${total} file mới vào Kho Media</b> (${fileOnly.length} source)`,
+      ...fileOnly.slice(0, 15).map(([sid, g]) => `• ${sources.get(sid) ? srcName(sources.get(sid)) : 'chưa gắn source'}: ${fileSummary(g)}`),
+      fileOnly.length > 15 ? `… và ${fileOnly.length - 15} source khác` : ''].filter(Boolean).join('\n'), buttons: [{ text: '🔎 Mở Kho Media', url: link('content_kho') }] });
   }
   return msgs;
 }
@@ -302,7 +337,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await auth.auth.getUser();
     const { data: me } = user ? await db.from('profiles').select('role').eq('id', user.id).maybeSingle() : { data: null };
     if (String(me?.role || '') !== 'admin') return json({ error: 'Chỉ Admin gửi tin thử' }, 403);
-    try { await tg(chatId, '✅ <b>Kết nối thành công</b>\nNhóm này sẽ nhận thông báo Marketing Workspace, clip mới / duyệt / lên Ads và Kho Media.', [{ text: '🔎 Mở app', url: link('mkt_workspace') }]); return json({ ok: true }); }
+    try { await tg(chatId, '✅ <b>Kết nối thành công</b>\nNhóm này sẽ nhận mọi thay đổi: Marketing Workspace, clip (up mới, duyệt, chạy Ads…) và Kho Media.', [{ text: '🔎 Mở app', url: link('mkt_workspace') }]); return json({ ok: true }); }
     catch (e) { return json({ error: (e as Error).message }); }
   }
 
@@ -325,7 +360,7 @@ Deno.serve(async (req) => {
 
   if (msgs.length > MAX_MESSAGES) {
     const rest = msgs.splice(MAX_MESSAGES - 1);
-    msgs.push({ rows: rest.flatMap(m => m.rows), text: `📋 <b>Và ${rest.length} cập nhật khác</b>\n` + rest.slice(0, 25).map(m => '• ' + m.text.split('\n').slice(0, 2).join(' — ').replace(/<[^>]+>/g, '')).map(s => esc(cut(s, 160))).join('\n'),
+    msgs.push({ rows: rest.flatMap(m => m.rows), text: `📋 <b>Và ${rest.length} cập nhật khác</b>\n` + rest.slice(0, 25).map(m => '• ' + cut(m.text.split('\n')[0].replace(/<[^>]+>/g, ''), 200).replace(/&[a-z#0-9]*…$/i, '…')).join('\n'),
       buttons: [{ text: '🔎 Mở app', url: link('mkt_workspace') }] });
   }
   let sent = 0;

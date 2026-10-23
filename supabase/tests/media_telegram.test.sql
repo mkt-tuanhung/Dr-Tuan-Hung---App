@@ -34,15 +34,26 @@ select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'kho
 insert into public.media_clips (media_customer_id, editor_id, title) values (pg_temp.id('srcTG'), '00000000-0000-0000-0000-0000000000c1', 'Clip TG V1');
 insert into ids select 'clipTG', id from public.media_clips where title = 'Clip TG V1';
 select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'clip_new' and payload->>'clip_id' = pg_temp.id('clipTG')::text) = 1, 'TG Clip: Editor up clip mới');
-update public.media_clips set stage = 'approved' where id = pg_temp.id('clipTG');
-select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'clip_approved' and payload->>'clip_id' = pg_temp.id('clipTG')::text) = 1, 'TG Clip: được duyệt');
+update public.media_clips set stage = 'approved', approved_to_run = true where id = pg_temp.id('clipTG');
+select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'clip_status' and payload->>'clip_id' = pg_temp.id('clipTG')::text
+  and payload->>'field' in ('stage', 'approved_to_run')) = 2, 'TG Clip: duyệt + duyệt chạy -> 2 thay đổi trạng thái');
+select pg_temp.ok((select payload->>'from' || '>' || (payload->>'to') from public.media_tg_outbox where kind = 'clip_status' and payload->>'field' = 'stage' and payload->>'clip_id' = pg_temp.id('clipTG')::text) = 'submitted>approved', 'TG Clip: ghi đúng trạng thái cũ -> mới');
 update public.media_clips set ad_status = 'dang_chay' where id = pg_temp.id('clipTG');
 update public.media_clips set fb_status = 'ACTIVE' where id = pg_temp.id('clipTG');
 update public.media_clips set fb_status = 'PAUSED' where id = pg_temp.id('clipTG');
 update public.media_clips set fb_status = 'ACTIVE' where id = pg_temp.id('clipTG');
-select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'clip_running' and payload->>'clip_id' = pg_temp.id('clipTG')::text) = 1, 'TG Clip: lên Ads báo đúng 1 lần (bật/tắt lại không báo trùng)');
-update public.media_clips set score = 7 where id = pg_temp.id('clipTG');
-select pg_temp.ok((select count(*) from public.media_tg_outbox where payload->>'clip_id' = pg_temp.id('clipTG')::text) = 3, 'TG Clip: sửa khác (chấm điểm) không sinh tin thừa');
+select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'clip_status' and payload->>'clip_id' = pg_temp.id('clipTG')::text and payload->>'field' = 'fb_status') = 3
+  and (select count(*) from public.media_tg_outbox where kind = 'clip_status' and payload->>'clip_id' = pg_temp.id('clipTG')::text and payload->>'field' = 'ad_status') = 1, 'TG Clip: MỌI lần đổi trạng thái Ads / Facebook đều báo');
+update public.media_clips set score = 8, win = true where id = pg_temp.id('clipTG');
+select pg_temp.ok((select count(*) from public.media_tg_outbox where kind = 'clip_status' and payload->>'clip_id' = pg_temp.id('clipTG')::text and payload->>'field' in ('score', 'win')) = 2, 'TG Clip: chấm điểm + WIN');
+update public.media_clips set title = 'Clip TG V1 (sửa tên)' where id = pg_temp.id('clipTG');
+select pg_temp.ok((select count(*) from public.media_tg_outbox where payload->>'clip_id' = pg_temp.id('clipTG')::text) = 1 + 2 + 4 + 2, 'TG Clip: sửa thông tin thường (tên) không sinh tin');
+-- Kho: đổi trạng thái source
+update public.media_customers set source_status = 'dang_dung' where id = pg_temp.id('srcTG');
+update public.media_customers set source_status = 'da_dung' where id = pg_temp.id('srcTG');
+select pg_temp.ok((select string_agg(payload->>'to', ',' order by id) from public.media_tg_outbox where kind = 'kho_status' and payload->>'source_id' = pg_temp.id('srcTG')::text) = 'dang_dung,da_dung', 'TG Kho: mọi lần đổi trạng thái source đều báo');
+-- Content Studio: đổi trạng thái nội dung (gửi duyệt ở test v1)
+select pg_temp.ok(exists (select 1 from public.media_tg_outbox where kind = 'mw' and payload->>'entity' = 'content' and payload->>'action' = 'status' and payload->'detail'->>'to' = 'in_review'), 'TG Content: đổi trạng thái nội dung (-> Đang duyệt) vào hàng đợi');
 
 -- Quyền: người dùng app không đọc / không lấy được hàng đợi
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000a1');
