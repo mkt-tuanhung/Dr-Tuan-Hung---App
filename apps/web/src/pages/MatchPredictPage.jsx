@@ -741,7 +741,7 @@ const QrModal = ({ game, onClose }) => {
     a.href = canvas.toDataURL('image/png'); a.download = 'du-doan-vn-thai.png'; a.click();
   };
   return (
-    <div className="fixed inset-0 z-[95] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div data-back-close className="fixed inset-0 z-[95] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-5 text-center" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-bold text-slate-800 flex items-center gap-2"><QrCode className="w-4 h-4 text-emerald-600" /> Quét để vào dự đoán</h3>

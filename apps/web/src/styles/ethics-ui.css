@@ -171,6 +171,8 @@
   /* Ngăn kéo chi tiết bên phải (Ethics .drawer) */
   .e-drawer { @apply fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-white shadow-float; width: min(480px, 100vw); animation: e-drawer-in 220ms cubic-bezier(.2,.8,.2,1); }
   .e-drawer-lg { width: min(720px, 100vw); }
+  /* Chừa camera / thanh trạng thái / thanh Home (iPhone, iPhone Duo) */
+  .e-drawer { padding-top: env(safe-area-inset-top, 0px); padding-right: env(safe-area-inset-right, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   .e-drawer-header { @apply flex items-start justify-between gap-3 px-6 pt-5 pb-3; }
   .e-drawer-title { @apply text-[20px] font-bold text-slate-900 leading-tight; }
   .e-drawer-desc { @apply text-[13px] text-slate-500 mt-1; }

@@ -623,7 +623,7 @@ const StaffManagementPage = ({ isNested = false }) => {
 
       {/* Điện thoại: bảng thao tác cho 1 nhân sự */}
       {sheet && (
-        <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+        <div data-back-close className="lg:hidden fixed inset-0 z-50 flex items-end">
           <div className="e-modal-backdrop" onClick={() => setSheet(null)} />
           <div className="relative w-full bg-white rounded-t-3xl shadow-float px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto animate-page">
             <div className="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3" />

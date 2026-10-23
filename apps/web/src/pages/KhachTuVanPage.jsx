@@ -752,7 +752,7 @@ const CustomerScreen = ({ r, rs, canWrite, isAdmin, me, onClose, onConsult, onRe
   const hasFile = !!r.consult_note || (r.consult_image_urls || []).length > 0;
 
   return (
-    <div className="lg:hidden fixed inset-0 z-40 bg-[#F3F9F9] flex flex-col">
+    <div data-own-history className="lg:hidden fixed inset-0 z-40 bg-[#F3F9F9] flex flex-col">
       {/* Header + tabs gạch chân (cố định trên) */}
       <div className="shrink-0 bg-white shadow-soft" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-2 px-2 h-16">

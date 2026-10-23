@@ -55,7 +55,7 @@ export default function ImageLightbox({ images = [], index = 0, onClose }) {
 
   // Portal ra body để KHÔNG bị "nhốt" trong modal/sheet có transform/backdrop-blur (fixed sẽ tính theo viewport)
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center select-none animate-in fade-in duration-150"
+    <div data-back-close className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center select-none animate-in fade-in duration-150"
       onClick={onClose} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
 
       {/* Thanh trên */}

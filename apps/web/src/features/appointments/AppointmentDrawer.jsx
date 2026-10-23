@@ -34,7 +34,7 @@ export default function AppointmentDrawer({ app, onClose, actions, profile }) {
   const recheck = isRecheck(app);
 
   return (
-    <div className="fixed inset-0 z-[45]">
+    <div data-back-close className="fixed inset-0 z-[45]">
       <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px]" onClick={onClose} />
       <aside className="absolute bg-white shadow-float flex flex-col
         inset-x-0 bottom-0 max-h-[88vh] rounded-t-3xl
