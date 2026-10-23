@@ -480,7 +480,7 @@ export default function BookReader({ doc, startPage = 1, onClose }) {
   };
 
   return createPortal(
-    <div ref={rootRef} className="fixed inset-0 z-[70] flex flex-col text-white select-none" style={{ background: 'radial-gradient(120% 90% at 50% 0%, #1A3F3A 0%, #0D2522 55%, #081815 100%)' }}>
+    <div data-back-close ref={rootRef} className="fixed inset-0 z-[70] flex flex-col text-white select-none" style={{ background: 'radial-gradient(120% 90% at 50% 0%, #1A3F3A 0%, #0D2522 55%, #081815 100%)' }}>
       {/* Thanh trên */}
       <div className="shrink-0 flex items-center gap-2 px-2 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
         <button type="button" onClick={onClose} aria-label="Đóng" className="w-10 h-10 grid place-items-center rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>

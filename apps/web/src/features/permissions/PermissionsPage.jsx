@@ -289,7 +289,7 @@ function UsersTab({ staff, overrides }) {
         {rows.length === 0 && <div className="text-center py-10 text-slate-400 text-sm">Không có nhân sự phù hợp</div>}
       </div>
       {open && (
-        <div className="fixed inset-0 z-[70]">
+        <div data-back-close className="fixed inset-0 z-[70]">
           <div className="absolute inset-0 bg-slate-900/30" onClick={() => setOpen(null)} />
           <aside className="absolute bg-white shadow-float flex flex-col inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[420px] lg:max-h-none lg:rounded-none lg:rounded-l-3xl">
             <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex items-start justify-between gap-3">

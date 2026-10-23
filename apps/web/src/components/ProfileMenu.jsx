@@ -256,7 +256,7 @@ export default function ProfileMenu({ children, mobile = false }) {
           </div>
           {/* ===== Điện thoại (Ethics M16): màn Tài khoản toàn màn — portal ra body để phủ cả thanh dưới ===== */}
           {createPortal((
-          <div className="lg:hidden fixed inset-0 z-[60] h-[100dvh] overflow-y-auto overscroll-contain bg-[#F3F9F9] animate-page cursor-default">
+          <div data-back-close className="lg:hidden fixed inset-0 z-[60] h-[100dvh] overflow-y-auto overscroll-contain bg-[#F3F9F9] animate-page cursor-default">
             <div className="sticky top-0 z-10 grid grid-cols-[88px_minmax(0,1fr)_88px] items-center h-14 px-2 bg-[#F3F9F9]/95 backdrop-blur">
               <button onClick={() => setMenuOpen(false)} className="w-11 h-11 grid place-items-center rounded-xl text-slate-900 active:bg-teal-50" aria-label="Đóng">
                 <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2} />

@@ -1134,7 +1134,7 @@ const ImageLightbox = () => {
   }, []);
   if (!url) return null;
   return (
-    <div className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4" onClick={() => setUrl(null)}>
+    <div data-back-close className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4" onClick={() => setUrl(null)}>
       <button onClick={() => setUrl(null)} className="absolute top-4 right-4 text-white/80 hover:text-white"><X className="w-7 h-7" /></button>
       <button onClick={(e) => { e.stopPropagation(); downloadFile(url, 'thumbnail.jpg'); }} title="Tải ảnh" className="absolute top-4 right-16 text-white/80 hover:text-white"><Download className="w-6 h-6" /></button>
       <img src={url} alt="" onClick={(e) => e.stopPropagation()} className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl" />
@@ -2941,7 +2941,7 @@ const VideoModal = ({ clip, onClose, title = 'Xem video clip', me, canScore, onS
 
   const thumb = (clip.thumb_links || [])[0];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+    <div data-back-close className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       {/* Nền: ảnh clip làm mờ cho sang, không còn nền đen thô */}
       <div className="absolute inset-0 overflow-hidden bg-slate-950">
         {thumb && <img src={thumbSrc(thumb)} alt="" className="w-full h-full object-cover opacity-40 blur-3xl scale-125" />}

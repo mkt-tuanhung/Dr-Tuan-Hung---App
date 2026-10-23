@@ -6,6 +6,10 @@ import '@fontsource-variable/inter';
 import '@/index.css';
 import { resolveNotifLink } from '@/lib/notif';
 import AppUpdateWatcher from '@/components/AppUpdateWatcher.jsx';
+import { initBackNav } from '@/lib/backNav';
+
+// Nút Back / vuốt quay lại: đóng hộp thoại, ngăn kéo, về màn trước
+initBackNav();
 
 // Đăng ký service worker (PWA + Web Push) + cầu nối bấm thông báo -> điều hướng.
 if ('serviceWorker' in navigator) {

@@ -6,7 +6,7 @@
 // ============================================================
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, ChevronLeft } from 'lucide-react';
 
 function useEscClose(open, onClose) {
   useEffect(() => {
@@ -30,7 +30,9 @@ export function Drawer({ open, onClose, title, description, size = 'md', footer,
       <aside ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
         className={`e-drawer outline-none ${size === 'lg' ? 'e-drawer-lg' : ''}`}>
         <div className="e-drawer-header">
-          <div className="min-w-0">
+          {/* Điện thoại: nút quay lại bên trái (dễ bấm, không bị camera / thanh trạng thái che như góc phải) */}
+          <button type="button" onClick={onClose} className="e-icon-btn w-9 h-9 shrink-0 -ml-2 sm:hidden" aria-label="Quay lại"><ChevronLeft className="w-5 h-5" /></button>
+          <div className="min-w-0 flex-1">
             {title && <div className="e-drawer-title">{title}</div>}
             {description && <div className="e-drawer-desc">{description}</div>}
           </div>

@@ -15,6 +15,7 @@ import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import { PageTitleProvider, usePageTitleValue } from '@/components/ds/PageTitle.jsx';
 import { Customer360Provider } from '@/features/crm/Customer360.jsx';
+import { setTabHandler, pushTab, markTab } from '@/lib/backNav';
 
 // Bỏ dấu tiếng Việt để tìm menu không cần gõ dấu ("lai lo" -> "Lãi / Lỗ")
 const deAccent = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
@@ -85,22 +86,42 @@ function Shell({
 
   const go = (id) => { onSelect(id); setSidebarOpen(false); setNavQ(''); setAllOpen(false); setAllQ(''); };
 
-  // Lịch sử màn đã mở -> nút quay lại trên header mobile
-  const hist = useRef([]);
+  // Lịch sử màn: mỗi lần đổi màn ghi 1 mục lịch sử trình duyệt -> nút ‹ trên header,
+  // nút Back của máy và vuốt quay lại đều về màn trước (lib/backNav)
+  const depth = useRef(0);        // số màn đã ghi trong phiên (0 = đang ở màn đầu)
+  const fromPop = useRef(false);  // đổi màn do Back -> không ghi thêm
+  const backReq = useRef(0);      // bấm ‹ : bỏ qua mục lịch sử "chết" (cùng màn) tối đa vài lần
+  const activeRef = useRef(activeTab);
+  activeRef.current = activeTab;
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  useEffect(() => {
+    markTab(activeTab);
+    setTabHandler((tab) => {
+      depth.current = Math.max(0, depth.current - 1);
+      if (tab === activeRef.current) {
+        if (backReq.current > 0 && depth.current > 0) { backReq.current--; window.history.back(); }
+        else backReq.current = 0;
+        return;
+      }
+      backReq.current = 0;
+      fromPop.current = true;
+      onSelectRef.current(tab);
+    });
+    return () => setTabHandler(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const prevTab = useRef(activeTab);
-  const backing = useRef(false);
   useEffect(() => {
     if (prevTab.current === activeTab) return;
-    if (!backing.current) hist.current = [...hist.current, prevTab.current].slice(-20);
-    backing.current = false;
     prevTab.current = activeTab;
+    if (fromPop.current) { fromPop.current = false; return; }
+    pushTab(activeTab);
+    depth.current += 1;
   }, [activeTab]);
   const isHome = activeTab === homeId;
   const goBack = () => {
-    const prev = hist.current[hist.current.length - 1];
-    hist.current = hist.current.slice(0, -1);
-    backing.current = true;
-    onSelect(prev && prev !== activeTab ? prev : homeId);
+    if (depth.current > 0) { backReq.current = 3; window.history.back(); }
+    else onSelect(homeId);
   };
   const now = new Date();
   const todayLabel = `${now.getDay() === 0 ? 'Chủ nhật' : `Thứ ${now.getDay() + 1}`}, ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
@@ -298,7 +319,7 @@ function Shell({
 
         {/* Header mobile (Ethics): Trang chủ = lời chào; màn khác = quay lại + tiêu đề giữa */}
         {isHome ? (
-          <header className="lg:hidden flex items-center gap-3.5 px-4 fold:pl-6 pt-4 pb-3 short:pt-2 short:pb-2 sticky top-0 z-20 bg-background/95 backdrop-blur">
+          <header className="lg:hidden flex items-center gap-3.5 px-4 fold:pl-6 pr-[calc(1rem+var(--safe-area-right))] pt-[calc(1rem+var(--safe-area-top))] pb-3 short:pt-[calc(0.5rem+var(--safe-area-top))] short:pb-2 sticky top-0 z-20 bg-background/95 backdrop-blur">
             <ProfileMenu mobile={true}>
               <div className="cursor-pointer rounded-full ring-[3px] ring-white shadow-soft"><Avatar profile={profile} size="w-14 h-14 short:w-11 short:h-11" text="text-lg" /></div>
             </ProfileMenu>
@@ -310,7 +331,7 @@ function Shell({
             <div className="w-11 h-11 rounded-[14px] bg-white border border-slate-200/80 shadow-soft grid place-items-center text-teal-700 shrink-0"><NotificationBell /></div>
           </header>
         ) : (
-          <header className="lg:hidden grid grid-cols-[88px_minmax(0,1fr)_88px] items-center h-14 px-2 sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-100">
+          <header className="lg:hidden grid grid-cols-[88px_minmax(0,1fr)_88px] items-center box-border h-[calc(3.5rem+var(--safe-area-top))] pt-[var(--safe-area-top)] pl-2 pr-[calc(0.5rem+var(--safe-area-right))] sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-100">
             <button onClick={goBack} className="w-11 h-11 grid place-items-center rounded-xl text-slate-900 active:bg-teal-50" aria-label="Quay lại">
               <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2} />
             </button>
@@ -331,8 +352,8 @@ function Shell({
 
       {/* ===== TẤT CẢ CHỨC NĂNG (mobile, Ethics) ===== */}
       {allOpen && (
-        <div className="lg:hidden fixed inset-0 fold:left-[var(--rail-w)] z-30 flex flex-col bg-gradient-to-b from-[#F7FBFB] to-white animate-page">
-          <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center h-14 px-2 shrink-0">
+        <div data-back-close className="lg:hidden fixed inset-0 fold:left-[var(--rail-w)] z-30 flex flex-col bg-gradient-to-b from-[#F7FBFB] to-white animate-page">
+          <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center box-border h-[calc(3.5rem+var(--safe-area-top))] pt-[var(--safe-area-top)] px-2 shrink-0">
             <button onClick={() => { setAllOpen(false); setAllQ(''); }} className="w-11 h-11 grid place-items-center rounded-xl text-slate-900 active:bg-teal-50" aria-label="Đóng">
               <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2} />
             </button>

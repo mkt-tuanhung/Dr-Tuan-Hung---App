@@ -2000,7 +2000,7 @@ const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+    <div data-back-close className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
       <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="shrink-0 px-5 py-3.5 border-b flex items-center justify-between bg-white">
           <h3 className="font-bold text-slate-800 flex items-center gap-2"><CalendarDays className="w-4 h-4 text-violet-600" /> Tạo lịch hẹn</h3>
