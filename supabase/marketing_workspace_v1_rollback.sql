@@ -11,7 +11,7 @@ drop trigger if exists mw_task_auto on public.mw_tasks;
 drop table if exists public.mw_automation_runs, public.mw_automations, public.mw_base_rows, public.mw_bases,
   public.mw_doc_versions, public.mw_docs, public.mw_messages cascade;
 -- Báo nhóm Telegram Media (media_telegram_notify.sql): trigger trên bảng mw_* tự mất khi xoá bảng
-drop function if exists public.mw_activity_tg(), public.mw_message_tg() cascade;
+drop function if exists public.mw_activity_tg(), public.mw_message_tg(), public.mw_content_tg() cascade;
 drop function if exists public.mw_task_auto_trg(), public.mw_run_automations(uuid, text), public.mw_automation_guard(),
   public.mw_base_guard(), public.mw_base_ws(uuid), public.mw_doc_guard(), public.mw_message_guard() cascade;
 alter table if exists public.mw_tasks drop column if exists location;

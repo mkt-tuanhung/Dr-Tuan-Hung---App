@@ -7,7 +7,10 @@
 --      "Thành viên & cấu hình")
 --   2) Editor up clip mới (media_clips thêm mới)
 --   3) Media thêm source mới / file mới vào Kho Media (media_customers, media_assets thêm mới)
---   4) Clip được duyệt, clip lên Ads (đang chạy) — mỗi clip báo "lên Ads" 1 lần
+--   4) MỌI thay đổi trạng thái clip: Ads duyệt / cần sửa / hoàn tất, duyệt chạy, Đang chạy / Tạm dừng Ads,
+--      trạng thái Facebook, đăng bài, Win, chấm điểm
+--   5) MỌI thay đổi trạng thái source Kho Media (Chưa dựng → Đang dựng → Đã dựng, Lỗi, Cần bổ sung)
+--   6) Đổi trạng thái nội dung trong Content Studio (Ý tưởng → Kịch bản → … → Đã đăng)
 -- Mỗi tin có nút "Xem chi tiết" mở app đúng thẻ / clip / source.
 --
 -- Cách chạy: trigger chỉ ghi vào hàng đợi media_tg_outbox (không gọi mạng trong giao dịch -> không làm chậm app);
@@ -89,7 +92,8 @@ do $$ begin
       if coalesce((select tg_media from mw_workspaces where id = NEW.workspace_id), false) then
         perform public.media_tg_enqueue('mw', coalesce('task:' || NEW.task_id, 'ws:' || NEW.workspace_id || ':' || NEW.entity), NEW.actor_id,
           jsonb_build_object('activity_id', NEW.id, 'workspace_id', NEW.workspace_id, 'task_id', NEW.task_id, 'entity', NEW.entity,
-            'entity_id', NEW.entity_id, 'action', NEW.action, 'detail', NEW.detail));
+            'entity_id', NEW.entity_id, 'action', NEW.action, 'detail', NEW.detail,
+            'auto', coalesce(current_setting('mw.auto', true), '') = 'on'));   -- do luật Automation làm
       end if;
       return null;
     end $b$;
@@ -117,27 +121,41 @@ do $$ begin
   create trigger mw_message_tg after insert on public.mw_messages for each row execute function public.mw_message_tg();
 end $$;
 
--- ---------- 2) + 4) Clip: up mới / được duyệt / lên Ads ----------
+-- Content Studio: đổi trạng thái nội dung (gom theo thẻ nếu nội dung tạo từ thẻ)
+do $$ begin
+  if to_regclass('public.mw_contents') is null then return; end if;
+  execute $f$
+    create or replace function public.mw_content_tg() returns trigger language plpgsql security definer set search_path = public as $b$
+    begin
+      if NEW.workflow_status is distinct from OLD.workflow_status
+         and coalesce((select tg_media from mw_workspaces where id = NEW.workspace_id), false) then
+        perform public.media_tg_enqueue('mw', coalesce('task:' || NEW.task_id, 'content:' || NEW.id), auth.uid(),
+          jsonb_build_object('workspace_id', NEW.workspace_id, 'task_id', NEW.task_id, 'entity', 'content', 'entity_id', NEW.id, 'action', 'status',
+            'detail', jsonb_build_object('content_id', NEW.id, 'title', NEW.title, 'from', OLD.workflow_status, 'to', NEW.workflow_status)));
+      end if;
+      return null;
+    end $b$;
+  $f$;
+  drop trigger if exists mw_content_tg on public.mw_contents;
+  create trigger mw_content_tg after update of workflow_status on public.mw_contents for each row execute function public.mw_content_tg();
+end $$;
+
+-- ---------- 2) + 4) Clip: up mới / MỌI thay đổi trạng thái ----------
 create or replace function public.media_clip_tg() returns trigger language plpgsql security definer set search_path = public as $$
-declare j jsonb := to_jsonb(NEW); o jsonb;
+declare j jsonb; o jsonb; f text;
 begin
   if TG_OP = 'INSERT' then
     perform public.media_tg_enqueue('clip_new', 'clip:' || NEW.id, coalesce(auth.uid(), NEW.editor_id), jsonb_build_object('clip_id', NEW.id));
     return null;
   end if;
-  o := to_jsonb(OLD);
-  -- Được duyệt: stage -> approved, hoặc tick "duyệt chạy"
-  if (j->>'stage' = 'approved' and o->>'stage' is distinct from 'approved')
-     or (coalesce((j->>'approved_to_run')::boolean, false) and not coalesce((o->>'approved_to_run')::boolean, false)) then
-    perform public.media_tg_enqueue('clip_approved', 'clip:' || NEW.id, auth.uid(), jsonb_build_object('clip_id', NEW.id),
-      'clip_approved:' || NEW.id || ':' || to_char(now(), 'YYYYMMDDHH24MI'));
-  end if;
-  -- Lên Ads: Ads bật "Đang chạy" / Facebook báo ACTIVE / platform đã tạo chiến dịch — báo 1 lần / clip
-  if (j->>'ad_status' = 'dang_chay' and o->>'ad_status' is distinct from 'dang_chay')
-     or (j->>'fb_status' = 'ACTIVE' and o->>'fb_status' is distinct from 'ACTIVE')
-     or (j->>'ads_auto_status' = 'created' and o->>'ads_auto_status' is distinct from 'created') then
-    perform public.media_tg_enqueue('clip_running', 'clip:' || NEW.id, auth.uid(), jsonb_build_object('clip_id', NEW.id), 'clip_running:' || NEW.id);
-  end if;
+  j := to_jsonb(NEW); o := to_jsonb(OLD);
+  -- Cột nào không có trên DB thì bỏ qua (to_jsonb không có khoá đó)
+  foreach f in array array['stage', 'approved_to_run', 'ad_status', 'fb_status', 'ads_auto_status', 'post_status', 'result_status', 'win', 'score'] loop
+    if j ? f and (j -> f) is distinct from (o -> f) then
+      perform public.media_tg_enqueue('clip_status', 'clip:' || NEW.id, auth.uid(),
+        jsonb_build_object('clip_id', NEW.id, 'field', f, 'from', o -> f, 'to', j -> f));
+    end if;
+  end loop;
   return null;
 end $$;
 drop trigger if exists media_clip_tg on public.media_clips;
@@ -153,10 +171,15 @@ begin
   if public.media_tg_nlinks(NEW.source_links) > 0 and (TG_OP = 'INSERT' or public.media_tg_nlinks(OLD.source_links) = 0) then
     perform public.media_tg_enqueue('kho_source', 'src:' || NEW.id, coalesce(auth.uid(), NEW.media_id), jsonb_build_object('source_id', NEW.id), 'kho_source:' || NEW.id);
   end if;
+  -- Đổi trạng thái source (Chưa dựng / Đang dựng / Đã dựng / Lỗi / Cần bổ sung)
+  if TG_OP = 'UPDATE' and (to_jsonb(NEW) -> 'source_status') is distinct from (to_jsonb(OLD) -> 'source_status') then
+    perform public.media_tg_enqueue('kho_status', 'src:' || NEW.id, auth.uid(),
+      jsonb_build_object('source_id', NEW.id, 'from', to_jsonb(OLD) ->> 'source_status', 'to', to_jsonb(NEW) ->> 'source_status'));
+  end if;
   return null;
 end $$;
 drop trigger if exists media_source_tg on public.media_customers;
-create trigger media_source_tg after insert or update of source_links on public.media_customers for each row execute function public.media_source_tg();
+create trigger media_source_tg after insert or update on public.media_customers for each row execute function public.media_source_tg();
 
 do $$ begin
   if to_regclass('public.media_assets') is null then return; end if;
