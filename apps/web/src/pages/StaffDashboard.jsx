@@ -229,7 +229,7 @@ const Overview = ({ profile, setActiveTab, available = [], onScan }) => {
   ];
 
   return (
-    <div className="space-y-4 lg:space-y-5">
+    <div className="flex flex-col gap-4 lg:gap-5">
       <div className="hidden lg:block"><HeroCard profile={profile} roleLabel={roleLabel} ring={ring} stats={heroStats} extra={salaryLine} /></div>
       {can('attendance') && <CheckinStrip profile={profile} onOpen={() => setActiveTab('attendance')} onScan={onScan} />}
       {/* Điện thoại (Ethics M03): ô chức năng lớn + số nhanh nền mint */}
@@ -247,7 +247,7 @@ const Overview = ({ profile, setActiveTab, available = [], onScan }) => {
       </div>
       {isEditor && <EditorOverview profile={profile} setActiveTab={setActiveTab} />}
       {(can('appointments') || canData) && !isEditor && !isAccountant && (
-        <div className={`grid grid-cols-1 gap-4 ${can('appointments') && canData ? 'lg:grid-cols-2' : ''}`}>
+        <div className={`grid grid-cols-1 gap-4 ${can('appointments') && canData ? 'min-[800px]:grid-cols-2' : ''}`}>
           {can('appointments') && (
             <Panel title="Lịch hẹn hôm nay của tôi" action={<button onClick={() => setActiveTab('appointments')} className="text-[12.5px] text-teal-700 font-semibold inline-flex items-center gap-0.5 hover:underline">Mở lịch <ChevronRight className="w-3.5 h-3.5" /></button>}>
               {todayList.length === 0 ? <div className="text-sm text-slate-400 py-8 text-center">Hôm nay bạn chưa có lịch hẹn</div> : (

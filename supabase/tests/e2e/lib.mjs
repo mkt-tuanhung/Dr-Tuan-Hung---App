@@ -41,8 +41,8 @@ export const summary = () => results;
 // Mở app với vai 1 nhân sự. opts: { tab, mobile, mwCache, extra }
 export async function openAs(user, opts = {}) {
   const ctx = await browser.newContext({
-    viewport: opts.mobile ? { width: opts.mobile, height: 800 } : { width: 1440, height: 900 },
-    deviceScaleFactor: 1, hasTouch: !!opts.mobile, isMobile: !!opts.mobile, locale: 'vi-VN', timezoneId: 'Asia/Ho_Chi_Minh',
+    viewport: opts.viewport || (opts.mobile ? { width: opts.mobile, height: 800 } : { width: 1440, height: 900 }),
+    deviceScaleFactor: opts.viewport ? 2 : 1, hasTouch: !!(opts.mobile || opts.viewport), isMobile: !!(opts.mobile || opts.viewport), locale: 'vi-VN', timezoneId: 'Asia/Ho_Chi_Minh',
   });
   const token = jwt(user.id);
   await ctx.addInitScript((c) => { try { if (c) localStorage.setItem('mw_enabled_cache', c); } catch { /* */ } }, opts.mwCache || '');
