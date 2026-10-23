@@ -220,8 +220,9 @@
 .fixed.inset-0, .e-modal-backdrop { margin: 0 !important; }
 
 /* Điện thoại: form (lớp phủ) luôn nằm trong VÙNG CÒN NHÌN THẤY — khi bật bàn phím thì co lại
-   ngay trên bàn phím, nút Lưu / Xác nhận ở đáy form không bị che (biến --vvh, --vv-top do main.jsx ghi). */
-@media (max-width: 639px) {
+   ngay trên bàn phím, nút Lưu / Xác nhận ở đáy form không bị che (biến --vvh, --vv-top do main.jsx ghi).
+   Áp cả màn cảm ứng tới 1023px (iPhone Duo khi mở, tablet) — cũng có bàn phím ảo. */
+@media (max-width: 639px), (pointer: coarse) and (max-width: 1023.98px) {
   .e-modal-backdrop {
     top: var(--vv-top, 0px) !important;
     bottom: auto !important;

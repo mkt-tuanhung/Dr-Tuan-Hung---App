@@ -306,7 +306,7 @@ const Overview = ({ profile, setActiveTab }) => {
   ];
 
   return (
-    <div className="space-y-4 lg:space-y-5">
+    <div className="flex flex-col gap-4 lg:gap-5">
       {/* Sub-tabs trong Tổng quan */}
       <div className={`e-tabs ${sub === 'tong_quan' ? 'hidden lg:flex' : ''}`}>
         {SUBTABS.map(t => (
@@ -320,8 +320,8 @@ const Overview = ({ profile, setActiveTab }) => {
         const weekTotal = d.weekRev.reduce((t, x) => t + x.value, 0);
         const pending = d.pendingExpenses + d.pendingLeaves;
         return (
-          <div className="lg:hidden space-y-3">
-            <button onClick={() => setActiveTab('finance')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3.5 text-left">
+          <div className="lg:hidden space-y-3 fold:space-y-0 fold:grid fold:grid-cols-2 fold:gap-3 fold:items-start">
+            <button onClick={() => setActiveTab('finance')} className="w-full fold:self-stretch rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3.5 text-left">
               <span className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Coins className="w-6 h-6" /></span>
               <span className="min-w-0">
                 <span className="block text-[13.5px] text-slate-500">Doanh thu hôm nay</span>

@@ -152,8 +152,49 @@ function Shell({
     );
   };
 
+  // Mục điều hướng nhanh: thanh dưới (điện thoại) và thanh dọc (màn mở iPhone Duo / tablet)
+  const regularItems = bottomItems.slice(0, centerAction ? 3 : 4);
+  const railItems = centerAction ? [...regularItems.slice(0, 2), '__center', ...regularItems.slice(2)] : regularItems;
+
   return (
     <div className="min-h-screen flex bg-background">
+
+      {/* ===== THANH DỌC (màn mở 600–1023px: iPhone Duo mở / tablet) — thay thanh dưới để dành chiều cao cho nội dung ===== */}
+      <nav aria-label="Điều hướng nhanh"
+        className="hidden fold:flex fixed inset-y-0 left-0 z-40 flex-col items-center gap-1 bg-white/95 backdrop-blur border-r border-slate-200/80 overflow-y-auto scrollbar-hide"
+        style={{ width: 'var(--rail-w)', paddingLeft: 'var(--safe-area-left)', paddingTop: 'calc(var(--safe-area-top) + 12px)', paddingBottom: 'calc(var(--safe-area-bottom) + 12px)' }}>
+        <button onClick={() => go(homeId)} className="w-11 h-11 rounded-full bg-slate-900 overflow-hidden p-1.5 shadow-soft shrink-0 mb-2" aria-label="Trang chủ">
+          <img src="/logo.png" alt="" className="w-full h-full object-contain" />
+        </button>
+        {railItems.map(item => {
+          if (item === '__center') {
+            const CIcon = centerAction.icon;
+            const active = activeTab === centerAction.id && !allOpen;
+            return (
+              <button key="__center" onClick={() => { go(centerAction.id); centerAction.onPress?.(); }} aria-label={centerAction.label}
+                className="w-[76px] flex flex-col items-center gap-1 py-1.5 shrink-0 active:scale-95 transition">
+                <span className={`w-12 h-12 rounded-2xl grid place-items-center text-white shadow-nav bg-gradient-to-br ${active ? 'from-[#06686C] to-[#067B7F]' : 'from-[#067B7F] to-[#12A4A5]'}`}><CIcon className="w-6 h-6" /></span>
+                <span className={`text-[11px] font-semibold leading-tight text-center ${active ? 'text-teal-700' : 'text-slate-600'}`}>{centerAction.label}</span>
+              </button>
+            );
+          }
+          const Icon = item.id === homeId ? House : item.icon;
+          const active = activeTab === item.id && !allOpen;
+          return (
+            <button key={item.id} onClick={() => go(item.id)} aria-current={active ? 'page' : undefined}
+              className={`relative w-[76px] flex flex-col items-center gap-1 py-2 rounded-2xl shrink-0 transition ${active ? 'bg-teal-50 text-teal-700' : 'text-slate-500 active:bg-slate-50'}`}>
+              <Icon className={`w-[22px] h-[22px] ${active ? 'fill-teal-100' : ''}`} strokeWidth={1.8} />
+              <span className={`text-[11px] leading-tight text-center line-clamp-2 px-1 ${active ? 'font-semibold' : 'font-medium'}`}>{item.id === homeId ? 'Trang chủ' : (item.shortLabel || item.label)}</span>
+              {item.badge > 0 && <span className="absolute top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-danger-500 text-white text-[9px] font-bold grid place-items-center border-2 border-white">{item.badge > 9 ? '9+' : item.badge}</span>}
+            </button>
+          );
+        })}
+        <button onClick={() => { setAllOpen(o => !o); setAllQ(''); }} aria-pressed={allOpen}
+          className={`w-[76px] flex flex-col items-center gap-1 py-2 rounded-2xl shrink-0 transition ${allOpen ? 'bg-teal-50 text-teal-700' : 'text-slate-500 active:bg-slate-50'}`}>
+          <LayoutGrid className={`w-[22px] h-[22px] ${allOpen ? 'fill-teal-100' : ''}`} strokeWidth={1.8} />
+          <span className={`text-[11px] leading-tight ${allOpen ? 'font-semibold' : 'font-medium'}`}>Tất cả</span>
+        </button>
+      </nav>
 
       {/* Overlay mobile */}
       {sidebarOpen && (
@@ -232,7 +273,7 @@ function Shell({
       </aside>
 
       {/* ===== MAIN ===== */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-clip">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-clip fold:pl-[var(--rail-w)]">
 
         {/* Header desktop */}
         <header className="hidden lg:flex items-center justify-between gap-6 px-8 pt-6 pb-4 sticky top-0 z-20 bg-background/90 backdrop-blur">
@@ -257,9 +298,9 @@ function Shell({
 
         {/* Header mobile (Ethics): Trang chủ = lời chào; màn khác = quay lại + tiêu đề giữa */}
         {isHome ? (
-          <header className="lg:hidden flex items-center gap-3.5 px-4 pt-4 pb-3 sticky top-0 z-20 bg-background/95 backdrop-blur">
+          <header className="lg:hidden flex items-center gap-3.5 px-4 fold:pl-6 pt-4 pb-3 short:pt-2 short:pb-2 sticky top-0 z-20 bg-background/95 backdrop-blur">
             <ProfileMenu mobile={true}>
-              <div className="cursor-pointer rounded-full ring-[3px] ring-white shadow-soft"><Avatar profile={profile} size="w-14 h-14" text="text-lg" /></div>
+              <div className="cursor-pointer rounded-full ring-[3px] ring-white shadow-soft"><Avatar profile={profile} size="w-14 h-14 short:w-11 short:h-11" text="text-lg" /></div>
             </ProfileMenu>
             <div className="flex-1 min-w-0 leading-tight">
               <div className="text-[13.5px] text-slate-500">Xin chào,</div>
@@ -283,14 +324,14 @@ function Shell({
           </header>
         )}
 
-        <main className="flex-1 px-4 lg:px-8 pt-4 lg:pt-2 pb-28 lg:pb-8">
+        <main className="flex-1 px-4 fold:pl-6 fold:pr-[calc(1.5rem+var(--safe-area-right))] lg:px-8 pt-4 lg:pt-2 pb-28 fold:pb-8 lg:pb-8">
           <div key={activeTab} className="animate-page">{children}</div>
         </main>
       </div>
 
       {/* ===== TẤT CẢ CHỨC NĂNG (mobile, Ethics) ===== */}
       {allOpen && (
-        <div className="lg:hidden fixed inset-0 z-30 flex flex-col bg-gradient-to-b from-[#F7FBFB] to-white animate-page">
+        <div className="lg:hidden fixed inset-0 fold:left-[var(--rail-w)] z-30 flex flex-col bg-gradient-to-b from-[#F7FBFB] to-white animate-page">
           <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center h-14 px-2 shrink-0">
             <button onClick={() => { setAllOpen(false); setAllQ(''); }} className="w-11 h-11 grid place-items-center rounded-xl text-slate-900 active:bg-teal-50" aria-label="Đóng">
               <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2} />
@@ -298,7 +339,7 @@ function Shell({
             <div className="text-[20px] font-bold text-slate-900 text-center truncate">Tất cả chức năng</div>
             <span />
           </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-28 scrollbar-hide">
+          <div className="flex-1 overflow-y-auto px-4 fold:px-6 pb-28 fold:pb-8 scrollbar-hide">
             <div className="e-search mt-1">
               <Search />
               <input value={allQ} onChange={e => setAllQ(e.target.value)} placeholder="Tìm chức năng…" className="!bg-white" />
@@ -306,7 +347,7 @@ function Shell({
             {allTiles.map(sec => sec.tiles.length > 0 && (
               <section key={sec.title} className="mt-5">
                 <h2 className="text-[18px] font-bold text-slate-900 mb-3">{sec.title}</h2>
-                <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-2 py-3 grid grid-cols-4 gap-y-3">
+                <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-2 py-3 grid grid-cols-4 fold:grid-cols-6 gap-y-3">
                   {sec.tiles.map((m, i) => {
                     const Icon = m.icon;
                     const active = activeTab === m.id;
@@ -329,10 +370,10 @@ function Shell({
       )}
 
       {/* ===== BOTTOM NAV (mobile) ===== */}
-      <nav className={`lg:hidden fixed bottom-0 inset-x-0 ${allOpen ? 'z-40' : 'z-20'} bg-white/95 backdrop-blur border-t border-slate-200/80 pb-safe`}>
+      <nav className={`lg:hidden fold:hidden fixed bottom-0 inset-x-0 ${allOpen ? 'z-40' : 'z-20'} bg-white/95 backdrop-blur border-t border-slate-200/80 pb-safe`}>
         <div className="flex items-end justify-around px-1 pt-1.5 pb-1.5">
           {(() => {
-            const regular = bottomItems.slice(0, centerAction ? 3 : 4);
+            const regular = regularItems;
             const tab = (item) => {
               const Icon = item.id === homeId ? House : item.icon;
               const active = activeTab === item.id;

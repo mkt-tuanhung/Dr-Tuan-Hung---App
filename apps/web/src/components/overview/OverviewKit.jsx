@@ -147,14 +147,14 @@ export const CheckinStrip = ({ profile, onOpen, onScan }) => {
   );
 };
 
-// Ô chức năng lớn 3 cột (Ethics M03 "m-tiles") — chỉ dùng trên điện thoại
+// Ô chức năng lớn 3 cột (Ethics M03 "m-tiles") — điện thoại; màn mở (iPhone Duo) 6 cột 1 hàng
 export const MobileTiles = ({ items = [], onSelect }) => {
   if (!items.length) return null;
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 fold:grid-cols-6 gap-3">
       {items.map(q => (
         <button key={q.id + q.label} onClick={() => onSelect(q.id)}
-          className="flex flex-col items-center justify-center gap-2.5 min-h-[100px] px-2 py-3 rounded-2xl bg-white border border-slate-200/80 shadow-soft text-center active:scale-[0.98] active:bg-teal-50 transition">
+          className="flex flex-col items-center justify-center fold:justify-start gap-2.5 short:gap-1.5 min-h-[100px] fold:min-h-[88px] short:min-h-[76px] px-2 py-3 short:py-2 rounded-2xl bg-white border border-slate-200/80 shadow-soft text-center active:scale-[0.98] active:bg-teal-50 transition">
           <q.icon className="w-[30px] h-[30px] text-teal-600" strokeWidth={1.7} />
           <span className="text-[13px] font-medium text-slate-700 leading-tight line-clamp-2">{q.label}</span>
         </button>

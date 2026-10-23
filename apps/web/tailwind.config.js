@@ -18,6 +18,13 @@ module.exports = {
       },
     },
     extend: {
+      // Màn trong iPhone Duo khi MỞ (≈626–951px, gần vuông) và máy tính bảng nhỏ: 600–1023px.
+      // Dùng khoảng (min+max) để không đè lên lg: (desktop giữ nguyên).
+      screens: {
+        fold: { min: '600px', max: '1023.98px' },
+        // Màn THẤP (iPhone Duo gập ~580px, xoay ngang khi mở ~543px): thu gọn đầu trang / ô chức năng
+        short: { raw: '(max-height: 640px)' },
+      },
       fontFamily: {
         sans: ['Inter Variable', 'Inter', 'SF Pro Display', 'SF Pro Text', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
