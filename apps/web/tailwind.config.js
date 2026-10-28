@@ -18,13 +18,6 @@ module.exports = {
       },
     },
     extend: {
-      // Màn trong iPhone Duo khi MỞ (≈626–951px, gần vuông) và máy tính bảng nhỏ: 600–1023px.
-      // Dùng khoảng (min+max) để không đè lên lg: (desktop giữ nguyên).
-      screens: {
-        fold: { min: '600px', max: '1023.98px' },
-        // Màn THẤP (iPhone Duo gập ~580px, xoay ngang khi mở ~543px): thu gọn đầu trang / ô chức năng
-        short: { raw: '(max-height: 640px)' },
-      },
       fontFamily: {
         sans: ['Inter Variable', 'Inter', 'SF Pro Display', 'SF Pro Text', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
@@ -193,5 +186,16 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    // fold: / short: là VARIANT riêng, KHÔNG khai báo trong theme.screens — Tailwind TẮT toàn bộ
+    // max-sm:/max-md:/max-lg: nếu screens có mốc dạng khoảng {min,max} hoặc {raw} (lỗi 23–28/10:
+    // mất bố cục điện thoại: nút nổi, form trượt, cuộn trong form…).
+    function ({ addVariant }) {
+      // Màn trong iPhone Duo khi MỞ (≈626–951px, gần vuông) và máy tính bảng nhỏ: 600–1023px
+      addVariant('fold', '@media (min-width: 600px) and (max-width: 1023.98px)');
+      // Màn THẤP (iPhone Duo gập ~580px, xoay ngang khi mở ~543px): thu gọn đầu trang / ô chức năng
+      addVariant('short', '@media (max-height: 640px)');
+    },
+  ],
 };
