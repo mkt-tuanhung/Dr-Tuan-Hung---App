@@ -34,6 +34,7 @@ import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
 import { parseNav, setPendingFocus, readUrlNav, clearUrlNav } from '@/lib/notif';
+import { isRecheck } from '@/features/appointments/calendarUtils';
 import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
@@ -163,10 +164,12 @@ const Overview = ({ profile, setActiveTab }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [gran, setGran] = useState('day');            // biểu đồ doanh thu: 15 ngày | 12 tháng
   const [apptQ, setApptQ] = useState('');             // tìm trong lịch hẹn hôm nay
+  const [mix, setMix] = useState('consult');          // Cơ cấu dịch vụ: tư vấn | thăm khám
   const [d, setD] = useState({
     totalStaff: 0, presentToday: 0, appointmentsToday: 0, pendingExpenses: 0, pendingLeaves: 0,
     monthRevenue: 0, todayRevenue: 0, closeRate: 0, newCustomers: 0, scTotal: 0,
     newStaffMonth: 0, apptTrend: null, revTrend: null, revMonthTrend: null, closeTrend: null, newCustTrend: null, rev6mTrend: null,
+    consultMonth: 0, recheckMonth: 0, consultTrend: null, recheckTrend: null, closedMonth: 0, todayConsult: 0, todayRecheck: 0, servicesRecheck: [], scTotalRecheck: 0,
     revenue6m: [], services: [], todayList: [], todayAll: [], weekly: [], newCust6w: [], topConsultants: [],
     ranges: { '7d': [], '30d': [], '6m': [], '12m': [] },
     // Trang chủ điện thoại (Ethics M04)
@@ -213,7 +216,12 @@ const Overview = ({ profile, setActiveTab }) => {
       const todayAppts = appts.filter(a => a.appointment_date === todayStr).sort((x, z) =>
         tKey(x.appointment_time).localeCompare(tKey(z.appointment_time)) || (x.created_at || '').localeCompare(z.created_at || ''));
 
-      const leadsM = appts.filter(a => inMonth(a.appointment_date));
+      // TÁCH RIÊNG: lịch hẹn TƯ VẤN (khách đặt lịch tư vấn) và lịch TÁI KHÁM (khách thăm khám, cắt chỉ, kiểm tra sau mổ)
+      // -> khách mới / tỷ lệ chốt / cơ cấu dịch vụ / hiệu suất tư vấn chỉ tính lịch TƯ VẤN
+      const consultAppts = appts.filter(a => !isRecheck(a));
+      const recheckAppts = appts.filter(a => isRecheck(a));
+      const leadsM = consultAppts.filter(a => inMonth(a.appointment_date));
+      const recheckM = recheckAppts.filter(a => inMonth(a.appointment_date));
       const closedM = leadsM.filter(a => a.status === 'coc' || a.status === 'phau_thuat');
       const closeRate = leadsM.length ? Math.round(closedM.length / leadsM.length * 100) : 0;
 
@@ -221,7 +229,8 @@ const Overview = ({ profile, setActiveTab }) => {
       const pctT = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 1000) / 10 : null;
       const prevDt = new Date(y, mo - 1, 1); const prevKey = `${prevDt.getFullYear()}-${pad(prevDt.getMonth() + 1)}`;
       const prevRevenue = appts.filter(a => a.status === 'phau_thuat' && a.surgery_date && a.surgery_date.slice(0, 7) === prevKey).reduce((s, a) => s + Number(a.revenue || 0), 0);
-      const prevLeads = appts.filter(a => a.appointment_date && a.appointment_date.slice(0, 7) === prevKey);
+      const prevLeads = consultAppts.filter(a => a.appointment_date && a.appointment_date.slice(0, 7) === prevKey);
+      const prevRecheck = recheckAppts.filter(a => a.appointment_date && a.appointment_date.slice(0, 7) === prevKey);
       const prevClose = prevLeads.length ? Math.round(prevLeads.filter(a => a.status === 'coc' || a.status === 'phau_thuat').length / prevLeads.length * 100) : 0;
       const ydayStr = iso(new Date(y, mo, now.getDate() - 1));
       const apptYday = appts.filter(a => a.appointment_date === ydayStr).length;
@@ -235,15 +244,23 @@ const Overview = ({ profile, setActiveTab }) => {
       });
       const newCust6w = Array.from({ length: 6 }, (_, i) => {
         const dt = new Date(y, mo - 5 + i, 1); const key = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`;
-        return { month: `T${dt.getMonth() + 1}`, value: appts.filter(a => a.appointment_date && a.appointment_date.slice(0, 7) === key).length };
+        return { month: `T${dt.getMonth() + 1}`, value: consultAppts.filter(a => a.appointment_date && a.appointment_date.slice(0, 7) === key).length };
       });
 
-      const scMap = {};
-      appts.forEach(a => { const s = (a.service || '').trim() || 'Khác'; scMap[s] = (scMap[s] || 0) + 1; });
-      const scSorted = Object.entries(scMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-      const restVal = scSorted.slice(5).reduce((s, x) => s + x.value, 0);
-      const services = restVal > 0 ? [...scSorted.slice(0, 5), { name: 'Khác', value: restVal }] : scSorted.slice(0, 5);
-      const scTotal = services.reduce((s, x) => s + x.value, 0);
+      // Cơ cấu dịch vụ: top 5 + "Khác", tính riêng cho lịch tư vấn và lịch thăm khám
+      const serviceMix = (list) => {
+        const m = {};
+        list.forEach(a => { const s = String(a.service || '').replace(/^\[Tái khám\]\s*/i, '').trim() || 'Khác'; m[s] = (m[s] || 0) + 1; });
+        const sorted = Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+        const rest = sorted.slice(5).reduce((t, x) => t + x.value, 0);
+        const top = rest > 0 ? [...sorted.slice(0, 5), { name: 'Khác', value: rest }] : sorted.slice(0, 5);
+        const total = top.reduce((t, x) => t + x.value, 0);
+        return { list: top.map(x => ({ ...x, pct: total ? Math.round(x.value / total * 100) : 0 })), total };
+      };
+      const mixConsult = serviceMix(consultAppts);
+      const mixRecheck = serviceMix(recheckAppts);
+      const services = mixConsult.list;
+      const scTotal = mixConsult.total;
 
       const DOWL = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
       const weekly = DOWL.map((lbl, i) => {
@@ -279,6 +296,10 @@ const Overview = ({ profile, setActiveTab }) => {
         totalStaff: staff.length, presentToday: at.count || 0, appointmentsToday: todayAppts.length,
         pendingExpenses: ex.count || 0, pendingLeaves: lv.count || 0,
         monthRevenue, todayRevenue, closeRate, newCustomers: leadsM.length, scTotal,
+        consultMonth: leadsM.length, recheckMonth: recheckM.length, closedMonth: closedM.length,
+        consultTrend: pctT(leadsM.length, prevLeads.length), recheckTrend: pctT(recheckM.length, prevRecheck.length),
+        todayConsult: todayAppts.filter(a => !isRecheck(a)).length, todayRecheck: todayAppts.filter(a => isRecheck(a)).length,
+        servicesRecheck: mixRecheck.list, scTotalRecheck: mixRecheck.total,
         newStaffMonth,
         apptTrend: pctT(todayAppts.length, apptYday),
         revTrend: pctT(todayRevenue, revYday),
@@ -286,7 +307,7 @@ const Overview = ({ profile, setActiveTab }) => {
         closeTrend: (leadsM.length && prevLeads.length) ? (closeRate - prevClose) : null,
         newCustTrend: pctT(leadsM.length, prevLeads.length),
         rev6mTrend: pctT(revenue6m[5]?.revenue || 0, revenue6m[0]?.revenue || 0),
-        revenue6m, services: services.map(s => ({ ...s, pct: scTotal ? Math.round(s.value / scTotal * 100) : 0 })),
+        revenue6m, services,
         todayList: todayAppts.slice(0, 6), todayAll: todayAppts, weekly, newCust6w, topConsultants, ranges,
       });
       setLoading(false);
@@ -348,7 +369,7 @@ const Overview = ({ profile, setActiveTab }) => {
               <button onClick={() => setActiveTab(kpiPct === null ? 'khach_tu_van' : 'kpi')} className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-3.5 flex flex-col items-center justify-center text-center gap-1 min-w-0">
                 <small className="text-[12.5px] text-slate-500">{kpiPct === null ? 'Tỷ lệ chốt tháng' : 'Hiệu suất KPI'}</small>
                 <b className="text-[38px] font-bold text-slate-900 leading-tight tabular-nums">{kpiPct === null ? d.closeRate : kpiPct}%</b>
-                <small className="text-[11.5px] text-slate-500 truncate max-w-full">{kpiPct === null ? `${d.newCustomers} khách trong tháng` : `${fmtVND(d.monthRevenue)} / ${fmtVND(d.targetMonth)}`}</small>
+                <small className="text-[11.5px] text-slate-500 truncate max-w-full">{kpiPct === null ? `${d.closedMonth}/${d.consultMonth} lịch tư vấn chốt` : `${fmtVND(d.monthRevenue)} / ${fmtVND(d.targetMonth)}`}</small>
               </button>
             </div>
             <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4">
@@ -379,7 +400,10 @@ const Overview = ({ profile, setActiveTab }) => {
             </button>
             <button onClick={() => setActiveTab('appointments')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3 text-left">
               <span className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><ReceiptText className="w-5 h-5" /></span>
-              <b className="flex-1 min-w-0 text-[14.5px] text-slate-900">{d.appointmentsToday} lịch hẹn hôm nay</b>
+              <span className="flex-1 min-w-0">
+                <b className="block text-[14.5px] text-slate-900">{d.appointmentsToday} lịch hẹn hôm nay</b>
+                {d.appointmentsToday > 0 && <small className="block text-[12.5px] text-slate-500">{d.todayConsult} tư vấn · {d.todayRecheck} thăm khám</small>}
+              </span>
               <ChevronRight className="w-[18px] h-[18px] text-slate-400 shrink-0" />
             </button>
             <button onClick={() => setSub('phan_tich')} className="w-full rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 flex items-center gap-3 text-left">
@@ -420,19 +444,21 @@ const Overview = ({ profile, setActiveTab }) => {
       )}
 
       {/* 4 chỉ số chính */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 lg:gap-4 [&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1">
         {[
           { icon: CircleDollarSign, label: 'Doanh thu', value: d.monthRevenue >= 1e10 ? fmtVND(d.monthRevenue) : new Intl.NumberFormat('vi-VN').format(Math.round(d.monthRevenue)) + 'đ', full: new Intl.NumberFormat('vi-VN').format(Math.round(d.monthRevenue)) + 'đ', delta: d.revMonthTrend, note: 'so với tháng trước', tab: 'finance' },
-          { icon: Users, label: 'Khách hàng mới', value: d.newCustomers.toLocaleString('vi-VN'), delta: d.newCustTrend, note: 'so với tháng trước', tab: 'khach_tu_van' },
-          { icon: CalendarCheck, label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, delta: d.apptTrend, note: 'so với hôm qua', tab: 'appointments' },
-          { icon: Target, label: 'Tỷ lệ chốt', value: d.closeRate + '%', delta: d.closeTrend, unit: ' điểm', note: 'so với tháng trước', tab: 'khach_tu_van' },
+          { icon: Users, label: 'Lịch hẹn tư vấn', value: d.consultMonth.toLocaleString('vi-VN'), delta: d.consultTrend, note: 'so với tháng trước', tab: 'khach_tu_van', title: 'Khách đặt lịch tư vấn trong tháng (không gồm tái khám)' },
+          { icon: Stethoscope, label: 'Khách thăm khám', value: d.recheckMonth.toLocaleString('vi-VN'), delta: d.recheckTrend, note: 'so với tháng trước', tab: 'appointments', title: 'Lịch tái khám / cắt chỉ / kiểm tra sau mổ trong tháng' },
+          { icon: Target, label: 'Tỷ lệ chốt tư vấn', value: d.closeRate + '%', delta: d.closeTrend, unit: ' điểm', note: 'so với tháng trước', tab: 'khach_tu_van', title: `${d.closedMonth}/${d.consultMonth} lịch tư vấn đã cọc hoặc phẫu thuật` },
+          { icon: CalendarCheck, label: 'Lịch hẹn hôm nay', value: d.appointmentsToday, sub: `${d.todayConsult} tư vấn · ${d.todayRecheck} thăm khám`, tab: 'appointments' },
         ].map(m => (
-          <button key={m.label} onClick={() => setActiveTab(m.tab)} title={m.full || undefined} className="text-left rounded-2xl bg-white border border-slate-200/80 shadow-card p-4 lg:p-5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 hover:border-teal-200 transition min-w-0">
-            <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><m.icon className="w-5 h-5 sm:w-6 sm:h-6" /></span>
+          <button key={m.label} onClick={() => setActiveTab(m.tab)} title={m.full || m.title || undefined} className="text-left rounded-2xl bg-white border border-slate-200/80 shadow-card p-4 lg:p-5 flex flex-col sm:flex-row sm:items-center xl:max-2xl:flex-col xl:max-2xl:items-start gap-2.5 sm:gap-4 xl:max-2xl:gap-2.5 hover:border-teal-200 transition min-w-0">
+            <span className="w-10 h-10 sm:w-12 sm:h-12 xl:max-2xl:w-10 xl:max-2xl:h-10 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><m.icon className="w-5 h-5 sm:w-6 sm:h-6 xl:max-2xl:w-5 xl:max-2xl:h-5" /></span>
             <div className="min-w-0">
               <div className="text-[12.5px] sm:text-[13.5px] text-slate-500">{m.label}</div>
               <div className="text-[18px] sm:text-[22px] font-bold text-slate-900 tabular-nums leading-tight truncate">{m.value}</div>
-              {m.delta != null
+              {m.sub ? <div className="text-[12px] sm:text-[12.5px] text-slate-500 mt-0.5 leading-snug">{m.sub}</div>
+                : m.delta != null
                 ? <div className={`text-[12px] sm:text-[12.5px] font-semibold mt-0.5 ${m.delta >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{m.delta >= 0 ? '▲' : '▼'} {Math.abs(m.delta)}{m.unit || '%'} <span className="hidden sm:inline font-normal text-slate-400">{m.note}</span></div>
                 : <div className="text-[12px] text-slate-400 mt-0.5">Chưa có kỳ trước</div>}
             </div>
@@ -476,25 +502,35 @@ const Overview = ({ profile, setActiveTab }) => {
           })()}
         </Panel>
 
-        <Panel title="Cơ cấu dịch vụ" action={<span className="text-[12px] text-slate-400">theo lượt khách · 12 tháng</span>}>
-          {d.services.length === 0 ? <div className="text-sm text-slate-400 py-16 text-center">Chưa có dữ liệu</div> : (
+        <Panel title="Cơ cấu dịch vụ" action={
+          <div className="e-seg">
+            {[['consult', 'Tư vấn'], ['recheck', 'Thăm khám']].map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setMix(k)} className={`e-seg-item h-7 px-3 text-[12px] ${mix === k ? 'e-seg-active' : ''}`}>{l}</button>
+            ))}
+          </div>
+        }>
+          {(() => {
+            const list = mix === 'recheck' ? d.servicesRecheck : d.services;
+            const total = mix === 'recheck' ? d.scTotalRecheck : d.scTotal;
+            return list.length === 0 ? <div className="text-sm text-slate-400 py-16 text-center">Chưa có dữ liệu</div> : (
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(170px,0.9fr)_1fr] items-center gap-6 py-2">
               <div className="relative aspect-square w-full max-w-[230px] justify-self-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <RPieChart>
-                    <Pie data={d.services} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="100%" startAngle={90} endAngle={-270} paddingAngle={1.2} stroke="none">
-                      {d.services.map((x, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    <Pie data={list} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="100%" startAngle={90} endAngle={-270} paddingAngle={1.2} stroke="none">
+                      {list.map((x, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={{ borderRadius: 12, border: 'none', fontSize: 12 }} formatter={(v) => [`${v} lượt`, 'Khách']} />
                   </RPieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <b className="text-[28px] font-bold text-slate-900 tracking-tight">{d.scTotal.toLocaleString('vi-VN')}</b>
-                  <span className="text-[12px] text-slate-500">Lượt khách</span>
+                  <b className="text-[28px] font-bold text-slate-900 tracking-tight">{total.toLocaleString('vi-VN')}</b>
+                  <span className="text-[12px] text-slate-500">{mix === 'recheck' ? 'Lượt thăm khám' : 'Lịch tư vấn'}</span>
+                  <span className="text-[11px] text-slate-400">12 tháng</span>
                 </div>
               </div>
               <ul className="space-y-3.5">
-                {d.services.map((x, i) => (
+                {list.map((x, i) => (
                   <li key={x.name} className="flex items-center gap-2.5 text-[13.5px]">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
                     <span className="flex-1 min-w-0 truncate text-slate-700">{x.name}</span>
@@ -503,7 +539,8 @@ const Overview = ({ profile, setActiveTab }) => {
                 ))}
               </ul>
             </div>
-          )}
+            );
+          })()}
         </Panel>
       </div>
 
