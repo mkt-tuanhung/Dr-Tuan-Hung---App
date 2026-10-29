@@ -546,6 +546,8 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, onViews,
       onMouseMove={poke}
       className={`relative mx-auto bg-black overflow-hidden select-none ${isFs ? 'w-full h-full grid place-items-center' : `${landscape ? 'aspect-video max-w-[min(100%,calc((100dvh-190px)*16/9))]' : 'aspect-[9/16] max-w-[min(100%,calc((100dvh-190px)*9/16))]'} w-full rounded-2xl shadow-float`}`}
     >
+      {/* video ngang: ảnh bìa dọc phủ mờ hai bên lúc chưa phát, khỏi trống đen */}
+      {landscape && !isFs && <img src={thumbOf(video, cfg)} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60" />}
       <video
         ref={vRef}
         src={video.video_url}
