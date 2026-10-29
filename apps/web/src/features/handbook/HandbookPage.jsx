@@ -2,9 +2,9 @@
 // SỔ TAY VIDEO (dùng chung) — Sổ Tay CSKH, Sổ Tay Chuyên môn… cho TOÀN BỘ nhân viên
 // Mỗi sổ tay = 1 cấu hình (handbookConfigs.js): bảng video + bảng tiến độ riêng, thư mục R2, ảnh thumb.
 // - Lưới tập (ảnh thumb dọc 9:16, thời lượng, tiến độ đã xem)
-// - Trình phát riêng: video dọc, play/pause, tua ±10s, thanh tua, tốc độ, toàn màn hình,
+// - Trình phát riêng: video dọc (video ngang 16:9 thì khung tự chuyển ngang), play/pause, tua ±10s, thanh tua, tốc độ, toàn màn hình,
 //   xem tiếp từ chỗ dừng, xem >= 90% = hoàn thành, hết tập tự sang tập kế (đếm ngược 5s)
-// - Admin: "Quản lý video" — sửa tên / mô tả, đổi ảnh thumb, tải video THẲNG lên R2
+// - Admin: "Quản lý video" — thêm tập mới, sửa tên / mô tả, đổi ảnh thumb, tải video THẲNG lên R2
 //   (chọn nhiều file 1 lần, tự khớp tập theo tên file "Tap01_…", "Tap02_…")
 // Bảng: xem cfg.videosTable / cfg.progressTable (supabase/so_tay_cskh.sql, supabase/so_tay_chuyen_mon.sql)
 // ============================================================
@@ -12,7 +12,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { toast } from 'sonner';
 import {
   BookOpen, Play, Pause, RotateCcw, RotateCw, Maximize, Minimize, CheckCircle2, ChevronLeft,
-  Settings2, Upload, ImagePlus, Loader2, Clock, Film, Users, Lock, AlertTriangle, Eye, ChevronDown,
+  Settings2, Upload, ImagePlus, Loader2, Clock, Film, Users, Lock, AlertTriangle, Eye, ChevronDown, Plus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -355,6 +355,7 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, onViews,
   const [speed, setSpeed] = useState(1);
   const [showUi, setShowUi] = useState(true);
   const [isFs, setIsFs] = useState(false);
+  const [landscape, setLandscape] = useState(false); // video ngang (16:9) -> khung ngang
   const [ended, setEnded] = useState(false);
   const [countdown, setCountdown] = useState(null);
   const [scrub, setScrub] = useState(null);       // đang kéo thanh tua -> giá trị tạm
@@ -447,7 +448,10 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, onViews,
     try {
       if (document.fullscreenElement || document.webkitFullscreenElement) {
         await (document.exitFullscreen?.() || document.webkitExitFullscreen?.());
-      } else if (el?.requestFullscreen) await el.requestFullscreen();
+      } else if (el?.requestFullscreen) {
+        await el.requestFullscreen();
+        if (landscape) screen.orientation?.lock?.('landscape').catch(() => {});   // điện thoại: tự xoay ngang
+      }
       else if (el?.webkitRequestFullscreen) el.webkitRequestFullscreen();
       else if (v?.webkitEnterFullscreen) v.webkitEnterFullscreen();     // iPhone: chỉ video được toàn màn hình
     } catch { v?.webkitEnterFullscreen?.(); }
@@ -484,6 +488,7 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, onViews,
     const v = vRef.current;
     if (!v) return;
     if (Number.isFinite(v.duration)) setDur(v.duration);
+    setLandscape(v.videoWidth > v.videoHeight);
     v.playbackRate = speed;
     if (!st.current.resumed) {
       st.current.resumed = true;
@@ -539,7 +544,7 @@ function VideoPlayer({ video, startAt, prevMax, wasDone, meId, onSaved, onViews,
     <div
       ref={wrapRef}
       onMouseMove={poke}
-      className={`relative mx-auto bg-black overflow-hidden select-none ${isFs ? 'w-full h-full grid place-items-center' : 'aspect-[9/16] w-full max-w-[min(100%,calc((100dvh-190px)*9/16))] rounded-2xl shadow-float'}`}
+      className={`relative mx-auto bg-black overflow-hidden select-none ${isFs ? 'w-full h-full grid place-items-center' : `${landscape ? 'aspect-video max-w-[min(100%,calc((100dvh-190px)*16/9))]' : 'aspect-[9/16] max-w-[min(100%,calc((100dvh-190px)*9/16))]'} w-full rounded-2xl shadow-float`}`}
     >
       <video
         ref={vRef}
@@ -674,6 +679,7 @@ function ManageDrawer({ open, onClose, videos, meId, onChanged }) {
   const [drafts, setDrafts] = useState({});    // episode -> {title, subtitle}
   const [up, setUp] = useState({});            // episode -> {pct, name, error}
   const [savingEp, setSavingEp] = useState(null);
+  const [adding, setAdding] = useState(false);
   const bulkRef = useRef(null);
 
   useEffect(() => {
@@ -729,6 +735,17 @@ function ManageDrawer({ open, onClose, videos, meId, onChanged }) {
     } catch (e) { toast.error(e.message); }
   };
   const resetThumb = async (episode) => { try { await patch(episode, { thumbnail_url: null }); onChanged(); } catch (e) { toast.error(e.message); } };
+
+  // Thêm tập kế tiếp (số lớn nhất + 1) — sau đó sửa tên / mô tả, tải video như các tập khác
+  const addEpisode = async () => {
+    const episode = Math.max(0, ...videos.map(v => v.episode)) + 1;
+    setAdding(true);
+    const { error } = await supabase.from(cfg.videosTable).insert({ episode, title: `${cfg.unit} ${pad2(episode)}`, updated_by: meId });
+    setAdding(false);
+    if (error) { toast.error(/duplicate|unique/i.test(error.message) ? `${cfg.unit} ${pad2(episode)} đã có nhưng đang ẩn — bật lại trong database` : error.message); return; }
+    toast.success(`Đã thêm ${cfg.unit} ${pad2(episode)} — đặt tên và tải video lên`);
+    onChanged();
+  };
 
   const saveText = async (v) => {
     const d = drafts[v.episode];
@@ -805,6 +822,10 @@ function ManageDrawer({ open, onClose, videos, meId, onChanged }) {
             </div>
           );
         })}
+
+        <button type="button" disabled={adding || busy} onClick={addEpisode} className="e-btn e-btn-outline e-btn-sm w-full">
+          {adding ? <Loader2 className="animate-spin" /> : <Plus />}Thêm {cfg.unitLower} mới ({cfg.unit} {pad2(Math.max(0, ...videos.map(v => v.episode)) + 1)})
+        </button>
       </div>
     </Drawer>
   );
