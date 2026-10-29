@@ -216,7 +216,7 @@ function HandbookHome() {
               const pr = progress[v.episode];
               const pct = pctOf(v, pr);
               return (
-                <button key={v.episode} type="button" onClick={() => setCurrent(v.episode)} className="group text-left min-w-0 focus:outline-none">
+                <button key={v.episode} type="button" onClick={() => setCurrent(v.episode)} className="group self-start text-left min-w-0 focus:outline-none">
                   <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-slate-900 shadow-card ring-1 ring-black/5 group-focus-visible:ring-2 group-focus-visible:ring-teal-500">
                     <img src={thumbOf(v, cfg)} alt={v.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:scale-[1.03]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
