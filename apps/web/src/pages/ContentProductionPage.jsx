@@ -556,9 +556,16 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   };
   // Duyệt chạy Ads + tuỳ chọn "Đăng ngay" + tuỳ chọn TỰ LÊN CHIẾN DỊCH (popup ApproveModal)
   // adsOpts = { pageId, pageName, runAt } khi Ads chọn "tự chạy ads sau khi đăng"
-  const doApprove = async (c, postNow, adsOpts = null) => {
+  // sched = { at?, pageId?, pageName? } — at có giá trị = HẸN GIỜ ĐĂNG (cron chuyển sang 'queued' đúng giờ)
+  const doApprove = async (c, postNow, adsOpts = null, sched = null) => {
     const payload = { approved_to_run: true, stage: c.stage === 'submitted' ? 'done' : c.stage, ads_id: me.id, evaluated_at: c.evaluated_at || new Date().toISOString() };
-    if (postNow) { payload.post_now = true; payload.post_now_at = new Date().toISOString(); payload.post_status = 'queued'; }
+    if (postNow && sched?.at) {
+      payload.post_now = false; payload.post_now_at = null; payload.post_status = 'scheduled'; payload.post_scheduled_at = sched.at;
+    } else if (postNow) {
+      payload.post_now = true; payload.post_now_at = new Date().toISOString(); payload.post_status = 'queued';
+      if (c.post_scheduled_at) payload.post_scheduled_at = null;   // chỉ gửi cột này khi có (DB chưa chạy SQL vẫn duyệt được)
+    }
+    if (postNow && sched?.pageId) { payload.ads_page_id = sched.pageId; payload.ads_page_name = sched.pageName; }
     if (postNow && adsOpts) {
       payload.ads_page_id = adsOpts.pageId;       // platform đăng lên đúng page này
       payload.ads_page_name = adsOpts.pageName;
@@ -566,8 +573,10 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       payload.ads_auto_status = 'queued';          // cron fb-create-campaign sẽ xử lý
       payload.fb_post_id = null; payload.ads_error = null;
     }
+    const hm = (iso) => new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
     await patchClip(c.id, payload,
-      adsOpts ? `Đã duyệt — sẽ đăng page "${adsOpts.pageName}" & tự lên chiến dịch lúc ${new Date(adsOpts.runAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+      adsOpts ? `Đã duyệt — ${sched?.at ? `hẹn đăng ${hm(sched.at)}` : 'đăng ngay'} lên "${adsOpts.pageName}" & tự lên chiến dịch lúc ${hm(adsOpts.runAt)}`
+        : sched?.at ? `Đã duyệt & hẹn đăng lúc ${hm(sched.at)}${sched.pageName ? ` lên "${sched.pageName}"` : ''}`
         : postNow ? 'Đã duyệt & bật ĐĂNG NGAY lên page' : 'Đã duyệt chạy Ads');
     setApproveFor(null);
   };
@@ -591,8 +600,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
   };
   // Bật/tắt nhãn "Đăng ngay" — hệ thống ngoài đọc cờ này để tự đăng video lên page
   const markPostNow = (c, on) => patchClip(c.id,
-    { post_now: on, post_now_at: on ? new Date().toISOString() : null, post_status: on ? 'queued' : null, ads_id: me.id },
-    on ? 'Đã bật ĐĂNG NGAY — hệ thống sẽ tự đăng lên page' : 'Đã huỷ Đăng ngay');
+    { post_now: on, post_now_at: on ? new Date().toISOString() : null, post_status: on ? 'queued' : null, ...(c.post_scheduled_at ? { post_scheduled_at: null } : {}), ads_id: me.id },
+    on ? 'Đã bật ĐĂNG NGAY — hệ thống sẽ tự đăng lên page' : (c.post_status === 'scheduled' ? 'Đã huỷ lịch đăng' : 'Đã huỷ Đăng ngay'));
   // Mở thẳng link Google Drive nguồn (thư mục tổng) trong tab mới
   const openSource = (s) => {
     const links = (s.source_links || []).filter(Boolean);
@@ -1017,7 +1026,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
 
       {addOpen && <AddMediaModal me={me} stores={stores} onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); loadData(); }} />}
       {autoImportOpen && <AutoImportModal me={me} stores={stores} onClose={() => setAutoImportOpen(false)} onSaved={() => { setAutoImportOpen(false); loadData(); }} />}
-      {approveFor && <ApproveModal clip={approveFor} store={storeOf(approveFor.media_customer_id)} onClose={() => setApproveFor(null)} onConfirm={(postNow, adsOpts) => doApprove(approveFor, postNow, adsOpts)} />}
+      {approveFor && <ApproveModal clip={approveFor} store={storeOf(approveFor.media_customer_id)} onClose={() => setApproveFor(null)} onConfirm={(postNow, adsOpts, sched) => doApprove(approveFor, postNow, adsOpts, sched)} />}
       {addVideoOpen && <AddVideoModal me={me} onClose={() => setAddVideoOpen(false)} onSaved={() => { setAddVideoOpen(false); loadData(); }} />}
       {editSource && <SourceModal store={editSource} onClose={() => setEditSource(null)} onSaved={() => { setEditSource(null); loadData(); }} />}
       {linkFor && <LinkCustomerModal store={linkFor} onClose={() => setLinkFor(null)} onSaved={() => { setLinkFor(null); loadData(); }} />}
@@ -2029,35 +2038,71 @@ const LeaderboardCard = ({ lb, now, onSeeAll }) => (
   </div>
 );
 
-// ---------- Popup: Duyệt chạy Ads + hỏi Đăng ngay ----------
+// ---------- Popup: Duyệt chạy Ads + Đăng ngay / HẸN GIỜ ĐĂNG (+ tự chạy ads) ----------
+// Hẹn giờ: post_status = 'scheduled' + post_scheduled_at + ads_page_id; cron mỗi phút (media_clip_schedule.sql)
+// đến giờ chuyển sang 'queued' -> platform đăng đúng ngày, giờ, đúng trang.
+const MIN_LEAD_MIN = 5;   // giờ hẹn đăng phải sau hiện tại ít nhất 5 phút (không chọn được giờ quá khứ)
+const pad2n = (n) => String(n).padStart(2, '0');
+const toDateInput = (d) => `${d.getFullYear()}-${pad2n(d.getMonth() + 1)}-${pad2n(d.getDate())}`;
+const toTimeInput = (d) => `${pad2n(d.getHours())}:${pad2n(d.getMinutes())}`;
+const toLocalInput = (d) => `${toDateInput(d)}T${toTimeInput(d)}`;
+const fmtWhen = (d) => d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+
 const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
   const [saving, setSaving] = useState(false);
-  // Tự chạy ads: chọn page + giờ lên chiến dịch (≥ +15 phút để platform kịp đăng bài & lấy ID)
-  const [runAds, setRunAds] = useState(false);
-  const [pages, setPages] = useState(null); // null = đang tải
+  const [mode, setMode] = useState('now');        // now | schedule
+  const [pages, setPages] = useState(null);       // null = đang tải
   const [pageId, setPageId] = useState('');
-  const defRunAt = () => { const d = new Date(Date.now() + 20 * 60000); d.setSeconds(0, 0); return d; };
-  const toLocalInput = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  const [runAt, setRunAt] = useState(() => toLocalInput(defRunAt()));
+  const defPost = () => { const d = new Date(Date.now() + 60 * 60000); d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0); return d; };
+  const [postDate, setPostDate] = useState(() => toDateInput(defPost()));
+  const [postTime, setPostTime] = useState(() => toTimeInput(defPost()));
+  // Tự chạy ads: giờ lên chiến dịch ≥ giờ đăng + 15 phút (platform kịp đăng bài & lấy ID)
+  const [runAds, setRunAds] = useState(false);
+  const [runAt, setRunAt] = useState(() => toLocalInput(new Date(Date.now() + 20 * 60000)));
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
-    if (!runAds || pages !== null) return;
     supabase.from('fb_pages').select('page_id, name').eq('active', true).order('name')
-      .then(({ data }) => setPages(data || []));
-  }, [runAds, pages]);
+      .then(({ data }) => { setPages(data || []); if ((data || []).length === 1) setPageId(data[0].page_id); });
+  }, []);
 
-  const go = async (postNow) => {
+  const minPost = new Date(now.getTime() + MIN_LEAD_MIN * 60000);
+  const postAt = mode === 'schedule' ? new Date(`${postDate}T${postTime || '00:00'}`) : now;
+  const postInvalid = mode === 'schedule' && (isNaN(postAt) || postAt < minPost);
+  const runMin = new Date(postAt.getTime() + 15 * 60000);
+  // Đổi giờ đăng -> đẩy giờ chạy ads theo nếu đang sớm hơn mức tối thiểu
+  useEffect(() => {
+    if (!runAds || isNaN(postAt)) return;
+    if (new Date(runAt) < runMin) setRunAt(toLocalInput(new Date(postAt.getTime() + 20 * 60000)));
+  }, [postDate, postTime, mode, runAds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pageName = (pages || []).find(p => p.page_id === pageId)?.name || pageId;
+  const needPage = mode === 'schedule' || runAds;
+
+  const go = async (post) => {
+    let sched = null;
     let adsOpts = null;
-    if (postNow && runAds) {
-      if (!pageId) { toast.error('Chọn page cần chạy ads'); return; }
-      const t = new Date(runAt);
-      if (!(t instanceof Date) || isNaN(t) || t.getTime() < Date.now() + 15 * 60000) {
-        toast.error('Giờ lên chiến dịch phải cách hiện tại ít nhất 15 phút'); return;
+    if (post) {
+      if (needPage && (pages || []).length && !pageId) { toast.error('Chọn trang Facebook sẽ đăng'); return; }
+      if (mode === 'schedule') {
+        if (postInvalid) { toast.error(`Không thể chọn giờ trong quá khứ — giờ đăng phải từ ${toTimeInput(minPost)} ${minPost.toLocaleDateString('vi-VN')} trở đi`); return; }
+        sched = { at: postAt.toISOString(), pageId: pageId || null, pageName: pageId ? pageName : null };
       }
-      adsOpts = { pageId, pageName: (pages || []).find(p => p.page_id === pageId)?.name || pageId, runAt: t.toISOString() };
+      if (runAds) {
+        const t = new Date(runAt);
+        if (isNaN(t) || t < runMin) { toast.error(`Giờ lên chiến dịch phải sau giờ đăng ít nhất 15 phút (từ ${fmtWhen(runMin)})`); return; }
+        adsOpts = { pageId, pageName, runAt: t.toISOString() };
+      } else if (pageId) {
+        sched = { ...(sched || {}), pageId, pageName };
+      }
     }
     setSaving(true);
-    await onConfirm(postNow, adsOpts); /* parent tự đóng */
+    await onConfirm(post, adsOpts, sched); /* parent tự đóng */
   };
+
+  const primaryLabel = mode === 'schedule'
+    ? (runAds ? 'Duyệt · Hẹn đăng · Chạy ads' : 'Duyệt & Hẹn giờ đăng')
+    : (runAds ? 'Duyệt · Đăng · Chạy ads' : 'Duyệt & Đăng ngay');
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -2072,11 +2117,59 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
           </div>
         </div>
         <div className="e-modal-body space-y-3">
-          <div className="rounded-xl border border-peach-100 bg-peach-50/60 p-3.5 flex items-start gap-3">
-            <span className="w-10 h-10 rounded-full bg-white text-peach-600 grid place-items-center shrink-0 text-lg shadow-soft">⚡</span>
-            <div className="min-w-0">
-              <div className="font-semibold text-slate-800 text-[14px]">Đăng ngay lên page luôn?</div>
-              <p className="text-[12.5px] text-slate-500 mt-0.5 leading-snug">Chọn <b>“Đăng ngay”</b> — hệ thống sẽ tự quét &amp; đăng video này lên page.<br />Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+          {/* Lịch đăng: đăng ngay | hẹn giờ + trang Facebook */}
+          <div className="rounded-xl border border-peach-100 bg-peach-50/60 p-3.5 space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="w-10 h-10 rounded-full bg-white text-peach-600 grid place-items-center shrink-0 text-lg shadow-soft">{mode === 'schedule' ? '🕒' : '⚡'}</span>
+              <div className="min-w-0">
+                <div className="font-semibold text-slate-800 text-[14px]">Lịch đăng lên page</div>
+                <p className="text-[12.5px] text-slate-500 mt-0.5 leading-snug">Chọn <b>Đăng ngay</b> hoặc <b>Hẹn giờ</b> — hệ thống tự đăng đúng ngày, giờ, đúng trang. Chọn <b>“Chỉ duyệt”</b> nếu muốn đăng sau.</p>
+              </div>
+            </div>
+            <div className="e-seg w-full">
+              {[['now', '⚡ Đăng ngay'], ['schedule', '🕒 Hẹn giờ đăng']].map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setMode(k)} className={`e-seg-item flex-1 ${mode === k ? 'e-seg-active' : ''}`}>{l}</button>
+              ))}
+            </div>
+            {mode === 'schedule' && (
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="e-label">Ngày đăng</span>
+                  <input type="date" className="e-input" value={postDate} min={toDateInput(minPost)}
+                    onChange={e => setPostDate(e.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="e-label">Giờ đăng</span>
+                  <input type="time" className="e-input" value={postTime} step={300}
+                    min={postDate === toDateInput(minPost) ? toTimeInput(minPost) : undefined}
+                    onChange={e => setPostTime(e.target.value)} />
+                </label>
+                <div className={`col-span-2 text-[12.5px] leading-snug ${postInvalid ? 'text-danger-600' : 'text-slate-500'}`}>
+                  {postInvalid
+                    ? `Không thể chọn giờ trong quá khứ — chọn từ ${toTimeInput(minPost)} ngày ${minPost.toLocaleDateString('vi-VN')} trở đi.`
+                    : `Sẽ đăng lúc ${fmtWhen(postAt)}.`}
+                </div>
+              </div>
+            )}
+            <div>
+              <div className="e-label">Trang Facebook đăng bài{needPage ? ' *' : ' (bỏ trống = trang mặc định)'}</div>
+              {pages === null ? (
+                <div className="text-[13px] text-slate-400 flex items-center gap-2 py-1"><Loader2 className="w-4 h-4 animate-spin" />Đang tải danh sách trang…</div>
+              ) : pages.length === 0 ? (
+                <div className="text-[12.5px] text-slate-500 e-subtle p-3">Chưa có trang nào được cấp token. Thêm trang vào bảng <b>fb_pages</b> trước.</div>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {pages.map(p => (
+                    <button type="button" key={p.page_id} onClick={() => setPageId(pageId === p.page_id && !needPage ? '' : p.page_id)}
+                      className={`w-full flex items-center gap-2.5 px-3 h-10 rounded-xl border text-left text-[14px] transition-colors ${pageId === p.page_id ? 'border-teal-400 bg-white font-semibold text-teal-800 shadow-soft' : 'border-slate-200 bg-white text-slate-600 hover:border-teal-200'}`}>
+                      <span className={`w-4 h-4 rounded-full border-2 grid place-items-center shrink-0 ${pageId === p.page_id ? 'border-teal-600' : 'border-slate-300'}`}>
+                        {pageId === p.page_id && <span className="w-2 h-2 rounded-full bg-teal-600" />}
+                      </span>
+                      <span className="truncate">{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -2089,32 +2182,12 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
               </span>
             </button>
             {runAds && (
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-2">
+                <div className="text-[13px] text-slate-600">Chạy trên trang: <b className="text-slate-800">{pageId ? pageName : 'chọn trang ở trên'}</b></div>
                 <div>
-                  <div className="e-label">Chọn page chạy ads</div>
-                  {pages === null ? (
-                    <div className="text-[13px] text-slate-400 flex items-center gap-2 py-1"><Loader2 className="w-4 h-4 animate-spin" />Đang tải danh sách page…</div>
-                  ) : pages.length === 0 ? (
-                    <div className="text-[12.5px] text-slate-500 e-subtle p-3">Chưa có page nào được cấp token. Thêm page vào bảng <b>fb_pages</b> trước.</div>
-                  ) : (
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                      {pages.map(p => (
-                        <button type="button" key={p.page_id} onClick={() => setPageId(p.page_id)}
-                          className={`w-full flex items-center gap-2.5 px-3 h-10 rounded-xl border text-left text-[14px] transition-colors ${pageId === p.page_id ? 'border-teal-400 bg-white font-semibold text-teal-800 shadow-soft' : 'border-slate-200 bg-white text-slate-600 hover:border-teal-200'}`}>
-                          <span className={`w-4 h-4 rounded-full border-2 grid place-items-center shrink-0 ${pageId === p.page_id ? 'border-teal-600' : 'border-slate-300'}`}>
-                            {pageId === p.page_id && <span className="w-2 h-2 rounded-full bg-teal-600" />}
-                          </span>
-                          <span className="truncate">{p.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div className="e-label">Giờ lên chiến dịch (≥ 15 phút nữa)</div>
-                  <input type="datetime-local" value={runAt} min={toLocalInput(new Date(Date.now() + 15 * 60000))} onChange={e => setRunAt(e.target.value)}
-                    className="e-input" />
-                  <p className="text-[12px] text-slate-400 mt-1.5 leading-snug">Trong thời gian chờ, hệ thống đăng bài lên page &amp; lấy ID bài đăng; đến giờ sẽ tự tạo chiến dịch với tệp target đã cấu hình sẵn.</p>
+                  <div className="e-label">Giờ lên chiến dịch (≥ 15 phút sau giờ đăng)</div>
+                  <input type="datetime-local" value={runAt} min={toLocalInput(runMin)} onChange={e => setRunAt(e.target.value)} className="e-input" />
+                  <p className="text-[12px] text-slate-400 mt-1.5 leading-snug">Sau khi đăng, hệ thống lấy ID bài đăng; đến giờ sẽ tự tạo chiến dịch với tệp target đã cấu hình sẵn.</p>
                 </div>
               </div>
             )}
@@ -2123,8 +2196,8 @@ const ApproveModal = ({ clip, store, onClose, onConfirm }) => {
         <div className="e-modal-footer flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center">
           <button onClick={onClose} disabled={saving} className="e-btn e-btn-secondary">Huỷ</button>
           <button onClick={() => go(false)} disabled={saving} className="e-btn e-btn-outline"><CheckCircle2 className="w-4 h-4" />Chỉ duyệt</button>
-          <button onClick={() => go(true)} disabled={saving} className="e-btn e-btn-primary">
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-base leading-none">{runAds ? '🚀' : '⚡'}</span>} {runAds ? 'Duyệt · Đăng · Chạy ads' : 'Duyệt & Đăng ngay'}
+          <button onClick={() => go(true)} disabled={saving || postInvalid} className="e-btn e-btn-primary">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-base leading-none">{runAds ? '🚀' : mode === 'schedule' ? '🕒' : '⚡'}</span>} {primaryLabel}
           </button>
         </div>
       </div>
@@ -2162,6 +2235,7 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
     canAds && !c.approved_to_run && { label: 'Duyệt chạy Ads', icon: <CheckCircle2 className="w-4 h-4" />, onClick: onApproveRun },
     canAds && c.approved_to_run && !c.post_now && c.post_status !== 'posted' && { label: '⚡ Đăng ngay lên page', icon: <Send className="w-4 h-4" />, onClick: () => onPostNow?.(c, true) },
     canAds && c.post_now && c.post_status !== 'posted' && { label: 'Huỷ Đăng ngay', icon: <X className="w-4 h-4" />, onClick: () => onPostNow?.(c, false) },
+    canAds && c.post_status === 'scheduled' && { label: 'Huỷ lịch đăng', icon: <X className="w-4 h-4" />, onClick: () => onPostNow?.(c, false) },
     canAds && { label: c.approved_to_run ? 'Ghi chú / đánh giá' : 'Xem & góp ý', icon: <Pencil className="w-4 h-4" />, onClick: onReview },
     (mine || isAdmin) && { label: 'Sửa clip', icon: <Pencil className="w-4 h-4" />, onClick: onEdit },
     (mine || isAdmin) && { label: 'Xoá clip', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, danger: true },
@@ -2211,6 +2285,11 @@ const ClipReviewCard = ({ c, store, me, isAdmin, canAds, winRule, editorAvg, onR
         {(c.post_status === 'posted' || c.post_now) && (
           <span className="absolute top-3 left-3 e-badge e-badge-sm bg-white/90 text-success-600 shadow-soft">
             {c.post_status === 'posted' ? <><span className="e-check" aria-hidden="true" />Đã đăng page</> : <><Zap className="w-3.5 h-3.5" aria-hidden="true" />Đã gửi đăng page</>}
+          </span>
+        )}
+        {c.post_status === 'scheduled' && c.post_scheduled_at && (
+          <span className="absolute top-3 left-3 e-badge e-badge-sm bg-white/90 text-info-600 shadow-soft" title={c.ads_page_name ? `Trang: ${c.ads_page_name}` : undefined}>
+            🕒 Hẹn đăng {new Date(c.post_scheduled_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}{c.ads_page_name ? ` · ${c.ads_page_name}` : ''}
           </span>
         )}
       </button>
