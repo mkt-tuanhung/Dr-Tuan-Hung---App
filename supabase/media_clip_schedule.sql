@@ -1,12 +1,11 @@
 -- ============================================================
 -- LÊN LỊCH ĐĂNG VIDEO ADS (chạy lại vẫn an toàn) — chạy SAU media_clip_post.sql, fb_auto_campaign.sql
 --
--- Ads bấm "Duyệt & Đăng" -> chọn "Hẹn giờ đăng" (ngày + giờ + trang Facebook):
+-- Ads bấm "Duyệt & Đăng" -> chọn "Hẹn giờ đăng" (ngày + giờ):
 --   media_clips.post_status       = 'scheduled'   (platform CHƯA thấy -> chưa đăng)
 --   media_clips.post_scheduled_at = giờ hẹn đăng
---   media_clips.ads_page_id/name  = trang Facebook sẽ đăng (đúng hợp đồng với platform)
 -- Cron 'media-post-schedule-1min' (mỗi phút): đến giờ hẹn -> post_now = true, post_status = 'queued'
---   -> platform admin.drtuanhung.vn nhận tín hiệu như "Đăng ngay" và đăng lên đúng page.
+--   -> platform admin.drtuanhung.vn nhận tín hiệu như "Đăng ngay" và đăng lên page như thường lệ.
 -- Platform muốn tự xếp lịch sớm trên Facebook (scheduled_publish_time) thì đọc thêm
 -- các clip post_status = 'scheduled' + post_scheduled_at.
 -- ============================================================
