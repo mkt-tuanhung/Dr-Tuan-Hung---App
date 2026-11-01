@@ -31,7 +31,7 @@ const Badge = ({ n, active }) => (n > 0 ? (
   <span className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold grid place-items-center ${active ? 'bg-white/25 text-white' : 'bg-rose-500 text-white'}`}>{n}</span>
 ) : null);
 
-// Màn "Tất cả chức năng": màu ô icon xoay vòng theo bảng Ethics
+// Màn "Tất cả chức năng": MỖI KHỐI 1 màu (xoay theo thứ tự khối) — không đổi màu từng ô cho đỡ rối
 const TILE_TONES = [
   'bg-teal-50 text-teal-700',
   'bg-info-50 text-info-600',
@@ -39,12 +39,22 @@ const TILE_TONES = [
   'bg-peach-50 text-peach-600',
   'bg-lavender-50 text-lavender-600',
 ];
+const TILE_BARS = ['bg-teal-400', 'bg-info-400', 'bg-danger-400', 'bg-peach-400', 'bg-lavender-400'];   // vạch màu cạnh tiêu đề khối
 // "KHÁCH HÀNG" -> "Khách hàng"
 const sentence = (t) => (t ? t.charAt(0) + t.slice(1).toLocaleLowerCase('vi') : 'Chung');
 // Mục con nằm phẳng trong lưới; nhãn chung chung thì ghép tên nhóm cha cho rõ
 const flatTiles = (items) => items.flatMap(m => (m.children
   ? m.children.map(c => ({ ...c, icon: c.icon || m.icon, label: c.label === 'Tổng quan' ? `Tổng quan ${m.label}` : c.label }))
   : [m]));
+// Điện thoại: mục cha (grp_*) tách thành KHỐI riêng có tiêu đề (VD "Khách hàng" · "Inbox & Tổng đài" · "Phẫu thuật")
+// thay vì dồn hết vào 1 khối nhóm lớn. Mục cha trùng tên nhóm lớn thì gộp vào khối đầu.
+const mobileSections = (groups) => groups.flatMap(g => {
+  const title = sentence(g.title);
+  const subs = g.items.filter(m => m.children);
+  const same = subs.find(sg => deAccent(sg.label).trim() === deAccent(title).trim());
+  const head = { title, tiles: [...(same ? flatTiles([same]) : []), ...g.items.filter(m => !m.children)] };
+  return [head, ...subs.filter(sg => sg !== same).map(sg => ({ title: sg.label, tiles: flatTiles([sg]) }))];
+});
 
 export const Avatar = ({ profile, size = 'w-9 h-9', text = 'text-sm' }) => (
   <div className={`${size} rounded-full overflow-hidden bg-teal-600 text-white ${text} font-bold grid place-items-center shrink-0`}>
@@ -127,7 +137,7 @@ function Shell({
   const todayLabel = `${now.getDay() === 0 ? 'Chủ nhật' : `Thứ ${now.getDay() + 1}`}, ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const allTiles = allQ.trim()
     ? [{ title: 'Kết quả tìm kiếm', tiles: flatTiles(groups.flatMap(g => g.items)).filter(m => deAccent(m.label).includes(deAccent(allQ))) }]
-    : groups.map(g => ({ title: sentence(g.title), tiles: flatTiles(g.items).filter(m => m.id !== homeId) })); // Trang chủ đã có ở thanh dưới
+    : mobileSections(groups).map(sec => ({ ...sec, tiles: sec.tiles.filter(m => m.id !== homeId) })); // Trang chủ đã có ở thanh dưới
   const focusSearch = () => { setSidebarOpen(true); setTimeout(() => searchRef.current?.focus(), 60); };
 
   const renderItem = (item) => {
@@ -365,16 +375,20 @@ function Shell({
               <Search />
               <input value={allQ} onChange={e => setAllQ(e.target.value)} placeholder="Tìm chức năng…" className="!bg-white" />
             </div>
-            {allTiles.map(sec => sec.tiles.length > 0 && (
-              <section key={sec.title} className="mt-5">
-                <h2 className="text-[18px] font-bold text-slate-900 mb-3">{sec.title}</h2>
+            {allTiles.filter(sec => sec.tiles.length > 0).map((sec, si) => (
+              <section key={`${si}-${sec.title}`} className="mt-5">
+                <h2 className="flex items-center gap-2 text-[16px] font-bold text-slate-900 mb-2.5 px-1">
+                  <span className={`w-1.5 h-4 rounded-full ${TILE_BARS[si % TILE_BARS.length]}`} aria-hidden="true" />
+                  {sec.title}
+                  <span className="text-[12px] font-medium text-slate-400 tabular-nums">{sec.tiles.length}</span>
+                </h2>
                 <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft px-2 py-3 grid grid-cols-4 fold:grid-cols-6 gap-y-3">
-                  {sec.tiles.map((m, i) => {
+                  {sec.tiles.map((m) => {
                     const Icon = m.icon;
                     const active = activeTab === m.id;
                     return (
                       <button key={m.id} onClick={() => go(m.id)} className="flex flex-col items-center gap-2 px-1 min-w-0 active:scale-95 transition">
-                        <span className={`relative w-[52px] h-[52px] rounded-2xl grid place-items-center ${TILE_TONES[i % TILE_TONES.length]} ${active ? 'ring-2 ring-teal-400 ring-offset-2' : ''}`}>
+                        <span className={`relative w-[52px] h-[52px] rounded-2xl grid place-items-center ${TILE_TONES[si % TILE_TONES.length]} ${active ? 'ring-2 ring-teal-400 ring-offset-2' : ''}`}>
                           {Icon && <Icon className="w-6 h-6" strokeWidth={1.8} />}
                           {m.badge > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-danger-500 text-white text-[10px] font-bold grid place-items-center border-2 border-white">{m.badge > 9 ? '9+' : m.badge}</span>}
                         </span>
