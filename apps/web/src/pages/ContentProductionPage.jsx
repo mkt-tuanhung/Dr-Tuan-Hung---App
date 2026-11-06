@@ -11,6 +11,7 @@ import {
   Clock, Wallet, TrendingUp, Phone, LayoutDashboard, Copy, Users, User, ShoppingCart, CircleDollarSign, Zap, Rocket, CalendarClock,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
+import EditorStatsPanel from '@/features/marketing/EditorStatsPanel.jsx';
 import ImageLibrary from '@/components/ImageLibrary.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
 
@@ -359,12 +360,15 @@ const DateRangeFilter = ({ from, to, onApply, headerLabel = 'Lọc theo ngày qu
 const ContentProductionPage = ({ setActiveTab, view }) => {
   const { profile: me } = useAuth();
   const roles = [me?.role, me?.role_2].filter(Boolean);
-  const isAdmin = roles.includes('admin');
+  // GIÁM ĐỐC MARKETING (vai trò Marketing + chức vụ "Giám đốc"): quản lý toàn bộ Video Ads như Admin
+  // (sửa / xoá mọi clip, xem chỉ số quản lý). Kho Media / Hình ảnh giữ quyền theo vai trò như cũ.
+  const isMktDirector = roles.includes('marketing') && me?.position === 'Giám đốc';
+  const isAdmin = roles.includes('admin') || isMktDirector;
   const isManager = isAdmin || roles.includes('accountant') || roles.includes('shareholder');
-  const canAddMedia = roles.includes('media') || isAdmin;
+  const canAddMedia = roles.includes('media') || roles.includes('admin');
   const canEdit = roles.includes('editor') || isAdmin;
   const canAds = roles.includes('marketing') || isAdmin;
-  const canDesign = roles.includes('designer') || isAdmin; // được upload/quản lý thư viện ảnh
+  const canDesign = roles.includes('designer') || roles.includes('admin'); // được upload/quản lý thư viện ảnh
 
   const tabs = [];
   if (canAds || isManager) tabs.push('overview');
@@ -954,13 +958,15 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           {(canAds || isManager) && <FbSummaryStrip clips={clips} onReport={setActiveTab ? () => setActiveTab('ads_report') : null} />}
           {/* Sub-tab trạng thái — thiết kế nổi bật, "Đang chạy" có hiệu ứng live */}
           <div className="e-card-flat px-2 sm:px-3 flex items-center gap-x-3 flex-wrap">
-            <div className="e-tabs border-b-0 flex-1 min-w-0">
+            {/* Điện thoại: hàng tab chiếm trọn 1 dòng (trước bị 2 nút bên phải ép mất), nút xuống dòng dưới */}
+            <div className="e-tabs border-b-0 flex-1 min-w-0 max-sm:basis-full">
               {[
                 { k: 'all', label: 'Tất cả', Icon: LayoutGrid, n: reviewClips.length, c: 'teal' },
                 { k: 'running', label: 'Đang chạy', Icon: PlayCircle, n: videoCounts.running, c: 'emerald', live: true },
                 { k: 'review', label: 'Đang duyệt', Icon: Clock, n: videoCounts.review, c: 'amber' },
                 { k: 'off', label: 'Đã tắt', Icon: PauseCircle, n: videoCounts.off, c: 'slate' },
                 { k: 'pending', label: 'Chờ duyệt', Icon: Clapperboard, n: videoCounts.pending, c: 'violet' },
+                ...((canAds || isManager) ? [{ k: 'stats', label: 'Thống kê editor', Icon: BarChart2, n: null, c: 'teal' }] : []),
               ].map(({ k, label, Icon, n, c, live }) => {
                 const active = videoTab === k;
                 const grad = { teal: 'bg-teal-500', emerald: 'bg-success-500', amber: 'bg-warning-500', slate: 'bg-slate-400', violet: 'bg-lavender-500' }[c];
@@ -979,7 +985,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
                     )}
                     <Icon className={`w-4 h-4 ${active ? 'text-teal-600' : iconCol}`} />
                     {label}
-                    <span className={`e-tab-count tabular-nums min-w-[22px] h-5 px-1.5 rounded-full grid place-items-center ${active ? 'bg-teal-50 text-teal-700 font-semibold' : 'bg-slate-100'}`}>{n}</span>
+                    {n != null && <span className={`e-tab-count tabular-nums min-w-[22px] h-5 px-1.5 rounded-full grid place-items-center ${active ? 'bg-teal-50 text-teal-700 font-semibold' : 'bg-slate-100'}`}>{n}</span>}
                   </button>
                 );
               })}
@@ -989,7 +995,9 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
               {canAds && <button onClick={syncAllFb} disabled={syncingAll} className="e-btn e-btn-outline e-btn-sm">{syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}Cập nhật chỉ số FB</button>}
             </div>
           </div>
-          {reviewClips.length === 0 ? (
+          {videoTab === 'stats' ? (
+          <EditorStatsPanel clips={clips} />
+        ) : reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : videoView === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
