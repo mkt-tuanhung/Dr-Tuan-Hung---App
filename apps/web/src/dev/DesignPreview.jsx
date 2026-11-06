@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import {
   LayoutDashboard, Database, ClipboardList, CalendarDays, UserCheck, Activity, Smile,
   Users, Target, Wallet, Banknote, PieChart, Sprout, BarChart2, Clapperboard, FolderOpen,
-  PlayCircle, Video, MessagesSquare, Gamepad2, Bell, ShieldCheck, ScanFace,
+  PlayCircle, MessagesSquare, Bell, ShieldCheck, ScanFace,
 } from 'lucide-react';
 import AppShell from '@/components/shell/AppShell.jsx';
 import ResourceCalendar from '@/features/appointments/ResourceCalendar.jsx';
@@ -46,9 +46,7 @@ const ADMIN_GROUPS = [
     ] },
   ] },
   { title: 'VẬN HÀNH', items: [
-    { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
-    { id: 'minigame', label: 'Minigame', icon: Gamepad2 },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
     { id: 'permissions', label: 'Phân quyền', icon: ShieldCheck },
   ] },
