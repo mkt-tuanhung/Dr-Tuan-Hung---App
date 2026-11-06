@@ -7,7 +7,6 @@ import AttendanceManagementPage from '@/pages/AttendanceManagementPage.jsx';
 import KPIManagementPage from '@/pages/KPIManagementPage.jsx';
 import PayrollPage from '@/pages/PayrollPage.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
-import MinigamePage from '@/pages/MinigamePage.jsx';
 import NotificationsPage from '@/pages/NotificationsPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
 import KhachCocPage from '@/pages/KhachCocPage.jsx';
@@ -29,7 +28,6 @@ import MarketingDataPage from '@/pages/MarketingDataPage.jsx';
 import ContentProductionPage from '@/pages/ContentProductionPage.jsx';
 import AdsReportPage from '@/pages/AdsReportPage.jsx';
 import KhachTuVanPage from '@/pages/KhachTuVanPage.jsx';
-import MeetingPage from '@/pages/MeetingPage.jsx';
 import ProfileMenu from '@/components/ProfileMenu.jsx';
 import NotificationBell from '@/components/NotificationBell.jsx';
 import AppShell from '@/components/shell/AppShell.jsx';
@@ -39,8 +37,8 @@ import {
   LayoutDashboard, Users, CalendarCheck, CalendarDays, ClipboardList,
   Banknote, Activity, Target, Wallet, Bell, ShieldCheck, LogOut,
   Menu, X, AlertCircle, ChevronRight, CheckCircle2, CircleDollarSign,
-  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, Video, PieChart, Sprout, Smile,
-  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, RefreshCw, Clock, CalendarRange,
+  Briefcase, Plus, Search, UserX, DollarSign, UserCheck, TrendingUp, BarChart2, MessagesSquare, Database, PieChart, Sprout, Smile,
+  Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, RefreshCw, Clock, CalendarRange,
   AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText,
   Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3, BookOpen, Library, Stethoscope, Workflow, KanbanSquare,
 } from 'lucide-react';
@@ -116,9 +114,7 @@ const MENU_GROUPS = [
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'tasks', label: 'Công việc & Duyệt', shortLabel: 'Công việc', icon: ListTodo },
-    { id: 'meetings', label: 'Phòng họp', icon: Video },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare },
-    { id: 'minigame', label: 'Minigame', icon: Gamepad2 },
     { id: 'notifications', label: 'Thông báo', icon: Bell },
   ]},
   { title: 'HỆ THỐNG', color: 'slate', items: [
@@ -706,7 +702,7 @@ const AdminDashboard = () => {
     const q = new URLSearchParams(window.location.search);
     const u = readUrlNav();
     if (u?.focus) setPendingFocus({ tab: u.tab || 'overview', id: u.focus });
-    return u?.tab || (q.get('meeting') ? 'meetings' : (localStorage.getItem('admin_active_tab') || 'overview'));
+    return u?.tab || (localStorage.getItem('admin_active_tab') || 'overview');
   });
   const [hrInitialTab, setHrInitialTab] = useState('staff');
 
@@ -765,9 +761,7 @@ const AdminDashboard = () => {
       case 'pl': return <PLPage />;
       case 'kpi': return <KPIManagementPage />;
       case 'payroll': return <PayrollPage />;
-      case 'meetings': return <MeetingPage />;
       case 'community': return <CommunityPage />;
-      case 'minigame': return <MinigamePage />;
       case 'cskh_handbook': return <CskhHandbookPage />;
       case 'pro_handbook': return <ProHandbookPage />;
       case 'proc_handbook': return <ProcHandbookPage />;

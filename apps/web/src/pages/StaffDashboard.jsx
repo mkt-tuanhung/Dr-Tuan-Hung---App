@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   LogOut, CalendarCheck, Target, Wallet, Clock, Banknote,
   Menu, X, User, LayoutDashboard, Bell, ChevronRight,
-  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard, Video,
+  CalendarDays, ClipboardList, Activity, UserX, BarChart2, MessagesSquare, Eye, EyeOff, Clapperboard,
   Trophy, Scissors, CheckCircle2, Database, UserCheck, PieChart, Handshake, Sprout, Smile,
-  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Gamepad2, Search, ScanFace, CalendarRange, PhoneCall
+  FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, Search, ScanFace, CalendarRange, PhoneCall
 } from 'lucide-react';
 import AttendancePage from '@/pages/AttendancePage.jsx';
 import MySchedulePage from '@/features/hr/MySchedulePage.jsx';
@@ -19,12 +19,10 @@ import SaleOfflineStaffKPI from '@/components/kpi/SaleOfflineStaffKPI.jsx';
 import TrucPageStaffKPI from '@/components/kpi/TrucPageStaffKPI.jsx';
 import TelesaleStaffKPI from '@/components/kpi/TelesaleStaffKPI.jsx';
 import CommunityPage from '@/pages/CommunityPage.jsx';
-import MinigamePage from '@/pages/MinigamePage.jsx';
 import CskhHandbookPage from '@/features/handbook/CskhHandbookPage.jsx';
 import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import ProcHandbookPage from '@/features/handbook/ProcHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
-import MeetingPage from '@/pages/MeetingPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import PLPage from '@/pages/PLPage.jsx';
@@ -199,9 +197,7 @@ const Overview = ({ profile, setActiveTab, available = [], onScan }) => {
     { id: 'payroll', label: 'Bảng lương', icon: Wallet, color: '#D98A4E' },
     { id: 'content_video', label: 'Video Ads', icon: PlayCircle, color: '#C46FB0' },
     { id: 'hau_phau', label: 'Hậu phẫu', icon: Activity, color: '#3FA7A2' },
-    { id: 'meetings', label: 'Phòng họp', icon: Video, color: '#8A9A5B' },
     { id: 'community', label: 'Cộng đồng', icon: MessagesSquare, color: '#5B8DD6' },
-    { id: 'minigame', label: 'Minigame', icon: Gamepad2, color: '#E5A13C' },
   ].filter(q => can(q.id)).slice(0, 8);
 
   const salaryLine = (
@@ -341,7 +337,7 @@ const StaffDashboard = () => {
     const q = new URLSearchParams(window.location.search);
     const u = readUrlNav();
     if (u?.focus) setPendingFocus({ tab: u.tab || 'overview', id: u.focus });
-    return u?.tab || (q.get('meeting') ? 'meetings' : (localStorage.getItem('staff_active_tab') || 'overview'));
+    return u?.tab || (localStorage.getItem('staff_active_tab') || 'overview');
   });
 
   useEffect(() => { localStorage.setItem('staff_active_tab', activeTab); }, [activeTab]);
@@ -449,12 +445,10 @@ const StaffDashboard = () => {
     if (activeTab === 'vien_phi') return <HospitalFeeAndInventoryPage />;
     if (activeTab === 'advances') return <AdvanceExpensePage />;
     if (activeTab === 'community') return <CommunityPage />;
-    if (activeTab === 'minigame') return <MinigamePage />;
     if (activeTab === 'cskh_handbook') return <CskhHandbookPage />;
     if (activeTab === 'pro_handbook') return <ProHandbookPage />;
     if (activeTab === 'proc_handbook') return <ProcHandbookPage />;
     if (activeTab === 'library') return <LibraryPage />;
-    if (activeTab === 'meetings') return <MeetingPage />;
     return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 

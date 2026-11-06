@@ -6,7 +6,7 @@
 // bảng role_permissions — ô không ghi đè thì giữ nguyên mặc định ở đây.
 // ============================================================
 import {
-  LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare, Gamepad2, Video,
+  LayoutDashboard, CalendarCheck, Target, Banknote, Wallet, MessagesSquare,
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
   Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
   Inbox, PhoneCall, BarChart3, ListTodo, Columns3, BookOpen, Library, Stethoscope, Workflow, KanbanSquare,
@@ -31,8 +31,6 @@ export const FULL_MENU = [
   { id: 'advances',   label: 'Tạm ứng chi',     icon: Banknote, roles: ['all'], exclude: ['designer'] },
   { id: 'my_payroll', label: 'Lương của tôi',   icon: Wallet, roles: ['all'] },
   { id: 'community',  label: 'Cộng đồng',       icon: MessagesSquare, roles: ['all'] },
-  { id: 'minigame',   label: 'Minigame',        icon: Gamepad2, roles: ['all'] },
-  { id: 'meetings',   label: 'Phòng họp',        icon: Video, roles: ['all'] },
   { id: 'tasks',      label: 'Công việc & Duyệt', icon: ListTodo, roles: ['all'] },
   { id: 'cskh_handbook', label: 'Sổ Tay CSKH',   icon: BookOpen, roles: ['all'] },
   { id: 'pro_handbook', label: 'Sổ Tay Chuyên môn', icon: Stethoscope, roles: ['all'] },
@@ -90,7 +88,7 @@ export const STAFF_GROUPS = [
   { title: 'MARKETING', flat: true, ids: ['marketing'] },
   { title: 'TÀI CHÍNH', ids: ['reports', 'finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
   { title: 'ĐÀO TẠO', ids: ['cskh_handbook', 'pro_handbook', 'proc_handbook', 'library'] },
-  { title: 'VẬN HÀNH', ids: ['tasks', 'community', 'meetings', 'minigame'] },
+  { title: 'VẬN HÀNH', ids: ['tasks', 'community'] },
 ];
 
 // Mọi id chức năng nằm trong 1 nhóm (kể cả bên trong mục cha grp_*)
