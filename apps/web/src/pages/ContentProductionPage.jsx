@@ -11,7 +11,7 @@ import {
   Clock, Wallet, TrendingUp, Phone, LayoutDashboard, Copy, Users, User, ShoppingCart, CircleDollarSign, Zap, Rocket, CalendarClock,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
-import EditorStatsPanel from '@/features/marketing/EditorStatsPanel.jsx';
+import EditorStatsPanel, { useEditorKpi, editorRows, thisMonth, monthLabel, KpiBar } from '@/features/marketing/EditorStatsPanel.jsx';
 import ImageLibrary from '@/components/ImageLibrary.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
 
@@ -843,11 +843,11 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       {/* Kho media (chế độ Quản lý nguồn): Việc cần xử lý full-width */}
       {tab === 'kho' && khoMode === 'sources' && <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} />}
 
-      {/* Video Ads: Việc cần xử lý + Bảng điểm Editor cạnh nhau (theo mockup) */}
+      {/* Video Ads: Việc cần xử lý + KPI Editor tháng (đã duyệt / chờ / bị từ chối so với chỉ tiêu) */}
       {tab === 'video' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <TodoPanel tiles={todoTiles.filter(t => t.n > 0)} compact />
-          <LeaderboardCard lb={lb} now={now} onSeeAll={() => gotoView('overview')} />
+          <EditorKpiCard compact clips={clips} onGoStats={() => setVideoTab('stats')} />
         </div>
       )}
 
@@ -925,7 +925,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
       {loading ? (
         <div className="e-card flex items-center justify-center h-40"><div className="w-7 h-7 border-4 border-teal-100 border-t-teal-500 rounded-full animate-spin" /></div>
       ) : tab === 'overview' ? (
-        <AdsOverview clips={clips} stores={stores} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} />
+        <AdsOverview clips={clips} stores={stores} storeOf={storeOf} now={now} videoCounts={videoCounts} todoTiles={todoTiles} lb={lb} onOpenClip={setVideoFor} onGoVideo={() => gotoView('video')} onGoStats={() => { gotoView('video'); setVideoTab('stats'); }} />
       ) : tab === 'images' ? (
         <ImageLibrary me={me} canWrite={canDesign} canDeleteFolder={canDesign || canEdit} />
       ) : tab === 'kho' && khoMode === 'library' ? (
@@ -966,7 +966,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
                 { k: 'review', label: 'Đang duyệt', Icon: Clock, n: videoCounts.review, c: 'amber' },
                 { k: 'off', label: 'Đã tắt', Icon: PauseCircle, n: videoCounts.off, c: 'slate' },
                 { k: 'pending', label: 'Chờ duyệt', Icon: Clapperboard, n: videoCounts.pending, c: 'violet' },
-                ...((canAds || isManager) ? [{ k: 'stats', label: 'Thống kê editor', Icon: BarChart2, n: null, c: 'teal' }] : []),
+                ...((canAds || isManager) ? [{ k: 'stats', label: 'KPI Editor', Icon: BarChart2, n: null, c: 'teal' }] : []),
               ].map(({ k, label, Icon, n, c, live }) => {
                 const active = videoTab === k;
                 const grad = { teal: 'bg-teal-500', emerald: 'bg-success-500', amber: 'bg-warning-500', slate: 'bg-slate-400', violet: 'bg-lavender-500' }[c];
@@ -996,7 +996,7 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
             </div>
           </div>
           {videoTab === 'stats' ? (
-          <EditorStatsPanel clips={clips} />
+          <EditorStatsPanel clips={clips} canAssign={isAdmin} />
         ) : reviewClips.length === 0 ? (
           <Empty icon={PlayCircle} title="Chưa có clip nào" desc="Editor dựng clip từ Kho media; clip sẽ hiện ở đây để Ads duyệt & chấm Win." />
         ) : videoView === 'grid' ? (
@@ -1596,7 +1596,7 @@ const TodoPanel = ({ tiles, compact }) => {
 };
 
 // ---------- Trang Tổng quan Marketing (dashboard) ----------
-const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, onOpenClip, onGoVideo }) => {
+const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, onOpenClip, onGoVideo, onGoStats }) => {
   const approved = clips.filter(c => c.approved_to_run);
   const winCount = clips.filter(c => c.win).length;
   const winRate = approved.length ? Math.round(winCount / approved.length * 100) : 0;
@@ -1763,6 +1763,39 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
           </div>
         </div>
       </div>
+
+      {/* Row 4: KPI editor tháng này — số video đã duyệt / chờ / bị từ chối so với chỉ tiêu */}
+      <EditorKpiCard clips={clips} onGoStats={onGoStats} />
+    </div>
+  );
+};
+
+// KPI editor tháng hiện tại (Tổng quan Marketing)
+const EditorKpiCard = ({ clips, onGoStats, compact = false }) => {
+  const month = thisMonth();
+  const { editors, targets } = useEditorKpi(month);
+  const all = editorRows(clips, month, editors, targets);
+  const rows = compact ? all.slice(0, 6) : all;
+  return (
+    <div className="e-card e-card-pad flex flex-col">
+      <div className="e-card-header mb-3">
+        <div className="min-w-0"><h3 className="e-card-title">KPI Editor · {monthLabel(month)}</h3><div className="e-card-sub">Video đã duyệt so với chỉ tiêu · chờ duyệt · bị từ chối</div></div>
+        <span className="e-metric-icon w-9 h-9 lg:w-9 lg:h-9 bg-teal-50 text-teal-600 [&_svg]:w-[18px] [&_svg]:h-[18px]"><Users /></span>
+      </div>
+      {rows.length === 0 ? <p className="e-empty-desc text-center mx-auto py-6">Chưa có editor nào</p> : (
+        <div className={`grid grid-cols-1 gap-x-6 gap-y-3 ${compact ? '' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+          {rows.map(r => (
+            <div key={r.id} className="min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[14px] font-semibold text-slate-800 truncate">{r.name}</span>
+                <span className="text-[12.5px] text-slate-500 shrink-0 tabular-nums"><b className="text-success-600">{r.approved}</b>{r.target ? `/${r.target}` : ''} duyệt · <span className="text-lavender-600">{r.pending} chờ</span> · <span className="text-danger-600">{r.rejected} từ chối</span></span>
+              </div>
+              <div className="mt-1"><KpiBar r={r} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+      {onGoStats && <button onClick={onGoStats} className="e-btn e-btn-ghost e-btn-sm -ml-3 mt-3">{compact && all.length > rows.length ? `Xem cả ${all.length} editor & giao KPI →` : 'Xem & giao KPI editor →'}</button>}
     </div>
   );
 };
@@ -2014,36 +2047,6 @@ const FbSummaryStrip = ({ clips, onReport }) => {
     </div>
   );
 };
-
-// ---------- Card "Bảng điểm Editor" (3 top editor) ----------
-const LeaderboardCard = ({ lb, now, onSeeAll }) => (
-  <div className="e-card e-card-pad">
-    <div className="e-card-header mb-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="e-metric-icon w-10 h-10 lg:w-10 lg:h-10 bg-warning-50 text-warning-600 [&_svg]:w-5 [&_svg]:h-5"><Trophy /></span>
-        <div className="min-w-0"><div className="e-card-title">Bảng điểm Editor tháng {now.getMonth() + 1}</div><div className="e-card-sub">Top editor theo điểm Win</div></div>
-      </div>
-      {onSeeAll && <button onClick={onSeeAll} className="e-btn e-btn-ghost e-btn-sm shrink-0">Xem bảng điểm →</button>}
-    </div>
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {lb.length === 0 && <p className="e-empty-desc text-center mx-auto py-6 col-span-full">Chưa có dữ liệu</p>}
-      {lb.slice(0, 3).map((e, i) => {
-        const cat = e.avg == null ? null : scoreCat(e.avg, false);
-        const rankCls = i === 0 ? 'bg-teal-600 text-white' : i === 1 ? 'bg-teal-100 text-teal-800' : 'bg-teal-50 text-teal-700';
-        return (
-          <div key={e.id} className="e-subtle p-3.5">
-            <div className="flex items-center justify-between mb-2">
-              <span className={`w-7 h-7 rounded-full grid place-items-center text-[12px] font-bold tabular-nums ${rankCls}`}>{i + 1}</span>
-              <span className={`e-badge e-badge-sm tabular-nums ${cat ? cat.cls : 'bg-slate-100 text-slate-400'}`}>{e.avg == null ? 'Chưa chấm' : `${i === 0 ? 'TB ' : ''}${e.avg.toFixed(1)}/10`}</span>
-            </div>
-            <div className="text-[14px] font-semibold text-slate-800 truncate">{e.name}</div>
-            <div className="text-[12px] text-slate-500 tabular-nums">{e.n} clip · {e.w} Win</div>
-          </div>
-        );
-      })}
-    </div>
-  </div>
-);
 
 // ---------- Popup: Duyệt chạy Ads + Đăng ngay / HẸN GIỜ ĐĂNG (+ tự chạy ads) ----------
 // Hẹn giờ: post_status = 'scheduled' + post_scheduled_at; cron mỗi phút (media_clip_schedule.sql)
