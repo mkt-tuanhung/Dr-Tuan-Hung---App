@@ -11,7 +11,7 @@ import {
   Clock, Wallet, TrendingUp, Phone, LayoutDashboard, Copy, Users, User, ShoppingCart, CircleDollarSign, Zap, Rocket, CalendarClock,
 } from 'lucide-react';
 import { uploadToR2 } from '@/lib/r2Client';
-import EditorStatsPanel, { useEditorKpi, editorRows, thisMonth, monthLabel, KpiBar } from '@/features/marketing/EditorStatsPanel.jsx';
+import EditorStatsPanel, { useEditorKpi, editorRows, thisMonth, shiftMonth, monthLabel, KpiBar } from '@/features/marketing/EditorStatsPanel.jsx';
 import ImageLibrary from '@/components/ImageLibrary.jsx';
 import { useFocusHighlight } from '@/lib/useFocusHighlight';
 
@@ -958,8 +958,8 @@ const ContentProductionPage = ({ setActiveTab, view }) => {
           {(canAds || isManager) && <FbSummaryStrip clips={clips} onReport={setActiveTab ? () => setActiveTab('ads_report') : null} />}
           {/* Sub-tab trạng thái — thiết kế nổi bật, "Đang chạy" có hiệu ứng live */}
           <div className="e-card-flat px-2 sm:px-3 flex items-center gap-x-3 flex-wrap">
-            {/* Điện thoại: hàng tab chiếm trọn 1 dòng (trước bị 2 nút bên phải ép mất), nút xuống dòng dưới */}
-            <div className="e-tabs border-b-0 flex-1 min-w-0 max-sm:basis-full">
+            {/* Dưới 1680px: hàng tab chiếm trọn 1 dòng (trước bị 2 nút bên phải che tab cuối), nút xuống dòng dưới */}
+            <div className="e-tabs border-b-0 flex-1 min-w-0 max-[1679px]:basis-full">
               {[
                 { k: 'all', label: 'Tất cả', Icon: LayoutGrid, n: reviewClips.length, c: 'teal' },
                 { k: 'running', label: 'Đang chạy', Icon: PlayCircle, n: videoCounts.running, c: 'emerald', live: true },
@@ -1772,15 +1772,20 @@ const AdsOverview = ({ clips, stores, storeOf, now, videoCounts, todoTiles, lb, 
 
 // KPI editor tháng hiện tại (Tổng quan Marketing)
 const EditorKpiCard = ({ clips, onGoStats, compact = false }) => {
-  const month = thisMonth();
+  const [month, setMonth] = useState(thisMonth);
+  const isCurrent = month === thisMonth();
   const { editors, targets } = useEditorKpi(month);
   const all = editorRows(clips, month, editors, targets);
   const rows = compact ? all.slice(0, 6) : all;
   return (
     <div className="e-card e-card-pad flex flex-col">
       <div className="e-card-header mb-3">
-        <div className="min-w-0"><h3 className="e-card-title">KPI Editor · {monthLabel(month)}</h3><div className="e-card-sub">Video đã duyệt so với chỉ tiêu · chờ duyệt · bị từ chối</div></div>
-        <span className="e-metric-icon w-9 h-9 lg:w-9 lg:h-9 bg-teal-50 text-teal-600 [&_svg]:w-[18px] [&_svg]:h-[18px]"><Users /></span>
+        <div className="min-w-0"><h3 className="e-card-title">KPI Editor</h3><div className="e-card-sub">Video đã duyệt (theo tháng Ads duyệt) so với chỉ tiêu · chờ duyệt · bị từ chối</div></div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button type="button" onClick={() => setMonth(m => shiftMonth(m, -1))} className="e-icon-btn w-8 h-8" aria-label="Tháng trước"><ChevronLeft className="w-4 h-4" /></button>
+          <button type="button" onClick={() => setMonth(thisMonth())} title="Về tháng này" className="min-w-[108px] text-center text-[13.5px] font-semibold text-slate-800 tabular-nums">{monthLabel(month)}</button>
+          <button type="button" onClick={() => setMonth(m => shiftMonth(m, 1))} disabled={isCurrent} className="e-icon-btn w-8 h-8 disabled:opacity-40" aria-label="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
+        </div>
       </div>
       {rows.length === 0 ? <p className="e-empty-desc text-center mx-auto py-6">Chưa có editor nào</p> : (
         <div className={`grid grid-cols-1 gap-x-6 gap-y-3 ${compact ? '' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
