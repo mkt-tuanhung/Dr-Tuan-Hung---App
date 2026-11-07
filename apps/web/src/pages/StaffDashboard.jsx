@@ -24,6 +24,7 @@ import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import ProcHandbookPage from '@/features/handbook/ProcHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
+import { EditorKpiLoader } from '@/features/marketing/EditorStatsPanel.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
 import PLPage from '@/pages/PLPage.jsx';
 import AppointmentManagementPage from '@/pages/AppointmentManagementPage.jsx';
@@ -395,6 +396,7 @@ const StaffDashboard = () => {
         truc_page: { label: 'Trực page', el: <TrucPageStaffKPI /> },
         telesale: { label: 'Telesale', el: <TelesaleStaffKPI /> },
         dieu_duong: { label: 'Điều dưỡng', el: <DieuDuongStaffKPI /> },
+        editor: { label: 'Editor', el: <EditorKpiLoader selfId={profile?.id} /> },
       };
       const kpiRoles = [profile?.role, profile?.role_2].filter(r => KPI_VIEWS[r]);
       if (kpiRoles.length === 0) return <KPIPage />;
