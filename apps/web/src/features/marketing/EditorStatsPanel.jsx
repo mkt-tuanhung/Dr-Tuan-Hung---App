@@ -33,7 +33,7 @@ export const monthOf = (c, st = statusOf(c)) => {
   if (st === 'pending') return thisMonth();
   return '';
 };
-const shiftMonth = (key, n) => { const [y, m] = key.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + n, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
+export const shiftMonth = (key, n) => { const [y, m] = key.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + n, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
 export const monthLabel = (key) => { const [y, m] = key.split('-'); return `Tháng ${Number(m)}/${y}`; };
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
 const ym = (key) => { const [y, m] = key.split('-').map(Number); return { year: y, month: m }; };
