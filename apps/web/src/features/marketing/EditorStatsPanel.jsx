@@ -4,7 +4,8 @@
 //   Chờ duyệt  : editor đã gửi, Ads chưa xử lý (stage submitted)
 //   Bị từ chối : Ads trả về "Cần sửa" (stage revision) — editor sửa & gửi lại thì về Chờ duyệt
 //   KPI        : chỉ tiêu số video ĐƯỢC DUYỆT trong tháng (kpi_targets.target_clips)
-// Clip tính vào THÁNG EDITOR GỬI DUYỆT (submitted_at, chưa có thì ngày tạo).
+// Tính tháng: Đã duyệt -> tháng Ads DUYỆT (evaluated_at, như bảng lương editor);
+//             Bị từ chối -> tháng bị trả về (updated_at); Chờ duyệt -> clip ĐANG chờ (chỉ ở tháng hiện tại).
 // Dùng ở: Video Ads → Thống kê editor · KPI & Hoa hồng → Editor · KPI của tôi (editor) .
 // ============================================================
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,13 +20,19 @@ export const statusOf = (c) => {
   if (c.stage === 'submitted') return 'pending';
   return null;   // đang dựng / nháp: chưa gửi duyệt
 };
-export const monthOf = (c) => {
-  const iso = c.submitted_at || c.created_at;
+const keyOf = (iso) => {
   if (!iso) return '';
   const d = new Date(new Date(iso).getTime() + 7 * 3600e3);   // giờ Việt Nam
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 };
-export const thisMonth = () => { const d = new Date(Date.now() + 7 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
+export const thisMonth = () => keyOf(new Date().toISOString());
+// Tháng mà clip được tính vào, theo trạng thái
+export const monthOf = (c, st = statusOf(c)) => {
+  if (st === 'approved') return keyOf(c.evaluated_at || c.submitted_at || c.created_at);
+  if (st === 'rejected') return keyOf(c.updated_at || c.submitted_at || c.created_at);
+  if (st === 'pending') return thisMonth();
+  return '';
+};
 const shiftMonth = (key, n) => { const [y, m] = key.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + n, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
 export const monthLabel = (key) => { const [y, m] = key.split('-'); return `Tháng ${Number(m)}/${y}`; };
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
@@ -58,7 +65,7 @@ export function editorRows(clips, month, editors, targets, selfId) {
   editors.forEach(e => add(e.id, e.full_name));
   clips.forEach(c => {
     const st = statusOf(c);
-    if (!st || monthOf(c) !== month) return;
+    if (!st || monthOf(c, st) !== month) return;
     const id = c.editor_id || 'none';
     if (selfId && id !== selfId) return;
     add(id, c.editor?.full_name || (id === 'none' ? 'Chưa rõ editor' : 'Editor'))[st] += 1;
@@ -70,7 +77,7 @@ export function editorRows(clips, month, editors, targets, selfId) {
 }
 
 const TILES = [
-  { k: 'total', label: 'Clip gửi duyệt', Icon: Film, cls: 'bg-teal-50 text-teal-700' },
+  { k: 'total', label: 'Tổng clip', Icon: Film, cls: 'bg-teal-50 text-teal-700' },
   { k: 'approved', label: 'Đã duyệt', Icon: CheckCircle2, cls: 'bg-success-50 text-success-600' },
   { k: 'pending', label: 'Chờ duyệt', Icon: Clock, cls: 'bg-lavender-50 text-lavender-600' },
   { k: 'rejected', label: 'Bị từ chối', Icon: RotateCcw, cls: 'bg-danger-50 text-danger-600' },
@@ -143,7 +150,7 @@ export default function EditorStatsPanel({ clips, canAssign = false, selfId = nu
             <button type="button" onClick={() => setOwnMonth(m => shiftMonth(m, 1))} disabled={isCurrent} className="e-icon-btn w-9 h-9 disabled:opacity-40" aria-label="Tháng sau"><ChevronRight className="w-4 h-4" /></button>
           </div>
           {!isCurrent && <button type="button" onClick={() => setOwnMonth(thisMonth())} className="e-btn e-btn-ghost e-btn-sm">Tháng này</button>}
-          <span className="ml-auto text-[12px] text-slate-500">Tính theo tháng editor gửi clip duyệt · KPI = số video được duyệt</span>
+          <span className="ml-auto text-[12px] text-slate-500">Đã duyệt tính theo tháng Ads duyệt · Chờ duyệt = đang chờ hiện tại · KPI = số video được duyệt</span>
         </div>
       )}
 
@@ -154,7 +161,7 @@ export default function EditorStatsPanel({ clips, canAssign = false, selfId = nu
             <div className="min-w-0">
               <div className="text-[12.5px] text-slate-500 truncate">{label}</div>
               <div className="text-[22px] font-bold text-slate-900 tabular-nums leading-tight">{k === 'target' ? (sum.target ? `${sum.approved}/${sum.target}` : '—') : sum[k]}</div>
-              {k === 'approved' && sum.total > 0 && <div className="text-[11.5px] text-success-600 font-semibold">{pct(sum.approved, sum.total)}% clip đã gửi</div>}
+              {k === 'approved' && sum.total > 0 && <div className="text-[11.5px] text-success-600 font-semibold">{pct(sum.approved, sum.total)}% tổng clip</div>}
               {k === 'target' && <div className={`text-[11.5px] font-semibold ${sum.target ? (sum.approved >= sum.target ? 'text-success-600' : 'text-warning-600') : 'text-slate-400'}`}>{sum.target ? `Đạt ${pct(sum.approved, sum.target)}% KPI` : (canAssign ? 'Bấm ✎ ở bảng để giao' : 'Chưa giao KPI')}</div>}
             </div>
           </div>
@@ -175,7 +182,7 @@ export default function EditorStatsPanel({ clips, canAssign = false, selfId = nu
               <table className="e-table">
                 <thead>
                   <tr>
-                    <th>Editor</th><th className="num">KPI tháng</th><th className="num">Gửi duyệt</th><th className="num">Đã duyệt</th><th className="num">Chờ duyệt</th><th className="num">Bị từ chối</th><th className="w-[190px]">% đạt KPI</th>
+                    <th>Editor</th><th className="num">KPI tháng</th><th className="num">Tổng clip</th><th className="num">Đã duyệt</th><th className="num">Chờ duyệt</th><th className="num">Bị từ chối</th><th className="w-[190px]">% đạt KPI</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -260,7 +267,7 @@ export function KpiBar({ r }) {
 export function EditorKpiLoader({ selfId = null, canAssign = false, monthKey = null }) {
   const [clips, setClips] = useState(null);
   useEffect(() => {
-    let q = supabase.from('media_clips').select('id, editor_id, stage, approved_to_run, submitted_at, created_at, editor:profiles!editor_id(full_name)');
+    let q = supabase.from('media_clips').select('id, editor_id, stage, approved_to_run, evaluated_at, submitted_at, created_at, updated_at, editor:profiles!editor_id(full_name)');
     if (selfId) q = q.eq('editor_id', selfId);
     q.then(({ data, error }) => { if (error) toast.error(error.message); setClips(data || []); });
   }, [selfId]);
