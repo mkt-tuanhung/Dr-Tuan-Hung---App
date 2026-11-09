@@ -6,6 +6,40 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI = Deno.env.get('OPENAI_API_KEY')!;
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+// Ghi âm tư vấn MỚI -> gửi file vào NHÓM HỒ SƠ TƯ VẤN (Telegram). Chỉ lần đầu (status 'pending'), chấm lại không gửi lại.
+const TG_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
+const CHAT_HOSO = Deno.env.get('TELEGRAM_HOSO_CHAT_ID') || '-5372152610';
+async function sendRecordingToHoSo(rec: any) {
+  if (!TG_TOKEN) return;
+  const { data: app } = await supabase.from('customer_appointments')
+    .select('customer_name, phone, service, appointment_date').eq('id', rec.appointment_id).single();
+  const { data: who } = rec.created_by
+    ? await supabase.from('profiles').select('full_name').eq('id', rec.created_by).single() : { data: null };
+  const d = String(app?.appointment_date || '').slice(0, 10).split('-');
+  const sec = Number(rec.duration_sec) || 0;
+  const urls: string[] = (Array.isArray(rec.segment_urls) && rec.segment_urls.length) ? rec.segment_urls : [rec.audio_url];
+  const head = `🎙 Ghi âm tư vấn — ${app?.customer_name || ''}${app?.phone ? ' ' + app.phone : ''}` +
+    (d.length === 3 ? `\nNgày tư vấn: ${d[2]}/${d[1]}` : '') +
+    (app?.service ? `\nDịch vụ: ${String(app.service).replace('[Tái khám] ', '')}` : '') +
+    (who?.full_name ? `\nSale ghi âm: ${who.full_name}` : '') +
+    (sec ? `\nThời lượng: ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '');
+  for (let i = 0; i < urls.length; i++) {
+    try {
+      const r = await fetch(urls[i]);
+      if (!r.ok) { console.error('tải ghi âm lỗi', r.status, urls[i]); continue; }
+      const blob = await r.blob();
+      const ext = (urls[i].split('?')[0].split('.').pop() || 'webm').toLowerCase();
+      const fd = new FormData();
+      fd.append('chat_id', CHAT_HOSO);
+      fd.append('caption', head + (urls.length > 1 ? `\nĐoạn ${i + 1}/${urls.length}` : ''));
+      fd.append('document', new File([blob], `ghi-am-tu-van-${i + 1}.${ext.length <= 4 ? ext : 'webm'}`, { type: blob.type || 'audio/webm' }));
+      const t = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`, { method: 'POST', body: fd });
+      const j = await t.json().catch(() => ({}));
+      if (!j.ok) console.error('gửi ghi âm Telegram lỗi', j.description || t.status);
+    } catch (e) { console.error('gửi ghi âm lỗi', (e as Error).message); }
+  }
+}
+
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 const RUBRIC = `Bạn là chuyên gia đào tạo & giám sát chất lượng tư vấn tại "Dr Tuấn Hùng" — phòng khám/thẩm mỹ chuyên PHẪU THUẬT THẨM MỸ, dẫn dắt bởi bác sĩ trình độ Bác sĩ Nội Trú (uy tín chuyên môn cao).
@@ -41,6 +75,12 @@ Deno.serve(async (req) => {
 
     const { data: rec } = await supabase.from('consult_recordings').select('*').eq('id', recId).single();
     if (!rec) return json({ error: 'không tìm thấy bản ghi' }, 404);
+    if (rec.status === 'pending') {
+      const task = sendRecordingToHoSo(rec).catch((e) => console.error('ghi âm -> nhóm Hồ sơ lỗi', e.message));
+      // deno-lint-ignore no-explicit-any
+      const rt: any = globalThis as any;
+      if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task);
+    }
     await supabase.from('consult_recordings').update({ status: 'processing' }).eq('id', recId);
 
     // Danh sách TẤT CẢ đoạn ghi âm (cuộc dài đã chia 5 phút/đoạn). Fallback file đơn.

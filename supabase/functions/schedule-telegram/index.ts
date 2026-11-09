@@ -25,7 +25,8 @@ const CHAT_JOURNEY = Deno.env.get('TELEGRAM_JOURNEY_CHAT_ID');                //
 const CHAT_POSTOP = Deno.env.get('TELEGRAM_POSTOP_CHAT_ID') || '-5448812418';
 // nhóm CHĂM SÓC KHÁCH HÀNG: ghi chú / nhật ký CSKH (+ ảnh) và phân loại khách
 const CHAT_CSKH = Deno.env.get('TELEGRAM_CSKH_CHAT_ID') || '-5461485486';
-// NHÓM HỒ SƠ: hồ sơ sau TIẾP NHẬN TƯ VẤN (ghi chú tư vấn + ảnh hồ sơ sale tải lên app) — không giá.
+// NHÓM HỒ SƠ TƯ VẤN: hồ sơ sau TIẾP NHẬN TƯ VẤN — ngày, tên, SĐT, dịch vụ, giá dự kiến, telesale/sale, ghi chú, ảnh hồ sơ;
+// file ghi âm tư vấn do hàm analyze-consult gửi.
 // Quy định 11/2026: nhóm HÀNH TRÌNH KHÁCH HÀNG và KHÁCH PHẪU THUẬT KHÔNG nhận ảnh hồ sơ tư vấn và KHÔNG hiện giá.
 const CHAT_HOSO = Deno.env.get('TELEGRAM_HOSO_CHAT_ID') || '-5372152610';
 const SECRET = Deno.env.get('WEBHOOK_SECRET');
@@ -376,21 +377,30 @@ Deno.serve(async (req) => {
     };
 
     // ---- NHÓM HỒ SƠ = hồ sơ sau TIẾP NHẬN TƯ VẤN: sale tư vấn xong ghi âm, chụp hồ sơ, note thông tin
-    //      (màn Khách tư vấn → "Hồ sơ tư vấn") -> gửi THÔNG TIN hồ sơ + ẢNH hồ sơ vào nhóm Hồ sơ. Không giá.
+    //      (màn Khách tư vấn → "Hồ sơ tư vấn") -> gửi THÔNG TIN hồ sơ + ẢNH hồ sơ vào nhóm Hồ sơ.
     //      Gửi khi ghi chú tư vấn thay đổi hoặc có ảnh hồ sơ mới (lưu lại không đổi gì thì không gửi).
     const newConsult = type === 'INSERT' ? consultNow : consultNow.filter((u) => !consultOld.includes(u));
     const noteNow = String(rec.consult_note || '').trim();
     const noteChanged = noteNow && noteNow !== String(old.consult_note || '').trim();
     if (newConsult.length || noteChanged) {
       const lan2 = type === 'UPDATE' && (String(old.consult_note || '').trim() || consultOld.length);
+      const { data: recs } = await supabase.from('consult_recordings')
+        .select('duration_sec').eq('appointment_id', rec.id).is('deleted_at', null);
+      const ghiAm = (recs || []).length
+        ? `${recs!.length} bản ghi${recs!.some((r) => r.duration_sec) ? ' — ' + Math.round((recs!.reduce((t, r) => t + (r.duration_sec || 0), 0)) / 60) + ' phút' : ''} (đã gửi file vào nhóm)`
+        : 'Chưa có (sale ghi âm xong file sẽ gửi vào nhóm)';
+      // Mẫu NHÓM HỒ SƠ TƯ VẤN (anh chốt 09/11/2026)
       await send(CHAT_HOSO,
         `📋 <b>HỒ SƠ TƯ VẤN${lan2 ? ' — CẬP NHẬT' : ''}</b>` +
-        line('KH', kh) +
-        line('Dịch vụ', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
-        line('Ngày tư vấn', dShort(rec.appointment_date)) +
+        line('Ngày tư vấn', dShort(rec.appointment_date) || nowVN()) +
+        line('Tên khách', `<b>${esc(rec.customer_name)}</b>`) +
+        line('SĐT', esc(rec.phone)) +
+        line('Dịch vụ tư vấn', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
+        line('Giá dự kiến', rec.expected_bill ? money(rec.expected_bill) : '') +
         staffLines +
         line('Ghi chú tư vấn', esc(noteNow)) +
-        (newConsult.length ? line('Ảnh hồ sơ', `${newConsult.length} ảnh${lan2 ? ' mới' : ''} (gửi ngay bên dưới)`) : ''));
+        line('Ảnh hồ sơ tư vấn', newConsult.length ? `${newConsult.length} ảnh${lan2 ? ' mới' : ''} (ngay bên dưới)` : consultNow.length ? `${consultNow.length} ảnh (đã gửi trước)` : 'Chưa có') +
+        line('Ghi âm tư vấn', ghiAm));
       queuePhotos(CHAT_HOSO, newConsult.slice(0, 20), `📎 Hồ sơ tư vấn — ${rec.customer_name}${rec.phone ? ' ' + rec.phone : ''}`);
     }
 
