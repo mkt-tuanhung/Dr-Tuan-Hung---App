@@ -25,7 +25,7 @@ const CHAT_JOURNEY = Deno.env.get('TELEGRAM_JOURNEY_CHAT_ID');                //
 const CHAT_POSTOP = Deno.env.get('TELEGRAM_POSTOP_CHAT_ID') || '-5448812418';
 // nhóm CHĂM SÓC KHÁCH HÀNG: ghi chú / nhật ký CSKH (+ ảnh) và phân loại khách
 const CHAT_CSKH = Deno.env.get('TELEGRAM_CSKH_CHAT_ID') || '-5461485486';
-// NHÓM HỒ SƠ: TOÀN BỘ thông tin + hồ sơ khách (ảnh hồ sơ tư vấn, giá: tổng bill, cọc).
+// NHÓM HỒ SƠ: CHỈ lưu ẢNH HỒ SƠ TƯ VẤN (sale offline tải lên app) — không tin nhắn chữ, không giá.
 // Quy định 11/2026: nhóm HÀNH TRÌNH KHÁCH HÀNG và KHÁCH PHẪU THUẬT KHÔNG nhận ảnh hồ sơ tư vấn và KHÔNG hiện giá.
 const CHAT_HOSO = Deno.env.get('TELEGRAM_HOSO_CHAT_ID') || '-5372152610';
 const SECRET = Deno.env.get('WEBHOOK_SECRET');
@@ -375,6 +375,16 @@ Deno.serve(async (req) => {
       if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
     };
 
+    // ---- NHÓM HỒ SƠ: chỉ ẢNH hồ sơ tư vấn. Khách nào được sale tải ảnh hồ sơ lên app (tạo mới có ảnh,
+    //      hoặc bổ sung ảnh sau) -> đẩy phần ảnh MỚI sang nhóm Hồ sơ. Không gửi chữ, không giá.
+    const newConsult = type === 'INSERT' ? consultNow : consultNow.filter((u) => !consultOld.includes(u));
+    if (newConsult.length) {
+      const cap = `📎 Hồ sơ tư vấn — ${rec.customer_name}${rec.phone ? ' ' + rec.phone : ''}` +
+        (serviceClean ? `\nDịch vụ: ${serviceClean}` : '') +
+        (saleName ? `\nSale: ${saleName}` : '');
+      queuePhotos(CHAT_HOSO, newConsult.slice(0, 20), cap);
+    }
+
     // ---- NHÓM HÀNH TRÌNH KHÁCH HÀNG (gửi thêm, KHÔNG chặn các nhánh dưới) ----
     if (CHAT_JOURNEY && type === 'UPDATE' && !isRecheck) {
       // a) Sale bấm TIẾP NHẬN khách từ lịch hẹn -> khách đã đến, đang tư vấn
@@ -389,15 +399,6 @@ Deno.serve(async (req) => {
       // b) Sale đánh giá sau tư vấn: CỌC / BONG / PHẪU THUẬT
       if (rec.status !== old.status) {
         if (rec.status === 'coc') {
-          await send(CHAT_HOSO,
-            `💰 <b>HỒ SƠ — KHÁCH CỌC</b>` +
-            line('KH', kh) +
-            line('Dịch vụ', esc(serviceClean)) +
-            line('Tiền cọc', money(rec.deposit_amount)) +
-            line('Tổng bill dự kiến', money(rec.expected_bill)) +
-            line('Dự kiến mổ', rec.expected_surgery_plan === 'none' ? 'Chưa có ngày PT dự kiến' : dShort(rec.expected_surgery_date)) +
-            staffLines +
-            line('Ghi chú tư vấn', esc(rec.consult_note)));
           await send(CHAT_JOURNEY,
             `💰 <b>KHÁCH CỌC</b>` +
             line('KH', kh) +
@@ -413,15 +414,6 @@ Deno.serve(async (req) => {
             line('Ghi chú', esc(notesClean)) +
             staffLines);
         } else if (rec.status === 'phau_thuat') {
-          await send(CHAT_HOSO,
-            `⚕️ <b>HỒ SƠ — CHỐT PHẪU THUẬT</b>` +
-            line('KH', kh) +
-            line('Loại phẫu thuật', esc(rec.surgery_type || serviceClean)) +
-            line('Ngày mổ', dShort(rec.surgery_date)) +
-            line('Tổng bill', money(rec.revenue)) +
-            line('Cọc', money(rec.deposit_amount)) +
-            staffLines +
-            line('Ghi chú tư vấn', esc(rec.consult_note)));
           await send(CHAT_JOURNEY,
             `⚕️ <b>CHỐT PHẪU THUẬT</b>` +
             line('KH', kh) +
@@ -459,32 +451,6 @@ Deno.serve(async (req) => {
         staffLines +
         line('Tình trạng', esc(notesClean));
       await send(CHAT_SURGERY, text);                    // nhóm PHẪU THUẬT: không giá, không ảnh hồ sơ
-      await send(CHAT_HOSO,
-        `⚕️ <b>HỒ SƠ — LỊCH PHẪU THUẬT ngày ${dShort(rec.surgery_date)}</b>` +
-        (surgeryUpdate && old.surgery_date ? line('Ngày cũ', dShort(old.surgery_date) + ' (đổi lịch)') : '') +
-        line('KH', kh) +
-        line('Loại phẫu thuật', esc(rec.surgery_type || serviceClean)) +
-        line('Bác sĩ', esc(bacSi)) +
-        line('Tổng bill', money(rec.revenue)) +
-        line('Cọc', money(rec.deposit_amount)) +
-        staffLines +
-        line('Tình trạng', esc(notesClean)));
-      queuePhotos(CHAT_HOSO);
-      return new Response('ok');
-    }
-
-    // 1b) HỒ SƠ TƯ VẤN BỔ SUNG cho khách PHẪU THUẬT / TƯ VẤN LÀM LUÔN: ảnh được tải lên SAU lúc báo lịch
-    //     (vd. màn Khách tư vấn lưu ảnh bằng nút "Hồ sơ tư vấn" riêng) -> gửi phần ảnh MỚI lên nhóm Phẫu thuật
-    const addedConsult = consultNow.filter((u) => !consultOld.includes(u));
-    if (type === 'UPDATE' && !isRecheck && addedConsult.length &&
-        (rec.status === 'phau_thuat' || rec.consult_do_now)) {
-      await send(CHAT_HOSO,
-        `📎 <b>Hồ sơ tư vấn bổ sung</b>` +
-        line('KH', kh) +
-        line('Ngày mổ', dShort(rec.surgery_date || rec.appointment_date)) +
-        line('Số ảnh mới', String(addedConsult.length)) +
-        line('Ghi chú tư vấn', esc(rec.consult_note)));
-      queuePhotos(CHAT_HOSO, addedConsult.slice(0, 10), `📎 Hồ sơ tư vấn — ${rec.customer_name}`);
       return new Response('ok');
     }
 
@@ -502,17 +468,6 @@ Deno.serve(async (req) => {
           staffLines +
           line('Tình trạng', esc(notesClean));
         await send(CHAT_SURGERY, text);                  // nhóm PHẪU THUẬT: không giá, không ảnh hồ sơ
-        await send(CHAT_HOSO,
-          `⚕️ <b>HỒ SƠ — TƯ VẤN LÀM LUÔN (dự kiến PT ${dShort(rec.appointment_date)})</b>` +
-          line('KH', kh) +
-          line('Dịch vụ', esc(serviceClean)) +
-          line('Tham khảo thêm', esc(rec.extra_consult)) +
-          line('Tổng bill dự kiến', money(rec.expected_bill)) +
-          line('Cọc', money(rec.deposit_amount)) +
-          line('Xét nghiệm', esc(rec.test_status)) +
-          staffLines +
-          line('Tình trạng', esc(notesClean)));
-        queuePhotos(CHAT_HOSO);
         return new Response('ok');
       }
       const text = isRecheck
@@ -536,8 +491,6 @@ Deno.serve(async (req) => {
       const chat = isRecheck ? CHAT_RECHECK : CHAT_MAIN;
       await send(chat, text);
       queuePhotos(chat);
-      await send(CHAT_HOSO, text.replace(/^(\S+ )<b>/, '$1<b>HỒ SƠ — '));   // bản lưu hồ sơ khách
-      queuePhotos(CHAT_HOSO);
       return new Response('ok');
     }
 
