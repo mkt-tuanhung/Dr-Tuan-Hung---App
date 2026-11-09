@@ -25,7 +25,7 @@ const CHAT_JOURNEY = Deno.env.get('TELEGRAM_JOURNEY_CHAT_ID');                //
 const CHAT_POSTOP = Deno.env.get('TELEGRAM_POSTOP_CHAT_ID') || '-5448812418';
 // nhóm CHĂM SÓC KHÁCH HÀNG: ghi chú / nhật ký CSKH (+ ảnh) và phân loại khách
 const CHAT_CSKH = Deno.env.get('TELEGRAM_CSKH_CHAT_ID') || '-5461485486';
-// NHÓM HỒ SƠ: CHỈ lưu ẢNH HỒ SƠ TƯ VẤN (sale offline tải lên app) — không tin nhắn chữ, không giá.
+// NHÓM HỒ SƠ: hồ sơ sau TIẾP NHẬN TƯ VẤN (ghi chú tư vấn + ảnh hồ sơ sale tải lên app) — không giá.
 // Quy định 11/2026: nhóm HÀNH TRÌNH KHÁCH HÀNG và KHÁCH PHẪU THUẬT KHÔNG nhận ảnh hồ sơ tư vấn và KHÔNG hiện giá.
 const CHAT_HOSO = Deno.env.get('TELEGRAM_HOSO_CHAT_ID') || '-5372152610';
 const SECRET = Deno.env.get('WEBHOOK_SECRET');
@@ -375,14 +375,23 @@ Deno.serve(async (req) => {
       if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
     };
 
-    // ---- NHÓM HỒ SƠ: chỉ ẢNH hồ sơ tư vấn. Khách nào được sale tải ảnh hồ sơ lên app (tạo mới có ảnh,
-    //      hoặc bổ sung ảnh sau) -> đẩy phần ảnh MỚI sang nhóm Hồ sơ. Không gửi chữ, không giá.
+    // ---- NHÓM HỒ SƠ = hồ sơ sau TIẾP NHẬN TƯ VẤN: sale tư vấn xong ghi âm, chụp hồ sơ, note thông tin
+    //      (màn Khách tư vấn → "Hồ sơ tư vấn") -> gửi THÔNG TIN hồ sơ + ẢNH hồ sơ vào nhóm Hồ sơ. Không giá.
+    //      Gửi khi ghi chú tư vấn thay đổi hoặc có ảnh hồ sơ mới (lưu lại không đổi gì thì không gửi).
     const newConsult = type === 'INSERT' ? consultNow : consultNow.filter((u) => !consultOld.includes(u));
-    if (newConsult.length) {
-      const cap = `📎 Hồ sơ tư vấn — ${rec.customer_name}${rec.phone ? ' ' + rec.phone : ''}` +
-        (serviceClean ? `\nDịch vụ: ${serviceClean}` : '') +
-        (saleName ? `\nSale: ${saleName}` : '');
-      queuePhotos(CHAT_HOSO, newConsult.slice(0, 20), cap);
+    const noteNow = String(rec.consult_note || '').trim();
+    const noteChanged = noteNow && noteNow !== String(old.consult_note || '').trim();
+    if (newConsult.length || noteChanged) {
+      const lan2 = type === 'UPDATE' && (String(old.consult_note || '').trim() || consultOld.length);
+      await send(CHAT_HOSO,
+        `📋 <b>HỒ SƠ TƯ VẤN${lan2 ? ' — CẬP NHẬT' : ''}</b>` +
+        line('KH', kh) +
+        line('Dịch vụ', esc(isRecheck ? rec.used_service || serviceClean : serviceClean)) +
+        line('Ngày tư vấn', dShort(rec.appointment_date)) +
+        staffLines +
+        line('Ghi chú tư vấn', esc(noteNow)) +
+        (newConsult.length ? line('Ảnh hồ sơ', `${newConsult.length} ảnh${lan2 ? ' mới' : ''} (gửi ngay bên dưới)`) : ''));
+      queuePhotos(CHAT_HOSO, newConsult.slice(0, 20), `📎 Hồ sơ tư vấn — ${rec.customer_name}${rec.phone ? ' ' + rec.phone : ''}`);
     }
 
     // ---- NHÓM HÀNH TRÌNH KHÁCH HÀNG (gửi thêm, KHÔNG chặn các nhánh dưới) ----
