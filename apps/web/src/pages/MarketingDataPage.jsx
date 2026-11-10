@@ -576,7 +576,11 @@ const MarketingDataPage = ({ initialView = null }) => {
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           {canAssign
                             ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-[12.5px] font-medium rounded-lg border border-slate-200 px-2 py-1 bg-white outline-none max-w-[130px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
-                            : <span className="text-[13px] text-slate-600 whitespace-nowrap">{r.telesale?.full_name || '—'}</span>}
+                            : r.telesale?.full_name
+                              ? <span className="text-[13px] text-slate-600 whitespace-nowrap">{r.telesale.full_name}</span>
+                              : isTele
+                                ? <button onClick={() => assignTele(r, me.id)} className="text-[12px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg px-2.5 py-1 whitespace-nowrap">Nhận data</button>
+                                : <span className="text-[13px] text-slate-400">—</span>}
                         </td>
                         <td className="px-4 py-3 text-[12.5px] whitespace-nowrap">
                           <div className="text-slate-700 font-medium">{r.source || '—'}</div>
@@ -709,7 +713,7 @@ const MarketingDataPage = ({ initialView = null }) => {
       )}
 
       {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} rows={rows} onClose={() => setReportOpen(false)} />}
-      {edit && <EditModal row={edit} me={me} staff={staff} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} />}
+      {edit && <EditModal row={edit} me={me} staff={staff} teleStaff={teleStaff} canAssign={canAssign} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} onOpenExisting={(id) => { const r = rows.find(x => x.id === id); setEdit(null); if (r) setDetail(r); else toast('Khách này nằm ngoài khoảng ngày đang tải — tìm theo SĐT để mở'); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
     </div>
@@ -1398,7 +1402,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
         </div>
       )}
 
-      {apptOpen && <CreateApptModal row={row} me={me} teleStaff={teleStaff} defaultNotes={consultSummary} onClose={() => { setApptOpen(false); loadAppts(); }} />}
+      {apptOpen && <CreateApptModal row={row} me={me} teleStaff={teleStaff} defaultNotes={consultSummary} onCreated={() => { loadActs?.(); onChanged?.(); }} onClose={() => { setApptOpen(false); loadAppts(); }} />}
     </div>
   );
 };
@@ -1752,34 +1756,97 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 };
 
 // ---------- Thêm khách mới ----------
-const EditModal = ({ row, me, staff, onClose, onSaved }) => {
+// Nguồn khách hay gặp (trực page chọn nhanh, vẫn gõ tự do được)
+const SOURCE_OPTS = ['Facebook Ads', 'Facebook (tự nhiên)', 'TikTok', 'Zalo', 'Instagram', 'Website', 'Hotline', 'Khách giới thiệu', 'Khách cũ', 'Khác'];
+const GROUP_OPTS = ['Nhóm hàm mặt', 'Nhóm mũi', 'Nhóm mắt', 'Nhóm ngực', 'Nhóm body', 'Nhóm da / trẻ hoá', 'Khác'];
+
+// ---------- Thêm / sửa khách — TRỰC PAGE tư vấn xin được số thì tạo khách, điền đủ thông tin ----------
+const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose, onSaved, onOpenExisting }) => {
+  const isNew = !row.id;
+  const myRoles = [me?.role, me?.role_2];
+  const amTruc = myRoles.includes('truc_page');
   const [f, setF] = useState({
-    customer_name: row.customer_name || '', phone: row.phone || '', truc_page_id: row.truc_page_id || '',
-    description: row.description || '', status: row.status || 'tiep_can',
+    customer_name: row.customer_name || '', phone: row.phone || '',
+    gender: row.gender || '', birthday: row.birthday || '', address: row.address || '',
+    source: row.source || '', customer_group: row.customer_group || '',
+    description: row.description || '', reached_info: row.reached_info || '',
+    status: row.status || 'tiep_can',
+    truc_page_id: row.truc_page_id || (isNew && amTruc ? me.id : ''),
+    telesale_id: row.telesale_id || '',
   });
   const [saving, setSaving] = useState(false);
+  const [dup, setDup] = useState(null);          // khách đã có cùng SĐT
+  const set = (k, v) => setF(x => ({ ...x, [k]: v }));
+  const normPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('84')) d = '0' + d.slice(2); if (d && !d.startsWith('0') && d.length === 9) d = '0' + d; return d; };
+
+  // Gõ xong SĐT -> kiểm tra trùng ngay (tránh 2 người cùng nhập 1 khách / ghi đè data của telesale khác)
+  const checkDup = async (phone) => {
+    const d = normPhone(phone);
+    if (!isNew || d.length < 9) { setDup(null); return null; }
+    const { data } = await supabase.from('marketing_data')
+      .select('id, customer_name, phone, status, telesale:profiles!telesale_id(full_name), truc_page:profiles!truc_page_id(full_name)')
+      .like('phone', `%${d.slice(-9)}`).limit(1);
+    const hit = data?.[0] || null; setDup(hit); return hit;
+  };
+
   const save = async () => {
-    if (!f.phone.trim()) { toast.error('Nhập số điện thoại'); return; }
+    const phone = normPhone(f.phone);
+    if (phone.length < 9) { toast.error('Nhập số điện thoại hợp lệ'); return; }
+    if (isNew && !f.customer_name.trim()) { toast.error('Nhập tên khách'); return; }
+    if (isNew && (await checkDup(phone))) { toast.error('SĐT này đã có trong Data khách — mở khách cũ để cập nhật'); return; }
     setSaving(true);
-    const payload = { ...f, truc_page_id: f.truc_page_id || null, phone: f.phone.trim() };
-    const { error } = row.id
-      ? await supabase.from('marketing_data').update(payload).eq('id', row.id)
-      : await supabase.from('marketing_data').upsert({ ...payload, created_by: me.id }, { onConflict: 'phone' });
+    const payload = {
+      ...f, phone, customer_name: f.customer_name.trim() || null,
+      truc_page_id: f.truc_page_id || null, telesale_id: f.telesale_id || null,
+    };
+    Object.keys(payload).forEach(k => { if (payload[k] === '') payload[k] = null; });
+    const { error } = isNew
+      ? await supabase.from('marketing_data').insert({ ...payload, created_by: me.id })
+      : await supabase.from('marketing_data').update(payload).eq('id', row.id);
     setSaving(false);
     if (error) { toast.error('Lỗi: ' + error.message); return; }
-    toast.success('Đã lưu'); onSaved();
+    toast.success(isNew ? (payload.telesale_id ? 'Đã tạo khách và chuyển cho telesale' : 'Đã tạo khách — chờ phân telesale') : 'Đã lưu');
+    onSaved();
   };
+  const canPickTele = canAssign || amTruc;
   return (
-    <Modal title={row.id ? 'Sửa data khách' : 'Thêm data khách'} onClose={onClose}>
+    <Modal title={isNew ? 'Thêm khách hàng mới' : 'Sửa thông tin khách'} onClose={onClose}>
+      {isNew && <p className="text-[12.5px] text-slate-500 -mt-1 mb-3">Trực page tư vấn xin được số thì tạo khách tại đây, điền đủ thông tin để telesale tiếp nhận và gọi.</p>}
+      <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3">Thông tin khách hàng</div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Tên khách hàng"><input value={f.customer_name} onChange={e => setF({ ...f, customer_name: e.target.value })} className={inp} /></Field>
-        <Field label="Số điện thoại *"><input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className={inp} /></Field>
+        <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} className={inp} /></Field>
+        <Field label="Số điện thoại *"><input value={f.phone} inputMode="tel" onChange={e => { set('phone', e.target.value); setDup(null); }} onBlur={e => checkDup(e.target.value)} className={inp} /></Field>
+      </div>
+      {dup && (
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-800">
+          SĐT đã có: <b>{dup.customer_name || 'Không tên'}</b> · {STATUS[dup.status]?.label || dup.status}
+          {dup.telesale?.full_name && <> · Telesale: <b>{dup.telesale.full_name}</b></>}
+          {onOpenExisting && <button onClick={() => onOpenExisting(dup.id)} className="ml-2 font-semibold text-teal-700 underline">Mở khách này</button>}
+        </div>
+      )}
+      <div className="grid grid-cols-3 gap-2">
+        <Field label="Giới tính"><select value={f.gender} onChange={e => set('gender', e.target.value)} className={inp}><option value="">—</option><option>Nữ</option><option>Nam</option><option>Khác</option></select></Field>
+        <Field label="Năm sinh / tuổi"><input value={f.birthday} onChange={e => set('birthday', e.target.value)} placeholder="VD: 1995" className={inp} /></Field>
+        <Field label="Tỉnh / địa chỉ"><input value={f.address} onChange={e => set('address', e.target.value)} placeholder="VD: Hà Nội" className={inp} /></Field>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Trực page phụ trách"><select value={f.truc_page_id} onChange={e => setF({ ...f, truc_page_id: e.target.value })} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
-        <Field label="Trạng thái"><select value={f.status} onChange={e => setF({ ...f, status: e.target.value })} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></Field>
+        <Field label="Nguồn khách">
+          <input list="md-source-opts" value={f.source} onChange={e => set('source', e.target.value)} placeholder="Chọn / gõ" className={inp} />
+          <datalist id="md-source-opts">{SOURCE_OPTS.map(o => <option key={o} value={o} />)}</datalist>
+        </Field>
+        <Field label="Nhóm dịch vụ quan tâm">
+          <input list="md-group-opts" value={f.customer_group} onChange={e => set('customer_group', e.target.value)} placeholder="Chọn / gõ" className={inp} />
+          <datalist id="md-group-opts">{GROUP_OPTS.map(o => <option key={o} value={o} />)}</datalist>
+        </Field>
       </div>
-      <Field label="Mô tả / nhu cầu"><textarea value={f.description} onChange={e => setF({ ...f, description: e.target.value })} rows={2} className={inp} /></Field>
+      <Field label="Nhu cầu / dịch vụ khách hỏi"><textarea value={f.description} onChange={e => set('description', e.target.value)} rows={2} placeholder="VD: Hỏi gọt hàm V-line, muốn làm trước Tết" className={inp} /></Field>
+      <Field label="Thông tin đã tiếp cận (trực page tư vấn gì)"><textarea value={f.reached_info} onChange={e => set('reached_info', e.target.value)} rows={3} placeholder="Đã gửi ảnh before/after, báo giá khoảng…, khách băn khoăn…, hẹn gọi lúc…" className={inp} /></Field>
+      <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3 mt-1">Phân công</div>
+      <div className="grid grid-cols-3 gap-2">
+        <Field label="Trạng thái"><select value={f.status} onChange={e => set('status', e.target.value)} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></Field>
+        <Field label="Trực page"><select value={f.truc_page_id} onChange={e => set('truc_page_id', e.target.value)} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
+        <Field label="Telesale nhận data"><select value={f.telesale_id} disabled={!canPickTele} onChange={e => set('telesale_id', e.target.value)} className={inp}><option value="">— Chưa phân —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
+      </div>
       <ModalActions onClose={onClose} onSave={save} saving={saving} />
     </Modal>
   );
@@ -1957,14 +2024,15 @@ const GetflyModal = ({ onClose, onDone }) => {
 };
 
 // ================= Tạo lịch hẹn từ 1 khách (đẩy sang Module lịch hẹn) =================
-const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
+const CreateApptModal = ({ row, me, defaultNotes = '', onClose, onCreated }) => {
   const today = vnToday();
   const [f, setF] = useState({
     appointment_date: today, appointment_time: '09:00',
     customer_name: row.customer_name || '', phone: row.phone || '',
     service: '', service_group: 'Hàm mặt', surgery_type: 'Tiểu phẫu',
     test_status: 'Chưa xét nghiệm', expected_bill: '', deposit_amount: '',
-    customer_source: 'Ads', customer_type: 'Mới',
+    customer_source: /giới thiệu|gioi thieu|referral/i.test(row.source || '') ? 'Referral' : /khách cũ|cskh/i.test(row.source || '') ? 'CSKH' : 'Ads',
+    customer_type: /khách cũ/i.test(row.source || '') ? 'Cũ' : 'Mới',
     telesale_id: row.telesale_id || '', telesale_id_2: '', sale_id: '',
     social_link: '', notes: defaultNotes || '',
   });
@@ -1995,7 +2063,19 @@ const CreateApptModal = ({ row, me, defaultNotes = '', onClose }) => {
     });
     setSaving(false);
     if (error) return toast.error('Lỗi tạo lịch: ' + error.message);
-    toast.success('Đã tạo lịch hẹn — xem ở Module lịch hẹn');
+    // Hành trình: data -> LỊCH HẸN. Ghi nhật ký + chuyển giai đoạn "Đã hẹn lịch" (nếu đang ở giai đoạn trước đó)
+    if (row.id) {
+      const when = `${String(f.appointment_time || '').slice(0, 5)} ${f.appointment_date.split('-').reverse().join('/')}`;
+      await supabase.from('marketing_activities').insert({
+        data_id: row.id, phone: row.phone, type: 'care', created_by: me.id,
+        content: `📅 Đã đẩy lên LỊCH HẸN: ${when}${f.service ? ' · ' + f.service : ''}`,
+      });
+      const upd = { last_contact_at: new Date().toISOString() };
+      if (['tiep_can', 'nong', 'tiem_nang', 'chot_fail', 'mat'].includes(row.status)) upd.status = 'da_hen_lich';
+      await supabase.from('marketing_data').update(upd).eq('id', row.id);
+    }
+    toast.success('Đã tạo lịch hẹn — khách chuyển sang "Đã hẹn lịch"');
+    onCreated?.();
     onClose();
   };
 
