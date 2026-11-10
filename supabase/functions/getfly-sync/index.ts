@@ -9,7 +9,7 @@
 // doanh thu, ngày tạo/sửa.
 //
 // Secrets: GETFLY_DOMAIN, GETFLY_API_KEY, (tuỳ chọn) GETFLY_LIST_PATH
-// Gọi: {} = kéo full · {max_pages:2} = cron 5' · {probe:true} = kiểm tra
+// Gọi: {} = kéo full · {max_pages:2} = cron 5' · {probe:true} = kiểm tra · {force:true} = ghi lại tất cả
 //      {start_page:N} = kéo tiếp
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -137,9 +137,9 @@ function extractRecords(d: any): any[] {
 function rowFrom(c: Record<string, any>, phone: string): { row: Record<string, unknown>; hasStatus: boolean } {
   const relationName = nameOf(c.relation_name) || nameOf(c.account_relation_detail);
   const status = relationName ? mapRelation(relationName) : null;
-  const manager = (typeof c.account_manager === "string" && c.account_manager.trim() && !/^\d+$/.test(c.account_manager.trim()))
-    ? c.account_manager.trim()
-    : (nameOf(c.account_manager) || pick(c, ["mgr_display_name"]) || null);
+  // Tên người phụ trách: ưu tiên tên hiển thị (account_manager thường chỉ là mã số "11")
+  const mgrRaw = typeof c.account_manager === "object" ? nameOf(c.account_manager) : String(c.account_manager ?? "").trim();
+  const manager = pick(c, ["mgr_display_name"]) || (mgrRaw && !/^\d+$/.test(mgrRaw) ? mgrRaw : "") || mgrRaw || null;
   const row: Record<string, unknown> = {
     phone,
     customer_name: pick(c, ["account_name", "client_name", "name", "full_name"]) || null,
@@ -160,6 +160,8 @@ function rowFrom(c: Record<string, any>, phone: string): { row: Record<string, u
     total_revenue: Number(c.total_revenue) || 0,
     getfly_created_at: toIso(c.created_at),
     getfly_updated_at: toIso(c.updated_at ?? c.last_active),
+    getfly_manager_id: /^\d+$/.test(mgrRaw) ? mgrRaw : null,
+    getfly_raw: c,                                                                       // BẢN GỐC đầy đủ (lưu trữ khi thôi dùng GetFly)
     getfly_synced_at: new Date().toISOString(),
   };
   if (status) row.status = status;   // Mối quan hệ GetFly -> trạng thái app
@@ -262,6 +264,7 @@ Deno.serve(async (req) => {
         (ex || []).forEach((e: any) => existing.set(e.phone, e));
       }
       const changed = candidates.filter(({ row }) => {
+        if (body.force) return true;                           // {force:true}: ghi lại TẤT CẢ (lưu bản gốc)
         const e = existing.get(String(row.phone));
         if (!e) return true;                                   // khách mới
         return e.getfly_updated_at !== row.getfly_updated_at   // có note/cập nhật mới
