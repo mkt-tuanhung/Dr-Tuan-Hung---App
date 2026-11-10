@@ -11,8 +11,9 @@ import PipelineBoard from '@/features/crm/PipelineBoard.jsx';
 import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
 import { useGetflyNotes, GetflyNotesList } from '@/features/crm/GetflyNotes.jsx';
 import { surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
-import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote } from 'lucide-react';
+import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote, ImagePlus, Film, Loader2 } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
+import { uploadToR2, uploadViaPresignWithProgress } from '@/lib/r2Client';
 
 const STATUS = {
   tiep_can: { label: 'Tiếp cận', cls: 'bg-slate-100 text-slate-600' },
@@ -1384,6 +1385,11 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 </div>
                 <Field label="Mô tả / nhu cầu"><textarea value={info.description} onChange={e => setInfo({ ...info, description: e.target.value })} disabled={!canWrite} rows={2} className={inp} /></Field>
                 <Field label="Thông tin đã tiếp cận"><textarea value={info.reached_info} onChange={e => setInfo({ ...info, reached_info: e.target.value })} disabled={!canWrite} rows={3} className={inp} /></Field>
+                <div>
+                  <label className="e-label">Ảnh / video khách</label>
+                  <CustomerMedia urls={Array.isArray(row.media_urls) ? row.media_urls : []} editable={canWrite}
+                    onChange={async (u) => { const { error } = await supabase.from('marketing_data').update({ media_urls: u }).eq('id', row.id); if (error) toast.error('Lỗi lưu ảnh: ' + error.message); else onChanged?.(); }} />
+                </div>
                 {(row.getfly_id || row.website || row.getfly_synced_at) && (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3 text-[12.5px] text-slate-600 space-y-1">
                     <div className="font-bold text-slate-700">Đồng bộ GetFly</div>
@@ -1756,6 +1762,61 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 };
 
 // ---------- Thêm khách mới ----------
+// ---------- ẢNH / VIDEO của khách (trực page tải lên khi tạo khách, xem/bổ sung trong hồ sơ) ----------
+const isVideoUrl = (u) => /\.(mp4|mov|m4v|webm|3gp|avi|mkv)(\?|$)/i.test(String(u || ''));
+const CustomerMedia = ({ urls = [], editable = false, onChange, compact = false }) => {
+  const [busy, setBusy] = useState(null);   // "2/3 · 45%"
+  const fileRef = useRef(null);
+  const pick = async (e) => {
+    const files = [...(e.target.files || [])]; e.target.value = '';
+    if (!files.length) return;
+    const out = [...urls];
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const tag = files.length > 1 ? `${i + 1}/${files.length}` : '';
+        if ((f.type || '').startsWith('video/') || isVideoUrl(f.name)) {
+          if (f.size > 500 * 1024 * 1024) { toast.error(`${f.name}: video quá 500MB`); continue; }
+          setBusy(`${tag} video 0%`);
+          out.push(await uploadViaPresignWithProgress(f, 'customer-media', (pct) => setBusy(`${tag} video ${pct}%`)));
+        } else {
+          setBusy(`${tag} ảnh…`);
+          out.push(await uploadToR2(f, 'customer-media'));
+        }
+        await onChange?.([...out]);
+      }
+      toast.success('Đã tải lên');
+    } catch (err) { toast.error(err.message || 'Tải lên lỗi'); }
+    setBusy(null);
+  };
+  const remove = (u) => onChange?.(urls.filter(x => x !== u));
+  const size = compact ? 'h-16 w-16' : 'h-20 w-20';
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {urls.map(u => (
+          <div key={u} className={`relative ${size} rounded-xl overflow-hidden border border-slate-200 bg-slate-100`}>
+            <a href={u} target="_blank" rel="noreferrer" className="block w-full h-full">
+              {isVideoUrl(u)
+                ? <><video src={u} muted playsInline preload="metadata" className="w-full h-full object-cover" /><span className="absolute inset-0 grid place-items-center bg-black/25"><Film className="w-6 h-6 text-white" /></span></>
+                : <img src={u} alt="" loading="lazy" className="w-full h-full object-cover" />}
+            </a>
+            {editable && <button type="button" onClick={() => remove(u)} title="Xoá" className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white grid place-items-center"><X className="w-3 h-3" /></button>}
+          </div>
+        ))}
+        {editable && (
+          <button type="button" disabled={!!busy} onClick={() => fileRef.current?.click()}
+            className={`${size} rounded-xl border-2 border-dashed border-teal-300 text-teal-600 hover:bg-teal-50 flex flex-col items-center justify-center gap-1 text-[10.5px] font-semibold disabled:opacity-70`}>
+            {busy ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="px-1 text-center leading-tight">{busy}</span></> : <><ImagePlus className="w-5 h-5" />Ảnh / video</>}
+          </button>
+        )}
+        {!editable && !urls.length && <span className="text-[13px] text-slate-400">Chưa có ảnh / video</span>}
+      </div>
+      {editable && <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={pick} />}
+    </div>
+  );
+};
+
 // Nguồn khách hay gặp (trực page chọn nhanh, vẫn gõ tự do được)
 const SOURCE_OPTS = ['Facebook Ads', 'Facebook (tự nhiên)', 'TikTok', 'Zalo', 'Instagram', 'Website', 'Hotline', 'Khách giới thiệu', 'Khách cũ', 'Khác'];
 const GROUP_OPTS = ['Nhóm hàm mặt', 'Nhóm mũi', 'Nhóm mắt', 'Nhóm ngực', 'Nhóm body', 'Nhóm da / trẻ hoá', 'Khác'];
@@ -1773,6 +1834,7 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
     status: row.status || 'tiep_can',
     truc_page_id: row.truc_page_id || (isNew && amTruc ? me.id : ''),
     telesale_id: row.telesale_id || '',
+    media_urls: Array.isArray(row.media_urls) ? row.media_urls : [],
   });
   const [saving, setSaving] = useState(false);
   const [dup, setDup] = useState(null);          // khách đã có cùng SĐT
@@ -1800,6 +1862,7 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
       truc_page_id: f.truc_page_id || null, telesale_id: f.telesale_id || null,
     };
     Object.keys(payload).forEach(k => { if (payload[k] === '') payload[k] = null; });
+    payload.media_urls = f.media_urls || [];
     const { error } = isNew
       ? await supabase.from('marketing_data').insert({ ...payload, created_by: me.id })
       : await supabase.from('marketing_data').update(payload).eq('id', row.id);
@@ -1841,6 +1904,8 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
       </div>
       <Field label="Nhu cầu / dịch vụ khách hỏi"><textarea value={f.description} onChange={e => set('description', e.target.value)} rows={2} placeholder="VD: Hỏi gọt hàm V-line, muốn làm trước Tết" className={inp} /></Field>
       <Field label="Thông tin đã tiếp cận (trực page tư vấn gì)"><textarea value={f.reached_info} onChange={e => set('reached_info', e.target.value)} rows={3} placeholder="Đã gửi ảnh before/after, báo giá khoảng…, khách băn khoăn…, hẹn gọi lúc…" className={inp} /></Field>
+      <label className="e-label">Ảnh / video khách gửi <span className="text-slate-400 font-normal">(ảnh chụp mặt, ảnh tin nhắn, video…)</span></label>
+      <div className="mb-3"><CustomerMedia urls={f.media_urls} editable onChange={(u) => set('media_urls', u)} compact /></div>
       <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3 mt-1">Phân công</div>
       <div className="grid grid-cols-3 gap-2">
         <Field label="Trạng thái"><select value={f.status} onChange={e => set('status', e.target.value)} className={inp}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></Field>
