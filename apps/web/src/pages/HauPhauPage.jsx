@@ -12,6 +12,7 @@ import { parseCSV, downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import MediaCustomerButton from '@/components/MediaCustomerButton.jsx';
 import { vnToday } from '@/lib/vnTime';
+import { askReason } from '@/components/ReasonPrompt.jsx';
 import { Customer360Button, CustomerName } from '@/features/crm/Customer360.jsx';
 import { useCustomerFilters, applyCustomerFilters, CustomerFilterBar, useServerSearch, mergeById, searchOrCond } from '@/features/crm/customerFilters.jsx';
 
@@ -98,26 +99,45 @@ const RISK_STYLE = {
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const initialsOf = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
+// ===== (4) MẪU MỐC CHĂM SÓC (bác sĩ duyệt) — nạp từ bảng care_templates =====
+let CARE_TEMPLATES = [];
+const templateFor = (app) => {
+  const ok = CARE_TEMPLATES.filter(t => t.status === 'approved' && Array.isArray(t.milestones) && t.milestones.length);
+  return ok.find(t => t.service_group && t.service_group === app?.service_group) || ok.find(t => !t.service_group) || null;
+};
+// Mốc của 1 ca: bản kế hoạch đã CHỐT (care_plan) -> mẫu đã duyệt -> mặc định
+const planDefs = (app) => {
+  if (Array.isArray(app?.care_plan) && app.care_plan.length) return app.care_plan;
+  return templateFor(app)?.milestones || MILESTONE_DEFS;
+};
+const LEGACY_CUTOFF = '2026-10-13';   // ca mổ trước ngày này đã sang CSKH theo cách cũ (≥1 tháng)
+// Ca thuộc CSKH: CSKH đã ký nhận bàn giao, hoặc ca cũ trước khi có quy trình bàn giao
+const inCskh = (c) => c.handover_status === 'da_nhan' || (!c.handover_status && !!c.surgery_date && String(c.surgery_date).slice(0, 10) < LEGACY_CUTOFF);
+
 // Dựng danh sách mốc (kết hợp mốc đã lưu + tính ngày theo ngày mổ)
 const buildMilestones = (app) => {
   const saved = Array.isArray(app?.care_milestones) ? app.care_milestones : [];
   const savedMap = {}; saved.forEach(m => { if (m?.key) savedMap[m.key] = m; });
   const surg = app?.surgery_date ? startOfDay(app.surgery_date) : null;
   const today = startOfDay(new Date());
-  return MILESTONE_DEFS.map(def => {
+  return planDefs(app).map(def => {
     const s = savedMap[def.key] || {};
-    const date = surg ? new Date(surg.getTime() + def.off * 86400000) : null;
-    let status = 'pending';
+    const date = surg ? new Date(surg.getTime() + Number(def.off || 0) * 86400000) : null;
+    let status = 'pending', overdueDays = 0;
     if (s.done) status = 'done';
-    else if (date && startOfDay(date) <= today) status = 'active'; // đến hạn / đang tới
-    return { ...def, date, status, done: !!s.done, nurse_id: s.nurse_id || null, note: s.note || '', done_at: s.done_at || null };
+    else if (date && startOfDay(date).getTime() === today.getTime()) status = 'active';      // đến hạn hôm nay
+    else if (date && startOfDay(date) < today) { status = 'overdue'; overdueDays = Math.round((today - startOfDay(date)) / 86400000); }
+    return { ...def, date, status, overdueDays, done: !!s.done, nurse_id: s.nurse_id || null, note: s.note || '', done_at: s.done_at || null };
   });
 };
+const overdueOf = (app) => (inCskh(app) || app.handover_status ? [] : buildMilestones(app).filter(m => m.status === 'overdue' && m.off > 0));
+// (5) Đủ điều kiện bàn giao: đã tới mốc cuối (vd D30)
+const handoverDue = (app) => { const ms = buildMilestones(app); const last = ms[ms.length - 1]; return !!last?.date && startOfDay(last.date) <= startOfDay(new Date()); };
 
 // Chỉ số tự tính từ mốc + dấu hiệu + đánh giá
 const computeMetrics = (app, ms, satisfaction) => {
   const total = ms.length;
-  const reached = ms.filter(m => m.status !== 'pending');
+  const reached = ms.filter(m => m.status !== 'pending');   // gồm hoàn thành, đến hạn, quá hạn
   const done = ms.filter(m => m.done);
   const progress = total ? Math.round((reached.length / total) * 100) : 0;
   const careScore = reached.length ? Math.round((done.length / reached.length) * 100) : 0;
@@ -141,6 +161,14 @@ const HauPhauPage = () => {
   useEffect(() => { localStorage.setItem('hp_view_mode', viewMode); }, [viewMode]);
 
   const isHeadNurse = profile?.role === 'dieu_duong' && profile?.position === 'Trưởng bộ phận';
+  const [templates, setTemplates] = useState([]);
+  const loadTemplates = useCallback(async () => {
+    const { data } = await supabase.from('care_templates').select('*, approver:profiles!approved_by(full_name)').order('created_at');
+    CARE_TEMPLATES = data || []; setTemplates(CARE_TEMPLATES);
+  }, []);
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  const [tplOpen, setTplOpen] = useState(false);
+  const isDoctor = [profile?.role, profile?.role_2].includes('bac_si');
   const isAdmin = profile?.role === 'admin';
   const isCskh = profile?.role === 'cskh' || profile?.role_2 === 'cskh';
   const isDieuDuong = profile?.role === 'dieu_duong' || profile?.role_2 === 'dieu_duong';
@@ -708,11 +736,17 @@ const HauPhauPage = () => {
     map[key] = { ...(map[key] || {}), key, ...patch };
     if (patch.done && !map[key].done_at) map[key].done_at = new Date().toISOString();
     if (patch.done === false) map[key].done_at = null;
-    const arr = MILESTONE_DEFS.map(d => map[d.key]).filter(Boolean);
-    const { error } = await supabase.from('customer_appointments').update({ care_milestones: arr }).eq('id', careApp.id);
+    const defs = planDefs(careApp);
+    const arr = defs.map(d => map[d.key]).filter(Boolean);
+    const upd = { care_milestones: arr };
+    if (!Array.isArray(careApp.care_plan) || !careApp.care_plan.length) {   // CHỐT kế hoạch cho ca này
+      const t = templateFor(careApp);
+      upd.care_plan = defs; upd.care_plan_version = t ? `${t.name} v${t.version}` : 'Mặc định (chưa duyệt)';
+    }
+    const { error } = await supabase.from('customer_appointments').update(upd).eq('id', careApp.id);
     setSavingMilestone(false);
     if (error) { toast.error(error.message); return; }
-    setCareApp(prev => prev ? { ...prev, care_milestones: arr } : prev);
+    setCareApp(prev => prev ? { ...prev, ...upd } : prev);
     setMilestoneEdit(null);
     loadData();
   };
@@ -753,8 +787,8 @@ const HauPhauPage = () => {
   };
 
   // Phân loại theo tuổi ca mổ: <1 tháng = Hậu phẫu, ≥1 tháng = CSKH
-  const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-  const isOldCase = (c) => c.surgery_date && new Date(c.surgery_date) < oneMonthAgo;
+  // (5) Ca chỉ sang CSKH khi CSKH đã KÝ NHẬN bàn giao (ca mổ trước 13/10 giữ cách cũ)
+  const isOldCase = inCskh;
   const mainTabCustomers = allCustomers.filter(c => mainTab === 'cskh' ? isOldCase(c) : !isOldCase(c));
   const hauPhauCount = allCustomers.filter(c => !isOldCase(c)).length;
   const cskhCount = allCustomers.filter(c => isOldCase(c)).length;
@@ -973,6 +1007,10 @@ const HauPhauPage = () => {
           </div>
         </div>
 
+        {/* (5) BÀN GIAO ĐIỀU DƯỠNG -> CSKH */}
+        <HandoverCard app={careApp} ms={ms} profile={profile} nurses={nurses}
+          onDone={(patch) => { setCareApp(prev => prev ? { ...prev, ...patch } : prev); loadData(); }} />
+
         {/* Hành động — mobile (3 thẻ) */}
         <div className="lg:hidden grid grid-cols-1 gap-2">{actionBtns}</div>
 
@@ -980,23 +1018,25 @@ const HauPhauPage = () => {
         <div className="grid lg:grid-cols-2 gap-4">
           {/* Hành trình hồi phục (mốc) */}
           <div className="e-card e-card-pad">
-            <div className="e-card-header"><h3 className="e-card-title flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Activity className="w-4 h-4" /></span> Hành trình hồi phục</h3></div>
+            <div className="e-card-header"><h3 className="e-card-title flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Activity className="w-4 h-4" /></span> Hành trình hồi phục</h3>
+              <span className="text-[11.5px] text-slate-400">{careApp.care_plan_version || (templateFor(careApp) ? `${templateFor(careApp).name} v${templateFor(careApp).version} · BS đã duyệt` : 'Mẫu mặc định · chưa duyệt')}</span></div>
             <div>
               {ms.map((m, i) => {
                 const done = m.status === 'done';
-                const active = m.status === 'active';
+                const overdue = m.status === 'overdue';
+                const active = m.status === 'active' || overdue;
                 return (
                   <div key={m.key} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${done ? 'bg-success-500 text-white' : active ? 'bg-teal-50 text-teal-700 ring-2 ring-teal-400' : 'bg-slate-100 text-slate-400'}`}>
+                      <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${done ? 'bg-success-500 text-white' : overdue ? 'bg-danger-50 text-danger-600 ring-2 ring-danger-400' : active ? 'bg-teal-50 text-teal-700 ring-2 ring-teal-400' : 'bg-slate-100 text-slate-400'}`}>
                         {done ? <Check className="w-4 h-4" /> : <span className="text-[11px] font-bold">{i === 0 ? 'PT' : m.off}</span>}
                       </span>
                       {i < ms.length - 1 && <span className={`w-0.5 flex-1 my-1 ${done ? 'bg-success-300' : 'bg-slate-200'}`} />}
                     </div>
-                    <button type="button" onClick={() => canEditHauPhau && setMilestoneEdit(m)} className={`text-left flex-1 mb-3 rounded-xl px-3 py-2 transition ${active ? 'bg-teal-50 border border-teal-200' : done ? 'bg-success-50/50' : 'hover:bg-slate-50'} ${canEditHauPhau ? 'cursor-pointer' : 'cursor-default'}`}>
+                    <button type="button" onClick={() => canEditHauPhau && setMilestoneEdit(m)} className={`text-left flex-1 mb-3 rounded-xl px-3 py-2 transition ${overdue ? 'bg-danger-50 border border-danger-200' : active ? 'bg-teal-50 border border-teal-200' : done ? 'bg-success-50/50' : 'hover:bg-slate-50'} ${canEditHauPhau ? 'cursor-pointer' : 'cursor-default'}`}>
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-slate-900 text-[14px]">{m.label}</span>
-                        <span className={`e-badge e-badge-sm shrink-0 ${done ? 'e-tone-success' : active ? 'e-tone-warning' : 'e-tone-neutral'}`}>{done ? '✓ Hoàn thành' : active ? 'Đến hạn' : 'Chưa tới'}</span>
+                        <span className={`e-badge e-badge-sm shrink-0 ${done ? 'e-tone-success' : overdue ? 'e-tone-danger' : active ? 'e-tone-warning' : 'e-tone-neutral'}`}>{done ? '✓ Hoàn thành' : overdue ? `Quá hạn ${m.overdueDays} ngày` : active ? 'Đến hạn hôm nay' : 'Chưa tới'}</span>
                       </div>
                       <div className="text-[12px] text-slate-400 mt-0.5 tabular-nums">{m.date ? m.date.toLocaleDateString('vi-VN') : '—'}</div>
                       <div className="text-[12.5px] text-slate-500 mt-0.5">{m.note || m.desc}</div>
@@ -1255,6 +1295,9 @@ const HauPhauPage = () => {
   const isToday = (d) => d && startOfDay(d).getTime() === startOfDay(nowTs).getTime();
   const listStats = (() => {
     const arr = mainTabCustomers;
+    const msOver = isCskhTab ? 0 : arr.filter(c => overdueOf(c).length).length;
+    const waitHand = allCustomers.filter(c => !inCskh(c) && !c.handover_status && handoverDue(c)).length;
+    const waitCskh = allCustomers.filter(c => c.handover_status === 'cho_nhan').length;
     const need = arr.filter(c => c.next_recheck_at && isToday(new Date(c.next_recheck_at))).length;
     const overdue = arr.filter(c => c.next_recheck_at && new Date(c.next_recheck_at) < nowTs && c.post_op_status !== 'Đã ổn định').length;
     const stable = arr.filter(c => c.post_op_status === 'Đã ổn định').length;
@@ -1263,7 +1306,7 @@ const HauPhauPage = () => {
     const complication = arr.filter(c => c.post_op_status === 'Có biến chứng').length;
     const sats = arr.map(c => satByAppt[c.id]).filter(v => v != null);
     const satScore = sats.length ? Math.round((sats.reduce((s, v) => s + v, 0) / sats.length) / 5 * 100) : null;
-    return { total: arr.length, need, overdue, stable, following, recheck, complication, satScore };
+    return { total: arr.length, need, overdue, stable, following, recheck, complication, satScore, msOver, waitHand, waitCskh };
   })();
   const fmtCountdown = (dt) => {
     const diff = new Date(dt) - nowTs;
@@ -1277,7 +1320,7 @@ const HauPhauPage = () => {
       const t = c.next_recheck_at ? new Date(c.next_recheck_at) : null;
       const cd = t ? fmtCountdown(t) : null;
       const risk = riskOf(c);
-      const urgent = risk === 'Cao' || (cd && (cd.over || cd.soon)) || (t && (t - nowTs) < 3 * 86400000);
+      const urgent = risk === 'Cao' || (cd && (cd.over || cd.soon)) || (t && (t - nowTs) < 3 * 86400000) || overdueOf(c).length > 0 || c.handover_status === 'cho_nhan';
       return { c, t, cd, risk, urgent };
     })
     .filter(p => p.urgent)
@@ -1344,8 +1387,8 @@ const HauPhauPage = () => {
       </div>
       <div className="hidden lg:flex e-tabs">
         {[
-          { id: 'hau_phau', label: 'Hậu phẫu', sub: `<1 tháng · ${hauPhauCount}` },
-          { id: 'cskh', label: 'CSKH', sub: `≥1 tháng · ${cskhCount}` },
+          { id: 'hau_phau', label: 'Hậu phẫu', sub: `Điều dưỡng · ${hauPhauCount}` },
+          { id: 'cskh', label: 'CSKH', sub: `Đã bàn giao · ${cskhCount}` },
         ].map(t => (
           <button key={t.id} onClick={() => { setMainTab(t.id); setActiveTab('all'); }}
             className={`e-tab gap-2 ${mainTab === t.id ? 'e-tab-active' : ''}`}>
@@ -1417,6 +1460,30 @@ const HauPhauPage = () => {
           })}
         </div>
       </div>
+
+      {/* (4)(5) Mốc quá hạn · chờ bàn giao · chờ CSKH nhận + mẫu mốc */}
+      <div className="flex flex-wrap items-center gap-2">
+        {!isCskhTab && listStats.msOver > 0 && <span className="e-badge e-tone-danger">⏰ {listStats.msOver} ca có mốc chăm sóc QUÁ HẠN</span>}
+        {listStats.waitHand > 0 && <span className="e-badge e-tone-warning">📋 {listStats.waitHand} ca tới mốc cuối — chờ điều dưỡng bàn giao CSKH</span>}
+        {listStats.waitCskh > 0 && <span className="e-badge e-tone-brand">🤝 {listStats.waitCskh} ca chờ CSKH ký nhận</span>}
+        {(isAdmin || isDoctor || isHeadNurse) && (
+          <button type="button" onClick={() => setTplOpen(true)} className="e-btn e-btn-secondary e-btn-sm ml-auto">
+            <ClipboardList className="w-4 h-4" /> Mẫu mốc chăm sóc {templates.some(t => t.status !== 'approved') && <span className="e-badge e-badge-sm e-tone-warning">chờ BS duyệt</span>}
+          </button>
+        )}
+      </div>
+      {/* CSKH: danh sách chờ ký nhận bàn giao */}
+      {isCskhTab && (isCskh || isAdmin) && allCustomers.some(c => c.handover_status === 'cho_nhan') && (
+        <div className="e-card p-4">
+          <div className="font-semibold text-slate-900 mb-2">🤝 Điều dưỡng đã bàn giao — chờ CSKH ký nhận</div>
+          <div className="space-y-2">{allCustomers.filter(c => c.handover_status === 'cho_nhan').map(c => (
+            <button key={c.id} type="button" onClick={() => openCare(c)} className="w-full text-left rounded-xl border border-teal-200 bg-teal-50/50 px-3 py-2.5 hover:border-teal-400">
+              <div className="font-semibold text-slate-900 text-[14px]">{c.customer_name} <span className="text-slate-400 font-normal">· {c.service || ''}</span></div>
+              <div className="text-[12.5px] text-slate-600 line-clamp-2 mt-0.5">{c.handover_summary || '—'}</div>
+            </button>))}</div>
+        </div>
+      )}
+      {tplOpen && <CareTemplateModal templates={templates} canApprove={isAdmin || isDoctor} onClose={() => setTplOpen(false)} onSaved={loadTemplates} />}
 
       {/* Cần ưu tiên theo dõi */}
       {priority.length > 0 && (
@@ -1492,6 +1559,9 @@ const HauPhauPage = () => {
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className="text-[12px] text-slate-400 tabular-nums">{app.phone || '—'}</span>
                                 <span className={`e-badge e-badge-sm border ${stCls}`}>{st}</span>
+                                {overdueOf(app).length > 0 && <span className="e-badge e-badge-sm e-tone-danger">⏰ {overdueOf(app).length} mốc quá hạn</span>}
+                                {app.handover_status === 'cho_nhan' && <span className="e-badge e-badge-sm e-tone-brand">Chờ CSKH nhận</span>}
+                                {!inCskh(app) && !app.handover_status && handoverDue(app) && <span className="e-badge e-badge-sm e-tone-warning">Chờ bàn giao</span>}
                               </div>
                             </div>
                           </div>
@@ -1597,6 +1667,12 @@ const HauPhauPage = () => {
                               </div>
                               <span className={`e-badge e-badge-sm border shrink-0 ${stCls}`}>{st}</span>
                             </div>
+                            {(overdueOf(app).length > 0 || app.handover_status === 'cho_nhan' || (!inCskh(app) && !app.handover_status && handoverDue(app))) && (
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {overdueOf(app).length > 0 && <span className="e-badge e-badge-sm e-tone-danger">⏰ {overdueOf(app).length} mốc quá hạn</span>}
+                                {app.handover_status === 'cho_nhan' && <span className="e-badge e-badge-sm e-tone-brand">Chờ CSKH nhận</span>}
+                                {!inCskh(app) && !app.handover_status && handoverDue(app) && <span className="e-badge e-badge-sm e-tone-warning">Chờ bàn giao</span>}
+                              </div>)}
                             <div className="mt-2 flex items-center gap-2 text-[12px] min-w-0">
                               <span className="e-badge e-badge-sm e-tone-neutral max-w-[55%] overflow-hidden">{app.service || 'Chưa rõ DV'}</span>
                               <span className="text-slate-300 shrink-0">·</span>
@@ -1724,6 +1800,151 @@ const HauPhauPage = () => {
         </div>
       )}
       {!loading && <LoadOlderBar fromYmd={winStart} label="Đang hiển thị ca mổ từ ngày" loading={moreLoading} onMore={() => { setMoreLoading(true); setWinStart(w => ymdShift(w, -30)); }} />}
+    </div>
+  );
+};
+
+// ================== (5) BÀN GIAO ĐIỀU DƯỠNG -> CSKH ==================
+const HANDOVER_OVERRIDE = ['Bác sĩ đã đánh giá, cho phép bàn giao', 'Khách tự theo dõi tại nhà theo chỉ định', 'Khách chuyển nơi khác theo dõi', 'Khác'];
+const HandoverCard = ({ app, ms, profile, nurses, onDone }) => {
+  const roles = [profile?.role, profile?.role_2];
+  const isAdm = roles.includes('admin'), isDoc = roles.includes('bac_si');
+  const canNurse = isAdm || roles.includes('dieu_duong'), canCskh = isAdm || roles.includes('cskh');
+  const [summary, setSummary] = useState(app.handover_summary || `Dịch vụ: ${app.service || ''}. Đã hoàn tất chăm sóc hậu phẫu ${ms.filter(m => m.done).length}/${ms.length} mốc. Lưu ý cho CSKH: `);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setSummary(app.handover_summary || `Dịch vụ: ${app.service || ''}. Đã hoàn tất chăm sóc hậu phẫu ${ms.filter(m => m.done).length}/${ms.length} mốc. Lưu ý cho CSKH: `); }, [app.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (inCskh(app) && !app.handover_status) return null;               // ca cũ đã ở CSKH
+  const last = ms[ms.length - 1];
+  const reachedEnd = !!last?.date && startOfDay(last.date) <= startOfDay(new Date());
+  const signs = Array.isArray(app.warning_signs) ? app.warning_signs : [];
+  const risky = app.post_op_status === 'Có biến chứng' || signs.length > 0;
+  const undone = ms.filter(m => m.status !== 'pending' && !m.done && m.off > 0);
+  const checks = [
+    { ok: reachedEnd, label: `Đã tới mốc cuối (${last?.label || 'D30'}${last?.date ? ' · ' + last.date.toLocaleDateString('vi-VN') : ''})` },
+    { ok: undone.length === 0, label: undone.length ? `Còn ${undone.length} mốc chưa hoàn thành: ${undone.map(m => m.label).join(', ')}` : 'Các mốc chăm sóc đã hoàn thành' },
+    { ok: !risky, label: risky ? `Còn dấu hiệu nguy cơ / biến chứng: ${[app.post_op_status === 'Có biến chứng' ? 'Có biến chứng' : null, ...signs].filter(Boolean).join(', ')}` : 'Không còn dấu hiệu nguy cơ, không biến chứng' },
+    { ok: !!app.next_recheck_at, label: app.next_recheck_at ? `Có lịch tái khám tiếp: ${new Date(app.next_recheck_at).toLocaleDateString('vi-VN')}` : 'Chưa có lịch tái khám tiếp (ghi rõ trong tóm tắt nếu không cần)' },
+    { ok: summary.trim().length > 40, label: 'Có tóm tắt cho CSKH (không ghi chi tiết y khoa)' },
+  ];
+  const nameOf = (id) => nurses.find(n => n.id === id)?.full_name || 'Nhân viên';
+  const nurseSign = async () => {
+    if (!summary.trim() || summary.trim().length <= 40) { toast.error('Viết tóm tắt cho CSKH (tối thiểu vài câu)'); return; }
+    let override = null;
+    if (risky) {
+      if (!(isAdm || isDoc)) { toast.error('Còn dấu hiệu nguy cơ / biến chứng — cần bác sĩ hoặc admin xác nhận mới được bàn giao'); return; }
+      const r = await askReason({ title: 'Bàn giao NGOẠI LỆ khi còn nguy cơ', subtitle: 'Bác sĩ / admin ghi lý do (lưu lịch sử)', options: HANDOVER_OVERRIDE });
+      if (!r) return; override = r.text;
+    } else if (!reachedEnd && !isAdm) { toast.error(`Chưa tới mốc cuối (${last?.label}) — chưa bàn giao được`); return; }
+    setBusy(true);
+    const patch = { handover_status: 'cho_nhan', handover_summary: summary.trim(), handover_override: override, handover_nurse_by: profile.id, handover_nurse_at: new Date().toISOString(),
+      handover_checklist: checks.map(c => ({ ok: c.ok, label: c.label })) };
+    const { error } = await supabase.from('customer_appointments').update(patch).eq('id', app.id);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã ký bàn giao — chờ CSKH ký nhận'); onDone(patch);
+  };
+  const cskhAccept = async () => {
+    setBusy(true);
+    const patch = { handover_status: 'da_nhan', handover_cskh_by: profile.id, handover_cskh_at: new Date().toISOString() };
+    const { error } = await supabase.from('customer_appointments').update(patch).eq('id', app.id);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('CSKH đã nhận bàn giao — khách chuyển sang tab CSKH'); onDone(patch);
+  };
+  const undo = async () => {
+    const patch = { handover_status: null, handover_nurse_by: null, handover_nurse_at: null, handover_override: null };
+    const { error } = await supabase.from('customer_appointments').update(patch).eq('id', app.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã huỷ bàn giao'); onDone(patch);
+  };
+  const st = app.handover_status;
+  return (
+    <div className={`e-card e-card-pad border ${st === 'da_nhan' ? 'border-success-200' : st === 'cho_nhan' ? 'border-teal-300' : reachedEnd ? 'border-warning-200' : 'border-slate-200'}`}>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <h3 className="e-card-title flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 grid place-items-center shrink-0"><Headset className="w-4 h-4" /></span> Bàn giao Điều dưỡng → CSKH</h3>
+        <span className={`e-badge e-badge-sm ${st === 'da_nhan' ? 'e-tone-success' : st === 'cho_nhan' ? 'e-tone-brand' : reachedEnd ? 'e-tone-warning' : 'e-tone-neutral'}`}>{st === 'da_nhan' ? '✓ CSKH đã nhận' : st === 'cho_nhan' ? 'Chờ CSKH ký nhận' : reachedEnd ? 'Đến hạn bàn giao' : 'Chưa tới mốc bàn giao'}</span>
+      </div>
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <div className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide">Checklist</div>
+          {(st ? (app.handover_checklist || []) : checks).map((c, i) => (
+            <div key={i} className={`flex gap-2 text-[13px] ${c.ok ? 'text-slate-700' : 'text-danger-600'}`}><span className="shrink-0">{c.ok ? '✅' : '⚠️'}</span><span>{c.label}</span></div>))}
+          {app.handover_override && <div className="text-[12.5px] text-warning-700 bg-warning-50 rounded-lg px-2.5 py-1.5">Bàn giao ngoại lệ: {app.handover_override}</div>}
+        </div>
+        <div>
+          <div className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Tóm tắt cho CSKH</div>
+          {st ? <div className="text-[13.5px] text-slate-700 whitespace-pre-wrap rounded-xl bg-slate-50 px-3 py-2">{app.handover_summary}</div>
+            : <textarea rows={5} value={summary} onChange={e => setSummary(e.target.value)} disabled={!canNurse} className="e-textarea resize-none text-[13.5px]" placeholder="Tình trạng chung, lịch tái khám, mong muốn của khách, lưu ý khi chăm sóc… (không ghi chi tiết y khoa)" />}
+        </div>
+        <div className="space-y-2.5">
+          <div className="rounded-xl border border-slate-200 px-3 py-2">
+            <div className="text-[12px] text-slate-500">Điều dưỡng ký giao</div>
+            <div className="text-[13.5px] font-semibold text-slate-800">{app.handover_nurse_at ? `${nameOf(app.handover_nurse_by)} · ${new Date(app.handover_nurse_at).toLocaleString('vi-VN')}` : '—'}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 px-3 py-2">
+            <div className="text-[12px] text-slate-500">CSKH ký nhận</div>
+            <div className="text-[13.5px] font-semibold text-slate-800">{app.handover_cskh_at ? `${nameOf(app.handover_cskh_by)} · ${new Date(app.handover_cskh_at).toLocaleString('vi-VN')}` : '—'}</div>
+          </div>
+          {!st && canNurse && <button type="button" onClick={nurseSign} disabled={busy} className="e-btn e-btn-primary w-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Điều dưỡng ký bàn giao</button>}
+          {st === 'cho_nhan' && canCskh && <button type="button" onClick={cskhAccept} disabled={busy} className="e-btn e-btn-primary w-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} CSKH ký nhận</button>}
+          {st === 'cho_nhan' && (isAdm || app.handover_nurse_by === profile?.id) && <button type="button" onClick={undo} className="e-btn e-btn-ghost e-btn-sm w-full text-slate-500">Huỷ bàn giao</button>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ================== (4) MẪU MỐC CHĂM SÓC — sửa & bác sĩ duyệt ==================
+const CareTemplateModal = ({ templates, canApprove, onClose, onSaved }) => {
+  const [sel, setSel] = useState(templates[0]?.id || 'new');
+  const cur = templates.find(t => t.id === sel);
+  const blank = { name: 'Mẫu mới', service_group: '', milestones: MILESTONE_DEFS.map(({ key, off, label, desc }) => ({ key, off, label, desc })) };
+  const [f, setF] = useState(cur ? { name: cur.name, service_group: cur.service_group || '', milestones: cur.milestones } : blank);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { const t = templates.find(x => x.id === sel); setF(t ? { name: t.name, service_group: t.service_group || '', milestones: t.milestones } : blank); }, [sel]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setRow = (i, k, v) => setF(x => ({ ...x, milestones: x.milestones.map((m, j) => j === i ? { ...m, [k]: k === 'off' ? Number(v) || 0 : v } : m) }));
+  const clean = () => [...f.milestones].map(m => ({ ...m, off: Number(m.off) || 0, key: `d${Number(m.off) || 0}` })).sort((a, b) => a.off - b.off);
+  const save = async (approve) => {
+    const ms = clean();
+    if (new Set(ms.map(m => m.key)).size !== ms.length) { toast.error('Hai mốc trùng ngày D+'); return; }
+    setBusy(true);
+    const row = { name: f.name.trim() || 'Mẫu', service_group: f.service_group.trim() || null, milestones: ms, ...(approve ? { status: 'approved' } : {}) };
+    const { error } = cur ? await supabase.from('care_templates').update(row).eq('id', cur.id) : await supabase.from('care_templates').insert({ ...row, status: approve ? 'approved' : 'draft' });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(approve ? 'Đã duyệt mẫu — áp dụng cho ca mới bắt đầu chăm sóc' : 'Đã lưu (chờ bác sĩ duyệt)'); onSaved();
+  };
+  return (
+    <div className="e-modal-backdrop z-[95] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="e-modal max-w-2xl w-full max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="e-modal-header items-center"><h3 className="e-modal-title">Mẫu mốc chăm sóc hậu phẫu</h3><button type="button" onClick={onClose} className="e-icon-btn w-9 h-9 border-transparent"><X className="w-[18px] h-[18px]" /></button></div>
+        <div className="e-modal-body overflow-y-auto space-y-3">
+          <p className="text-[12.5px] text-slate-500">Mẫu chỉ áp dụng khi <b>bác sĩ / admin duyệt</b>. Mỗi ca khi bắt đầu chăm sóc sẽ CHỐT bản mẫu lúc đó — sửa mẫu sau không làm thay đổi ca đang chạy. Đây là mốc nhắc việc, không phải phác đồ điều trị.</p>
+          <div className="flex flex-wrap gap-1.5">
+            {templates.map(t => <button key={t.id} type="button" onClick={() => setSel(t.id)} className={`px-3 h-9 rounded-xl text-[13px] font-semibold border ${sel === t.id ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'}`}>{t.name}{t.service_group ? ` · ${t.service_group}` : ''} <span className="opacity-75">v{t.version} {t.status === 'approved' ? '✓' : '(chờ duyệt)'}</span></button>)}
+            <button type="button" onClick={() => setSel('new')} className={`px-3 h-9 rounded-xl text-[13px] font-semibold border ${sel === 'new' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-teal-700 border-teal-200'}`}>+ Mẫu theo nhóm dịch vụ</button>
+          </div>
+          {cur?.status === 'approved' && <div className="text-[12.5px] text-success-700 bg-success-50 rounded-lg px-3 py-1.5">✓ Đã duyệt bởi {cur.approver?.full_name || 'bác sĩ'} · {cur.approved_at ? new Date(cur.approved_at).toLocaleString('vi-VN') : ''}</div>}
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[12.5px] text-slate-500">Tên mẫu<input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="e-input mt-1" /></label>
+            <label className="text-[12.5px] text-slate-500">Nhóm dịch vụ (trống = mẫu chung)<input value={f.service_group} onChange={e => setF({ ...f, service_group: e.target.value })} placeholder="VD: Hàm mặt, Body, Tiểu phẫu" className="e-input mt-1" /></label>
+          </div>
+          <div className="space-y-2">
+            {f.milestones.map((m, i) => (
+              <div key={i} className="grid grid-cols-[70px_1fr_2fr_32px] gap-2 items-center">
+                <label className="text-[11px] text-slate-400">D+<input type="number" min="0" value={m.off} onChange={e => setRow(i, 'off', e.target.value)} className="e-input h-9 px-2" /></label>
+                <input value={m.label} onChange={e => setRow(i, 'label', e.target.value)} placeholder="Tên mốc" className="e-input h-9 self-end" />
+                <input value={m.desc} onChange={e => setRow(i, 'desc', e.target.value)} placeholder="Việc cần làm ở mốc này" className="e-input h-9 self-end" />
+                <button type="button" onClick={() => setF(x => ({ ...x, milestones: x.milestones.filter((_, j) => j !== i) }))} className="e-icon-btn w-8 h-8 self-end text-slate-400"><Trash2 className="w-4 h-4" /></button>
+              </div>))}
+            <button type="button" onClick={() => setF(x => ({ ...x, milestones: [...x.milestones, { key: '', off: (x.milestones[x.milestones.length - 1]?.off || 0) + 7, label: 'Mốc mới', desc: '' }] }))} className="e-btn e-btn-ghost e-btn-sm"><Plus className="w-4 h-4" /> Thêm mốc</button>
+          </div>
+        </div>
+        <div className="e-modal-footer gap-2">
+          <button type="button" onClick={() => save(false)} disabled={busy} className="e-btn e-btn-secondary">Lưu (chờ duyệt)</button>
+          {canApprove && <button type="button" onClick={() => save(true)} disabled={busy} className="e-btn e-btn-primary"><ShieldCheck className="w-4 h-4" /> Bác sĩ duyệt & áp dụng</button>}
+        </div>
+      </div>
     </div>
   );
 };
