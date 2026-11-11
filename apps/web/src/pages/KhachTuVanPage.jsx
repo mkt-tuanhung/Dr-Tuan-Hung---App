@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useContext, createContext } from 'react';
+import { askReason, BONG_REASONS } from '@/components/ReasonPrompt.jsx';
 import ConsultUpdateFields, { uploadConsultFiles } from '@/components/ConsultUpdateFields.jsx';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
@@ -459,6 +460,12 @@ const EvalModal = ({ app, onClose, onSaved }) => {
       const planErr = surgeryPlanError(f.surgery_plan, f.plan_date);
       if (planErr) { toast.error(planErr); return; }
     }
+    let bongReason = null;
+    if (f.status === 'bong' && app.status !== 'bong') {
+      const br = await askReason({ title: 'Lý do khách bong', subtitle: app.customer_name, options: BONG_REASONS });
+      if (!br) return;
+      bongReason = br.text;
+    }
     setSaving(true);
     let upd = { status: f.status, surgery_type: f.surgery_type };
     if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, expected_surgery_plan: 'date', revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service, bong_date: null };
@@ -468,7 +475,7 @@ const EvalModal = ({ app, onClose, onSaved }) => {
       upd = { ...upd, consult_note: consultNote.trim() || null, consult_image_urls: [...(app.consult_image_urls || []), ...newConsult] };
     }
     else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, ...surgeryPlanPatch(f.surgery_plan, f.plan_date), revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
-    else if (f.status === 'bong') upd = { ...upd, notes: f.notes, bong_date: today, revenue: 0, upsale_revenue: 0, surgery_date: null };
+    else if (f.status === 'bong') upd = { ...upd, notes: f.notes, ...(bongReason ? { bong_reason: bongReason } : {}), bong_date: today, revenue: 0, upsale_revenue: 0, surgery_date: null };
     const { data, error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id).select('id, status, revenue, surgery_date');
     setSaving(false);
     if (error) { console.error('eval update error', error); toast.error(`LỖI [${error.code || '?'}]: ${error.message}`, { duration: 20000 }); return; }

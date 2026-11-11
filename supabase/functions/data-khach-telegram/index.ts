@@ -70,6 +70,50 @@ const later = (task: Promise<unknown>) => {
   if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
 };
 
+// ===== (1) THỜI HẠN GỌI LEAD MỚI 15' (cron mỗi 2 phút): nhắc còn 5 phút + báo QUÁ HẠN =====
+async function slaCheck() {
+  const now = Date.now();
+  const { data } = await db.from('marketing_data')
+    .select('id, customer_name, phone, source, description, sla_due_at, sla_warned_at, sla_breached_at, status, telesale:profiles!telesale_id(full_name)')
+    .is('first_contact_at', null).not('sla_due_at', 'is', null)
+    .gte('sla_due_at', new Date(now - 6 * 3600_000).toISOString()).lte('sla_due_at', new Date(now + 5 * 60_000).toISOString())
+    .not('status', 'in', '(mat,da_lam_dv)').limit(200);
+  let warned = 0, breached = 0;
+  for (const k of data || []) {
+    const due = new Date(k.sla_due_at).getTime();
+    const who = (k as any).telesale?.full_name || 'Telesale';
+    if (due <= now && !k.sla_breached_at) {
+      await send(`🚨 <b>QUÁ 15 PHÚT CHƯA GỌI KHÁCH MỚI</b>` + line('Khách', `<b>${esc(k.customer_name || '(chưa có tên)')}</b> ${esc(k.phone)}`) +
+        line('Nguồn', esc(k.source)) + line('Nhu cầu', esc(String(k.description || '').slice(0, 200))) +
+        line('Phụ trách', esc(who)) + line('Hạn gọi', vnTime(k.sla_due_at)) + `\n👉 ${esc(who)} gọi / note ngay. Quản lý theo dõi.`);
+      await db.from('marketing_data').update({ sla_breached_at: new Date().toISOString(), sla_warned_at: k.sla_warned_at || new Date().toISOString() }).eq('id', k.id);
+      breached++;
+    } else if (due > now && due - now <= 5 * 60_000 && !k.sla_warned_at) {
+      await send(`⏱ <b>Còn ${Math.max(1, Math.round((due - now) / 60000))} phút phải gọi khách mới</b>` + line('Khách', `<b>${esc(k.customer_name || '(chưa có tên)')}</b> ${esc(k.phone)}`) +
+        line('Phụ trách', esc(who)));
+      await db.from('marketing_data').update({ sla_warned_at: new Date().toISOString() }).eq('id', k.id);
+      warned++;
+    }
+  }
+  return { ok: true, warned, breached };
+}
+
+// ===== (3) NHẮC LỊCH HẸN NGÀY MAI (cron 18:00 VN) =====
+async function apptRemind() {
+  const vn = new Date(Date.now() + 7 * 3600_000);
+  const tomorrow = new Date(Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate()) + 86400000).toISOString().slice(0, 10);
+  const { data } = await db.from('customer_appointments')
+    .select('customer_name, phone, appointment_time, service, confirmed_at, telesale:profiles!telesale_id(full_name), sale:profiles!sale_id(full_name)')
+    .eq('appointment_date', tomorrow).eq('status', 'scheduled').order('appointment_time', { ascending: true }).limit(100);
+  const list = (data || []).filter((a: any) => !String(a.service || '').startsWith('[Tái khám]'));
+  if (!list.length) return { ok: true, n: 0 };
+  const notConf = list.filter((a: any) => !a.confirmed_at).length;
+  const dd = `${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}`;
+  const rows = list.map((a: any, i: number) => `\n${i + 1}. ${a.confirmed_at ? '✅' : '⚪️'} ${String(a.appointment_time || '').slice(0, 5)} · <b>${esc(a.customer_name)}</b> ${esc(a.phone)} · ${esc(String(a.service || '').slice(0, 40))}${a.telesale?.full_name ? ' · Tele: ' + esc(a.telesale.full_name) : ''}`).join('');
+  await send(`📅 <b>LỊCH HẸN NGÀY MAI ${dd}: ${list.length} khách</b> — chưa xác nhận: <b>${notConf}</b>${rows}\n\n👉 Telesale gọi xác nhận, bấm <b>Xác nhận lịch</b> trong app (✅ đã xác nhận · ⚪️ chưa).`);
+  return { ok: true, n: list.length, notConf };
+}
+
 // ===== BÁO CÁO SALE NGÀY HÔM TRƯỚC (cron 7:00 VN) — cùng cấu trúc nút "Báo cáo ngày" trong app,
 //       lưu vào daily_reports -> link công khai /bao-cao/<mã> gửi vào nhóm =====
 const APP_URL = (Deno.env.get('APP_URL') || 'https://dr-tuan-hung-app-web-ujkb.vercel.app').replace(/\/$/, '');
@@ -95,6 +139,16 @@ async function dailyReport(dayArg?: string) {
   const newRows: any[] = [...(n1.data || []), ...(n2.data || [])];
   const newIds = new Set(newRows.map(r => r.id));
   const { count: apptCount } = await db.from('customer_appointments').select('id', { count: 'exact', head: true }).gte('created_at', from).lt('created_at', to);
+  // (1) SLA 15' của số mới trong ngày · (3) khách đến / không đến · (2) lý do mất
+  const { data: slaRows } = await db.from('marketing_data').select('created_at, sla_due_at, first_contact_at').gte('created_at', from).lt('created_at', to).not('sla_due_at', 'is', null).limit(3000);
+  const slaOn = (slaRows || []).filter((r: any) => r.first_contact_at && new Date(r.first_contact_at) <= new Date(r.sla_due_at)).length;
+  const resp = (slaRows || []).filter((r: any) => r.first_contact_at).map((r: any) => (new Date(r.first_contact_at).getTime() - new Date(r.created_at).getTime()) / 60000);
+  const { data: dayAppts } = await db.from('customer_appointments').select('service, status, consult_received, no_show_at').eq('appointment_date', day).limit(500);
+  const mainAppts = (dayAppts || []).filter((a: any) => !String(a.service || '').startsWith('[Tái khám]'));
+  const cameN = mainAppts.filter((a: any) => a.consult_received || ['coc', 'phau_thuat', 'bong'].includes(a.status)).length;
+  const noShowN = mainAppts.filter((a: any) => a.no_show_at).length;
+  const { data: lostH } = await db.from('marketing_stage_history').select('reason').in('to_status', ['mat', 'chot_fail']).gte('changed_at', from).lt('changed_at', to).limit(500);
+  const lostMap: Record<string, number> = {}; (lostH || []).forEach((h: any) => { const k = String(h.reason || 'Chưa ghi lý do').split(' — ')[0]; lostMap[k] = (lostMap[k] || 0) + 1; });
 
   const A: any[] = acts || [];
   // GỌI / LIÊN HỆ = mọi lần nhân viên ghi cuộc gọi HOẶC note khách (anh Dũng: note thông tin cũng là đã gọi)
@@ -142,6 +196,9 @@ async function dailyReport(dayArg?: string) {
     line('🆕 Số mới về', `${newRows.length} — đã gọi/note ${newCalled.length} · chưa ${newRows.length - newCalled.length}`) +
     line('⏰ Hẹn gọi lại', String(payload.stats.next_cnt)) +
     line('📅 Lịch hẹn mới tạo', String(apptCount || 0)) +
+    ((slaRows || []).length ? line('⏱ Gọi số mới đúng hạn 15\'', `${slaOn}/${slaRows!.length}${pct(slaOn, slaRows!.length)}${resp.length ? ' · phản hồi TB ' + Math.round(resp.reduce((a, b) => a + b, 0) / resp.length) + ' phút' : ''}`) : '') +
+    (mainAppts.length ? line('🙋 Lịch hẹn trong ngày', `${mainAppts.length} — đến ${cameN}${pct(cameN, mainAppts.length)} · không đến ${noShowN}`) : '') +
+    (Object.keys(lostMap).length ? line('📉 Mất / Chốt Fail', Object.entries(lostMap).map(([k, v]) => `${esc(k)} ${v}`).join(' · ')) : '') +
     `\n\n👉 Xem chi tiết (biểu đồ, từng cuộc gọi): ${url}`);
   return { ok: true, url, day };
 }
@@ -191,6 +248,8 @@ Deno.serve(async (req) => {
     if (!CHAT) return new Response('chưa cấu hình nhóm');
     const body = await req.json().catch(() => ({}));
     if (body.mode === 'morning') { await morning(); return new Response('ok morning'); }
+    if (body.mode === 'sla') { const r = await slaCheck(); return new Response(JSON.stringify(r)); }
+    if (body.mode === 'appt_remind') { const r = await apptRemind(); return new Response(JSON.stringify(r)); }
     if (body.mode === 'daily_report') { const r = await dailyReport(body.day); return new Response(JSON.stringify(r)); }
     const table = String(body.table || '');
     const id = String(body.id || body.record?.id || '');

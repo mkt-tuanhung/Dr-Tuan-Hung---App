@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { askReason, BONG_REASONS } from '@/components/ReasonPrompt.jsx';
 import ConsultUpdateFields, { uploadConsultFiles } from '@/components/ConsultUpdateFields.jsx';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
@@ -192,12 +193,15 @@ const KhachCocPage = ({ isNested = false }) => {
 
   const handleBongSubmit = async (e) => {
     e.preventDefault();
+    const br = await askReason({ title: 'Lý do khách bong (huỷ cọc)', subtitle: selectedApp?.customer_name, options: BONG_REASONS });
+    if (!br) return;
     setSaving(true);
     const { error } = await supabase.from('customer_appointments')
       .update({
         status: 'bong',
         bong_date: vnToday(),
-        notes: (selectedApp.notes || '') + `\n[Hủy cọc] ${bongForm.notes}`
+        bong_reason: br.text,
+        notes: (selectedApp.notes || '') + `\n[Hủy cọc] ${br.text}${bongForm.notes ? ' — ' + bongForm.notes : ''}`
       }).eq('id', selectedApp.id);
 
     if (error) toast.error(error.message);

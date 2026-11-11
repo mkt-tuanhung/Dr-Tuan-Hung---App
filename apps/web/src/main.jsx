@@ -8,6 +8,7 @@ import { resolveNotifLink } from '@/lib/notif';
 import AppUpdateWatcher from '@/components/AppUpdateWatcher.jsx';
 import { initBackNav } from '@/lib/backNav';
 import RootErrorBoundary from '@/components/RootErrorBoundary.jsx';
+import ReasonPromptHost from '@/components/ReasonPrompt.jsx';
 import { safeReload, isChunkError, cleanReloadParam } from '@/lib/safeReload';
 
 // ===== CHỐNG MÀN HÌNH TRẮNG (PWA iPhone mở lại sau khi app có bản mới) =====
@@ -63,6 +64,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <App />
       <AppUpdateWatcher />
+      <ReasonPromptHost />
     </BrowserRouter>
   </RootErrorBoundary>
 );
