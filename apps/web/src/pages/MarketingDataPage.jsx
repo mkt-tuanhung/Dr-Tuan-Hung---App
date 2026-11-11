@@ -76,6 +76,23 @@ const TIME_PRESETS = [
   { k: 'last_year', label: 'Năm trước', r: () => { const y = new Date().getFullYear(); return [ymd(y - 1, 0), ymd(y, 0)]; } },
 ];
 const fmtYmd = (k) => k ? k.split('-').reverse().join('/') : '';
+// ===== LIÊN HỆ LẦN CUỐI: số ngày từ lần gọi / ghi chú gần nhất đến hôm nay =====
+const lcDays = (r) => (r.last_contact_at ? Math.floor((Date.now() - new Date(r.last_contact_at).getTime()) / 86400000) : null);
+const LC_BUCKETS = [
+  { k: 'lc_0_3', label: '≤ 3 ngày', dot: 'bg-emerald-500', test: d => d !== null && d <= 3 },
+  { k: 'lc_4_7', label: '4–7 ngày', dot: 'bg-amber-400', test: d => d !== null && d >= 4 && d <= 7 },
+  { k: 'lc_8_30', label: '8–30 ngày', dot: 'bg-orange-500', test: d => d !== null && d >= 8 && d <= 30 },
+  { k: 'lc_30', label: '> 30 ngày', dot: 'bg-rose-500', test: d => d !== null && d > 30 },
+  { k: 'lc_none', label: 'Chưa liên hệ', dot: 'bg-slate-300', test: d => d === null },
+];
+const LC_ACTIVE = (r) => !['mat', 'da_lam_dv'].includes(r.status);   // khách còn cần chăm
+const STATUS_RANK = { nong: 0, tiem_nang: 1, coc: 2, da_hen_lich: 3, tiep_can: 4, chot_fail: 5, sai_gon: 6 };
+const LastContact = ({ r, className = '' }) => {
+  const d = lcDays(r);
+  const tone = d === null ? 'bg-slate-100 text-slate-500' : d <= 3 ? 'bg-emerald-50 text-emerald-700' : d <= 7 ? 'bg-amber-50 text-amber-700' : d <= 30 ? 'bg-orange-50 text-orange-700' : 'bg-rose-50 text-rose-700';
+  const txt = d === null ? 'Chưa liên hệ' : d === 0 ? 'Liên hệ hôm nay' : d === 1 ? 'Liên hệ hôm qua' : `Liên hệ cuối: ${d} ngày`;
+  return <span title={r.last_contact_at ? `Liên hệ lần cuối ${fmtDT(r.last_contact_at)}` : 'Chưa có cuộc gọi / ghi chú'} className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${tone} ${className}`}><Clock className="w-3 h-3" />{txt}</span>;
+};
 const RANGE_CHIPS = { thang_nay: () => monthRange(0), thang_truoc: () => monthRange(-1), quy_truoc: prevQuarterRange };
 const inRange = (r, [a, b]) => { const k = dayKey(arrivedAt(r)); return k >= a && k < b; };
 const weekStartKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d.toISOString()); };
@@ -327,6 +344,8 @@ const MarketingDataPage = ({ initialView = null }) => {
       case 'hom_nay': return dayKey(arrivedAt(r)) === todayKey();          // khách mới về / trực page tạo hôm nay
       case 'tuan_nay': return dayKey(arrivedAt(r)) >= weekStartKey();      // khách mới trong tuần (từ thứ Hai)
       case 'thang_nay': case 'thang_truoc': case 'quy_truoc': return inRange(r, RANGE_CHIPS[chip]());
+      case 'lc_0_3': case 'lc_4_7': case 'lc_8_30': case 'lc_30': case 'lc_none':
+        return LC_ACTIVE(r) && LC_BUCKETS.find(b => b.k === chip).test(lcDays(r));
       case 'nong': return r.status === 'nong';
       case 'mat': return r.status === 'mat';
       case 'da_lam_dv': return r.status === 'da_lam_dv' || a?.status === 'phau_thuat';
@@ -345,7 +364,10 @@ const MarketingDataPage = ({ initialView = null }) => {
     (!q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q)) &&
     (!fTruc || r.truc_page_id === fTruc) &&
     (!fDay || dayKey(arrivedAt(r)) === fDay) && (!tRange || inRange(r, [tRange.from, tRange.to])) && matchTele(r) && matchChip(r));
-  const visible = baseVisible.filter(r => !fStatus || r.status === fStatus);
+  const visible0 = baseVisible.filter(r => !fStatus || r.status === fStatus);
+  const visible = chip.startsWith('lc_')
+    ? [...visible0].sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9) || (lcDays(b) ?? 1e6) - (lcDays(a) ?? 1e6))
+    : visible0;
   const stageCount = baseVisible.reduce((m, r) => { const k = r.status || 'tiep_can'; m[k] = (m[k] || 0) + 1; return m; }, {});
 
   // Đổi trạng thái nhanh ngay trên dòng
@@ -404,6 +426,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   const mineOrAll = (r) => (isTele ? r.telesale_id === me?.id || !r.telesale_id : true);
   const newToday = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) === todayKey()).length;
   const newWeek = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) >= weekStartKey()).length;
+  const lcCount = (b) => rows.filter(r => mineOrAll(r) && LC_ACTIVE(r) && b.test(lcDays(r))).length;
   const rangeCount = (k) => rows.filter(r => mineOrAll(r) && inRange(r, RANGE_CHIPS[k]())).length;
   const dueCount = rows.filter(r => (isTele ? r.telesale_id === me?.id : true) && isDue(r.next_call_at)).length;
   const stat = {
@@ -488,6 +511,23 @@ const MarketingDataPage = ({ initialView = null }) => {
           </button>
         ))}
       </div>}
+
+      {/* ===== SỨC KHOẺ CHĂM DATA: khách còn cần chăm theo số ngày từ lần liên hệ cuối (bấm để lọc) ===== */}
+      {view === 'list' && (
+        <div className="rounded-2xl bg-white shadow-soft border border-slate-200 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-[12.5px] font-bold text-slate-700 inline-flex items-center gap-1.5"><Clock className="w-4 h-4 text-teal-600" />Liên hệ lần cuối{isTele ? ' · data của tôi' : ''}</span>
+            {chip.startsWith('lc_') && <button onClick={() => { setChip('all'); setPage(1); }} className="text-[12px] font-semibold text-teal-700">Bỏ lọc</button>}
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+            {LC_BUCKETS.map(b => { const n = lcCount(b); const on = chip === b.k; return (
+              <button key={b.k} onClick={() => { setChip(on ? 'all' : b.k); setPage(1); }}
+                className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12.5px] font-semibold border transition ${on ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                <span className={`w-2 h-2 rounded-full ${b.dot}`} />{b.label}<span className={`tabular-nums ${on ? 'text-white/80' : 'text-slate-400'}`}>{n.toLocaleString('vi-VN')}</span>
+              </button>); })}
+          </div>
+        </div>
+      )}
 
       {/* ===== Thanh công cụ ===== */}
       <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-3 space-y-2">
@@ -633,7 +673,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                         <td className="px-4 py-3 max-w-[240px]">
                           <div className="text-[12.5px] text-slate-600 truncate" title={r.last_exchange}>{r.last_exchange || <span className="text-slate-300">Chưa liên hệ</span>}</div>
                           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                            {r.last_contact_at && <span className="text-[11px] text-slate-400 whitespace-nowrap">{fmtDT(r.last_contact_at)}</span>}
+                            <LastContact r={r} />
                             <DueBadge r={r} />
                           </div>
                         </td>
@@ -663,6 +703,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>
                     {st && <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
+                    <LastContact r={r} />
                     <DueBadge r={r} />
                     {r.telesale?.full_name && !isTele && <span className="text-[10.5px] text-slate-400 inline-flex items-center gap-0.5"><Headphones className="w-3 h-3" />{r.telesale.full_name}</span>}
                     {isTele && !r.telesale_id && <button onClick={(e) => { e.stopPropagation(); assignTele(r, me.id); }} className="text-[11px] font-semibold text-teal-700 bg-teal-50 rounded-full px-2 py-0.5">Nhận data</button>}
