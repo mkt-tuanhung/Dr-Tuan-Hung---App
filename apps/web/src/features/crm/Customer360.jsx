@@ -126,7 +126,7 @@ const Kv = ({ label, children }) => (
 
 function Customer360Drawer({ target, onClose, onRetarget }) {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = [profile?.role, profile?.role_2].includes('admin');
   // Trưởng bộ phận điều dưỡng sửa được nhân sự ca mổ / hậu phẫu (Admin sửa tất cả)
   const isHeadNurse = [profile?.role, profile?.role_2].includes('dieu_duong') && profile?.position === 'Trưởng bộ phận';
   const canEditCase = isAdmin || isHeadNurse;
