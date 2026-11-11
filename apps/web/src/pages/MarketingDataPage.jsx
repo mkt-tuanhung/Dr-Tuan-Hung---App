@@ -1942,6 +1942,7 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
   });
   const [saving, setSaving] = useState(false);
   const [dup, setDup] = useState(null);          // khách đã có cùng SĐT
+  const dupRef = useRef(null);
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   const normPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('84')) d = '0' + d.slice(2); if (d && !d.startsWith('0') && d.length === 9) d = '0' + d; return d; };
 
@@ -1959,7 +1960,7 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
     const phone = normPhone(f.phone);
     if (phone.length < 9) { toast.error('Nhập số điện thoại hợp lệ'); return; }
     if (isNew && !f.customer_name.trim()) { toast.error('Nhập tên khách'); return; }
-    if (isNew && (await checkDup(phone))) { toast.error('SĐT này đã có trong Data khách — mở khách cũ để cập nhật'); return; }
+    if (isNew && (await checkDup(phone))) { setTimeout(() => dupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80); toast.error('SĐT đã có trong Data khách — bấm "Cập nhật vào khách này" để gộp thông tin'); return; }
     setSaving(true);
     const payload = {
       ...f, phone, customer_name: f.customer_name.trim() || null,
@@ -1975,6 +1976,38 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
     toast.success(isNew ? (payload.telesale_id ? 'Đã tạo khách và chuyển cho telesale' : 'Đã tạo khách — chờ phân telesale') : 'Đã lưu');
     onSaved();
   };
+  // SĐT đã có (vd hệ thống tự tạo từ Messenger) -> GỘP thông tin trực page vừa nhập vào khách cũ
+  const [merging, setMerging] = useState(false);
+  const mergeInto = async () => {
+    if (!dup?.id) return;
+    setMerging(true);
+    const { data: ex, error: e1 } = await supabase.from('marketing_data').select('*').eq('id', dup.id).single();
+    if (e1 || !ex) { setMerging(false); toast.error('Không đọc được khách cũ'); return; }
+    const upd = {};
+    const fillIfEmpty = ['gender', 'birthday', 'address', 'source', 'customer_group'];
+    fillIfEmpty.forEach(k => { if (f[k] && !ex[k]) upd[k] = f[k]; });
+    if (f.customer_name.trim() && (!ex.customer_name || /^(khách|kh|messenger|fb)/i.test(ex.customer_name))) upd.customer_name = f.customer_name.trim();
+    if (f.source && ex.source && ex.source !== f.source && /messenger/i.test(ex.source)) upd.source = f.source;
+    const appendText = (k) => { const v = (f[k] || '').trim(); if (!v) return; const old = (ex[k] || '').trim(); if (!old || /tự tạo từ hội thoại/i.test(old)) upd[k] = v; else if (!old.includes(v)) upd[k] = `${old}\n${v}`; };
+    appendText('description'); appendText('reached_info');
+    if (f.truc_page_id && !ex.truc_page_id) upd.truc_page_id = f.truc_page_id;
+    if (f.telesale_id && !ex.telesale_id) upd.telesale_id = f.telesale_id;
+    if (f.status && f.status !== 'tiep_can' && (ex.status || 'tiep_can') === 'tiep_can') upd.status = f.status;
+    if ((f.media_urls || []).length) upd.media_urls = [...(Array.isArray(ex.media_urls) ? ex.media_urls : []), ...f.media_urls.filter(u => !(ex.media_urls || []).includes(u))];
+    const { error } = Object.keys(upd).length ? await supabase.from('marketing_data').update(upd).eq('id', ex.id) : { error: null };
+    if (!error) {
+      // Ghi nhật ký -> nhóm Data khách hàng nhận NOTE MỚI (kèm ảnh)
+      const parts = [f.description && `Nhu cầu: ${f.description.trim()}`, f.reached_info && `Đã tiếp cận: ${f.reached_info.trim()}`].filter(Boolean);
+      await supabase.from('marketing_activities').insert({
+        data_id: ex.id, phone: ex.phone, type: 'care', created_by: me.id, media_urls: f.media_urls || [],
+        content: `Trực page bổ sung thông tin khách${parts.length ? ':\n' + parts.join('\n') : ''}`,
+      });
+    }
+    setMerging(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success('Đã cập nhật thông tin vào khách cũ');
+    onSaved();
+  };
   const canPickTele = canAssign || amTruc;
   return (
     <Modal title={isNew ? 'Thêm khách hàng mới' : 'Sửa thông tin khách'} onClose={onClose}>
@@ -1985,10 +2018,14 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
         <Field label="Số điện thoại *"><input value={f.phone} inputMode="tel" onChange={e => { set('phone', e.target.value); setDup(null); }} onBlur={e => checkDup(e.target.value)} className={inp} /></Field>
       </div>
       {dup && (
-        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-800">
+        <div ref={dupRef} className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-800">
           SĐT đã có: <b>{dup.customer_name || 'Không tên'}</b> · {STATUS[dup.status]?.label || dup.status}
           {dup.telesale?.full_name && <> · Telesale: <b>{dup.telesale.full_name}</b></>}
-          {onOpenExisting && <button onClick={() => onOpenExisting(dup.id)} className="ml-2 font-semibold text-teal-700 underline">Mở khách này</button>}
+          <div className="flex flex-wrap gap-2 mt-2">
+            <button onClick={mergeInto} disabled={merging} className="h-9 px-3 rounded-lg bg-teal-600 text-white text-[13px] font-semibold disabled:opacity-60">{merging ? 'Đang cập nhật…' : 'Cập nhật vào khách này'}</button>
+            {onOpenExisting && <button onClick={() => onOpenExisting(dup.id)} className="h-9 px-3 rounded-lg border border-amber-300 bg-white text-[13px] font-semibold text-amber-800">Mở khách này</button>}
+          </div>
+          <div className="text-[11.5px] text-amber-700/80 mt-1.5">"Cập nhật" sẽ điền các ô còn trống, thêm nhu cầu / thông tin đã tiếp cận và ảnh vào khách cũ (không xoá dữ liệu cũ).</div>
         </div>
       )}
       <div className="grid grid-cols-3 gap-2">
