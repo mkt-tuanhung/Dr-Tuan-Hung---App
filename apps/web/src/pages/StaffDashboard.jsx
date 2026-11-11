@@ -338,6 +338,9 @@ const StaffDashboard = () => {
     const q = new URLSearchParams(window.location.search);
     const u = readUrlNav();
     if (u?.focus) setPendingFocus({ tab: u.tab || 'overview', id: u.focus });
+    // TELESALE: mở app luôn vào thẳng Data khách hàng (để note khách ngay) — trừ khi bấm thông báo dẫn tới mục khác
+    const isTeleRole = [profile?.role, profile?.role_2].includes('telesale') && ![profile?.role, profile?.role_2].includes('admin');
+    if (isTeleRole) return u?.tab || 'data_kh';
     return u?.tab || (localStorage.getItem('staff_active_tab') || 'overview');
   });
 
