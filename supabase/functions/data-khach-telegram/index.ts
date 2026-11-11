@@ -70,10 +70,51 @@ const later = (task: Promise<unknown>) => {
   if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
 };
 
+// ===== NHẮC BUỔI SÁNG (cron 8:15 VN): việc chăm data hôm nay của từng telesale =====
+const WAKE_PER_DAY = 20;
+async function morning() {
+  const rows: any[] = [];
+  for (let from = 0; from < 50000; from += 1000) {
+    const { data } = await db.from('marketing_data')
+      .select('id, status, telesale_id, last_contact_at, next_call_at, created_at, getfly_created_at')
+      .not('telesale_id', 'is', null).not('status', 'in', '(mat,da_lam_dv)').range(from, from + 999);
+    if (!data?.length) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  const { data: teles } = await db.from('profiles').select('id, full_name').eq('is_active', true).or('role.eq.telesale,role_2.eq.telesale');
+  const now = Date.now(), DAY = 86400000;
+  const vn = new Date(now + 7 * 3600_000);
+  const todayStartUtc = Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate()) - 7 * 3600_000;
+  const endToday = todayStartUtc + DAY;
+  const arrived = (r: any) => new Date(r.getfly_created_at || r.created_at).getTime();
+  const daysSince = (t?: string | null) => (t ? (now - new Date(t).getTime()) / DAY : null);
+  let text = `☀️ <b>CHĂM DATA HÔM NAY ${String(vn.getUTCDate()).padStart(2, '0')}/${String(vn.getUTCMonth() + 1).padStart(2, '0')}</b>`;
+  let any = false;
+  for (const t of teles || []) {
+    const mine = rows.filter(r => r.telesale_id === t.id);
+    if (!mine.length) continue;
+    any = true;
+    const due = mine.filter(r => r.next_call_at && new Date(r.next_call_at).getTime() < endToday).length;
+    const cold = mine.filter(r => ['nong', 'tiem_nang'].includes(r.status) && ((daysSince(r.last_contact_at) ?? (now - arrived(r)) / DAY) > 3)).length;
+    const newY = mine.filter(r => !r.last_contact_at && arrived(r) >= todayStartUtc - DAY && arrived(r) < todayStartUtc).length;
+    const old = mine.filter(r => (daysSince(r.last_contact_at) ?? (now - arrived(r)) / DAY) > 30).length;
+    text += `\n\n👤 <b>${esc(t.full_name)}</b>` +
+      line('📞 Tới hạn gọi lại', String(due)) +
+      line('🔥 Nóng / Tiềm năng sắp nguội (&gt;3 ngày)', String(cold)) +
+      line('🆕 Data mới hôm qua chưa gọi', String(newY)) +
+      line('⏰ Đánh thức data cũ hôm nay', `${Math.min(WAKE_PER_DAY, old)} khách (còn ${old} khách &gt;30 ngày)`);
+  }
+  if (!any) return;
+  text += `\n\n👉 App → Data khách → nút <b>Sắp nguội</b> / <b>Đánh thức data cũ</b> / <b>🔥 Ưu tiên gọi</b>.`;
+  await send(text);
+}
+
 Deno.serve(async (req) => {
   try {
     if (!CHAT) return new Response('chưa cấu hình nhóm');
     const body = await req.json().catch(() => ({}));
+    if (body.mode === 'morning') { await morning(); return new Response('ok morning'); }
     const table = String(body.table || '');
     const id = String(body.id || body.record?.id || '');
     if (!id) return new Response('skip');

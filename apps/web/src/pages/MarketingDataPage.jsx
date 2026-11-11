@@ -93,6 +93,40 @@ const LastContact = ({ r, className = '' }) => {
   const txt = d === null ? 'Chưa liên hệ' : d === 0 ? 'Liên hệ hôm nay' : d === 1 ? 'Liên hệ hôm qua' : `Liên hệ cuối: ${d} ngày`;
   return <span title={r.last_contact_at ? `Liên hệ lần cuối ${fmtDT(r.last_contact_at)}` : 'Chưa có cuộc gọi / ghi chú'} className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${tone} ${className}`}><Clock className="w-3 h-3" />{txt}</span>;
 };
+// ===== (1) ĐỘ NÓNG DATA 0–100: giai đoạn + độ mới + tương tác + lịch gọi − độ nguội =====
+const HEAT_BASE = { nong: 45, tiem_nang: 35, da_hen_lich: 40, coc: 35, tiep_can: 22, chot_fail: 12, sai_gon: 6, da_lam_dv: 8, mat: 0 };
+const heatOf = (r, notes = 0) => {
+  if (r.status === 'mat') return 0;
+  let h = HEAT_BASE[r.status] ?? 20;
+  const age = Math.floor((Date.now() - new Date(arrivedAt(r) || Date.now()).getTime()) / 86400000);
+  h += age <= 1 ? 22 : age <= 3 ? 16 : age <= 7 ? 10 : age <= 30 ? 4 : 0;          // data mới về
+  h += Math.min(notes, 10) * 1.2 + (r.last_exchange ? 3 : 0);                        // đã tương tác nhiều
+  if (/nghe máy|cân nhắc|hẹn|quan tâm|zalo/i.test(r.last_exchange || '')) h += 6;   // phản hồi tích cực gần nhất
+  if (/từ chối|sai số|không liên lạc/i.test(r.last_exchange || '')) h -= 12;
+  if (isDue(r.next_call_at)) h += 12;                                                 // tới hạn gọi lại
+  const d = lcDays(r);
+  h -= d === null ? (age > 7 ? 6 : 0) : d > 30 ? 12 : d > 7 ? 5 : 0;                // nguội
+  return Math.max(0, Math.min(100, Math.round(h)));
+};
+const HeatBadge = ({ v }) => {
+  const tone = v >= 70 ? 'bg-rose-500 text-white' : v >= 50 ? 'bg-orange-100 text-orange-700' : v >= 30 ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500';
+  return <span title="Độ nóng data (0–100): giai đoạn, độ mới, tương tác, lịch gọi, độ nguội" className={`shrink-0 inline-flex items-center gap-0.5 text-[10.5px] font-bold px-1.5 py-0.5 rounded-full tabular-nums ${tone}`}><Flame className="w-3 h-3" />{v}</span>;
+};
+// (5) Kịch bản gọi lại gợi ý theo dịch vụ khách từng hỏi
+const SCRIPT_RULES = [
+  [/hàm|v-?line|gò má|cằm|cơ cắn/i, 'Gọt hàm / hàm mặt', 'Chào chị, em là trợ lý Dr Tuấn Hùng. Trước chị có hỏi về [gọt hàm/V-line]; tháng này bên em có lịch Dr thăm khám trực tiếp + chụp CT 3D miễn phí, em giữ cho chị 1 suất cuối tuần này được không ạ? Chị còn băn khoăn về chi phí hay thời gian hồi phục để em gửi ca thực tế tương tự?'],
+  [/mũi/i, 'Nâng mũi', 'Chào chị, em gọi lại từ Dr Tuấn Hùng về tư vấn nâng mũi chị hỏi hôm trước. Em gửi chị vài ca dáng mũi giống mong muốn của chị qua Zalo nhé, và hẹn chị qua soi mũi trực tiếp với Dr để chọn dáng phù hợp ạ.'],
+  [/mắt|mí|bọng/i, 'Mắt', 'Chào chị, em là trợ lý Dr Tuấn Hùng. Về cắt mí/bọng mắt chị quan tâm: làm khoảng 45–60 phút, 5–7 ngày là đi làm được. Em xếp lịch Dr soi mắt cho chị vào khung giờ nào tiện nhất ạ?'],
+  [/ngực|body|hút mỡ|bụng/i, 'Ngực / body', 'Chào chị, em gọi lại về dịch vụ [ngực/body] chị quan tâm. Bên em đang có ưu đãi + hỗ trợ trả góp; em hẹn chị qua đo, tư vấn trực tiếp với Dr để có phương án và chi phí chính xác nhé ạ.'],
+];
+const scriptFor = (r) => {
+  const txt = `${r.customer_group || ''} ${r.description || ''} ${r.reached_info || ''} ${r.last_exchange || ''}`;
+  const hit = SCRIPT_RULES.find(([re]) => re.test(txt));
+  const d = lcDays(r);
+  const open = d !== null && d > 30 ? `Lâu rồi bên em chưa liên hệ lại chị (≈${d} ngày) — ` : '';
+  return hit ? { title: hit[1], text: open + hit[2] } : { title: 'Chung', text: open + 'Chào chị, em là trợ lý Dr Tuấn Hùng. Trước chị có quan tâm dịch vụ bên em, không biết chị đã tìm hiểu thêm được chưa ạ? Tuần này Dr có lịch thăm khám trực tiếp, em giữ cho chị 1 suất để Dr tư vấn kỹ nhé.' };
+};
+const WAKE_PER_DAY = 20;   // (5) mỗi telesale đánh thức tối đa 20 khách cũ / ngày
 const RANGE_CHIPS = { thang_nay: () => monthRange(0), thang_truoc: () => monthRange(-1), quy_truoc: prevQuarterRange };
 const inRange = (r, [a, b]) => { const k = dayKey(arrivedAt(r)); return k >= a && k < b; };
 const weekStartKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d.toISOString()); };
@@ -166,6 +200,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   const [quickNote, setQuickNote] = useState(null);     // khách đang ghi chú nhanh (mobile)
   const [tRange, setTRange] = useState(null);           // lọc thời gian: { k, label, from, to } (to = ngày kế tiếp)
   const [timeOpen, setTimeOpen] = useState(false);
+  const [kpiOpen, setKpiOpen] = useState(false);       // (3)(4) KPI telesale + giờ vàng
   const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
   // Chế độ xem: 'list' (bảng) | 'pipeline' (cột thẻ theo giai đoạn, kiểu Ethics BOS)
   const [view, setView] = useState(() => { if (initialView) return initialView; try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
@@ -337,6 +372,21 @@ const MarketingDataPage = ({ initialView = null }) => {
 
   const q = search.trim().toLowerCase();
   const apptOf = (r) => apptMap[phoneKey(r.phone)];
+  // (2) SẮP NGUỘI: khách Nóng / Tiềm năng quá 3 ngày chưa liên hệ
+  const isColdHot = (r) => ['nong', 'tiem_nang'].includes(r.status) && (lcDays(r) === null ? (Date.now() - new Date(arrivedAt(r)).getTime()) / 86400000 > 3 : lcDays(r) > 3);
+  // (5) ĐÁNH THỨC DATA CŨ: mỗi telesale tối đa WAKE_PER_DAY khách >30 ngày chưa liên hệ, độ nóng cao trước
+  const wakeIds = React.useMemo(() => {
+    const byTele = {};
+    rows.forEach(r => {
+      if (!LC_ACTIVE(r) || !r.telesale_id) return;
+      const d = lcDays(r); const age = (Date.now() - new Date(arrivedAt(r)).getTime()) / 86400000;
+      if (!(d === null ? age > 30 : d > 30)) return;
+      (byTele[r.telesale_id] = byTele[r.telesale_id] || []).push(r);
+    });
+    const ids = new Set();
+    Object.values(byTele).forEach(list => list.sort((a, b) => heatOf(b, noteCounts[b.id]) - heatOf(a, noteCounts[a.id])).slice(0, WAKE_PER_DAY).forEach(r => ids.add(r.id)));
+    return ids;
+  }, [rows, noteCounts]);
   const matchChip = (r) => {
     const a = apptOf(r);
     switch (chip) {
@@ -344,6 +394,9 @@ const MarketingDataPage = ({ initialView = null }) => {
       case 'hom_nay': return dayKey(arrivedAt(r)) === todayKey();          // khách mới về / trực page tạo hôm nay
       case 'tuan_nay': return dayKey(arrivedAt(r)) >= weekStartKey();      // khách mới trong tuần (từ thứ Hai)
       case 'thang_nay': case 'thang_truoc': case 'quy_truoc': return inRange(r, RANGE_CHIPS[chip]());
+      case 'uu_tien': return LC_ACTIVE(r);
+      case 'sap_nguoi': return isColdHot(r);
+      case 'danh_thuc': return wakeIds.has(r.id);
       case 'lc_0_3': case 'lc_4_7': case 'lc_8_30': case 'lc_30': case 'lc_none':
         return LC_ACTIVE(r) && LC_BUCKETS.find(b => b.k === chip).test(lcDays(r));
       case 'nong': return r.status === 'nong';
@@ -365,7 +418,9 @@ const MarketingDataPage = ({ initialView = null }) => {
     (!fTruc || r.truc_page_id === fTruc) &&
     (!fDay || dayKey(arrivedAt(r)) === fDay) && (!tRange || inRange(r, [tRange.from, tRange.to])) && matchTele(r) && matchChip(r));
   const visible0 = baseVisible.filter(r => !fStatus || r.status === fStatus);
-  const visible = chip.startsWith('lc_')
+  const visible = ['uu_tien', 'sap_nguoi', 'danh_thuc'].includes(chip)
+    ? [...visible0].sort((a, b) => heatOf(b, noteCounts[b.id]) - heatOf(a, noteCounts[a.id]))
+    : chip.startsWith('lc_')
     ? [...visible0].sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9) || (lcDays(b) ?? 1e6) - (lcDays(a) ?? 1e6))
     : visible0;
   const stageCount = baseVisible.reduce((m, r) => { const k = r.status || 'tiep_can'; m[k] = (m[k] || 0) + 1; return m; }, {});
@@ -409,7 +464,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   // HÀNG ĐỢI GỌI: sắp theo độ ưu tiên rồi mở lần lượt từng khách
   const buildQueue = () => {
     const mine = rows.filter(r => (isTele ? r.telesale_id === me?.id : matchTele(r)) && !['mat', 'da_lam_dv'].includes(r.status));
-    const ordered = [...mine].sort((a, b) => callPriority(a) - callPriority(b) || new Date(a.next_call_at || a.last_contact_at || 0) - new Date(b.next_call_at || b.last_contact_at || 0));
+    const ordered = [...mine].sort((a, b) => (isDue(a.next_call_at) ? 0 : 1) - (isDue(b.next_call_at) ? 0 : 1) || heatOf(b, noteCounts[b.id]) - heatOf(a, noteCounts[a.id]));
     if (!ordered.length) { toast.error(isTele ? 'Bạn chưa được phân công khách nào cần gọi' : 'Không có khách nào cần gọi'); return; }
     setQueue({ ids: ordered.map(r => r.id), pos: 0 });
     setDetail(ordered[0]);
@@ -426,6 +481,8 @@ const MarketingDataPage = ({ initialView = null }) => {
   const mineOrAll = (r) => (isTele ? r.telesale_id === me?.id || !r.telesale_id : true);
   const newToday = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) === todayKey()).length;
   const newWeek = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) >= weekStartKey()).length;
+  const coldHotN = rows.filter(r => mineOrAll(r) && isColdHot(r)).length;
+  const wakeN = rows.filter(r => wakeIds.has(r.id) && (isTele ? r.telesale_id === me?.id : true)).length;
   const lcCount = (b) => rows.filter(r => mineOrAll(r) && LC_ACTIVE(r) && b.test(lcDays(r))).length;
   const rangeCount = (k) => rows.filter(r => mineOrAll(r) && inRange(r, RANGE_CHIPS[k]())).length;
   const dueCount = rows.filter(r => (isTele ? r.telesale_id === me?.id : true) && isDue(r.next_call_at)).length;
@@ -477,6 +534,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   ];
   const moreActions = [
     { show: canWrite, label: 'Báo cáo ngày', icon: FileText, run: () => setReportOpen(true) },
+    { show: canWrite, label: 'KPI telesale & Giờ vàng', icon: Gauge, run: () => setKpiOpen(true) },
     { show: canAssign, label: dividing ? 'Đang chia…' : 'Chia đều cho telesale', icon: Users, run: divideTele },
     { show: roles.includes('admin'), label: 'Kéo từ GetFly', icon: Download, run: () => setGetflyOpen(true) },
     { show: ['marketing', 'truc_page', 'admin'].some(r => roles.includes(r)), label: 'Import CSV', icon: Upload, run: () => setImportOpen(true) },
@@ -511,6 +569,19 @@ const MarketingDataPage = ({ initialView = null }) => {
           </button>
         ))}
       </div>}
+
+      {/* ===== (2) CẢNH BÁO DATA SẮP NGUỘI ===== */}
+      {view === 'list' && coldHotN > 0 && chip !== 'sap_nguoi' && (
+        <button onClick={() => { setChip('sap_nguoi'); setFStatus(''); setPage(1); }}
+          className="w-full text-left rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 flex items-center gap-3 active:scale-[.99] transition">
+          <span className="w-9 h-9 rounded-xl bg-rose-500 text-white grid place-items-center shrink-0"><AlertTriangle className="w-5 h-5" /></span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[13.5px] font-bold text-rose-800">{coldHotN} khách Nóng / Tiềm năng sắp nguội</span>
+            <span className="block text-[12px] text-rose-700/80">Đã quá 3 ngày chưa liên hệ{isTele ? ' — data của bạn' : ''}. Bấm để gọi ngay (khách nóng nhất lên đầu).</span>
+          </span>
+          <ChevronRight className="w-5 h-5 text-rose-400 shrink-0" />
+        </button>
+      )}
 
       {/* ===== SỨC KHOẺ CHĂM DATA: khách còn cần chăm theo số ngày từ lần liên hệ cuối (bấm để lọc) ===== */}
       {view === 'list' && (
@@ -574,7 +645,8 @@ const MarketingDataPage = ({ initialView = null }) => {
             {!tRange && newToday > 0 && <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]" title="Khách mới hôm nay">{newToday}</span>}
             {tRange && <span onClick={(e) => { e.stopPropagation(); setTRange(null); setPage(1); }} className="ml-0.5 -mr-1 w-5 h-5 rounded-full bg-white/25 grid place-items-center"><X className="w-3 h-3" /></span>}
           </button>
-          {[{ k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
+          {[{ k: 'uu_tien', label: '🔥 Ưu tiên gọi' }, { k: 'sap_nguoi', label: 'Sắp nguội', n: coldHotN }, { k: 'danh_thuc', label: 'Đánh thức data cũ', n: wakeN },
+            { k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
             <button key={c.k} onClick={() => { setChip(chip === c.k ? 'all' : c.k); setPage(1); }}
               className={`shrink-0 whitespace-nowrap px-3 h-9 lg:h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
               {c.label}{c.n > 0 && <span className={`ml-1 ${c.hot ? 'inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]' : 'text-rose-500'}`}>{c.n}</span>}
@@ -638,6 +710,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                             <div className="min-w-0">
                               <CustomerName phone={r.phone} name={r.customer_name} className="block font-semibold text-slate-900 truncate max-w-[200px]">{r.customer_name || '(Chưa có tên)'}</CustomerName>
                               <div className="text-[11.5px] text-slate-400 flex items-center gap-1.5">
+                                {LC_ACTIVE(r) && <HeatBadge v={heatOf(r, noteCounts[r.id])} />}
                                 {isToday ? <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold whitespace-nowrap"><Sparkles className="w-3 h-3" />Mới hôm nay</span> : <span className="whitespace-nowrap">Về {fmtD(arrivedAt(r))}</span>}
                                 {r.getfly_code && <><span>·</span><span className="truncate max-w-[90px]">{r.getfly_code}</span></>}
                               </div>
@@ -694,6 +767,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                   <div className="flex items-center gap-1.5">
                     <CustomerName phone={r.phone} name={r.customer_name} className="block font-bold text-slate-900 text-[14.5px] truncate">{r.customer_name || '(Chưa có tên)'}</CustomerName>
                     {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
+                    {LC_ACTIVE(r) && <HeatBadge v={heatOf(r, noteCounts[r.id])} />}
                   </div>
                   <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5">
                     <span className="font-semibold text-slate-600 tabular-nums">{phoneView(r.phone, me)}</span>
@@ -801,6 +875,7 @@ const MarketingDataPage = ({ initialView = null }) => {
         </div>
       )}
 
+      {kpiOpen && <TeleKpiModal me={me} isTele={isTele} teleStaff={teleStaff} rows={rows} onClose={() => setKpiOpen(false)} />}
       {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} rows={rows} onClose={() => setReportOpen(false)} />}
       {edit && <EditModal row={edit} me={me} staff={staff} teleStaff={teleStaff} canAssign={canAssign} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} onOpenExisting={(id) => { const r = rows.find(x => x.id === id); setEdit(null); if (r) setDetail(r); else toast('Khách này nằm ngoài khoảng ngày đang tải — tìm theo SĐT để mở'); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
@@ -1860,6 +1935,100 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 };
 
 // ---------- Thêm khách mới ----------
+// ---------- (3) KPI TELESALE + (4) GIỜ VÀNG GỌI ----------
+const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
+  const [days, setDays] = useState(1);            // 1 = hôm nay, 7, 30
+  const [acts, setActs] = useState([]);
+  const [appts, setAppts] = useState([]);
+  const [goldActs, setGoldActs] = useState([]);   // 60 ngày cuộc gọi cho giờ vàng
+  const [loading, setLoading] = useState(true);
+  const fromIso = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (days - 1)); return d.toISOString(); })();
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const g = new Date(); g.setDate(g.getDate() - 60);
+      const [a, ap, gold] = await Promise.all([
+        supabase.from('marketing_activities').select('data_id, type, outcome, created_by, created_at, content').gte('created_at', fromIso).not('created_by', 'is', null).limit(10000),
+        supabase.from('customer_appointments').select('id, telesale_id, status, created_at, deposit_amount').gte('created_at', fromIso).limit(5000),
+        supabase.from('marketing_activities').select('outcome, created_at, created_by').eq('type', 'call').gte('created_at', g.toISOString()).limit(20000),
+      ]);
+      setActs(a.data || []); setAppts(ap.data || []); setGoldActs(gold.data || []); setLoading(false);
+    })();
+  }, [fromIso]); // eslint-disable-line react-hooks/exhaustive-deps
+  const people = (isTele ? teleStaff.filter(t => t.id === me.id) : teleStaff);
+  const fromKey = dayKey(fromIso);
+  const row = (t) => {
+    const mine = acts.filter(a => a.created_by === t.id);
+    const calls = mine.filter(a => a.type === 'call');
+    const picked = calls.filter(a => ['nghe_may', 'hen_goi_lai', 'can_nhac'].includes(a.outcome)).length;
+    const newData = rows.filter(r => r.telesale_id === t.id && dayKey(arrivedAt(r)) >= fromKey);
+    const called24 = newData.filter(r => acts.some(a => a.data_id === r.id && a.type === 'call' && new Date(a.created_at) - new Date(arrivedAt(r)) <= 86400000)).length;
+    const myAppts = appts.filter(x => x.telesale_id === t.id);
+    const deposits = myAppts.filter(x => ['coc', 'phau_thuat'].includes(x.status)).length;
+    return { t, calls: calls.length, pickRate: calls.length ? Math.round(picked * 100 / calls.length) : null, notes: mine.length - calls.length, newData: newData.length, called24, appts: myAppts.length, deposits,
+      d2a: newData.length ? Math.round(myAppts.length * 100 / newData.length) : null, a2c: myAppts.length ? Math.round(deposits * 100 / myAppts.length) : null };
+  };
+  const data = people.map(row);
+  // Giờ vàng: % nghe máy theo giờ (60 ngày, của tôi nếu là telesale)
+  const gold = Array.from({ length: 14 }, (_, i) => i + 8).map(h => {
+    const list = goldActs.filter(a => (!isTele || a.created_by === me.id) && new Date(a.created_at).getHours() === h);
+    const ok = list.filter(a => ['nghe_may', 'hen_goi_lai', 'can_nhac'].includes(a.outcome)).length;
+    return { h, n: list.length, rate: list.length ? Math.round(ok * 100 / list.length) : 0 };
+  });
+  const best = [...gold].filter(g => g.n >= 3).sort((a, b) => b.rate - a.rate).slice(0, 3);
+  const maxN = Math.max(1, ...gold.map(g => g.n));
+  const pct = (v) => (v === null ? '—' : `${v}%`);
+  return (
+    <div data-back-close className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="shrink-0 px-5 py-3.5 border-b flex items-center justify-between gap-3">
+          <h3 className="font-bold text-slate-900 flex items-center gap-2"><Gauge className="w-5 h-5 text-teal-600" />KPI telesale & Giờ vàng</h3>
+          <div className="flex items-center gap-2">
+            <div className="e-seg">{[[1, 'Hôm nay'], [7, '7 ngày'], [30, '30 ngày']].map(([d, l]) => <button key={d} onClick={() => setDays(d)} className={`e-seg-item h-8 px-3 ${days === d ? 'bg-white text-teal-700 font-semibold shadow-soft' : 'text-slate-500'}`}>{l}</button>)}</div>
+            <button onClick={onClose} className="w-8 h-8 grid place-items-center text-slate-500"><X className="w-5 h-5" /></button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5">
+          {loading ? <div className="py-12 grid place-items-center"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div> : (<>
+            <div className="space-y-3">
+              {data.map(d => (
+                <div key={d.t.id} className="rounded-2xl border border-slate-200 p-3.5">
+                  <div className="font-bold text-slate-900 mb-2.5">{d.t.full_name}</div>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {[['Cuộc gọi', d.calls], ['% nghe máy', pct(d.pickRate)], ['Ghi chú / chăm', d.notes], ['Data mới', d.newData], ['Gọi trong 24h', d.newData ? `${d.called24}/${d.newData}` : '—'],
+                      ['Lịch hẹn', d.appts], ['Cọc / PT', d.deposits], ['Data → lịch hẹn', pct(d.d2a)], ['Lịch hẹn → cọc', pct(d.a2c)]].map(([k, v]) => (
+                      <div key={k} className="rounded-xl bg-slate-50 px-2.5 py-2"><div className="text-[11px] text-slate-500">{k}</div><div className="text-[16px] font-bold text-slate-900 tabular-nums">{v}</div></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {!data.length && <div className="text-center text-slate-400 text-sm py-6">Chưa có telesale</div>}
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-3.5">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="font-bold text-slate-900">⏰ Giờ vàng gọi điện <span className="text-[12px] font-normal text-slate-400">· 60 ngày{isTele ? ', cuộc gọi của bạn' : ''}</span></div>
+              </div>
+              <div className="text-[12.5px] text-slate-600 mb-3">{best.length ? <>Khách hay nghe máy nhất lúc <b>{best.map(b => `${b.h}h (${b.rate}%)`).join(', ')}</b> — ưu tiên gọi khách nóng vào các khung này.</> : 'Cần thêm dữ liệu cuộc gọi (ghi Kết quả gọi mỗi lần gọi) để tính giờ vàng.'}</div>
+              <div className="flex items-end gap-1 h-36">
+                {gold.map(g => (
+                  <div key={g.h} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                    <span className="text-[10px] text-slate-500 tabular-nums">{g.n ? `${g.rate}%` : ''}</span>
+                    <div className="w-full rounded-t-md bg-slate-100 relative" style={{ height: `${Math.max(4, g.n * 100 / maxN)}%` }}>
+                      <div className="absolute bottom-0 inset-x-0 rounded-t-md bg-teal-500" style={{ height: `${g.rate}%` }} />
+                    </div>
+                    <span className="text-[10px] text-slate-500">{g.h}h</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-2">Cột xám = số cuộc gọi · phần xanh = % nghe máy (Nghe máy / Hẹn gọi lại / Đang cân nhắc).</div>
+            </div>
+          </>)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ---------- CHỌN THỜI GIAN (ngày data về) — bảng trượt giống mẫu ----------
 const TimeRangeSheet = ({ value, countOf, onClose, onApply }) => {
   const [sel, setSel] = useState(value?.k || '');
@@ -1966,6 +2135,11 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
             <div className="text-[12px] font-semibold text-slate-500 mb-1.5">Giai đoạn khách</div>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-5 px-5">{Object.entries(STATUS).map(([k, v]) => <button key={k} onClick={() => setStatus(k)} className={pill(status === k)}>{v.label}</button>)}</div>
           </div>
+          {mode === 'call' && (() => { const sc = scriptFor(row); return (
+            <details className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
+              <summary className="text-[12.5px] font-semibold text-amber-800 cursor-pointer">💡 Kịch bản gọi gợi ý · {sc.title}</summary>
+              <p className="text-[13px] text-amber-900 mt-1.5 leading-relaxed">{sc.text}</p>
+            </details>); })()}
           <div>
             <div className="text-[12px] font-semibold text-slate-500 mb-1.5">{mode === 'call' ? 'Nội dung trao đổi' : 'Ghi chú'}</div>
             <textarea value={content} onChange={e => setContent(e.target.value)} rows={4} autoFocus={mode === 'care'}
