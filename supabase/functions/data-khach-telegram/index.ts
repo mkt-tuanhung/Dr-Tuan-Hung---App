@@ -70,6 +70,80 @@ const later = (task: Promise<unknown>) => {
   if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
 };
 
+// ===== BÁO CÁO SALE NGÀY HÔM TRƯỚC (cron 7:00 VN) — cùng cấu trúc nút "Báo cáo ngày" trong app,
+//       lưu vào daily_reports -> link công khai /bao-cao/<mã> gửi vào nhóm =====
+const APP_URL = (Deno.env.get('APP_URL') || 'https://dr-tuan-hung-app-web-ujkb.vercel.app').replace(/\/$/, '');
+const STATUS_COLORS: Record<string, string> = { tiep_can: '#64748b', nong: '#f43f5e', tiem_nang: '#f59e0b', da_hen_lich: '#3b82f6', coc: '#8b5cf6', da_lam_dv: '#12A4A5', sai_gon: '#06b6d4', chot_fail: '#fb923c', mat: '#94a3b8' };
+const OUTCOME_COLORS: Record<string, string> = { nghe_may: '#10b981', khong_nghe: '#94a3b8', may_ban: '#f59e0b', hen_goi_lai: '#3b82f6', can_nhac: '#8b5cf6', tu_choi: '#f43f5e', sai_so: '#64748b' };
+const maskPhone = (p: unknown) => { const s = String(p ?? '').trim(); return !s ? s : s.length <= 4 ? '••••' : s.slice(0, -4) + '••••'; };
+async function dailyReport(dayArg?: string) {
+  const DAY = 86400000;
+  const vnNow = new Date(Date.now() + 7 * 3600_000);
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(dayArg || '')) ? String(dayArg)
+    : new Date(Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate()) - DAY).toISOString().slice(0, 10);   // hôm qua (giờ VN)
+  const from = new Date(Date.parse(day + 'T00:00:00Z') - 7 * 3600_000).toISOString();
+  const to = new Date(Date.parse(day + 'T00:00:00Z') - 7 * 3600_000 + DAY).toISOString();
+  const vnDay = (iso?: string | null) => (iso ? new Date(new Date(iso).getTime() + 7 * 3600_000).toISOString().slice(0, 10) : '');
+
+  const { data: acts } = await db.from('marketing_activities')
+    .select('data_id, type, outcome, content, next_at, created_at, phone, author:profiles!created_by(full_name), khach:marketing_data!data_id(customer_name, phone, status, created_at, getfly_created_at)')
+    .gte('created_at', from).lt('created_at', to).not('created_by', 'is', null).order('created_at', { ascending: true }).limit(5000);
+  const [n1, n2] = await Promise.all([
+    db.from('marketing_data').select('id, customer_name, phone, source, status').gte('getfly_created_at', from).lt('getfly_created_at', to).limit(3000),
+    db.from('marketing_data').select('id, customer_name, phone, source, status').is('getfly_created_at', null).gte('created_at', from).lt('created_at', to).limit(3000),
+  ]);
+  const newRows: any[] = [...(n1.data || []), ...(n2.data || [])];
+  const newIds = new Set(newRows.map(r => r.id));
+  const { count: apptCount } = await db.from('customer_appointments').select('id', { count: 'exact', head: true }).gte('created_at', from).lt('created_at', to);
+
+  const A: any[] = acts || [];
+  const calls = A.filter(a => a.type === 'call');
+  const callIds = new Set(calls.map(a => a.data_id));
+  const cares = A.filter(a => a.type === 'care');
+  const isNewK = (a: any) => newIds.has(a.data_id) || vnDay(a.khach?.getfly_created_at || a.khach?.created_at) === day;
+  const callRows = calls.map(a => ({
+    name: a.khach?.customer_name || '—', phone: maskPhone(a.khach?.phone || a.phone), time: a.created_at,
+    content: String(`${OUTCOME[a.outcome] || 'Gọi'}${a.content ? ' — ' + a.content : ''}`).slice(0, 300),
+    author: a.author?.full_name || null, is_new: isNewK(a), status_label: STATUS[a.khach?.status] || null, status_color: STATUS_COLORS[a.khach?.status] || null,
+  }));
+  const callsNew = callRows.filter(c => c.is_new), callsOld = callRows.filter(c => !c.is_new);
+  const newCalled = newRows.filter(r => callIds.has(r.id));
+  // trạng thái khách trong ngày (có cuộc gọi hoặc số mới)
+  const st: Record<string, number> = {};
+  const seen = new Set<string>();
+  calls.forEach(a => { if (a.data_id && !seen.has(a.data_id)) { seen.add(a.data_id); const k = a.khach?.status || 'tiep_can'; st[k] = (st[k] || 0) + 1; } });
+  newRows.forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); const k = r.status || 'tiep_can'; st[k] = (st[k] || 0) + 1; } });
+  const byOutcome: Record<string, number> = {}; calls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
+  const src: Record<string, number> = {}; newRows.forEach(r => { const s = String(r.source || '').trim() || 'Khác'; src[s] = (src[s] || 0) + 1; });
+  const palette = ['#12A4A5', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'];
+  const payload = {
+    day, whoName: 'Tất cả telesale', generated_at: new Date().toISOString(),
+    stats: { calls: calls.length, new_count: newRows.length, new_called: newCalled.length, new_not_called: newRows.length - newCalled.length,
+      cares: cares.length, next_cnt: A.filter(a => a.next_at).length, old_calls: callsOld.length, new_calls: callsNew.length },
+    by_outcome: Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOME[k] || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' })),
+    by_status: Object.entries(st).map(([k, v]) => ({ label: STATUS[k] || k, value: v, color: STATUS_COLORS[k] || '#cbd5e1' })),
+    by_source: Object.entries(src).map(([k, v], i) => ({ label: k, value: v, color: palette[i % 6] })).sort((a, b) => b.value - a.value),
+    calls_new: callsNew.slice(0, 200), calls_old: callsOld.slice(0, 200),
+    news: newRows.slice(0, 300).map(r => ({ name: r.customer_name, phone: maskPhone(r.phone), source: r.source || null, called: callIds.has(r.id), status: STATUS[r.status] || r.status })),
+  };
+  const slug = Array.from(crypto.getRandomValues(new Uint8Array(14))).map(b => (b % 36).toString(36)).join('');
+  const dd = `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`;
+  const { error } = await db.from('daily_reports').insert({ slug, day, title: `Báo cáo telesale ${dd} (tự động)`, payload, created_by: null });
+  if (error) { console.error('daily_reports insert lỗi', error.message); return { ok: false, error: error.message }; }
+  const url = `${APP_URL}/bao-cao/${slug}`;
+  const pct = (a: number, b: number) => (b ? ` (${Math.round(a * 100 / b)}%)` : '');
+  await send(
+    `📊 <b>BÁO CÁO SALE NGÀY ${dd}</b>` +
+    line('📞 Cuộc gọi', `${calls.length} — khách mới ${callsNew.length} · khách cũ ${callsOld.length}`) +
+    line('✅ Nghe máy', `${(byOutcome.nghe_may || 0) + (byOutcome.hen_goi_lai || 0) + (byOutcome.can_nhac || 0)}${pct((byOutcome.nghe_may || 0) + (byOutcome.hen_goi_lai || 0) + (byOutcome.can_nhac || 0), calls.length)}`) +
+    line('🆕 Số mới về', `${newRows.length} — đã gọi ${newCalled.length} · chưa gọi ${newRows.length - newCalled.length}`) +
+    line('📝 Ghi chú / chăm sóc', String(cares.length)) +
+    line('⏰ Hẹn gọi lại', String(payload.stats.next_cnt)) +
+    line('📅 Lịch hẹn mới tạo', String(apptCount || 0)) +
+    `\n\n👉 Xem chi tiết (biểu đồ, từng cuộc gọi): ${url}`);
+  return { ok: true, url, day };
+}
+
 // ===== NHẮC BUỔI SÁNG (cron 8:15 VN): việc chăm data hôm nay của từng telesale =====
 const WAKE_PER_DAY = 20;
 async function morning() {
@@ -115,6 +189,7 @@ Deno.serve(async (req) => {
     if (!CHAT) return new Response('chưa cấu hình nhóm');
     const body = await req.json().catch(() => ({}));
     if (body.mode === 'morning') { await morning(); return new Response('ok morning'); }
+    if (body.mode === 'daily_report') { const r = await dailyReport(body.day); return new Response(JSON.stringify(r)); }
     const table = String(body.table || '');
     const id = String(body.id || body.record?.id || '');
     if (!id) return new Response('skip');
