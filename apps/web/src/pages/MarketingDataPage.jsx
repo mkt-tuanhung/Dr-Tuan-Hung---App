@@ -125,6 +125,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   const [queue, setQueue] = useState(null);             // hàng đợi gọi: mảng id + vị trí
   const [fDay, setFDay] = useState('');                 // lọc theo NGÀY data về (YYYY-MM-DD)
   const [reportOpen, setReportOpen] = useState(false);  // Báo cáo ngày
+  const [quickNote, setQuickNote] = useState(null);     // khách đang ghi chú nhanh (mobile)
   const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
   // Chế độ xem: 'list' (bảng) | 'pipeline' (cột thẻ theo giai đoạn, kiểu Ethics BOS)
   const [view, setView] = useState(() => { if (initialView) return initialView; try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
@@ -436,12 +437,12 @@ const MarketingDataPage = ({ initialView = null }) => {
       <div className="flex lg:grid lg:grid-cols-5 gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
         {kpiCards.map((c, i) => (
           <button key={i} onClick={c.onClick}
-            className={`text-left rounded-2xl bg-white p-4 shadow-card transition-all border ${c.active ? 'border-teal-500 ring-2 ring-teal-100' : 'border-transparent hover:border-slate-200'} shrink-0 min-w-[148px] lg:min-w-0`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-slate-500 font-medium">{c.label}</span>
-              <span className={`w-9 h-9 rounded-xl grid place-items-center ${c.tone}`}><c.icon className="w-[18px] h-[18px]" /></span>
+            className={`text-left rounded-2xl bg-white px-3 py-2.5 lg:p-4 shadow-card transition-all border ${c.active ? 'border-teal-500 ring-2 ring-teal-100' : 'border-transparent hover:border-slate-200'} shrink-0 min-w-[118px] lg:min-w-0`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12px] lg:text-[13px] text-slate-500 font-medium whitespace-nowrap">{c.label}</span>
+              <span className={`w-7 h-7 lg:w-9 lg:h-9 rounded-lg lg:rounded-xl grid place-items-center shrink-0 ${c.tone}`}><c.icon className="w-4 h-4 lg:w-[18px] lg:h-[18px]" /></span>
             </div>
-            <div className="text-[22px] lg:text-[26px] font-bold text-slate-900 mt-1 tabular-nums leading-tight">{c.value.toLocaleString('vi-VN')}</div>
+            <div className="text-[19px] lg:text-[26px] font-bold text-slate-900 mt-0.5 lg:mt-1 tabular-nums leading-tight">{c.value.toLocaleString('vi-VN')}</div>
           </button>
         ))}
       </div>
@@ -462,14 +463,14 @@ const MarketingDataPage = ({ initialView = null }) => {
 
       {/* ===== Thanh công cụ ===== */}
       <div className="rounded-2xl bg-white shadow-soft border border-slate-200 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
+        <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
+        <div className="relative flex-1 min-w-0 basis-full lg:basis-auto">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên khách hàng, số điện thoại…"
             className="w-full pl-10 pr-3 h-10 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-400 outline-none transition" />
         </div>
         {/* Bộ lọc — mobile */}
-        <button onClick={() => setFilterOpen(true)} className="lg:hidden relative h-10 w-10 rounded-xl border border-slate-200 text-slate-600 bg-white grid place-items-center">
+        <button onClick={() => setFilterOpen(true)} className="lg:hidden relative h-10 w-10 shrink-0 mr-auto rounded-xl border border-slate-200 text-slate-600 bg-white grid place-items-center">
           <SlidersHorizontal className="w-[18px] h-[18px]" />
           {activeFilters > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] font-bold grid place-items-center">{activeFilters}</span>}
         </button>
@@ -498,10 +499,10 @@ const MarketingDataPage = ({ initialView = null }) => {
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
         {/* Lọc nhanh */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1 max-w-full">
           {[{ k: 'hom_nay', label: 'Khách hôm nay', n: newToday, hot: true }, { k: 'tuan_nay', label: 'Khách tuần này', n: newWeek, hot: true }, { k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
             <button key={c.k} onClick={() => { setChip(chip === c.k ? 'all' : c.k); setPage(1); }}
-              className={`px-3 h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 h-9 lg:h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
               {c.label}{c.n > 0 && <span className={`ml-1 ${c.hot ? 'inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]' : 'text-rose-500'}`}>{c.n}</span>}
             </button>
           ))}
@@ -629,11 +630,15 @@ const MarketingDataPage = ({ initialView = null }) => {
                     <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>
                     {st && <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
                     <DueBadge r={r} />
+                    {r.telesale?.full_name && !isTele && <span className="text-[10.5px] text-slate-400 inline-flex items-center gap-0.5"><Headphones className="w-3 h-3" />{r.telesale.full_name}</span>}
+                    {isTele && !r.telesale_id && <button onClick={(e) => { e.stopPropagation(); assignTele(r, me.id); }} className="text-[11px] font-semibold text-teal-700 bg-teal-50 rounded-full px-2 py-0.5">Nhận data</button>}
                   </div>
                 </div>
                 <div className="shrink-0 flex flex-col gap-1.5" onClick={e => e.stopPropagation()}>
                   <a href={`tel:${r.phone}`} className="w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center shadow-sm active:scale-95"><PhoneCall className="w-[18px] h-[18px]" /></a>
-                  <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 grid place-items-center text-[10.5px] font-bold active:scale-95">Zalo</a>
+                  {canWrite
+                    ? <button onClick={() => setQuickNote(r)} title="Ghi chú nhanh" className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 grid place-items-center active:scale-95"><StickyNote className="w-[18px] h-[18px]" /></button>
+                    : <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 grid place-items-center text-[10.5px] font-bold active:scale-95">Zalo</a>}
                 </div>
               </div>); })}
           </div>
@@ -665,7 +670,7 @@ const MarketingDataPage = ({ initialView = null }) => {
         </div>
       )}
 
-      {canWrite && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && (
+      {canWrite && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && !quickNote && (
         <button onClick={() => setEdit({})} title="Thêm khách" className="sm:hidden fixed z-[25] bottom-24 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-float ring-4 ring-white flex items-center justify-center"><UserPlus className="w-6 h-6" /></button>
       )}
 
@@ -724,6 +729,7 @@ const MarketingDataPage = ({ initialView = null }) => {
       {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} rows={rows} onClose={() => setReportOpen(false)} />}
       {edit && <EditModal row={edit} me={me} staff={staff} teleStaff={teleStaff} canAssign={canAssign} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} onOpenExisting={(id) => { const r = rows.find(x => x.id === id); setEdit(null); if (r) setDetail(r); else toast('Khách này nằm ngoài khoảng ngày đang tải — tìm theo SĐT để mở'); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
+      {quickNote && <QuickNoteSheet row={quickNote} me={me} onClose={() => setQuickNote(null)} onSaved={() => { setQuickNote(null); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
     </div>
   );
@@ -899,7 +905,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   };
 
   // ----- nhật ký gọi -----
-  const [call, setCall] = useState({ outcome: 'nghe_may', content: '', next: '', status: row.status || 'tiep_can' });
+  const [call, setCall] = useState({ outcome: 'nghe_may', content: '', next: '', status: row.status || 'tiep_can', media: [] });
   useEffect(() => { setCall(c => ({ ...c, status: row.status || 'tiep_can' })); }, [row.status]);
   const [savingCall, setSavingCall] = useState(false);
   const addCall = async () => {
@@ -908,7 +914,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     const nextIso = fromLocalInput(call.next);
     const { error } = await supabase.from('marketing_activities').insert({
       data_id: row.id, phone: row.phone, type: 'call', outcome: call.outcome,
-      content: call.content.trim() || null, next_at: nextIso, created_by: me.id,
+      content: call.content.trim() || null, next_at: nextIso, created_by: me.id, media_urls: call.media || [],
     });
     if (!error) {
       await supabase.from('marketing_data').update({
@@ -919,20 +925,20 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     setSavingCall(false);
     if (error) return toast.error('Lỗi: ' + error.message);
     toast.success('Đã lưu cuộc gọi');
-    setCall({ outcome: 'nghe_may', content: '', next: '', status: call.status });
+    setCall({ outcome: 'nghe_may', content: '', next: '', status: call.status, media: [] });
     loadActs(); onChanged?.();
   };
 
   // ----- nhật ký chăm sóc -----
-  const [care, setCare] = useState({ content: '', next: '' });
+  const [care, setCare] = useState({ content: '', next: '', media: [] });
   const [savingCare, setSavingCare] = useState(false);
   const addCare = async () => {
     if (!canWrite) return;
-    if (!care.content.trim()) return toast.error('Nhập nội dung chăm sóc');
+    if (!care.content.trim() && !(care.media || []).length) return toast.error('Nhập nội dung hoặc thêm ảnh');
     setSavingCare(true);
     const nextIso = fromLocalInput(care.next);
     const { error } = await supabase.from('marketing_activities').insert({
-      data_id: row.id, phone: row.phone, type: 'care', content: care.content.trim(), next_at: nextIso, created_by: me.id,
+      data_id: row.id, phone: row.phone, type: 'care', content: care.content.trim() || null, next_at: nextIso, created_by: me.id, media_urls: care.media || [],
     });
     if (!error) {
       const upd = { last_contact_at: new Date().toISOString() };
@@ -942,7 +948,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     setSavingCare(false);
     if (error) return toast.error('Lỗi: ' + error.message);
     toast.success('Đã lưu chăm sóc');
-    setCare({ content: '', next: '' }); loadActs(); onChanged?.();
+    setCare({ content: '', next: '', media: [] }); loadActs(); onChanged?.();
   };
 
   const delAct = async (a) => {
@@ -1218,7 +1224,8 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 <div className="space-y-2 mb-3 -mt-1">
                   {cares.slice(0, 3).map(c => (
                     <div key={c.id} className="rounded-xl bg-slate-50 px-3 py-2">
-                      <div className="text-[12.5px] text-slate-700 whitespace-pre-wrap break-words line-clamp-3">{c.content}</div>
+                      {c.content && <div className="text-[12.5px] text-slate-700 whitespace-pre-wrap break-words line-clamp-3">{c.content}</div>}
+                      {(c.media_urls || []).length > 0 && <div className="mt-1.5"><CustomerMedia urls={c.media_urls} compact /></div>}
                       <div className="text-[10.5px] text-slate-400 mt-1">{c.author?.full_name || ''}{c.created_at ? ` · ${fmtDT(c.created_at)}` : ''}</div>
                     </div>
                   ))}
@@ -1229,8 +1236,9 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 <>
                   <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Thêm ghi chú về khách hàng…"
                     className="w-full px-3 py-2 text-[13px] rounded-xl border border-slate-200 focus:border-teal-400 outline-none resize-y" />
-                  <div className="flex justify-end mt-2">
-                    <button onClick={addCare} disabled={savingCare || !care.content.trim()} className="h-8 px-4 rounded-lg bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 disabled:opacity-40">{savingCare ? 'Đang lưu…' : 'Lưu ghi chú'}</button>
+                  <div className="flex items-end justify-between gap-2 mt-2">
+                    <CustomerMedia urls={care.media} editable compact onChange={(u) => setCare(c => ({ ...c, media: u }))} />
+                    <button onClick={addCare} disabled={savingCare || (!care.content.trim() && !(care.media || []).length)} className="h-8 px-4 rounded-lg bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 disabled:opacity-40">{savingCare ? 'Đang lưu…' : 'Lưu ghi chú'}</button>
                   </div>
                 </>
               )}
@@ -1320,6 +1328,8 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                     </div>
                     <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Nội dung trao đổi</label>
                       <textarea value={call.content} onChange={e => setCall({ ...call, content: e.target.value })} rows={3} placeholder="Khách quan tâm gì, báo giá, phản hồi…" className={inp} /></div>
+                    <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Ảnh / video (ảnh khách gửi, chụp tin nhắn…)</label>
+                      <CustomerMedia urls={call.media} editable compact onChange={(u) => setCall(c => ({ ...c, media: u }))} /></div>
                     <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Hẹn gọi lại (nếu có)</label>
                       <div className="flex flex-wrap gap-1.5 mb-1.5">
                         {[['Chiều nay', 0, 15], ['Sáng mai', 1, 9], ['3 ngày nữa', 3, 9], ['1 tuần nữa', 7, 9]].map(([lb, d, h]) => (
@@ -1343,6 +1353,8 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                     <div className="text-[13.5px] font-bold text-slate-700">Ghi chăm sóc mới</div>
                     <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Nội dung chăm sóc</label>
                       <textarea value={care.content} onChange={e => setCare({ ...care, content: e.target.value })} rows={3} placeholder="Nhắn tin hỏi thăm, gửi ưu đãi, tư vấn thêm…" className={inp} /></div>
+                    <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Ảnh / video</label>
+                      <CustomerMedia urls={care.media} editable compact onChange={(u) => setCare(c => ({ ...c, media: u }))} /></div>
                     <div><label className="block text-[11.5px] font-semibold text-slate-500 mb-1">Hẹn chăm sóc tiếp (nếu có)</label>
                       <input type="datetime-local" value={care.next} onChange={e => setCare({ ...care, next: e.target.value })} className={inp} /></div>
                     <button onClick={addCare} disabled={savingCare} className="e-btn e-btn-primary e-btn-block"><Save className="w-4 h-4" />{savingCare ? 'Đang lưu…' : 'Lưu chăm sóc'}</button>
@@ -1438,6 +1450,7 @@ const Timeline = ({ items, loading, me, onDelete, kind }) => {
             {(a.created_by === me?.id || me?.role === 'admin') && <button onClick={() => onDelete(a)} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>}
           </div>
           {a.content && <div className="text-[13px] text-slate-700 mt-1.5 whitespace-pre-wrap break-words">{a.content}</div>}
+          {(a.media_urls || []).length > 0 && <div className="mt-2"><CustomerMedia urls={a.media_urls} compact /></div>}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="text-[11px] text-slate-400">{a.author?.full_name || 'Nhân viên'}</span>
             {a.next_at && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(a.next_at)}</span>}
@@ -1770,6 +1783,89 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 };
 
 // ---------- Thêm khách mới ----------
+// ---------- GHI CHÚ NHANH (mobile): bấm 1 chạm kết quả gọi, giai đoạn, nội dung, ảnh, hẹn gọi lại ----------
+const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
+  const [mode, setMode] = useState('call');             // 'call' = cuộc gọi | 'care' = ghi chú
+  const [outcome, setOutcome] = useState('nghe_may');
+  const [status, setStatus] = useState(row.status || 'tiep_can');
+  const [content, setContent] = useState('');
+  const [media, setMedia] = useState([]);
+  const [next, setNext] = useState('');
+  const [saving, setSaving] = useState(false);
+  const quick = [['Chiều nay', 0, 15], ['Sáng mai', 1, 9], ['3 ngày', 3, 9], ['1 tuần', 7, 9]];
+  const save = async () => {
+    if (mode === 'care' && !content.trim() && !media.length) { toast.error('Nhập nội dung hoặc thêm ảnh'); return; }
+    setSaving(true);
+    const nextIso = fromLocalInput(next);
+    const { error } = await supabase.from('marketing_activities').insert({
+      data_id: row.id, phone: row.phone, type: mode, outcome: mode === 'call' ? outcome : null,
+      content: content.trim() || null, next_at: nextIso, created_by: me.id, media_urls: media,
+    });
+    if (!error) {
+      const upd = { last_contact_at: new Date().toISOString() };
+      if (mode === 'call') { upd.status = status; upd.next_call_at = nextIso; upd.last_exchange = `${OUTCOMES[outcome]?.label}${content.trim() ? ' · ' + content.trim() : ''}`; }
+      else { if (nextIso) upd.next_call_at = nextIso; if (status !== row.status) upd.status = status; if (content.trim()) upd.last_exchange = content.trim(); }
+      await supabase.from('marketing_data').update(upd).eq('id', row.id);
+    }
+    setSaving(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    toast.success(mode === 'call' ? 'Đã lưu cuộc gọi' : 'Đã lưu ghi chú');
+    onSaved();
+  };
+  const pill = (on) => `shrink-0 px-3 h-9 rounded-full text-[13px] font-semibold border transition ${on ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'}`;
+  return (
+    <div data-back-close className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="pt-2.5 pb-1 grid place-items-center sm:hidden"><span className="w-10 h-1.5 rounded-full bg-slate-200" /></div>
+        <div className="shrink-0 px-5 pb-3 pt-1 sm:pt-4 border-b flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-bold text-slate-900 truncate">{row.customer_name || '(Chưa có tên)'}</div>
+            <div className="text-[12.5px] text-slate-500 tabular-nums">{phoneView(row.phone, me)}</div>
+          </div>
+          <a href={`tel:${row.phone}`} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center"><PhoneCall className="w-[18px] h-[18px]" /></a>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100">
+            {[['call', 'Cuộc gọi', PhoneCall], ['care', 'Ghi chú / chăm sóc', StickyNote]].map(([k, lb, Ic]) => (
+              <button key={k} onClick={() => setMode(k)} className={`h-9 rounded-lg text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 ${mode === k ? 'bg-white text-teal-700 shadow-soft' : 'text-slate-500'}`}><Ic className="w-4 h-4" />{lb}</button>
+            ))}
+          </div>
+          {mode === 'call' && (
+            <div>
+              <div className="text-[12px] font-semibold text-slate-500 mb-1.5">Kết quả gọi</div>
+              <div className="flex flex-wrap gap-1.5">{Object.entries(OUTCOMES).map(([k, v]) => <button key={k} onClick={() => setOutcome(k)} className={pill(outcome === k)}>{v.label}</button>)}</div>
+            </div>
+          )}
+          <div>
+            <div className="text-[12px] font-semibold text-slate-500 mb-1.5">Giai đoạn khách</div>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-5 px-5">{Object.entries(STATUS).map(([k, v]) => <button key={k} onClick={() => setStatus(k)} className={pill(status === k)}>{v.label}</button>)}</div>
+          </div>
+          <div>
+            <div className="text-[12px] font-semibold text-slate-500 mb-1.5">{mode === 'call' ? 'Nội dung trao đổi' : 'Ghi chú'}</div>
+            <textarea value={content} onChange={e => setContent(e.target.value)} rows={4} autoFocus={mode === 'care'}
+              placeholder={mode === 'call' ? 'Khách quan tâm gì, báo giá, băn khoăn…' : 'Ghi chú về khách…'}
+              className="w-full px-3.5 py-3 text-[15px] rounded-2xl border border-slate-200 focus:border-teal-400 outline-none resize-none" />
+          </div>
+          <div>
+            <div className="text-[12px] font-semibold text-slate-500 mb-1.5">Ảnh / video</div>
+            <CustomerMedia urls={media} editable onChange={setMedia} />
+          </div>
+          <div>
+            <div className="text-[12px] font-semibold text-slate-500 mb-1.5">Hẹn gọi lại</div>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide mb-2">
+              {quick.map(([lb, d, h]) => { const t = new Date(); t.setDate(t.getDate() + d); t.setHours(h, 0, 0, 0); const v = toLocalInput(t.toISOString()); return <button key={lb} onClick={() => setNext(next === v ? '' : v)} className={pill(next === v)}>{lb}</button>; })}
+            </div>
+            <input type="datetime-local" value={next} onChange={e => setNext(e.target.value)} className={inp} />
+          </div>
+        </div>
+        <div className="shrink-0 p-4 border-t bg-white" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <button onClick={save} disabled={saving} className="w-full h-12 rounded-2xl bg-teal-600 text-white font-bold text-[15px] inline-flex items-center justify-center gap-2 disabled:opacity-60"><Save className="w-5 h-5" />{saving ? 'Đang lưu…' : mode === 'call' ? 'Lưu cuộc gọi' : 'Lưu ghi chú'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ---------- ẢNH / VIDEO của khách (trực page tải lên khi tạo khách, xem/bổ sung trong hồ sơ) ----------
 const isVideoUrl = (u) => /\.(mp4|mov|m4v|webm|3gp|avi|mkv)(\?|$)/i.test(String(u || ''));
 const CustomerMedia = ({ urls = [], editable = false, onChange, compact = false }) => {
