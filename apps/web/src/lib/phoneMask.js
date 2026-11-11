@@ -6,10 +6,11 @@ export const maskPhone = (p) => {
   return s.length <= 4 ? '••••' : s.slice(0, -4) + '••••';
 };
 
-// Vị trí Sale Offline (role chính hoặc phụ) — trừ admin thì vẫn thấy đủ.
+// Vị trí Sale Offline (role chính hoặc phụ) — trừ admin và TELESALE thì vẫn thấy đủ
+// (telesale kiêm sale offline cần SĐT để gọi / copy — anh Dũng duyệt 11/11/2026).
 export const isSaleOffline = (profile) => {
   const roles = [profile?.role, profile?.role_2].filter(Boolean);
-  return roles.includes('sale_offline') && !roles.includes('admin');
+  return roles.includes('sale_offline') && !roles.includes('admin') && !roles.includes('telesale');
 };
 
 // Che 5 số cuối (dùng cho Telesale ở Data khách hàng).
