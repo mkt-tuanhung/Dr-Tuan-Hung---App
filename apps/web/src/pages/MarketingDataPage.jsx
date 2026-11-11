@@ -61,6 +61,21 @@ const todayKey = () => dayKey(new Date().toISOString());
 const ymd = (y, m, d = 1) => dayKey(new Date(y, m, d, 12).toISOString());
 const monthRange = (offset = 0) => { const n = new Date(); return [ymd(n.getFullYear(), n.getMonth() + offset), ymd(n.getFullYear(), n.getMonth() + offset + 1)]; };
 const prevQuarterRange = () => { const n = new Date(); const q0 = Math.floor(n.getMonth() / 3) * 3; return [ymd(n.getFullYear(), q0 - 3), ymd(n.getFullYear(), q0)]; };
+// Bộ lọc "Chọn thời gian" (ngày data về): [từ, đến) dạng 'YYYY-MM-DD'
+const addDays = (k, n) => { const [y, m, d] = k.split('-').map(Number); return ymd(y, m - 1, d + n); };
+const TIME_PRESETS = [
+  { k: 'today', label: 'Hôm nay', r: () => [todayKey(), addDays(todayKey(), 1)] },
+  { k: 'yesterday', label: 'Hôm qua', r: () => [addDays(todayKey(), -1), todayKey()] },
+  { k: 'week', label: 'Tuần này', r: () => [weekStartKey(), addDays(weekStartKey(), 7)] },
+  { k: 'last_week', label: 'Tuần trước', r: () => [addDays(weekStartKey(), -7), weekStartKey()] },
+  { k: 'month', label: 'Tháng này', r: () => monthRange(0) },
+  { k: 'last_month', label: 'Tháng trước', r: () => monthRange(-1) },
+  { k: 'quarter', label: 'Quý này', r: () => { const n = new Date(); const q0 = Math.floor(n.getMonth() / 3) * 3; return [ymd(n.getFullYear(), q0), ymd(n.getFullYear(), q0 + 3)]; } },
+  { k: 'last_quarter', label: 'Quý trước', r: () => prevQuarterRange() },
+  { k: 'year', label: 'Năm nay', r: () => { const y = new Date().getFullYear(); return [ymd(y, 0), ymd(y + 1, 0)]; } },
+  { k: 'last_year', label: 'Năm trước', r: () => { const y = new Date().getFullYear(); return [ymd(y - 1, 0), ymd(y, 0)]; } },
+];
+const fmtYmd = (k) => k ? k.split('-').reverse().join('/') : '';
 const RANGE_CHIPS = { thang_nay: () => monthRange(0), thang_truoc: () => monthRange(-1), quy_truoc: prevQuarterRange };
 const inRange = (r, [a, b]) => { const k = dayKey(arrivedAt(r)); return k >= a && k < b; };
 const weekStartKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d.toISOString()); };
@@ -132,6 +147,8 @@ const MarketingDataPage = ({ initialView = null }) => {
   const [fDay, setFDay] = useState('');                 // lọc theo NGÀY data về (YYYY-MM-DD)
   const [reportOpen, setReportOpen] = useState(false);  // Báo cáo ngày
   const [quickNote, setQuickNote] = useState(null);     // khách đang ghi chú nhanh (mobile)
+  const [tRange, setTRange] = useState(null);           // lọc thời gian: { k, label, from, to } (to = ngày kế tiếp)
+  const [timeOpen, setTimeOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
   // Chế độ xem: 'list' (bảng) | 'pipeline' (cột thẻ theo giai đoạn, kiểu Ethics BOS)
   const [view, setView] = useState(() => { if (initialView) return initialView; try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
@@ -223,6 +240,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   useEffect(() => { if (fDay && winRef.current && fDay < winRef.current) loadOlder(fDay); }, [fDay]); // eslint-disable-line react-hooks/exhaustive-deps
   // Lọc Tháng trước / Quý trước: kéo thêm khách cũ nếu khoảng ngày nằm ngoài dữ liệu đang tải
   useEffect(() => { const f = RANGE_CHIPS[chip]; if (!f) return; const [a] = f(); if (winRef.current && a < winRef.current) loadOlder(a); }, [chip]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tRange?.from && winRef.current && tRange.from < winRef.current) loadOlder(tRange.from); }, [tRange?.from]); // eslint-disable-line react-hooks/exhaustive-deps
   // Giữ bộ nhớ đệm khớp với các sửa đổi tại chỗ (đổi giai đoạn, chia telesale, xoá…)
   useEffect(() => { if (didLoad.current) mdCache.rows = rows; }, [rows]);
   useRealtimeReload('marketing_data', loadData);
@@ -326,7 +344,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   const baseVisible = rows.filter(r =>
     (!q || (r.customer_name || '').toLowerCase().includes(q) || (r.phone || '').includes(q)) &&
     (!fTruc || r.truc_page_id === fTruc) &&
-    (!fDay || dayKey(arrivedAt(r)) === fDay) && matchTele(r) && matchChip(r));
+    (!fDay || dayKey(arrivedAt(r)) === fDay) && (!tRange || inRange(r, [tRange.from, tRange.to])) && matchTele(r) && matchChip(r));
   const visible = baseVisible.filter(r => !fStatus || r.status === fStatus);
   const stageCount = baseVisible.reduce((m, r) => { const k = r.status || 'tiep_can'; m[k] = (m[k] || 0) + 1; return m; }, {});
 
@@ -510,9 +528,13 @@ const MarketingDataPage = ({ initialView = null }) => {
         <div className="flex flex-wrap items-center gap-1.5">
         {/* Lọc nhanh */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1 max-w-full">
-          {[{ k: 'hom_nay', label: 'Khách hôm nay', n: newToday, hot: true }, { k: 'tuan_nay', label: 'Khách tuần này', n: newWeek, hot: true },
-            { k: 'thang_nay', label: 'Tháng này', n: rangeCount('thang_nay') }, { k: 'thang_truoc', label: 'Tháng trước', n: rangeCount('thang_truoc') }, { k: 'quy_truoc', label: 'Quý trước', n: rangeCount('quy_truoc') },
-            { k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
+          <button onClick={() => setTimeOpen(true)}
+            className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 h-9 lg:h-10 rounded-xl text-[13px] font-semibold border transition ${tRange ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
+            <CalendarDays className="w-4 h-4" />{tRange ? tRange.label : 'Thời gian'}
+            {!tRange && newToday > 0 && <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]" title="Khách mới hôm nay">{newToday}</span>}
+            {tRange && <span onClick={(e) => { e.stopPropagation(); setTRange(null); setPage(1); }} className="ml-0.5 -mr-1 w-5 h-5 rounded-full bg-white/25 grid place-items-center"><X className="w-3 h-3" /></span>}
+          </button>
+          {[{ k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
             <button key={c.k} onClick={() => { setChip(chip === c.k ? 'all' : c.k); setPage(1); }}
               className={`shrink-0 whitespace-nowrap px-3 h-9 lg:h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
               {c.label}{c.n > 0 && <span className={`ml-1 ${c.hot ? 'inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]' : 'text-rose-500'}`}>{c.n}</span>}
@@ -682,7 +704,7 @@ const MarketingDataPage = ({ initialView = null }) => {
         </div>
       )}
 
-      {canWrite && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && !quickNote && (
+      {canWrite && !reportOpen && !filterOpen && !edit && !importOpen && !getflyOpen && !quickNote && !timeOpen && (
         <button onClick={() => setEdit({})} title="Thêm khách" className="sm:hidden fixed z-[25] bottom-24 right-5 w-14 h-14 rounded-full bg-teal-600 text-white shadow-float ring-4 ring-white flex items-center justify-center"><UserPlus className="w-6 h-6" /></button>
       )}
 
@@ -741,6 +763,8 @@ const MarketingDataPage = ({ initialView = null }) => {
       {reportOpen && <DailyReportModal me={me} teleStaff={teleStaff} isTele={isTele} rows={rows} onClose={() => setReportOpen(false)} />}
       {edit && <EditModal row={edit} me={me} staff={staff} teleStaff={teleStaff} canAssign={canAssign} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); loadData(); }} onOpenExisting={(id) => { const r = rows.find(x => x.id === id); setEdit(null); if (r) setDetail(r); else toast('Khách này nằm ngoài khoảng ngày đang tải — tìm theo SĐT để mở'); }} />}
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
+      {timeOpen && <TimeRangeSheet value={tRange} countOf={(a, b) => rows.filter(r => mineOrAll(r) && inRange(r, [a, b])).length}
+        onClose={() => setTimeOpen(false)} onApply={(v) => { setTRange(v); setChip('all'); setPage(1); setTimeOpen(false); }} />}
       {quickNote && <QuickNoteSheet row={quickNote} me={me} onClose={() => setQuickNote(null)} onSaved={() => { setQuickNote(null); loadData(); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
     </div>
@@ -1795,6 +1819,55 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 };
 
 // ---------- Thêm khách mới ----------
+// ---------- CHỌN THỜI GIAN (ngày data về) — bảng trượt giống mẫu ----------
+const TimeRangeSheet = ({ value, countOf, onClose, onApply }) => {
+  const [sel, setSel] = useState(value?.k || '');
+  const [from, setFrom] = useState(value?.k === 'custom' ? value.from : '');
+  const [to, setTo] = useState(value?.k === 'custom' ? addDays(value.to, -1) : '');
+  const apply = () => {
+    if (!sel) { onApply(null); return; }
+    if (sel === 'custom') {
+      if (!from) { toast.error('Chọn Từ ngày'); return; }
+      const end = to && to >= from ? to : from;
+      onApply({ k: 'custom', label: from === end ? fmtYmd(from) : `${fmtYmd(from).slice(0, 5)} – ${fmtYmd(end)}`, from, to: addDays(end, 1) });
+      return;
+    }
+    const p = TIME_PRESETS.find(x => x.k === sel); const [a, b] = p.r();
+    onApply({ k: p.k, label: p.label, from: a, to: b });
+  };
+  return (
+    <div data-back-close className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="pt-2.5 pb-1 grid place-items-center sm:hidden"><span className="w-10 h-1.5 rounded-full bg-slate-200" /></div>
+        <div className="shrink-0 px-5 pt-1 sm:pt-4 pb-3 flex items-center justify-between">
+          <span className="w-8" />
+          <h3 className="font-bold text-slate-900 text-[17px]">Chọn thời gian</h3>
+          <button onClick={onClose} className="w-8 h-8 grid place-items-center text-slate-500"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-3 space-y-2">
+          {TIME_PRESETS.map(p => { const [a, b] = p.r(); const n = countOf(a, b); const on = sel === p.k; return (
+            <button key={p.k} onClick={() => setSel(on ? '' : p.k)}
+              className={`w-full h-12 px-4 rounded-xl flex items-center justify-between text-[15px] font-semibold transition ${on ? 'bg-teal-50 text-teal-800 ring-2 ring-teal-500' : 'bg-slate-50 text-slate-800 hover:bg-slate-100'}`}>
+              <span>{p.label}</span>
+              <span className="flex items-center gap-2"><span className="text-[12.5px] font-medium text-slate-400 tabular-nums">{n} khách</span>{on && <CheckCircle2 className="w-5 h-5 text-teal-600" />}</span>
+            </button>); })}
+          <div className={`rounded-xl px-4 py-3 transition ${sel === 'custom' ? 'bg-teal-50 ring-2 ring-teal-500' : 'bg-slate-50'}`}>
+            <button onClick={() => setSel('custom')} className="w-full text-left text-[15px] font-semibold text-slate-800">Thời gian khác</button>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <label className="text-[12.5px] text-slate-500">Từ ngày<input type="date" value={from} onChange={e => { setFrom(e.target.value); setSel('custom'); }} className="mt-1 w-full h-10 px-2 rounded-lg border border-slate-200 bg-white text-[14px] text-slate-800" /></label>
+              <label className="text-[12.5px] text-slate-500">Đến ngày<input type="date" value={to} onChange={e => { setTo(e.target.value); setSel('custom'); }} className="mt-1 w-full h-10 px-2 rounded-lg border border-slate-200 bg-white text-[14px] text-slate-800" /></label>
+            </div>
+          </div>
+        </div>
+        <div className="shrink-0 p-4 border-t bg-white flex gap-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          {value && <button onClick={() => onApply(null)} className="h-12 px-4 rounded-2xl border border-slate-200 text-slate-600 font-semibold">Bỏ lọc</button>}
+          <button onClick={apply} className="flex-1 h-12 rounded-2xl bg-teal-600 text-white font-bold text-[15px]">Cập nhật</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ---------- GHI CHÚ NHANH (mobile): bấm 1 chạm kết quả gọi, giai đoạn, nội dung, ảnh, hẹn gọi lại ----------
 const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
   const [mode, setMode] = useState('call');             // 'call' = cuộc gọi | 'care' = ghi chú
