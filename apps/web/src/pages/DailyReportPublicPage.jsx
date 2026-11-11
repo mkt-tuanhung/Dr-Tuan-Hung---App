@@ -55,7 +55,7 @@ const DailyReportPublicPage = () => {
         {/* 4 thẻ tổng quan */}
         <div className="grid grid-cols-2 gap-2.5 mb-3">
           {[
-            { label: 'Cuộc gọi trong ngày', value: st.calls ?? 0, icon: PhoneCall, cls: 'text-emerald-600 bg-emerald-50' },
+            { label: 'Gọi / note trong ngày', value: st.calls ?? 0, icon: PhoneCall, cls: 'text-emerald-600 bg-emerald-50' },
             { label: 'Số mới tiếp nhận', value: st.new_count ?? 0, icon: UserPlus, cls: 'text-blue-600 bg-blue-50' },
             { label: 'Mới đã gọi', value: st.new_called ?? 0, icon: TrendingUp, cls: 'text-teal-600 bg-teal-50' },
             { label: 'Mới chưa gọi', value: st.new_not_called ?? 0, icon: CalendarClock, cls: 'text-rose-600 bg-rose-50' },
@@ -69,7 +69,7 @@ const DailyReportPublicPage = () => {
         </div>
 
         {/* Khách cũ / khách mới */}
-        <Section title="Cuộc gọi: khách cũ · khách mới" icon={Users}>
+        <Section title="Gọi / note: khách cũ · khách mới" icon={Users}>
           {(() => {
             const oldC = st.old_calls ?? 0, newC = st.new_calls ?? 0, tot = oldC + newC || 1;
             return (
@@ -112,8 +112,8 @@ const DailyReportPublicPage = () => {
         )}
 
         {/* Cuộc gọi tách KHÁCH MỚI / KHÁCH CŨ */}
-        {[{ title: 'Cuộc gọi KHÁCH MỚI', items: callsNew, cls: 'text-emerald-700', badge: 'bg-emerald-600' },
-          { title: 'Cuộc gọi KHÁCH CŨ', items: callsOld, cls: 'text-slate-700', badge: 'bg-slate-500' }].map((g, gi) => (
+        {[{ title: 'Gọi / note KHÁCH MỚI', items: callsNew, cls: 'text-emerald-700', badge: 'bg-emerald-600' },
+          { title: 'Gọi / note KHÁCH CŨ', items: callsOld, cls: 'text-slate-700', badge: 'bg-slate-500' }].map((g, gi) => (
           <div key={gi} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
             <div className={`text-[13px] font-bold mb-2.5 flex items-center gap-1.5 ${g.cls}`}>
               <PhoneCall className="w-4 h-4" /> {g.title}

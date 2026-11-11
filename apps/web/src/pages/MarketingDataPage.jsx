@@ -1643,11 +1643,12 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const isNewRow = (r) => r && dayKey(arrivedAt(r)) === day;
 
   // CUỘC GỌI = note GetFly trong ngày + nhật ký gọi trong app
-  const inAppCalls = acts.filter(a => a.type === 'call');
+  // GỌI / LIÊN HỆ = cuộc gọi HOẶC note khách của nhân viên (note thông tin cũng là đã gọi)
+  const inAppCalls = acts.filter(a => a.created_by);
   const inAppIds = new Set(inAppCalls.map(a => a.data_id));
   const gfCalls = rows.filter(r => ofWho(r) && r.last_exchange && dayKey(r.getfly_updated_at) === day && !inAppIds.has(r.id));
   const callRows = [
-    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name, isNew: isNewRow(rowById.get(a.data_id)), st: rowById.get(a.data_id)?.status || null })),
+    ...inAppCalls.map(a => ({ time: a.created_at, name: a.khach?.customer_name || '—', phone: a.khach?.phone || a.phone || '', content: a.type === 'call' ? `${OUTCOMES[a.outcome]?.label || 'Gọi'}${a.content ? ' — ' + a.content : ''}` : `Note${a.content ? ' — ' + a.content : ''}`, author: a.author?.full_name, isNew: isNewRow(rowById.get(a.data_id)), st: rowById.get(a.data_id)?.status || null })),
     ...gfCalls.map(r => ({ time: r.getfly_updated_at, name: r.customer_name || '—', phone: r.phone, content: r.last_exchange, author: r.manager_name, gf: true, isNew: isNewRow(r), st: r.status || null })),
   ].sort((a, b) => new Date(a.time) - new Date(b.time));
   const newCallCnt = callRows.filter(c => c.isNew).length;
@@ -1664,7 +1665,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
   const byStatusData = Object.entries(STATUS).map(([k, v]) => ({ label: v.label, value: dayCustomerRows.filter(r => r.status === k).length, color: STATUS_COLORS[k] })).filter(d => d.value > 0);
   const callsNew = callRows.filter(c => c.isNew);
   const callsOld = callRows.filter(c => !c.isNew);
-  const byOutcome = {}; inAppCalls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
+  const byOutcome = {}; inAppCalls.filter(c => c.type === 'call' && c.outcome).forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
   const byOutcomeData = Object.entries(byOutcome).map(([k, v]) => ({ label: OUTCOMES[k]?.label || k, value: v, color: OUTCOME_COLORS[k] || '#64748b' }));
   const srcMap = {}; newRows.forEach(r => { const raw = String(r.source || '').trim(); const s = !raw ? 'Khác' : (/^\d+$/.test(raw) ? 'Nguồn #' + raw : raw); srcMap[s] = (srcMap[s] || 0) + 1; });
   const bySourceData = Object.entries(srcMap).map(([k, v], i) => ({ label: k, value: v, color: ['#12A4A5', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'][i % 6] })).sort((a, b) => b.value - a.value);
@@ -1789,8 +1790,8 @@ ${sec('Cuộc gọi: khách cũ ' + p.stats.old_calls + ' · khách mới ' + p.
 ${p.by_status.length ? sec('Khách trong ngày theo trạng thái', donut(p.by_status)) : ''}
 ${p.by_outcome.length ? sec('Kết quả cuộc gọi', bars(p.by_outcome)) : ''}
 ${p.by_source.length ? sec('Số mới theo nguồn', bars(p.by_source)) : ''}
-${sec('Cuộc gọi KHÁCH MỚI (' + p.calls_new.length + ')', p.calls_new.map(callItem).join('') || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
-${sec('Cuộc gọi KHÁCH CŨ (' + p.calls_old.length + ')', p.calls_old.map(callItem).join('') || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
+${sec('Gọi / note KHÁCH MỚI (' + p.calls_new.length + ')', p.calls_new.map(callItem).join('') || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
+${sec('Gọi / note KHÁCH CŨ (' + p.calls_old.length + ')', p.calls_old.map(callItem).join('') || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
 ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style="color:#cbd5e1;text-align:center;padding:12px">Không có</div>')}
 <div style="text-align:center;color:#cbd5e1;font-size:11px">Dr Tuấn Hùng — Internal System</div>
 </div></body></html>`;
@@ -1805,7 +1806,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
   const copyReport = () => {
     const d = new Date(day + 'T12:00:00').toLocaleDateString('vi-VN');
     const lines = [`BÁO CÁO TELESALE NGÀY ${d}${whoName ? ' — ' + whoName : ''}`];
-    lines.push(`• Cuộc gọi trong ngày: ${callRows.length} (khách cũ ${oldCallCnt} · khách mới ${newCallCnt})`);
+    lines.push(`• Gọi / note trong ngày: ${callRows.length} (khách cũ ${oldCallCnt} · khách mới ${newCallCnt})`);
     lines.push(`• Số mới tiếp nhận: ${newRows.length} (đã gọi ${newCalled.length} · chưa gọi ${newRows.length - newCalled.length})`);
     if (cares.length) lines.push(`• Chăm sóc: ${cares.length}`);
     if (nextCnt) lines.push(`• Hẹn liên hệ lại: ${nextCnt}`);
@@ -1862,7 +1863,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
               {/* 4 thẻ tổng quan */}
               <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                 {[
-                  { label: 'Cuộc gọi', value: callRows.length, cls: 'bg-emerald-50 text-emerald-700' },
+                  { label: 'Gọi / note', value: callRows.length, cls: 'bg-emerald-50 text-emerald-700' },
                   { label: 'Số mới', value: newRows.length, cls: 'bg-blue-50 text-blue-700' },
                   { label: 'Mới đã gọi', value: newCalled.length, cls: 'bg-teal-50 text-teal-700' },
                   { label: 'Mới chưa gọi', value: newRows.length - newCalled.length, cls: 'bg-rose-50 text-rose-700' },
@@ -1871,7 +1872,7 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
 
               {/* Khách cũ / mới */}
               <div className="rounded-2xl border border-slate-100 p-3.5 mb-3">
-                <div className="text-[12.5px] font-bold text-slate-700 mb-2">Cuộc gọi: khách cũ · khách mới</div>
+                <div className="text-[12.5px] font-bold text-slate-700 mb-2">Gọi / note: khách cũ · khách mới</div>
                 <div className="flex h-4 rounded-full overflow-hidden bg-slate-100 mb-1.5">
                   <div className="bg-slate-400" style={{ width: `${(oldCallCnt / (callRows.length || 1)) * 100}%` }} />
                   <div className="bg-emerald-500" style={{ width: `${(newCallCnt / (callRows.length || 1)) * 100}%` }} />
@@ -1887,8 +1888,8 @@ ${sec('Số mới tiếp nhận (' + p.news.length + ')', newList || '<div style
               {bySourceData.length > 0 && <div className="rounded-2xl border border-slate-100 p-3.5 mb-3"><div className="text-[12.5px] font-bold text-slate-700 mb-2.5">Số mới theo nguồn</div><Bars data={bySourceData} /></div>}
 
               {/* Chi tiết cuộc gọi — TÁCH RÕ KHÁCH MỚI / KHÁCH CŨ */}
-              {[{ title: 'Cuộc gọi KHÁCH MỚI', items: callsNew, tone: 'text-emerald-700', ring: 'border-emerald-200', badge: 'bg-emerald-600' },
-                { title: 'Cuộc gọi KHÁCH CŨ', items: callsOld, tone: 'text-slate-700', ring: 'border-slate-200', badge: 'bg-slate-500' }].map((g, gi) => (
+              {[{ title: 'Gọi / note KHÁCH MỚI', items: callsNew, tone: 'text-emerald-700', ring: 'border-emerald-200', badge: 'bg-emerald-600' },
+                { title: 'Gọi / note KHÁCH CŨ', items: callsOld, tone: 'text-slate-700', ring: 'border-slate-200', badge: 'bg-slate-500' }].map((g, gi) => (
                 <div key={gi} className="mb-4">
                   <div className={`text-[13px] font-bold mb-1.5 flex items-center gap-1.5 ${g.tone}`}>
                     <PhoneCall className="w-4 h-4" /> {g.title}
@@ -1959,13 +1960,14 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
   const fromKey = dayKey(fromIso);
   const row = (t) => {
     const mine = acts.filter(a => a.created_by === t.id);
-    const calls = mine.filter(a => a.type === 'call');
-    const picked = calls.filter(a => ['nghe_may', 'hen_goi_lai', 'can_nhac'].includes(a.outcome)).length;
+    const calls = mine;                                                     // gọi + note đều tính là đã liên hệ
+    const withOut = mine.filter(a => a.type === 'call' && a.outcome);
+    const picked = withOut.filter(a => ['nghe_may', 'hen_goi_lai', 'can_nhac'].includes(a.outcome)).length;
     const newData = rows.filter(r => r.telesale_id === t.id && dayKey(arrivedAt(r)) >= fromKey);
-    const called24 = newData.filter(r => acts.some(a => a.data_id === r.id && a.type === 'call' && new Date(a.created_at) - new Date(arrivedAt(r)) <= 86400000)).length;
+    const called24 = newData.filter(r => acts.some(a => a.data_id === r.id && new Date(a.created_at) - new Date(arrivedAt(r)) <= 86400000)).length;
     const myAppts = appts.filter(x => x.telesale_id === t.id);
     const deposits = myAppts.filter(x => ['coc', 'phau_thuat'].includes(x.status)).length;
-    return { t, calls: calls.length, pickRate: calls.length ? Math.round(picked * 100 / calls.length) : null, notes: mine.length - calls.length, newData: newData.length, called24, appts: myAppts.length, deposits,
+    return { t, calls: calls.length, pickRate: withOut.length ? Math.round(picked * 100 / withOut.length) : null, notes: new Set(mine.map(a => a.data_id)).size, newData: newData.length, called24, appts: myAppts.length, deposits,
       d2a: newData.length ? Math.round(myAppts.length * 100 / newData.length) : null, a2c: myAppts.length ? Math.round(deposits * 100 / myAppts.length) : null };
   };
   const data = people.map(row);
@@ -1995,7 +1997,7 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
                 <div key={d.t.id} className="rounded-2xl border border-slate-200 p-3.5">
                   <div className="font-bold text-slate-900 mb-2.5">{d.t.full_name}</div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {[['Cuộc gọi', d.calls], ['% nghe máy', pct(d.pickRate)], ['Ghi chú / chăm', d.notes], ['Data mới', d.newData], ['Gọi trong 24h', d.newData ? `${d.called24}/${d.newData}` : '—'],
+                    {[['Gọi / note', d.calls], ['% nghe máy', pct(d.pickRate)], ['Khách đã liên hệ', d.notes], ['Data mới', d.newData], ['Gọi trong 24h', d.newData ? `${d.called24}/${d.newData}` : '—'],
                       ['Lịch hẹn', d.appts], ['Cọc / PT', d.deposits], ['Data → lịch hẹn', pct(d.d2a)], ['Lịch hẹn → cọc', pct(d.a2c)]].map(([k, v]) => (
                       <div key={k} className="rounded-xl bg-slate-50 px-2.5 py-2"><div className="text-[11px] text-slate-500">{k}</div><div className="text-[16px] font-bold text-slate-900 tabular-nums">{v}</div></div>
                     ))}
