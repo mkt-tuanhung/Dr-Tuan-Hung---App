@@ -56,6 +56,8 @@ const zaloLink = (p) => { const d = String(p || '').replace(/\D/g, ''); return d
 const arrivedAt = (r) => r.getfly_created_at || r.created_at;
 const dayKey = (iso) => { if (!iso) return ''; const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const todayKey = () => dayKey(new Date().toISOString());
+// Thứ Hai đầu tuần (giờ máy VN) -> 'YYYY-MM-DD'
+const weekStartKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d.toISOString()); };
 const fmtD = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }); };
 // Độ ưu tiên gọi: tới hạn gọi lại -> nóng -> tiềm năng -> chưa gọi lần nào -> còn lại.
 // ===== Bộ nhớ đệm Data KH (dùng chung giữa các lần mở màn trong 1 phiên) =====
@@ -295,6 +297,8 @@ const MarketingDataPage = ({ initialView = null }) => {
     const a = apptOf(r);
     switch (chip) {
       case 'can_goi': return isDue(r.next_call_at);
+      case 'hom_nay': return dayKey(arrivedAt(r)) === todayKey();          // khách mới về / trực page tạo hôm nay
+      case 'tuan_nay': return dayKey(arrivedAt(r)) >= weekStartKey();      // khách mới trong tuần (từ thứ Hai)
       case 'nong': return r.status === 'nong';
       case 'mat': return r.status === 'mat';
       case 'da_lam_dv': return r.status === 'da_lam_dv' || a?.status === 'phau_thuat';
@@ -368,6 +372,10 @@ const MarketingDataPage = ({ initialView = null }) => {
     setQueue({ ...queue, pos: nextPos });
     if (nxt) setDetail(nxt); else queueNext();
   };
+  // Khách MỚI (ngày data về) hôm nay / tuần này — telesale chỉ đếm khách của mình
+  const mineOrAll = (r) => (isTele ? r.telesale_id === me?.id || !r.telesale_id : true);
+  const newToday = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) === todayKey()).length;
+  const newWeek = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) >= weekStartKey()).length;
   const dueCount = rows.filter(r => (isTele ? r.telesale_id === me?.id : true) && isDue(r.next_call_at)).length;
   const stat = {
     total: rows.length,
@@ -491,10 +499,10 @@ const MarketingDataPage = ({ initialView = null }) => {
         <div className="flex flex-wrap items-center gap-1.5">
         {/* Lọc nhanh */}
         <div className="flex items-center gap-1.5">
-          {[{ k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
+          {[{ k: 'hom_nay', label: 'Khách hôm nay', n: newToday, hot: true }, { k: 'tuan_nay', label: 'Khách tuần này', n: newWeek, hot: true }, { k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
             <button key={c.k} onClick={() => { setChip(chip === c.k ? 'all' : c.k); setPage(1); }}
               className={`px-3 h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-              {c.label}{c.n > 0 && <span className="ml-1 text-rose-500">{c.n}</span>}
+              {c.label}{c.n > 0 && <span className={`ml-1 ${c.hot ? 'inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]' : 'text-rose-500'}`}>{c.n}</span>}
             </button>
           ))}
         </div>
