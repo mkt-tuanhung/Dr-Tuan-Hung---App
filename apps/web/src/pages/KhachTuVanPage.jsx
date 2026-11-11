@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useContext, createContext } from 'react';
+import ConsultUpdateFields, { uploadConsultFiles } from '@/components/ConsultUpdateFields.jsx';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -449,6 +450,10 @@ const EvalModal = ({ app, onClose, onSaved }) => {
     surgery_plan: planOf(app), plan_date: app.expected_surgery_date || '',   // form cọc: ngày PT dự kiến
   });
   const [saving, setSaving] = useState(false);
+  // Khách CỌC / BONG -> PHẪU THUẬT: cho cập nhật nội dung tư vấn + ảnh hồ sơ mới
+  const fromCocBong = ['coc', 'bong'].includes(app.status);
+  const [consultNote, setConsultNote] = useState(app.consult_note || '');
+  const [consultFiles, setConsultFiles] = useState([]);
   const save = async () => {
     if (f.status === 'coc') {
       const planErr = surgeryPlanError(f.surgery_plan, f.plan_date);
@@ -457,6 +462,11 @@ const EvalModal = ({ app, onClose, onSaved }) => {
     setSaving(true);
     let upd = { status: f.status, surgery_type: f.surgery_type };
     if (f.status === 'phau_thuat') upd = { ...upd, surgery_date: f.expected_surgery_date, expected_surgery_date: f.expected_surgery_date, expected_surgery_plan: 'date', revenue: f.revenue || 0, upsale_revenue: f.upsale_revenue || 0, service: f.service, bong_date: null };
+    if (f.status === 'phau_thuat' && fromCocBong) {
+      let newConsult = [];
+      try { newConsult = await uploadConsultFiles(consultFiles); } catch (err) { toast.error('Tải ảnh hồ sơ lỗi: ' + err.message); setSaving(false); return; }
+      upd = { ...upd, consult_note: consultNote.trim() || null, consult_image_urls: [...(app.consult_image_urls || []), ...newConsult] };
+    }
     else if (f.status === 'coc') upd = { ...upd, deposit_date: f.deposit_date, deposit_amount: f.deposit_amount || 0, service: f.service, ...surgeryPlanPatch(f.surgery_plan, f.plan_date), revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
     else if (f.status === 'bong') upd = { ...upd, notes: f.notes, bong_date: today, revenue: 0, upsale_revenue: 0, surgery_date: null };
     const { data, error } = await supabase.from('customer_appointments').update(upd).eq('id', app.id).select('id, status, revenue, surgery_date');
@@ -492,6 +502,7 @@ const EvalModal = ({ app, onClose, onSaved }) => {
           <Field label="Upsale (VNĐ)"><MoneyInput value={f.upsale_revenue} onChange={v => setF({ ...f, upsale_revenue: v })} className={inp} /></Field>
           <Field label="Dịch vụ"><input value={f.service} onChange={e => setF({ ...f, service: e.target.value })} className={inp} /></Field>
         </div>
+        {fromCocBong && <div className="mb-4"><ConsultUpdateFields note={consultNote} onNote={setConsultNote} existing={app.consult_image_urls || []} files={consultFiles} onFiles={setConsultFiles} /></div>}
       </>)}
       {f.status === 'coc' && (<>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

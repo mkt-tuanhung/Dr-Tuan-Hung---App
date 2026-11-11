@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ConsultUpdateFields, { uploadConsultFiles } from '@/components/ConsultUpdateFields.jsx';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -67,6 +68,8 @@ const KhachCocPage = ({ isNested = false }) => {
   const [showBongModal, setShowBongModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [showSurgeryModal, setShowSurgeryModal] = useState(false);
+  const [consultNote, setConsultNote] = useState('');   // cập nhật hồ sơ tư vấn khi lên phẫu thuật
+  const [consultFiles, setConsultFiles] = useState([]);
   const [saving, setSaving] = useState(false);
 
   // Forms
@@ -224,6 +227,8 @@ const KhachCocPage = ({ isNested = false }) => {
   const handleSurgerySubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    let newConsult = [];
+    try { newConsult = await uploadConsultFiles(consultFiles); } catch (err) { toast.error('Tải ảnh hồ sơ lỗi: ' + err.message); setSaving(false); return; }
     const { error } = await supabase.from('customer_appointments')
       .update({
         status: 'phau_thuat',
@@ -236,7 +241,9 @@ const KhachCocPage = ({ isNested = false }) => {
         service_group: surgeryForm.service_group,
         surgery_type: surgeryForm.surgery_type,
         customer_source: surgeryForm.customer_source,
-        customer_type: surgeryForm.customer_type
+        customer_type: surgeryForm.customer_type,
+        consult_note: consultNote.trim() || null,
+        consult_image_urls: [...(selectedApp.consult_image_urls || []), ...newConsult],
       }).eq('id', selectedApp.id);
 
     if (error) toast.error(error.message);
@@ -262,6 +269,7 @@ const KhachCocPage = ({ isNested = false }) => {
       customer_source: app.customer_source || 'Ads',
       customer_type: app.customer_type || 'Mới'
     });
+    setConsultNote(app.consult_note || ''); setConsultFiles([]);
     setShowSurgeryModal(true);
   };
 
@@ -629,6 +637,7 @@ const KhachCocPage = ({ isNested = false }) => {
                   <MoneyInput value={surgeryForm.upsale_revenue} onChange={v => setSurgeryForm({ ...surgeryForm, upsale_revenue: v })} className="e-input" placeholder="0" />
                 </div>
               </div>
+              <ConsultUpdateFields note={consultNote} onNote={setConsultNote} existing={selectedApp?.consult_image_urls || []} files={consultFiles} onFiles={setConsultFiles} />
             </div>
             <div className="e-modal-footer">
               <button type="submit" disabled={saving} className="e-btn e-btn-primary">{saving ? 'Đang lưu...' : 'Hoàn tất & Chuyển module'}</button>
