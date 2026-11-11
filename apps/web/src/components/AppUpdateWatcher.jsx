@@ -6,6 +6,7 @@
 //   - còn lại -> hiện thanh "Có bản cập nhật mới · Tải lại" (không làm mất dữ liệu đang nhập)
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { safeReload } from '@/lib/safeReload';
 
 const CHECK_EVERY_MS = 5 * 60 * 1000;
 const ENTRY_RE = /\/assets\/index-[A-Za-z0-9_-]+\.js/;
@@ -35,10 +36,15 @@ export default function AppUpdateWatcher() {
     if (!import.meta.env.PROD || !current.current) return undefined;
     const first = setTimeout(check, 30 * 1000);
     const timer = setInterval(check, CHECK_EVERY_MS);
+    // Mở lại app: chờ app hiện hẳn (iOS ra màn trắng nếu reload ngay lúc vừa resume), 1 lần duy nhất
+    let busy = false;
     const onShow = async () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || busy) return;
+      busy = true;
+      await new Promise(r => setTimeout(r, 600));
       const hasNew = ready || await check();
-      if (hasNew && !hasOpenOverlay()) window.location.reload();
+      if (hasNew && !hasOpenOverlay()) safeReload('new version on resume');
+      busy = false;
     };
     document.addEventListener('visibilitychange', onShow);
     window.addEventListener('focus', onShow);
@@ -50,7 +56,7 @@ export default function AppUpdateWatcher() {
     <div className="fixed inset-x-0 top-0 z-[90] flex justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pointer-events-none">
       <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-slate-900 text-white shadow-float pl-4 pr-1.5 py-1.5 text-[13.5px] max-w-full">
         <span className="min-w-0 truncate">Có bản cập nhật mới của app</span>
-        <button type="button" onClick={() => window.location.reload()}
+        <button type="button" onClick={() => { try { sessionStorage.removeItem('app_reload_at'); } catch { /* */ } safeReload('update bar'); }}
           className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-teal-500 hover:bg-teal-400 font-semibold">
           <RefreshCw className="w-4 h-4" />Tải lại
         </button>

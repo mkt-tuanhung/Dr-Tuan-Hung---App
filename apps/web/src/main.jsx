@@ -7,6 +7,20 @@ import '@/index.css';
 import { resolveNotifLink } from '@/lib/notif';
 import AppUpdateWatcher from '@/components/AppUpdateWatcher.jsx';
 import { initBackNav } from '@/lib/backNav';
+import RootErrorBoundary from '@/components/RootErrorBoundary.jsx';
+import { safeReload, isChunkError, cleanReloadParam } from '@/lib/safeReload';
+
+// ===== CHỐNG MÀN HÌNH TRẮNG (PWA iPhone mở lại sau khi app có bản mới) =====
+cleanReloadParam();
+window.__APP_BOOTED = true;   // báo cho "chó canh" trong index.html là app đã chạy
+// Vite báo không tải được file code phụ -> tải lại lấy bản mới
+window.addEventListener('vite:preloadError', (e) => { e.preventDefault?.(); safeReload('vite:preloadError'); });
+window.addEventListener('unhandledrejection', (e) => { if (isChunkError(e.reason)) safeReload('chunk error (promise)'); });
+window.addEventListener('error', (e) => { if (isChunkError(e.error || e.message)) safeReload('chunk error'); });
+// iOS khôi phục trang từ bộ nhớ (bfcache) mà khung app trống -> tải lại
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted && !document.getElementById('root')?.childElementCount) safeReload('pageshow empty');
+});
 
 // Nút Back / vuốt quay lại: đóng hộp thoại, ngăn kéo, về màn trước
 initBackNav();
@@ -45,8 +59,10 @@ if (window.visualViewport) {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <App />
-    <AppUpdateWatcher />
-  </BrowserRouter>
+  <RootErrorBoundary>
+    <BrowserRouter>
+      <App />
+      <AppUpdateWatcher />
+    </BrowserRouter>
+  </RootErrorBoundary>
 );
