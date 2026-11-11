@@ -462,9 +462,12 @@ const StaffDashboard = () => {
 
   const canCheckIn = flatMenu.some(m => m.id === 'attendance');
   const centerAction = canCheckIn ? { id: 'attendance', label: 'Chấm công', icon: ScanFace, onPress: () => setScanReq(n => n + 1) } : null;
+  // TELESALE: "Trang chủ" (mobile) = Data khách hàng, đứng đầu thanh dưới
+  const isTeleHome = [profile?.role, profile?.role_2].includes('telesale') && ![profile?.role, profile?.role_2].includes('admin') && flatMenu.some(m => m.id === 'data_kh');
+  const pref = isTeleHome ? ['data_kh', 'overview', 'appointments', 'kpi', 'my_payroll'] : BOTTOM_PREF;
   const sideIds = [
-    ...BOTTOM_PREF.filter(id => flatMenu.some(m => m.id === id)),
-    ...flatMenu.map(m => m.id).filter(id => !BOTTOM_PREF.includes(id)),
+    ...pref.filter(id => flatMenu.some(m => m.id === id)),
+    ...flatMenu.map(m => m.id).filter(id => !pref.includes(id)),
   ].filter(id => id !== centerAction?.id);
   const bottomItems = sideIds.slice(0, centerAction ? 3 : 4).map(id => flatMenu.find(m => m.id === id));
 
@@ -479,7 +482,7 @@ const StaffDashboard = () => {
       roleLabel={profile?.position || roleLabel}
       bottomItems={bottomItems}
       centerAction={centerAction}
-      homeId={flatMenu.some(m => m.id === 'overview') ? 'overview' : flatMenu[0]?.id}
+      homeId={isTeleHome ? 'data_kh' : (flatMenu.some(m => m.id === 'overview') ? 'overview' : flatMenu[0]?.id)}
     >
       {renderContent()}
     </AppShell>
