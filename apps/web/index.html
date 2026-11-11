@@ -27,6 +27,31 @@
         document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
       });
     </script>
+    <script>
+      // CHÓ CANH MÀN HÌNH TRẮNG: sau 8 giây app chưa chạy (file code không tải được) -> tự tải lại 1 lần,
+      // lần sau vẫn trắng thì hiện nút "Tải lại" thay vì để trắng xoá.
+      (function () {
+        function blank() { var r = document.getElementById('root'); return !window.__APP_BOOTED || !r || !r.childElementCount; }
+        function show() {
+          if (document.getElementById('boot-fallback')) return;
+          var d = document.createElement('div'); d.id = 'boot-fallback';
+          d.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;background:#F3F9F9;font-family:-apple-system,system-ui,sans-serif;z-index:99999';
+          d.innerHTML = '<div style="text-align:center;padding:24px"><img src="/logo.png?v=2" style="width:64px;height:64px;border-radius:16px"><div style="font-weight:700;margin:14px 0 6px;color:#0f172a">Đang tải app…</div><div style="font-size:14px;color:#64748b;margin-bottom:16px">Mạng chậm hoặc app vừa cập nhật.</div><button onclick="location.replace(location.pathname+\'?_r=\'+Date.now())" style="height:44px;padding:0 22px;border-radius:14px;border:0;background:#0d9488;color:#fff;font-weight:700;font-size:15px">Tải lại</button></div>';
+          document.body.appendChild(d);
+          var iv = setInterval(function () { if (!blank()) { clearInterval(iv); d.remove(); } }, 1000);
+        }
+        function watch() {
+          setTimeout(function () {
+            if (!blank()) return;
+            var k = 'boot_retry_at', t = 0; try { t = +sessionStorage.getItem(k) || 0; } catch (e) {}
+            if (Date.now() - t > 30000) { try { sessionStorage.setItem(k, Date.now()); } catch (e) {} location.replace(location.pathname + '?_r=' + Date.now()); }
+            else show();
+          }, 8000);
+        }
+        watch();
+        window.addEventListener('pageshow', function (e) { if (e.persisted) watch(); });
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
