@@ -27,10 +27,12 @@ const vnTime = (iso?: string | null) => {
 };
 const isVideo = (u: string) => /\.(mp4|mov|m4v|webm|3gp|avi|mkv)(\?|$)/i.test(u);
 
-async function send(text: string) {
+const CHAT_POSTOP = Deno.env.get('TELEGRAM_POSTOP_CHAT_ID') || '-5448812418';   // nhóm CHĂM SÓC HẬU PHẪU
+const CHAT_CSKH = Deno.env.get('TELEGRAM_CSKH_CHAT_ID') || '-5461485486';       // nhóm CHĂM SÓC KHÁCH HÀNG
+async function send(text: string, chat: string = CHAT) {
   const r = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+    body: JSON.stringify({ chat_id: chat, text, parse_mode: 'HTML', disable_web_page_preview: true }),
   });
   const j = await r.json().catch(() => ({}));
   if (!j.ok) console.error('sendMessage lỗi', j.description || r.status);
@@ -69,6 +71,63 @@ const later = (task: Promise<unknown>) => {
   const rt: any = globalThis as any;
   if (rt.EdgeRuntime?.waitUntil) rt.EdgeRuntime.waitUntil(task); else task.catch(() => {});
 };
+
+// ===== (4) HẬU PHẪU: mốc đến hạn / quá hạn mỗi sáng 8:00 · (5) bàn giao Điều dưỡng -> CSKH =====
+const DEFAULT_PLAN = [{ key: 'd0', off: 0, label: 'Ngày phẫu thuật' }, { key: 'd1', off: 1, label: 'Ngày 1' }, { key: 'd2', off: 2, label: 'Ngày 2' },
+  { key: 'd7', off: 7, label: 'Ngày 7' }, { key: 'd14', off: 14, label: 'Ngày 14' }, { key: 'd30', off: 30, label: 'Ngày 30' }];
+const LEGACY_CUTOFF = '2026-10-13';
+async function postopDaily() {
+  const vn = new Date(Date.now() + 7 * 3600_000);
+  const today = vn.toISOString().slice(0, 10);
+  const { data: tpls } = await db.from('care_templates').select('service_group, milestones, status').eq('status', 'approved');
+  const tplFor = (g: string | null) => (tpls || []).find((t: any) => t.service_group && t.service_group === g)?.milestones || (tpls || []).find((t: any) => !t.service_group)?.milestones || DEFAULT_PLAN;
+  const { data: apps } = await db.from('customer_appointments')
+    .select('id, customer_name, phone, service, service_group, surgery_date, care_plan, care_milestones, handover_status, post_op_status, warning_signs, hau_phau:profiles!hau_phau_id(full_name)')
+    .eq('status', 'phau_thuat').gte('surgery_date', LEGACY_CUTOFF).lte('surgery_date', today).limit(1000);
+  const byNurse: Record<string, string[]> = {};
+  let overdueN = 0, dueN = 0, waitHand = 0, waitCskh = 0;
+  for (const a of (apps || []) as any[]) {
+    if (a.handover_status === 'da_nhan') continue;
+    if (a.handover_status === 'cho_nhan') { waitCskh++; continue; }
+    const plan: any[] = Array.isArray(a.care_plan) && a.care_plan.length ? a.care_plan : tplFor(a.service_group);
+    const done = new Set((Array.isArray(a.care_milestones) ? a.care_milestones : []).filter((m: any) => m?.done).map((m: any) => m.key));
+    const surg = Date.parse(String(a.surgery_date).slice(0, 10) + 'T00:00:00Z');
+    const items: string[] = [];
+    for (const m of plan) {
+      if (!m || Number(m.off) <= 0 || done.has(m.key)) continue;
+      const d = new Date(surg + Number(m.off) * 86400000).toISOString().slice(0, 10);
+      if (d === today) { items.push(`🟡 ${esc(m.label)} (hôm nay)`); dueN++; }
+      else if (d < today) { items.push(`🔴 ${esc(m.label)} — quá hạn ${Math.round((Date.parse(today) - Date.parse(d)) / 86400000)} ngày`); overdueN++; }
+    }
+    const lastOff = Math.max(...plan.map((m: any) => Number(m.off) || 0));
+    if (new Date(surg + lastOff * 86400000).toISOString().slice(0, 10) <= today) { items.push('📋 Tới mốc cuối — cần bàn giao CSKH'); waitHand++; }
+    if (!items.length) continue;
+    const nurse = a.hau_phau?.full_name || 'Chưa phân công';
+    (byNurse[nurse] = byNurse[nurse] || []).push(`• <b>${esc(a.customer_name)}</b> ${esc(a.phone || '')}${(a.warning_signs || []).length || a.post_op_status === 'Có biến chứng' ? ' ⚠️' : ''}: ${items.join('; ')}`);
+  }
+  if (!Object.keys(byNurse).length && !waitCskh) return { ok: true, empty: true };
+  let text = `🩺 <b>VIỆC HẬU PHẪU HÔM NAY ${today.slice(8, 10)}/${today.slice(5, 7)}</b>\n🔴 Quá hạn: ${overdueN} · 🟡 Đến hạn: ${dueN} · 📋 Chờ bàn giao: ${waitHand} · 🤝 Chờ CSKH nhận: ${waitCskh}`;
+  for (const [n, list] of Object.entries(byNurse)) text += `\n\n👩‍⚕️ <b>${esc(n)}</b>\n${list.slice(0, 30).join('\n')}`;
+  text += `\n\n👉 App → Hậu phẫu → mở khách → bấm mốc để đánh dấu hoàn thành.`;
+  await send(text.slice(0, 4000), CHAT_POSTOP);
+  return { ok: true, overdueN, dueN, waitHand, waitCskh };
+}
+async function handoverNotify(id: string) {
+  const { data: a } = await db.from('customer_appointments')
+    .select('customer_name, phone, service, surgery_date, handover_status, handover_summary, handover_override, handover_nurse_at, handover_cskh_at, nurse:profiles!handover_nurse_by(full_name), cskh:profiles!handover_cskh_by(full_name)')
+    .eq('id', id).maybeSingle();
+  if (!a) return { ok: false };
+  const x: any = a;
+  if (x.handover_status === 'cho_nhan') {
+    await send(`📋 <b>BÀN GIAO KHÁCH SANG CSKH</b>` + line('Khách', `<b>${esc(x.customer_name)}</b> ${esc(x.phone || '')}`) + line('Dịch vụ', esc(x.service)) +
+      line('Ngày mổ', String(x.surgery_date || '').slice(0, 10).split('-').reverse().join('/')) + line('Điều dưỡng giao', esc(x.nurse?.full_name)) +
+      line('Tóm tắt', esc(String(x.handover_summary || '').slice(0, 1200))) + (x.handover_override ? line('⚠️ Bàn giao ngoại lệ', esc(x.handover_override)) : '') +
+      `\n👉 CSKH vào app → Hậu phẫu → tab CSKH → ký nhận.`, CHAT_CSKH);
+  } else if (x.handover_status === 'da_nhan') {
+    await send(`✅ <b>CSKH ĐÃ NHẬN BÀN GIAO</b>` + line('Khách', `<b>${esc(x.customer_name)}</b>`) + line('CSKH nhận', esc(x.cskh?.full_name)) + line('Lúc', vnTime(x.handover_cskh_at)), CHAT_POSTOP);
+  }
+  return { ok: true };
+}
 
 // ===== (1) THỜI HẠN GỌI LEAD MỚI 15' (cron mỗi 2 phút): nhắc còn 5 phút + báo QUÁ HẠN =====
 async function slaCheck() {
@@ -248,6 +307,8 @@ Deno.serve(async (req) => {
     if (!CHAT) return new Response('chưa cấu hình nhóm');
     const body = await req.json().catch(() => ({}));
     if (body.mode === 'morning') { await morning(); return new Response('ok morning'); }
+    if (body.mode === 'postop_daily') { const r = await postopDaily(); return new Response(JSON.stringify(r)); }
+    if (body.table === 'handover' && body.id) { const r = await handoverNotify(String(body.id)); return new Response(JSON.stringify(r)); }
     if (body.mode === 'sla') { const r = await slaCheck(); return new Response(JSON.stringify(r)); }
     if (body.mode === 'appt_remind') { const r = await apptRemind(); return new Response(JSON.stringify(r)); }
     if (body.mode === 'daily_report') { const r = await dailyReport(body.day); return new Response(JSON.stringify(r)); }
