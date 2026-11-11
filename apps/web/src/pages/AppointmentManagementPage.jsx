@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { askReason, BONG_REASONS, NO_SHOW_REASONS, RESCHEDULE_REASONS } from '@/components/ReasonPrompt.jsx';
 import { supabase } from '@/lib/supabaseClient';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
@@ -409,6 +410,12 @@ const AppointmentManagementPage = () => {
       };
 
       if (createForm.id) {
+        const orig = appointments.find(a => a.id === createForm.id);
+        if (orig && (orig.appointment_date !== payload.appointment_date || String(orig.appointment_time || '').slice(0, 5) !== String(payload.appointment_time || '').slice(0, 5))) {
+          const r = await askReason({ title: 'Lý do dời lịch hẹn', subtitle: `${orig.customer_name} · ${String(orig.appointment_time || '').slice(0, 5)} ${orig.appointment_date} → ${String(payload.appointment_time || '').slice(0, 5)} ${payload.appointment_date}`, options: RESCHEDULE_REASONS });
+          if (!r) { setSaving(false); return; }
+          payload.reschedule_reason = r.text;
+        }
         const { error } = await supabase.from('customer_appointments').update(payload).eq('id', createForm.id);
         if (error) throw error;
         toast.success('Đã cập nhật lịch hẹn!');
@@ -512,6 +519,19 @@ const AppointmentManagementPage = () => {
     setShowEvalModal(true);
   };
 
+  // (3) Khách xác nhận lịch / KHÔNG ĐẾN (có lý do)
+  const confirmAppt = async (app) => {
+    const { error } = await supabase.from('customer_appointments').update({ confirmed_at: new Date().toISOString(), confirmed_by: profile.id }).eq('id', app.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã ghi: khách xác nhận lịch'); loadData();
+  };
+  const markNoShow = async (app) => {
+    const r = await askReason({ title: 'Khách KHÔNG ĐẾN — lý do', subtitle: `${app.customer_name} · ${String(app.appointment_time || '').slice(0, 5)} ${app.appointment_date}`, options: NO_SHOW_REASONS });
+    if (!r) return;
+    const { error } = await supabase.from('customer_appointments').update({ no_show_at: new Date().toISOString(), no_show_reason: r.text }).eq('id', app.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Đã ghi khách không đến — bấm sửa để dời lịch mới nếu khách hẹn lại'); loadData();
+  };
   const receiveConsult = async (app) => {
     const { error } = await supabase.from('customer_appointments').update({ consult_received: true }).eq('id', app.id);
     if (error) { toast.error(error.message); return; }
@@ -535,8 +555,10 @@ const AppointmentManagementPage = () => {
         // Cọc: chưa mổ → xoá doanh thu/ngày mổ và dấu bong cũ
         updateData = { ...updateData, deposit_date: evalForm.deposit_date, deposit_amount: evalForm.deposit_amount || 0, service: evalForm.service, ...surgeryPlanPatch(evalForm.surgery_plan, evalForm.plan_date), revenue: 0, upsale_revenue: 0, surgery_date: null, bong_date: null };
       } else if (evalForm.status === 'bong') {
-        // Bong: huỷ → xoá doanh thu/ngày mổ để không lọt vào thống kê
-        updateData = { ...updateData, notes: evalForm.notes, bong_date: vnToday(), revenue: 0, upsale_revenue: 0, surgery_date: null };
+        // Bong: huỷ → xoá doanh thu/ngày mổ để không lọt vào thống kê; bắt buộc chọn lý do bong
+        const br = await askReason({ title: 'Lý do khách bong', subtitle: evalApp.customer_name, options: BONG_REASONS });
+        if (!br) { setSaving(false); return; }
+        updateData = { ...updateData, notes: evalForm.notes, bong_reason: br.text, bong_date: vnToday(), revenue: 0, upsale_revenue: 0, surgery_date: null };
       }
 
       // Hồ sơ tư vấn: upload ảnh mới + giữ ảnh cũ + ghi chú
@@ -631,6 +653,17 @@ const AppointmentManagementPage = () => {
                             <button onClick={() => setConsultView(app)} className="e-btn e-btn-secondary e-btn-sm">
                               <ImagePlus className="w-4 h-4" /> Hồ sơ tư vấn
                             </button>
+                          )}
+                          {app.status === 'scheduled' && !app.consult_received && !isRecheck(app) && (
+                            app.no_show_at
+                              ? <div className="e-badge e-tone-danger w-full justify-start" title={app.no_show_reason || ''}>✗ Không đến{app.no_show_reason ? ` · ${app.no_show_reason}` : ''}</div>
+                              : app.confirmed_at
+                                ? <div className="e-badge e-tone-success">✓ Khách đã xác nhận lịch</div>
+                                : (isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
+                                  <button onClick={() => confirmAppt(app)} className="e-btn e-btn-secondary e-btn-sm"><UserCheck className="w-4 h-4 text-teal-600" /> Xác nhận lịch</button>)
+                          )}
+                          {app.status === 'scheduled' && !app.consult_received && !app.no_show_at && !isRecheck(app) && app.appointment_date <= vnToday() && (isAdmin || ['telesale', 'sale_offline'].includes(profile?.role)) && (
+                            <button onClick={() => markNoShow(app)} className="e-btn e-btn-secondary e-btn-sm text-danger-600"><Ban className="w-4 h-4" /> Không đến</button>
                           )}
                           {app.status === 'scheduled' && !app.consult_received && ['admin', 'sale_offline', 'telesale'].includes(profile?.role) && (
                             <button onClick={() => receiveConsult(app)} className="e-btn e-btn-primary e-btn-sm">

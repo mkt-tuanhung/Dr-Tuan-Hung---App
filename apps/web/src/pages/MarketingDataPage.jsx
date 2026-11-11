@@ -13,6 +13,7 @@ import { useGetflyNotes, GetflyNotesList } from '@/features/crm/GetflyNotes.jsx'
 import { surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote, ImagePlus, Film, Loader2 } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
+import { askReason, LOST_REASONS } from '@/components/ReasonPrompt.jsx';
 import { uploadToR2, uploadViaPresignWithProgress } from '@/lib/r2Client';
 
 const STATUS = {
@@ -127,6 +128,24 @@ const scriptFor = (r) => {
   return hit ? { title: hit[1], text: open + hit[2] } : { title: 'Chung', text: open + 'Chào chị, em là trợ lý Dr Tuấn Hùng. Trước chị có quan tâm dịch vụ bên em, không biết chị đã tìm hiểu thêm được chưa ạ? Tuần này Dr có lịch thăm khám trực tiếp, em giữ cho chị 1 suất để Dr tư vấn kỹ nhé.' };
 };
 const WAKE_PER_DAY = 20;   // (5) mỗi telesale đánh thức tối đa 20 khách cũ / ngày
+// ===== (2) LÝ DO MẤT KHÁCH: chuyển sang Mất / Chốt Fail bắt buộc chọn lý do =====
+const LOST_STATUSES = ['mat', 'chot_fail'];
+// Trả {} (không cần lý do) | { lost_reason } | null (người dùng huỷ -> không đổi giai đoạn)
+const lostPatch = async (status, prev, name) => {
+  if (!LOST_STATUSES.includes(status) || status === prev) return {};
+  const r = await askReason({ title: `Lý do chuyển "${STATUS[status]?.label}"`, subtitle: name || '', options: LOST_REASONS });
+  return r ? { lost_reason: r.text } : null;
+};
+// ===== (1) THỜI HẠN GỌI LEAD MỚI 15 PHÚT =====
+const slaPending = (r) => !!r.sla_due_at && !r.first_contact_at && !['mat', 'da_lam_dv'].includes(r.status);
+const SlaBadge = ({ r }) => {
+  if (!slaPending(r)) return null;
+  const m = Math.round((new Date(r.sla_due_at).getTime() - Date.now()) / 60000);
+  const late = m < 0;
+  const tone = late ? 'bg-rose-600 text-white animate-pulse' : m <= 5 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800';
+  const txt = late ? `Quá hạn gọi ${-m >= 60 ? Math.floor(-m / 60) + 'g' + String(-m % 60).padStart(2, '0') : -m + ' phút'}` : m > 60 ? `Gọi trước ${new Date(r.sla_due_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : `Gọi trong ${m} phút`;
+  return <span title="Lead mới: gọi / note lần đầu trong 15 phút (ngoài giờ 8h–21h: trước 8:15 sáng)" className={`shrink-0 inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${tone}`}>⏱ {txt}</span>;
+};
 const RANGE_CHIPS = { thang_nay: () => monthRange(0), thang_truoc: () => monthRange(-1), quy_truoc: prevQuarterRange };
 const inRange = (r, [a, b]) => { const k = dayKey(arrivedAt(r)); return k >= a && k < b; };
 const weekStartKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d.toISOString()); };
@@ -200,7 +219,9 @@ const MarketingDataPage = ({ initialView = null }) => {
   const [quickNote, setQuickNote] = useState(null);     // khách đang ghi chú nhanh (mobile)
   const [tRange, setTRange] = useState(null);           // lọc thời gian: { k, label, from, to } (to = ngày kế tiếp)
   const [timeOpen, setTimeOpen] = useState(false);
-  const [kpiOpen, setKpiOpen] = useState(false);       // (3)(4) KPI telesale + giờ vàng
+  const [kpiOpen, setKpiOpen] = useState(false);
+  const [, setTick] = useState(0);                      // đồng hồ đếm ngược 15' tự chạy
+  useEffect(() => { const t = setInterval(() => setTick(x => x + 1), 30000); return () => clearInterval(t); }, []);       // (3)(4) KPI telesale + giờ vàng
   const [filterOpen, setFilterOpen] = useState(false);  // bottom-sheet bộ lọc (mobile)
   // Chế độ xem: 'list' (bảng) | 'pipeline' (cột thẻ theo giai đoạn, kiểu Ethics BOS)
   const [view, setView] = useState(() => { if (initialView) return initialView; try { return localStorage.getItem('crm_view') === 'pipeline' ? 'pipeline' : 'list'; } catch { return 'list'; } });
@@ -395,6 +416,7 @@ const MarketingDataPage = ({ initialView = null }) => {
       case 'tuan_nay': return dayKey(arrivedAt(r)) >= weekStartKey();      // khách mới trong tuần (từ thứ Hai)
       case 'thang_nay': case 'thang_truoc': case 'quy_truoc': return inRange(r, RANGE_CHIPS[chip]());
       case 'uu_tien': return LC_ACTIVE(r);
+      case 'cho_goi': return slaPending(r);
       case 'sap_nguoi': return isColdHot(r);
       case 'danh_thuc': return wakeIds.has(r.id);
       case 'lc_0_3': case 'lc_4_7': case 'lc_8_30': case 'lc_30': case 'lc_none':
@@ -418,7 +440,9 @@ const MarketingDataPage = ({ initialView = null }) => {
     (!fTruc || r.truc_page_id === fTruc) &&
     (!fDay || dayKey(arrivedAt(r)) === fDay) && (!tRange || inRange(r, [tRange.from, tRange.to])) && matchTele(r) && matchChip(r));
   const visible0 = baseVisible.filter(r => !fStatus || r.status === fStatus);
-  const visible = ['uu_tien', 'sap_nguoi', 'danh_thuc'].includes(chip)
+  const visible = chip === 'cho_goi'
+    ? [...visible0].sort((a, b) => new Date(a.sla_due_at) - new Date(b.sla_due_at))
+    : ['uu_tien', 'sap_nguoi', 'danh_thuc'].includes(chip)
     ? [...visible0].sort((a, b) => heatOf(b, noteCounts[b.id]) - heatOf(a, noteCounts[a.id]))
     : chip.startsWith('lc_')
     ? [...visible0].sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9) || (lcDays(b) ?? 1e6) - (lcDays(a) ?? 1e6))
@@ -427,8 +451,10 @@ const MarketingDataPage = ({ initialView = null }) => {
 
   // Đổi trạng thái nhanh ngay trên dòng
   const quickStatus = async (r, status) => {
-    setRows(list => list.map(x => x.id === r.id ? { ...x, status } : x));
-    const { error } = await supabase.from('marketing_data').update({ status }).eq('id', r.id);
+    const lp = await lostPatch(status, r.status, r.customer_name);
+    if (!lp) return false;
+    setRows(list => list.map(x => x.id === r.id ? { ...x, status, ...lp } : x));
+    const { error } = await supabase.from('marketing_data').update({ status, ...lp }).eq('id', r.id);
     if (error) { toast.error('Lỗi: ' + error.message); loadData(); }
     return !error;
   };
@@ -481,6 +507,7 @@ const MarketingDataPage = ({ initialView = null }) => {
   const mineOrAll = (r) => (isTele ? r.telesale_id === me?.id || !r.telesale_id : true);
   const newToday = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) === todayKey()).length;
   const newWeek = rows.filter(r => mineOrAll(r) && dayKey(arrivedAt(r)) >= weekStartKey()).length;
+  const slaN = rows.filter(r => mineOrAll(r) && slaPending(r)).length;
   const coldHotN = rows.filter(r => mineOrAll(r) && isColdHot(r)).length;
   const wakeN = rows.filter(r => wakeIds.has(r.id) && (isTele ? r.telesale_id === me?.id : true)).length;
   const lcCount = (b) => rows.filter(r => mineOrAll(r) && LC_ACTIVE(r) && b.test(lcDays(r))).length;
@@ -570,6 +597,18 @@ const MarketingDataPage = ({ initialView = null }) => {
         ))}
       </div>}
 
+      {/* ===== (1) LEAD MỚI QUÁ 15 PHÚT CHƯA GỌI ===== */}
+      {view === 'list' && (() => { const late = rows.filter(r => mineOrAll(r) && slaPending(r) && new Date(r.sla_due_at) < new Date()).length; return late > 0 && chip !== 'cho_goi' ? (
+        <button onClick={() => { setChip('cho_goi'); setFStatus(''); setPage(1); }}
+          className="w-full text-left rounded-2xl border border-rose-300 bg-rose-600 text-white px-4 py-3 flex items-center gap-3 active:scale-[.99] transition">
+          <span className="w-9 h-9 rounded-xl bg-white/20 grid place-items-center shrink-0 text-lg">⏱</span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[13.5px] font-bold">{late} khách mới QUÁ 15 PHÚT chưa gọi</span>
+            <span className="block text-[12px] text-white/85">Gọi hoặc note ngay để không mất khách. Bấm để xem danh sách.</span>
+          </span>
+          <ChevronRight className="w-5 h-5 text-white/80 shrink-0" />
+        </button>) : null; })()}
+
       {/* ===== (2) CẢNH BÁO DATA SẮP NGUỘI ===== */}
       {view === 'list' && coldHotN > 0 && chip !== 'sap_nguoi' && (
         <button onClick={() => { setChip('sap_nguoi'); setFStatus(''); setPage(1); }}
@@ -645,7 +684,7 @@ const MarketingDataPage = ({ initialView = null }) => {
             {!tRange && newToday > 0 && <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-rose-500 text-white text-[11px]" title="Khách mới hôm nay">{newToday}</span>}
             {tRange && <span onClick={(e) => { e.stopPropagation(); setTRange(null); setPage(1); }} className="ml-0.5 -mr-1 w-5 h-5 rounded-full bg-white/25 grid place-items-center"><X className="w-3 h-3" /></span>}
           </button>
-          {[{ k: 'uu_tien', label: '🔥 Ưu tiên gọi' }, { k: 'sap_nguoi', label: 'Sắp nguội', n: coldHotN }, { k: 'danh_thuc', label: 'Đánh thức data cũ', n: wakeN },
+          {[{ k: 'cho_goi', label: '⏱ Chờ gọi lần đầu', n: slaN, hot: true }, { k: 'uu_tien', label: '🔥 Ưu tiên gọi' }, { k: 'sap_nguoi', label: 'Sắp nguội', n: coldHotN }, { k: 'danh_thuc', label: 'Đánh thức data cũ', n: wakeN },
             { k: 'can_goi', label: 'Cần gọi', n: stat.due }, { k: 'cskh', label: 'CSKH' }].map(c => (
             <button key={c.k} onClick={() => { setChip(chip === c.k ? 'all' : c.k); setPage(1); }}
               className={`shrink-0 whitespace-nowrap px-3 h-9 lg:h-10 rounded-xl text-[13px] font-semibold border transition ${chip === c.k ? 'bg-teal-50 text-teal-700 border-teal-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
@@ -711,6 +750,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                               <CustomerName phone={r.phone} name={r.customer_name} className="block font-semibold text-slate-900 truncate max-w-[200px]">{r.customer_name || '(Chưa có tên)'}</CustomerName>
                               <div className="text-[11.5px] text-slate-400 flex items-center gap-1.5">
                                 {LC_ACTIVE(r) && <HeatBadge v={heatOf(r, noteCounts[r.id])} />}
+                                <SlaBadge r={r} />
                                 {isToday ? <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold whitespace-nowrap"><Sparkles className="w-3 h-3" />Mới hôm nay</span> : <span className="whitespace-nowrap">Về {fmtD(arrivedAt(r))}</span>}
                                 {r.getfly_code && <><span>·</span><span className="truncate max-w-[90px]">{r.getfly_code}</span></>}
                               </div>
@@ -769,6 +809,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                     {isToday && <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><Sparkles className="w-3 h-3" />Mới</span>}
                     {LC_ACTIVE(r) && <HeatBadge v={heatOf(r, noteCounts[r.id])} />}
                   </div>
+                  {slaPending(r) && <div className="mt-1"><SlaBadge r={r} /></div>}
                   <div className="text-[12.5px] text-slate-500 mt-0.5 flex items-center gap-1.5">
                     <span className="font-semibold text-slate-600 tabular-nums">{phoneView(r.phone, me)}</span>
                     {r.source && <><span className="text-slate-300">·</span><span className="truncate">{r.source}</span></>}
@@ -1051,7 +1092,9 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     toast.success('Đã lưu thông tin'); onChanged?.();
   };
   const changeStatus = async (status) => {
-    const { error } = await supabase.from('marketing_data').update({ status }).eq('id', row.id);
+    const lp = await lostPatch(status, row.status, row.customer_name);
+    if (!lp) return;
+    const { error } = await supabase.from('marketing_data').update({ status, ...lp }).eq('id', row.id);
     if (error) return toast.error('Lỗi: ' + error.message);
     toast.success(`Đã chuyển giai đoạn: ${STATUS[status]?.label || status}`); onChanged?.();
   };
@@ -1062,6 +1105,8 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const [savingCall, setSavingCall] = useState(false);
   const addCall = async () => {
     if (!canWrite) return;
+    const lpCall = await lostPatch(call.status, row.status, row.customer_name);
+    if (!lpCall) return;
     setSavingCall(true);
     const nextIso = fromLocalInput(call.next);
     const { error } = await supabase.from('marketing_activities').insert({
@@ -1070,7 +1115,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     });
     if (!error) {
       await supabase.from('marketing_data').update({
-        status: call.status, last_contact_at: new Date().toISOString(),
+        status: call.status, ...lpCall, last_contact_at: new Date().toISOString(),
         next_call_at: nextIso, last_exchange: `${OUTCOMES[call.outcome]?.label}${call.content ? ' · ' + call.content.trim() : ''}`,
       }).eq('id', row.id);
     }
@@ -1160,8 +1205,19 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   };
 
   // Dòng thời gian hợp nhất mọi tương tác
+  const [stageHist, setStageHist] = useState([]);
+  useEffect(() => {
+    supabase.from('marketing_stage_history').select('from_status, to_status, reason, changed_at, by:profiles!changed_by(full_name)')
+      .eq('data_id', row.id).order('changed_at', { ascending: false }).limit(50)
+      .then(({ data }) => setStageHist(data || []));
+  }, [row.id, row.status]);
   const events = (() => {
     const ev = [];
+    stageHist.filter(h => h.from_status).forEach(h => ev.push({
+      at: h.changed_at, icon: Columns3, color: LOST_STATUSES.includes(h.to_status) ? '#D9635C' : '#64748b',
+      title: `Chuyển giai đoạn: ${STATUS[h.from_status]?.label || h.from_status} → ${STATUS[h.to_status]?.label || h.to_status}`,
+      desc: h.reason ? `Lý do: ${h.reason}` : '', by: h.by?.full_name,
+    }));
     const arr = arrivedAt(row);
     if (arr) ev.push({ at: arr, icon: Sparkles, color: '#3FA7A2', title: 'Khách về hệ thống', desc: [row.source, row.customer_group].filter(Boolean).join(' · ') });
     acts.forEach(a => ev.push({
@@ -1942,18 +1998,20 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
   const [acts, setActs] = useState([]);
   const [appts, setAppts] = useState([]);
   const [goldActs, setGoldActs] = useState([]);   // 60 ngày cuộc gọi cho giờ vàng
+  const [lostRows, setLostRows] = useState([]);    // chuyển Mất / Chốt Fail trong kỳ (kèm lý do)
   const [loading, setLoading] = useState(true);
   const fromIso = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (days - 1)); return d.toISOString(); })();
   useEffect(() => {
     (async () => {
       setLoading(true);
       const g = new Date(); g.setDate(g.getDate() - 60);
-      const [a, ap, gold] = await Promise.all([
+      const [a, ap, gold, lost] = await Promise.all([
         supabase.from('marketing_activities').select('data_id, type, outcome, created_by, created_at, content').gte('created_at', fromIso).not('created_by', 'is', null).limit(10000),
-        supabase.from('customer_appointments').select('id, telesale_id, status, created_at, deposit_amount').gte('created_at', fromIso).limit(5000),
+        supabase.from('customer_appointments').select('id, telesale_id, status, created_at, deposit_amount, appointment_date, consult_received, no_show_at, confirmed_at, appointment_type, service').gte('appointment_date', dayKey(fromIso)).limit(5000),
         supabase.from('marketing_activities').select('outcome, created_at, created_by').eq('type', 'call').gte('created_at', g.toISOString()).limit(20000),
+        supabase.from('marketing_stage_history').select('to_status, reason, changed_at').in('to_status', ['mat', 'chot_fail']).gte('changed_at', fromIso).limit(5000),
       ]);
-      setActs(a.data || []); setAppts(ap.data || []); setGoldActs(gold.data || []); setLoading(false);
+      setActs(a.data || []); setAppts(ap.data || []); setGoldActs(gold.data || []); setLostRows(lost.data || []); setLoading(false);
     })();
   }, [fromIso]); // eslint-disable-line react-hooks/exhaustive-deps
   const people = (isTele ? teleStaff.filter(t => t.id === me.id) : teleStaff);
@@ -1965,10 +2023,21 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
     const picked = withOut.filter(a => ['nghe_may', 'hen_goi_lai', 'can_nhac'].includes(a.outcome)).length;
     const newData = rows.filter(r => r.telesale_id === t.id && dayKey(arrivedAt(r)) >= fromKey);
     const called24 = newData.filter(r => acts.some(a => a.data_id === r.id && new Date(a.created_at) - new Date(arrivedAt(r)) <= 86400000)).length;
-    const myAppts = appts.filter(x => x.telesale_id === t.id);
+    const myAppts = appts.filter(x => x.telesale_id === t.id && !String(x.service || '').startsWith('[Tái khám]'));
+    // (1) SLA 15': lead mới trong kỳ có hạn gọi
+    const slaRows = newData.filter(r => r.sla_due_at);
+    const onTime = slaRows.filter(r => r.first_contact_at && new Date(r.first_contact_at) <= new Date(r.sla_due_at)).length;
+    const respMins = slaRows.filter(r => r.first_contact_at).map(r => Math.max(0, (new Date(r.first_contact_at) - new Date(r.created_at)) / 60000));
+    // (3) Tỷ lệ khách đến: lịch đã qua ngày
+    const past = myAppts.filter(x => x.appointment_date && x.appointment_date < todayKey());
+    const came = past.filter(x => x.consult_received || ['coc', 'phau_thuat', 'bong'].includes(x.status)).length;
+    const noShow = past.filter(x => x.no_show_at).length;
     const deposits = myAppts.filter(x => ['coc', 'phau_thuat'].includes(x.status)).length;
     return { t, calls: calls.length, pickRate: withOut.length ? Math.round(picked * 100 / withOut.length) : null, notes: new Set(mine.map(a => a.data_id)).size, newData: newData.length, called24, appts: myAppts.length, deposits,
-      d2a: newData.length ? Math.round(myAppts.length * 100 / newData.length) : null, a2c: myAppts.length ? Math.round(deposits * 100 / myAppts.length) : null };
+      d2a: newData.length ? Math.round(myAppts.length * 100 / newData.length) : null, a2c: myAppts.length ? Math.round(deposits * 100 / myAppts.length) : null,
+      slaRate: slaRows.length ? Math.round(onTime * 100 / slaRows.length) : null, slaN: slaRows.length,
+      respAvg: respMins.length ? Math.round(respMins.reduce((x, y) => x + y, 0) / respMins.length) : null,
+      showRate: past.length ? Math.round(came * 100 / past.length) : null, noShow, pastN: past.length };
   };
   const data = people.map(row);
   // Giờ vàng: % nghe máy theo giờ (60 ngày, của tôi nếu là telesale)
@@ -1998,13 +2067,22 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
                   <div className="font-bold text-slate-900 mb-2.5">{d.t.full_name}</div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {[['Gọi / note', d.calls], ['% nghe máy', pct(d.pickRate)], ['Khách đã liên hệ', d.notes], ['Data mới', d.newData], ['Gọi trong 24h', d.newData ? `${d.called24}/${d.newData}` : '—'],
-                      ['Lịch hẹn', d.appts], ['Cọc / PT', d.deposits], ['Data → lịch hẹn', pct(d.d2a)], ['Lịch hẹn → cọc', pct(d.a2c)]].map(([k, v]) => (
+                      ['Lịch hẹn', d.appts], ['Cọc / PT', d.deposits], ['Data → lịch hẹn', pct(d.d2a)], ['Lịch hẹn → cọc', pct(d.a2c)],
+                      ['Gọi đúng hạn 15\'', d.slaN ? `${pct(d.slaRate)} (${d.slaN})` : '—'], ['Phản hồi đầu TB', d.respAvg === null ? '—' : `${d.respAvg} phút`],
+                      ['Tỷ lệ khách đến', d.pastN ? `${pct(d.showRate)} (${d.pastN})` : '—'], ['Không đến', d.noShow]].map(([k, v]) => (
                       <div key={k} className="rounded-xl bg-slate-50 px-2.5 py-2"><div className="text-[11px] text-slate-500">{k}</div><div className="text-[16px] font-bold text-slate-900 tabular-nums">{v}</div></div>
                     ))}
                   </div>
                 </div>
               ))}
               {!data.length && <div className="text-center text-slate-400 text-sm py-6">Chưa có telesale</div>}
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-3.5">
+              <div className="font-bold text-slate-900 mb-2">📉 Lý do mất khách <span className="text-[12px] font-normal text-slate-400">· chuyển Mất / Chốt Fail trong kỳ</span></div>
+              {(() => { const m = {}; lostRows.forEach(x => { const k = String(x.reason || 'Chưa ghi lý do').split(' — ')[0]; m[k] = (m[k] || 0) + 1; }); const list = Object.entries(m).sort((a, b) => b[1] - a[1]); const max = Math.max(1, ...list.map(x => x[1]));
+                return list.length ? <div className="space-y-1.5">{list.map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2 text-[12.5px]"><span className="w-44 shrink-0 text-slate-600 truncate">{k}</span><div className="flex-1 h-2.5 rounded-full bg-slate-100"><div className="h-2.5 rounded-full bg-rose-400" style={{ width: `${v * 100 / max}%` }} /></div><span className="w-8 text-right font-semibold tabular-nums">{v}</span></div>))}</div>
+                  : <div className="text-[12.5px] text-slate-400">Chưa có khách chuyển Mất / Chốt Fail trong kỳ.</div>; })()}
             </div>
             <div className="rounded-2xl border border-slate-200 p-3.5">
               <div className="flex items-center justify-between gap-2 mb-1">
@@ -2092,6 +2170,8 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
   const quick = [['Chiều nay', 0, 15], ['Sáng mai', 1, 9], ['3 ngày', 3, 9], ['1 tuần', 7, 9]];
   const save = async () => {
     if (mode === 'care' && !content.trim() && !media.length) { toast.error('Nhập nội dung hoặc thêm ảnh'); return; }
+    const lpQ = await lostPatch(status, row.status, row.customer_name);
+    if (!lpQ) return;
     setSaving(true);
     const nextIso = fromLocalInput(next);
     const { error } = await supabase.from('marketing_activities').insert({
@@ -2100,6 +2180,7 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
     });
     if (!error) {
       const upd = { last_contact_at: new Date().toISOString() };
+      Object.assign(upd, lpQ);
       if (mode === 'call') { upd.status = status; upd.next_call_at = nextIso; upd.last_exchange = `${OUTCOMES[outcome]?.label}${content.trim() ? ' · ' + content.trim() : ''}`; }
       else { if (nextIso) upd.next_call_at = nextIso; if (status !== row.status) upd.status = status; if (content.trim()) upd.last_exchange = content.trim(); }
       await supabase.from('marketing_data').update(upd).eq('id', row.id);
@@ -2262,6 +2343,8 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
     const phone = normPhone(f.phone);
     if (phone.length < 9) { toast.error('Nhập số điện thoại hợp lệ'); return; }
     if (isNew && !f.customer_name.trim()) { toast.error('Nhập tên khách'); return; }
+    const lpE = await lostPatch(f.status, isNew ? null : row.status, f.customer_name);
+    if (!lpE) return;
     if (isNew && (await checkDup(phone))) { setTimeout(() => dupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80); toast.error('SĐT đã có trong Data khách — bấm "Cập nhật vào khách này" để gộp thông tin'); return; }
     setSaving(true);
     const payload = {
@@ -2270,6 +2353,7 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
     };
     Object.keys(payload).forEach(k => { if (payload[k] === '') payload[k] = null; });
     payload.media_urls = f.media_urls || [];
+    Object.assign(payload, lpE);
     const { error } = isNew
       ? await supabase.from('marketing_data').insert({ ...payload, created_by: me.id })
       : await supabase.from('marketing_data').update(payload).eq('id', row.id);
