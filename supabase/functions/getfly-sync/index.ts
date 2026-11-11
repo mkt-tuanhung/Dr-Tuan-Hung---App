@@ -71,7 +71,7 @@ function nameOf(v: any): string {
   if (v == null) return "";
   if (typeof v === "string") return v.trim();
   if (Array.isArray(v)) return v.map(nameOf).filter(Boolean).join(", ");
-  if (typeof v === "object") return String(v.name ?? v.title ?? v.display ?? v.value ?? "").trim();
+  if (typeof v === "object") return String(v.name ?? v.label ?? v.title ?? v.display ?? v.value ?? "").trim();
   return String(v);
 }
 const stripHtml = (s: string) => s.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
