@@ -97,13 +97,15 @@ async function dailyReport(dayArg?: string) {
   const { count: apptCount } = await db.from('customer_appointments').select('id', { count: 'exact', head: true }).gte('created_at', from).lt('created_at', to);
 
   const A: any[] = acts || [];
-  const calls = A.filter(a => a.type === 'call');
+  // GỌI / LIÊN HỆ = mọi lần nhân viên ghi cuộc gọi HOẶC note khách (anh Dũng: note thông tin cũng là đã gọi)
+  const calls = A;
   const callIds = new Set(calls.map(a => a.data_id));
+  const withOutcome = A.filter(a => a.type === 'call' && a.outcome);
   const cares = A.filter(a => a.type === 'care');
   const isNewK = (a: any) => newIds.has(a.data_id) || vnDay(a.khach?.getfly_created_at || a.khach?.created_at) === day;
   const callRows = calls.map(a => ({
     name: a.khach?.customer_name || '—', phone: maskPhone(a.khach?.phone || a.phone), time: a.created_at,
-    content: String(`${OUTCOME[a.outcome] || 'Gọi'}${a.content ? ' — ' + a.content : ''}`).slice(0, 300),
+    content: String(a.type === 'call' ? `${OUTCOME[a.outcome] || 'Gọi'}${a.content ? ' — ' + a.content : ''}` : `Note${a.content ? ' — ' + a.content : ''}`).slice(0, 300),
     author: a.author?.full_name || null, is_new: isNewK(a), status_label: STATUS[a.khach?.status] || null, status_color: STATUS_COLORS[a.khach?.status] || null,
   }));
   const callsNew = callRows.filter(c => c.is_new), callsOld = callRows.filter(c => !c.is_new);
@@ -113,7 +115,7 @@ async function dailyReport(dayArg?: string) {
   const seen = new Set<string>();
   calls.forEach(a => { if (a.data_id && !seen.has(a.data_id)) { seen.add(a.data_id); const k = a.khach?.status || 'tiep_can'; st[k] = (st[k] || 0) + 1; } });
   newRows.forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); const k = r.status || 'tiep_can'; st[k] = (st[k] || 0) + 1; } });
-  const byOutcome: Record<string, number> = {}; calls.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
+  const byOutcome: Record<string, number> = {}; withOutcome.forEach(c => { byOutcome[c.outcome] = (byOutcome[c.outcome] || 0) + 1; });
   const src: Record<string, number> = {}; newRows.forEach(r => { const s = String(r.source || '').trim() || 'Khác'; src[s] = (src[s] || 0) + 1; });
   const palette = ['#12A4A5', '#3b82f6', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b'];
   const payload = {
@@ -134,10 +136,10 @@ async function dailyReport(dayArg?: string) {
   const pct = (a: number, b: number) => (b ? ` (${Math.round(a * 100 / b)}%)` : '');
   await send(
     `📊 <b>BÁO CÁO SALE NGÀY ${dd}</b>` +
-    line('📞 Cuộc gọi', `${calls.length} — khách mới ${callsNew.length} · khách cũ ${callsOld.length}`) +
-    line('✅ Nghe máy', `${(byOutcome.nghe_may || 0) + (byOutcome.hen_goi_lai || 0) + (byOutcome.can_nhac || 0)}${pct((byOutcome.nghe_may || 0) + (byOutcome.hen_goi_lai || 0) + (byOutcome.can_nhac || 0), calls.length)}`) +
-    line('🆕 Số mới về', `${newRows.length} — đã gọi ${newCalled.length} · chưa gọi ${newRows.length - newCalled.length}`) +
-    line('📝 Ghi chú / chăm sóc', String(cares.length)) +
+    line('📞 Gọi / note khách', `${calls.length} lượt — khách mới ${callsNew.length} · khách cũ ${callsOld.length}`) +
+    line('👥 Số khách đã liên hệ', String(callIds.size)) +
+    (withOutcome.length ? line('✅ Nghe máy', `${(byOutcome.nghe_may || 0) + (byOutcome.hen_goi_lai || 0) + (byOutcome.can_nhac || 0)}/${withOutcome.length} lượt có chọn kết quả${pct((byOutcome.nghe_may || 0) + (byOutcome.hen_goi_lai || 0) + (byOutcome.can_nhac || 0), withOutcome.length)}`) : '') +
+    line('🆕 Số mới về', `${newRows.length} — đã gọi/note ${newCalled.length} · chưa ${newRows.length - newCalled.length}`) +
     line('⏰ Hẹn gọi lại', String(payload.stats.next_cnt)) +
     line('📅 Lịch hẹn mới tạo', String(apptCount || 0)) +
     `\n\n👉 Xem chi tiết (biểu đồ, từng cuộc gọi): ${url}`);
