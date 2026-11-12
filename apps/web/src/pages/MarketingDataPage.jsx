@@ -1434,7 +1434,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                 <ol className="relative space-y-2.5">
                   {events.map((e, i) => (
                     <li key={i} className="relative flex gap-2.5">
-                      <span className="w-7 h-7 rounded-full grid place-items-center shrink-0 mt-1.5" style={{ background: deptStyle(e.dept).bg, color: deptStyle(e.dept).c, border: `1px solid ${deptStyle(e.dept).bd}` }}><e.icon className="w-3.5 h-3.5" /></span>
+                      <span className="w-7 h-7 rounded-full grid place-items-center shrink-0 mt-1.5" style={{ background: deptStyle(e.dept).bg, color: deptStyle(e.dept).t || deptStyle(e.dept).c, border: `1px solid ${deptStyle(e.dept).bd}` }}><e.icon className="w-3.5 h-3.5" /></span>
                       <DeptCard dept={e.dept} className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex flex-wrap items-center gap-1.5">
