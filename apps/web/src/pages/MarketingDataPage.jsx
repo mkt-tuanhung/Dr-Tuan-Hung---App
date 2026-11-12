@@ -524,6 +524,17 @@ const MarketingDataPage = ({ initialView = null }) => {
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const curPage = Math.min(page, totalPages);
   const paged = visible.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
+  // Trao đổi gần nhất kiểu GetFly: người note + giờ + nội dung (nhật ký app mới nhất của từng khách đang hiện)
+  const [lastActs, setLastActs] = useState({});
+  const [actsTick, setActsTick] = useState(0);
+  const pagedKey = paged.map(r => r.id).join(',');
+  useEffect(() => {
+    const ids = paged.map(r => r.id);
+    if (!ids.length) return;
+    supabase.from('marketing_activities').select('data_id, type, outcome, content, created_at, author:profiles!created_by(full_name)')
+      .in('data_id', ids).not('created_by', 'is', null).order('created_at', { ascending: false }).limit(400)
+      .then(({ data }) => { const m = {}; (data || []).forEach(a => { if (!m[a.data_id]) m[a.data_id] = a; }); setLastActs(prev => ({ ...prev, ...m })); });
+  }, [pagedKey, actsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const CHIPS = [{ k: 'all', label: 'Tất cả' }, { k: 'can_goi', label: 'Cần gọi' }, { k: 'nong', label: 'Nóng' }, { k: 'mat', label: 'Mất' }, { k: 'da_lam_dv', label: 'Đã làm DV' }, { k: 'cskh', label: 'CSKH' }];
   const initials = (n) => (n || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
 
@@ -722,75 +733,87 @@ const MarketingDataPage = ({ initialView = null }) => {
             <div className="text-[14px] font-bold text-slate-800">{fStatus ? STATUS[fStatus]?.label : 'Tất cả khách hàng'}</div>
             <div className="text-[12.5px] text-slate-500 tabular-nums">{visible.length.toLocaleString('vi-VN')} khách</div>
           </div>
-          {/* Desktop — bảng gọn */}
+          {/* Desktop — BẢNG CHI TIẾT kiểu GetFly: đọc được nhu cầu, trao đổi gần nhất, thông tin đã tiếp cận ngay trên danh sách + note luôn */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left table-fixed min-w-[1280px]">
               <thead className="bg-slate-50/80 text-slate-500 text-[12px]">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Khách hàng</th>
-                  <th className="px-4 py-3 font-semibold">Liên hệ</th>
-                  <th className="px-4 py-3 font-semibold">Giai đoạn</th>
-                  <th className="px-4 py-3 font-semibold">Telesale</th>
-                  <th className="px-4 py-3 font-semibold">Nguồn</th>
-                  <th className="px-4 py-3 font-semibold">Tương tác gần nhất</th>
-                  <th className="px-4 py-3 font-semibold w-10"></th>
+                  <th className="px-3 py-3 font-semibold w-10 text-center">#</th>
+                  <th className="px-3 py-3 font-semibold w-[210px]">Khách hàng</th>
+                  <th className="px-3 py-3 font-semibold w-[150px]">Nhu cầu / mô tả</th>
+                  <th className="px-3 py-3 font-semibold w-[230px]">Trao đổi gần nhất</th>
+                  <th className="px-3 py-3 font-semibold w-[300px]">Thông tin đã tiếp cận</th>
+                  <th className="px-3 py-3 font-semibold w-[130px]">Giai đoạn</th>
+                  <th className="px-3 py-3 font-semibold w-[130px]">Telesale · Nguồn</th>
+                  <th className="px-3 py-3 font-semibold w-[90px]">Ngày tạo</th>
+                  <th className="px-3 py-3 font-semibold w-[80px] text-center">Liên hệ lần cuối</th>
+                  <th className="px-3 py-3 font-semibold w-[70px] text-center">Note</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paged.length === 0 ? <tr><td colSpan={7} className="text-center py-12 text-slate-400">Không có khách hàng phù hợp</td></tr> :
-                  paged.map(r => {
+              <tbody className="divide-y divide-slate-100 align-top">
+                {paged.length === 0 ? <tr><td colSpan={10} className="text-center py-12 text-slate-400">Không có khách hàng phù hợp</td></tr> :
+                  paged.map((r, idx) => {
                     const st = APPT_STAGE(apptMap[phoneKey(r.phone)]);
-                    const isToday = dayKey(arrivedAt(r)) === todayKey();
+                    const la = lastActs[r.id];
+                    // Nhật ký app mới hơn ghi chú GetFly thì hiện nhật ký app (người note + giờ)
+                    const useApp = la && (!r.getfly_updated_at || new Date(la.created_at) >= new Date(r.getfly_updated_at));
+                    const gfMatch = !useApp && r.last_exchange ? String(r.last_exchange).match(/^Ngày\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})(?::\d{2})?\s*-\s*(.+?)\s+đã\s+[^:]*:\s*([\s\S]*)$/) : null;
+                    const lxWho = useApp ? la.author?.full_name : gfMatch ? gfMatch[3] : (r.manager_name || '');
+                    const lxWhen = useApp ? fmtDT(la.created_at) : gfMatch ? `${gfMatch[2]} · ${gfMatch[1].slice(0, 5)}` : (r.last_contact_at ? fmtDT(r.last_contact_at) : '');
+                    const lxText = useApp ? `${la.type === 'call' ? (OUTCOMES[la.outcome]?.label || 'Gọi') + (la.content ? ' — ' : '') : ''}${la.content || ''}` : gfMatch ? gfMatch[4] : (r.last_exchange || '');
+                    const d = lcDays(r);
                     return (
                       <tr key={r.id} className="cursor-pointer hover:bg-teal-50/40 transition-colors" onClick={() => setDetail(r)}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className="w-10 h-10 rounded-full bg-teal-600 text-white grid place-items-center text-[12px] font-bold shrink-0">{initials(r.customer_name)}</span>
+                        <td className="px-3 py-3 text-center text-slate-400 tabular-nums">{(curPage - 1) * PAGE_SIZE + idx + 1}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-start gap-2.5">
+                            <span className="relative w-9 h-9 rounded-full bg-teal-600 text-white grid place-items-center text-[11.5px] font-bold shrink-0">{initials(r.customer_name)}
+                              {noteCounts[r.id] > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-white text-[10px] grid place-items-center">{noteCounts[r.id]}</span>}
+                            </span>
                             <div className="min-w-0">
-                              <CustomerName phone={r.phone} name={r.customer_name} className="block font-semibold text-slate-900 truncate max-w-[200px]">{r.customer_name || '(Chưa có tên)'}</CustomerName>
-                              <div className="text-[11.5px] text-slate-400 flex items-center gap-1.5">
+                              <CustomerName phone={r.phone} name={r.customer_name} className="block font-semibold text-slate-900 break-words leading-snug">{r.customer_name || '(Chưa có tên)'}</CustomerName>
+                              <div className="flex items-center gap-1 mt-0.5" onClick={e => e.stopPropagation()}>
+                                <a href={`tel:${r.phone}`} className="text-[12.5px] text-teal-700 font-semibold tabular-nums hover:underline">{phoneView(r.phone, me)}</a>
+                                <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" title="Zalo" className="px-1 text-[10.5px] font-bold text-blue-600 hover:bg-blue-50 rounded">Zalo</a>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
                                 {LC_ACTIVE(r) && <HeatBadge v={heatOf(r, noteCounts[r.id])} />}
-                                <SlaBadge r={r} />
-                                {isToday ? <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold whitespace-nowrap"><Sparkles className="w-3 h-3" />Mới hôm nay</span> : <span className="whitespace-nowrap">Về {fmtD(arrivedAt(r))}</span>}
-                                {r.getfly_code && <><span>·</span><span className="truncate max-w-[90px]">{r.getfly_code}</span></>}
+                                <SlaBadge r={r} /><DueBadge r={r} />
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-700 tabular-nums whitespace-nowrap">{phoneView(r.phone, me)}</span>
-                            <a href={`tel:${r.phone}`} title="Gọi" className="w-7 h-7 rounded-lg grid place-items-center text-emerald-600 hover:bg-emerald-50"><PhoneCall className="w-3.5 h-3.5" /></a>
-                            <a href={zaloLink(r.phone)} target="_blank" rel="noopener noreferrer" title="Zalo" className="px-1.5 h-7 rounded-lg grid place-items-center text-[11px] font-bold text-blue-600 hover:bg-blue-50">Zalo</a>
-                          </div>
+                        <td className="px-3 py-3 text-[12.5px] text-slate-700"><div className="line-clamp-4 break-words" title={r.description || ''}>{r.description || <span className="text-slate-300">—</span>}</div></td>
+                        <td className="px-3 py-3 text-[12.5px]">
+                          {lxText ? (<>
+                            <div className="flex items-baseline justify-between gap-2"><span className="font-semibold text-blue-700 truncate">{lxWho || '—'}</span><span className="text-[11px] text-slate-400 shrink-0 tabular-nums">{lxWhen}</span></div>
+                            <div className="text-slate-600 mt-0.5 line-clamp-4 break-words" title={lxText}>{lxText}</div>
+                          </>) : <span className="text-slate-300">Chưa có trao đổi</span>}
                         </td>
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <td className="px-3 py-3 text-[12.5px] text-slate-700"><div className="line-clamp-6 break-words whitespace-pre-line" title={r.reached_info || ''}>{r.reached_info || <span className="text-slate-300">—</span>}</div></td>
+                        <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                           {canWrite
-                            ? <select value={r.status || 'tiep_can'} onChange={e => quickStatus(r, e.target.value)} className={`text-[11.5px] font-bold rounded-full px-2.5 py-1 outline-none border-0 cursor-pointer ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+                            ? <select value={r.status || 'tiep_can'} onChange={e => quickStatus(r, e.target.value)} className={`text-[11.5px] font-bold rounded-full px-2 py-1 outline-none border-0 cursor-pointer max-w-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
                             : <span className={`text-[11.5px] font-bold px-2.5 py-1 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>}
-                          {st && <div className="mt-1"><span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap ${st.cls}`} title="Hành trình theo lịch hẹn"><Link2 className="w-3 h-3" />{st.label}</span></div>}
+                          {st && <div className="mt-1"><span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${st.cls}`}><Link2 className="w-3 h-3" />{st.label}</span></div>}
+                          {r.lost_reason && LOST_STATUSES.includes(r.status) && <div className="text-[11px] text-rose-500 mt-1 line-clamp-2">{r.lost_reason}</div>}
                         </td>
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <td className="px-3 py-3 text-[12.5px]" onClick={e => e.stopPropagation()}>
                           {canAssign
-                            ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-[12.5px] font-medium rounded-lg border border-slate-200 px-2 py-1 bg-white outline-none max-w-[130px]"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
-                            : r.telesale?.full_name
-                              ? <span className="text-[13px] text-slate-600 whitespace-nowrap">{r.telesale.full_name}</span>
-                              : isTele
-                                ? <button onClick={() => assignTele(r, me.id)} className="text-[12px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg px-2.5 py-1 whitespace-nowrap">Nhận data</button>
-                                : <span className="text-[13px] text-slate-400">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-[12.5px] whitespace-nowrap">
-                          <div className="text-slate-700 font-medium">{r.source || '—'}</div>
+                            ? <select value={r.telesale_id || ''} onChange={e => assignTele(r, e.target.value)} className="text-[12px] rounded-lg border border-slate-200 px-1.5 py-1 bg-white outline-none max-w-full"><option value="">— Chưa —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select>
+                            : r.telesale?.full_name ? <div className="text-slate-700">{r.telesale.full_name}</div>
+                              : isTele ? <button onClick={() => assignTele(r, me.id)} className="text-[12px] font-semibold text-teal-700 bg-teal-50 rounded-lg px-2 py-1">Nhận data</button> : <span className="text-slate-400">—</span>}
+                          <div className="text-slate-500 mt-1 break-words">{r.source || ''}</div>
                           {r.customer_group && <div className="text-slate-400 text-[11.5px]">{r.customer_group}</div>}
                         </td>
-                        <td className="px-4 py-3 max-w-[240px]">
-                          <div className="text-[12.5px] text-slate-600 truncate" title={r.last_exchange}>{r.last_exchange || <span className="text-slate-300">Chưa liên hệ</span>}</div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <LastContact r={r} />
-                            <DueBadge r={r} />
-                          </div>
+                        <td className="px-3 py-3 text-[12px] text-slate-600 tabular-nums">{arrivedAt(r) ? <>{new Date(arrivedAt(r)).toLocaleDateString('vi-VN')}<div className="text-slate-400">{new Date(arrivedAt(r)).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div></> : '—'}</td>
+                        <td className="px-3 py-3 text-center" title={r.last_contact_at ? `Liên hệ lần cuối ${fmtDT(r.last_contact_at)}` : 'Chưa liên hệ'}>
+                          <div className={`text-[22px] font-bold tabular-nums leading-none ${d === null ? 'text-slate-300' : d <= 3 ? 'text-emerald-600' : d <= 7 ? 'text-amber-600' : d <= 30 ? 'text-orange-600' : 'text-rose-600'}`}>{d === null ? '—' : d}</div>
+                          <div className="text-[10.5px] text-slate-400 mt-0.5">{d === null ? 'chưa LH' : 'ngày'}</div>
                         </td>
-                        <td className="px-2 py-3 text-right"><ChevronRight className="w-4 h-4 text-slate-300 inline" /></td>
+                        <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          {canWrite && <button onClick={() => setQuickNote(r)} title="Ghi chú nhanh / ghi cuộc gọi" className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 grid place-items-center mx-auto"><StickyNote className="w-[18px] h-[18px]" /></button>}
+                        </td>
                       </tr>
                     );
                   })}
@@ -922,7 +945,7 @@ const MarketingDataPage = ({ initialView = null }) => {
       {importOpen && <ImportModal me={me} onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); loadData(); }} />}
       {timeOpen && <TimeRangeSheet value={tRange} countOf={(a, b) => rows.filter(r => mineOrAll(r) && inRange(r, [a, b])).length}
         onClose={() => setTimeOpen(false)} onApply={(v) => { setTRange(v); setChip('all'); setPage(1); setTimeOpen(false); }} />}
-      {quickNote && <QuickNoteSheet row={quickNote} me={me} onClose={() => setQuickNote(null)} onSaved={() => { setQuickNote(null); loadData(); }} />}
+      {quickNote && <QuickNoteSheet row={quickNote} me={me} onClose={() => setQuickNote(null)} onSaved={() => { setQuickNote(null); loadData(); setActsTick(t => t + 1); }} />}
       {getflyOpen && <GetflyModal onClose={() => setGetflyOpen(false)} onDone={loadData} />}
     </div>
   );
@@ -1280,10 +1303,10 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const evStyle = (color) => ({ background: color + '1a', color });
 
   return (
-    <div className="space-y-4">
-      {/* Điều hướng */}
+    <div className="space-y-4" data-back-page>
+      {/* Điều hướng — Back của điện thoại / trình duyệt cũng quay về danh sách (backNav) */}
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onClose} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[13.5px] font-semibold text-slate-600 hover:bg-white hover:shadow-soft transition">
+        <button onClick={onClose} aria-label="Quay lại" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[13.5px] font-semibold text-slate-600 hover:bg-white hover:shadow-soft transition">
           <ArrowLeft className="w-4 h-4" /> Danh sách khách hàng
         </button>
         {queuePos && (

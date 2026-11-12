@@ -11,7 +11,9 @@
 //     thống -> tự xử lý vuốt từ mép trái màn hình.
 // Lớp tự quản lịch sử riêng: gắn data-own-history để bỏ qua.
 // ============================================================
-const LAYER_SEL = '[role="dialog"], [role="alertdialog"], [aria-modal="true"], .e-drawer, .e-modal, [data-back-close]';
+const NESTED_SEL = '[role="dialog"], [role="alertdialog"], [aria-modal="true"], .e-drawer, .e-modal, [data-back-close]';
+// [data-back-page]: "trang con" toàn màn (vd hồ sơ khách) — Back quay về danh sách; hộp thoại mở bên trong vẫn đóng trước
+const LAYER_SEL = NESTED_SEL + ', [data-back-page]';
 const CLOSE_RE = /^(đóng|quay lại|huỷ|hủy|close|×|✕|‹ danh sách)$/i;
 
 const layers = [];          // [{ el, id }] theo thứ tự mở
@@ -28,7 +30,7 @@ export function pushTab(tab) { push({ __tab: tab, __ov: undefined }); }
 export function markTab(tab) { window.history.replaceState({ ...st(), __tab: tab }, ''); }
 
 const visible = (el) => el.isConnected && el.getClientRects().length > 0;
-const isLayerRoot = (el) => !el.closest('[data-own-history]') && !(el.parentElement && el.parentElement.closest(LAYER_SEL));
+const isLayerRoot = (el) => !el.closest('[data-own-history]') && !(el.parentElement && el.parentElement.closest(NESTED_SEL));
 
 function scan() {
   const found = [...document.querySelectorAll(LAYER_SEL)].filter(el => isLayerRoot(el) && visible(el));
