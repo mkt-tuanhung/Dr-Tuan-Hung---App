@@ -200,11 +200,11 @@ export default function C360Pipeline({ d, appts, lead, who, staff = [], jIdx, ca
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-[13px]">
                           <DeptTag dept={dp} name={a.created_by ? who(a.created_by) : ''} />
-                          <span className="font-semibold text-slate-800 inline-flex items-center gap-1">{a.type === 'call' ? <PhoneCall className="w-3.5 h-3.5" /> : <MessageSquare className="w-3.5 h-3.5" />}{a.type === 'call' ? `Gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : a.type === 'care' ? 'Ghi chú / chăm sóc' : 'Ghi chú'}</span>
+                          <span className="font-semibold text-slate-800 inline-flex items-center gap-1">{a.type === 'call' ? <PhoneCall className="w-3.5 h-3.5" /> : <MessageSquare className="w-3.5 h-3.5" />}{a.type === 'call' ? `Gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : a.type === 'exchange' ? '💬 Trao đổi nội bộ' : a.type === 'care' ? 'Ghi chú / chăm sóc' : 'Ghi chú'}</span>
                         </div>
                         <span className="text-[11px] text-slate-500 shrink-0">{dt(a.created_at)}</span>
                       </div>
-                      {a.content && <div className="text-[13px] text-slate-700 mt-1 whitespace-pre-line break-words">{a.content}</div>}
+                      {a.content && <div className="text-[13px] text-slate-700 mt-1 whitespace-pre-line break-words">{String(a.content).replace(/@\[([^\]]+)\]\((?:staff|cust):[0-9a-fA-F-]+\)/g, '@$1')}</div>}
                       <MediaThumbs urls={a.media_urls} />
                     </DeptCard>
                   </li>); })}
