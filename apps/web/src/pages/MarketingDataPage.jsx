@@ -885,13 +885,11 @@ const MarketingDataPage = ({ initialView = null }) => {
                   paged.map((r, idx) => {
                     const st = APPT_STAGE(apptMap[phoneKey(r.phone)]);
                     const la = lastActs[r.id];
-                    // Nhật ký app mới hơn ghi chú GetFly thì hiện nhật ký app (người note + giờ)
-                    const useApp = la && (!r.getfly_updated_at || new Date(la.created_at) >= new Date(r.getfly_updated_at));
-                    const gfMatch = !useApp && r.last_exchange ? String(r.last_exchange).match(/^Ngày\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})(?::\d{2})?\s*-\s*(.+?)\s+đã\s+[^:]*:\s*([\s\S]*)$/) : null;
-                    // Trao đổi gần nhất = nhân viên / bộ phận nhắn, tag nhau (không phải note khách)
-                    const lxWho = useApp ? la.author?.full_name : gfMatch ? gfMatch[3] : '';
-                    const lxWhen = useApp ? fmtDT(la.created_at) : gfMatch ? `${gfMatch[2]} · ${gfMatch[1].slice(0, 5)}` : '';
-                    const lxText = useApp ? plainMentions(la.content) : gfMatch ? gfMatch[4] : '';
+                    // Trao đổi gần nhất = CHỈ trao đổi nội bộ (nhân viên / bộ phận nhắn, tag nhau).
+                    // Note của sale (kể cả note cũ trên GetFly) nằm ở cột Thông tin đã tiếp cận.
+                    const lxWho = la ? la.author?.full_name : '';
+                    const lxWhen = la ? fmtDT(la.created_at) : '';
+                    const lxText = la ? plainMentions(la.content) : '';
                     const d = lcDays(r);
                     const cells = {
                       kh: (
