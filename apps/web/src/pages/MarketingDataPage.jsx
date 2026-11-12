@@ -570,6 +570,22 @@ const MarketingDataPage = ({ initialView = null }) => {
     if (error) { toast.error('Lỗi: ' + error.message); loadData(); }
     return !error;
   };
+  // Sửa Nhu cầu / mô tả ngay trên bảng (rê chuột -> nút sửa)
+  const [editDesc, setEditDesc] = useState(null);   // { id, val }
+  const [savingDesc, setSavingDesc] = useState(false);
+  const saveDesc = async () => {
+    if (!editDesc) return;
+    const val = editDesc.val.trim() || null;
+    const r = rows.find(x => x.id === editDesc.id);
+    if (r && (r.description || null) === val) { setEditDesc(null); return; }
+    setSavingDesc(true);
+    const { error } = await supabase.from('marketing_data').update({ description: val }).eq('id', editDesc.id);
+    setSavingDesc(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    setRows(list => list.map(x => x.id === editDesc.id ? { ...x, description: val } : x));
+    if (mdCache.rows) mdCache.rows = mdCache.rows.map(x => x.id === editDesc.id ? { ...x, description: val } : x);
+    setEditDesc(null); toast.success('Đã lưu nhu cầu / mô tả');
+  };
   // Pipeline: chuyển giai đoạn bằng kéo thả / nút ⇄ (dùng lại quickStatus)
   const moveStage = async (r, status) => {
     if (await quickStatus(r, status)) toast.success(`Đã chuyển ${r.customer_name || 'khách'} sang “${STATUS[status]?.label || status}”`);
@@ -898,7 +914,22 @@ const MarketingDataPage = ({ initialView = null }) => {
                             </div>
                           </div>
                         </td>),
-                      need: <td key="need" className="px-3 py-3 text-[12.5px] text-slate-700"><div className="line-clamp-4 break-words" title={r.description || ''}>{r.description || <span className="text-slate-300">—</span>}</div></td>,
+                      need: editDesc?.id === r.id ? (
+                        <td key="need" className="px-2 py-2 text-[12.5px]" onClick={e => e.stopPropagation()}>
+                          <textarea autoFocus value={editDesc.val} onChange={e => setEditDesc({ id: r.id, val: e.target.value })} rows={4}
+                            onKeyDown={e => { if (e.key === 'Escape') setEditDesc(null); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveDesc(); }}
+                            placeholder="Khách cần gì, quan tâm dịch vụ nào…" className="w-full px-2 py-1.5 rounded-lg border border-teal-400 outline-none text-[12.5px] resize-y" />
+                          <div className="flex gap-1 mt-1">
+                            <button onClick={saveDesc} disabled={savingDesc} className="h-7 px-2.5 rounded-lg bg-teal-600 text-white text-[11.5px] font-bold disabled:opacity-60">{savingDesc ? 'Lưu…' : 'Lưu'}</button>
+                            <button onClick={() => setEditDesc(null)} className="h-7 px-2 rounded-lg border border-slate-200 text-[11.5px] text-slate-600">Huỷ</button>
+                          </div>
+                        </td>)
+                        : (
+                        <td key="need" className="px-3 py-3 text-[12.5px] text-slate-700 relative group/need">
+                          <div className="line-clamp-4 break-words pr-5" title={r.description || ''}>{r.description || <span className="text-slate-300">—</span>}</div>
+                          {canWrite && <button onClick={e => { e.stopPropagation(); setEditDesc({ id: r.id, val: r.description || '' }); }} title="Sửa nhu cầu / mô tả"
+                            className="absolute top-2 right-1.5 w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-teal-700 hover:border-teal-300 grid place-items-center shadow-sm opacity-0 group-hover/need:opacity-100 focus:opacity-100 transition-opacity"><Pencil className="w-3.5 h-3.5" /></button>}
+                        </td>),
                       lx: (
                         <td key="lx" className="px-3 py-3 text-[12.5px]">
                           {lxText ? (<>
