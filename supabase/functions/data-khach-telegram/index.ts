@@ -190,7 +190,7 @@ async function dailyReport(dayArg?: string) {
 
   const { data: acts } = await db.from('marketing_activities')
     .select('data_id, type, outcome, content, next_at, created_at, phone, author:profiles!created_by(full_name), khach:marketing_data!data_id(customer_name, phone, status, created_at, getfly_created_at)')
-    .gte('created_at', from).lt('created_at', to).not('created_by', 'is', null).order('created_at', { ascending: true }).limit(5000);
+    .gte('created_at', from).lt('created_at', to).not('created_by', 'is', null).neq('type', 'exchange').order('created_at', { ascending: true }).limit(5000);
   const [n1, n2] = await Promise.all([
     db.from('marketing_data').select('id, customer_name, phone, source, status').gte('getfly_created_at', from).lt('getfly_created_at', to).limit(3000),
     db.from('marketing_data').select('id, customer_name, phone, source, status').is('getfly_created_at', null).gte('created_at', from).lt('created_at', to).limit(3000),
@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
 
     if (table === 'marketing_activities') {
       const { data: a } = await db.from('marketing_activities').select('*').eq('id', id).maybeSingle();
-      if (!a) return new Response('skip');
+      if (!a || a.type === 'exchange') return new Response('skip');   // trao đổi nội bộ: chỉ báo người được tag trong app
       const { data: k } = a.data_id
         ? await db.from('marketing_data').select('customer_name, phone, status, telesale_id').eq('id', a.data_id).maybeSingle()
         : { data: null };

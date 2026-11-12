@@ -17,6 +17,8 @@ import { surgeryPlanLabel } from '@/features/appointments/surgeryPlan.jsx';
 import { Database, Plus, Upload, Search, X, Trash2, Link2, Download, Users, Flame, CheckCircle2, Headphones, UserX, ChevronLeft, ChevronRight, Phone, PhoneCall, HeartHandshake, Clock, Copy, CalendarClock, Save, FileText, CalendarDays, Sparkles, UserPlus, SlidersHorizontal, Send, MoreHorizontal, ArrowLeft, Mail, MapPin, Cake, Tag, Wallet, Receipt, Stethoscope, Activity, Lightbulb, Gauge, AlertTriangle, MessageSquare, Pencil, Gem, Hash, UserCheck, LayoutList, Columns3, StickyNote, ImagePlus, Film, Loader2, GripVertical, Wand2 } from 'lucide-react';
 import { vnToday } from '@/lib/vnTime';
 import { askReason, LOST_REASONS } from '@/components/ReasonPrompt.jsx';
+import MentionInput from '@/components/MentionInput.jsx';
+import { takePendingFocus } from '@/lib/notif';
 import { uploadToR2, uploadViaPresignWithProgress } from '@/lib/r2Client';
 
 const STATUS = {
@@ -104,9 +106,10 @@ const heatOf = (r, notes = 0) => {
   let h = HEAT_BASE[r.status] ?? 20;
   const age = Math.floor((Date.now() - new Date(arrivedAt(r) || Date.now()).getTime()) / 86400000);
   h += age <= 1 ? 22 : age <= 3 ? 16 : age <= 7 ? 10 : age <= 30 ? 4 : 0;          // data mới về
-  h += Math.min(notes, 10) * 1.2 + (r.last_exchange ? 3 : 0);                        // đã tương tác nhiều
-  if (/nghe máy|cân nhắc|hẹn|quan tâm|zalo/i.test(r.last_exchange || '')) h += 6;   // phản hồi tích cực gần nhất
-  if (/từ chối|sai số|không liên lạc/i.test(r.last_exchange || '')) h -= 12;
+  const lastNote = `${r.last_exchange || ''} ${String(r.reached_info || '').trim().split('\n')[0]}`;
+  h += Math.min(notes, 10) * 1.2 + (lastNote.trim() ? 3 : 0);                        // đã tương tác nhiều
+  if (/nghe máy|cân nhắc|hẹn|quan tâm|zalo/i.test(lastNote)) h += 6;   // phản hồi tích cực gần nhất
+  if (/từ chối|sai số|không liên lạc/i.test(lastNote)) h -= 12;
   if (isDue(r.next_call_at)) h += 12;                                                 // tới hạn gọi lại
   const d = lcDays(r);
   h -= d === null ? (age > 7 ? 6 : 0) : d > 30 ? 12 : d > 7 ? 5 : 0;                // nguội
@@ -155,6 +158,53 @@ const weekStartKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.g
 const fmtD = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }); };
 // Độ ưu tiên gọi: tới hạn gọi lại -> nóng -> tiềm năng -> chưa gọi lần nào -> còn lại.
 // ===== Bộ nhớ đệm Data KH (dùng chung giữa các lần mở màn trong 1 phiên) =====
+// ===== TRAO ĐỔI NỘI BỘ (nhân viên / bộ phận nhắn, tag @nhau trên hồ sơ khách) — khác với NOTE khách =====
+const MENTION_SPLIT = /@\[([^\]]+)\]\((?:staff|cust):[0-9a-fA-F-]+\)/;
+const plainMentions = (t) => String(t || '').replace(/@\[([^\]]+)\]\((?:staff|cust):[0-9a-fA-F-]+\)/g, '@$1');
+const MentionText = ({ text }) => String(text || '').split(MENTION_SPLIT).map((part, i) => (i % 2
+  ? <span key={i} className="font-semibold text-blue-700 bg-blue-50 rounded px-0.5">@{part}</span> : <React.Fragment key={i}>{part}</React.Fragment>));
+const ExchangeComposer = ({ row, me, onSaved }) => {
+  const staffAll = useStaff();
+  const staff = staffAll.filter(s => s.is_active !== false && s.id !== me?.id);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    const t = text.trim();
+    if (!t) { toast.error('Nhập nội dung trao đổi'); return; }
+    setBusy(true);
+    const { error } = await supabase.from('marketing_activities').insert({ data_id: row.id, phone: row.phone, type: 'exchange', content: t, created_by: me.id });
+    setBusy(false);
+    if (error) { toast.error('Lỗi: ' + error.message); return; }
+    const n = (t.match(/\(staff:/g) || []).length;
+    toast.success(n ? `Đã gửi trao đổi — đã báo ${n} người được tag` : 'Đã gửi trao đổi');
+    setText(''); onSaved?.();
+  };
+  return (
+    <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-3">
+      <div className="text-[12px] text-slate-500 mb-2">Nhắn cho đồng nghiệp / bộ phận khác về khách này. Gõ <b>@</b> + tên để tag — người được tag nhận thông báo.</div>
+      <div className="flex gap-2 items-center">
+        <MentionInput value={text} onChange={setText} onEnter={send} staff={staff} allowCustomer={false} placeholder="VD: @Bảo Bei khách hỏi lại ảnh before/after…"
+          className="w-full h-11 px-3 text-[14px] rounded-xl border border-slate-200 bg-white outline-none focus:border-blue-400" />
+        <button onClick={send} disabled={busy} className="shrink-0 h-11 px-4 rounded-xl bg-blue-600 text-white text-[13.5px] font-bold inline-flex items-center gap-1.5 disabled:opacity-60"><Send className="w-4 h-4" />{busy ? 'Đang gửi…' : 'Gửi'}</button>
+      </div>
+    </div>
+  );
+};
+const ExchangeList = ({ items, me, onDelete }) => (
+  !items.length ? <div className="text-center py-6 text-slate-300 text-sm">Chưa có trao đổi nội bộ</div> : (
+    <div className="space-y-2">
+      {items.map(a => (
+        <div key={a.id} className="rounded-xl border border-slate-100 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12.5px] font-semibold text-blue-700">{a.author?.full_name || 'Nhân viên'}</span>
+            <span className="flex items-center gap-2 shrink-0"><span className="text-[11px] text-slate-400 tabular-nums">{fmtDT(a.created_at)}</span>
+              {(a.created_by === me?.id || me?.role === 'admin') && <button onClick={() => onDelete(a)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}</span>
+          </div>
+          <div className="text-[13px] text-slate-700 mt-1 whitespace-pre-wrap break-words"><MentionText text={a.content} /></div>
+        </div>
+      ))}
+    </div>));
+
 // Cột bảng Data khách (máy tính) — telesale kéo thả đổi thứ tự, lưu trên máy
 const MD_COLS = [
   { id: 'kh', label: 'Khách hàng', w: 'w-[210px]' },
@@ -385,6 +435,22 @@ const MarketingDataPage = ({ initialView = null }) => {
     Object.assign(mdCache, { rows: list, apptMap: map, cursor: maxUpdatedAt(incoming, mdCache.cursor) });
     setRows(list); setApptMap(map);
   };
+  // Bấm thông báo "nhắc bạn về khách" (link data_kh#kh:<id>) -> mở thẳng hồ sơ khách
+  useEffect(() => {
+    const open = async (raw) => {
+      const id = String(raw || '').startsWith('kh:') ? String(raw).slice(3) : null;
+      if (!id) return;
+      const hit = (mdCache.rows || []).find(r => r.id === id);
+      if (hit) { setDetail(hit); return; }
+      const { data } = await supabase.from('marketing_data').select(MD_SELECT).eq('id', id).maybeSingle();
+      if (data) { await mergeRows([data]); setDetail(data); } else toast.error('Không mở được khách này');
+    };
+    const p = takePendingFocus('data_kh');
+    if (p) open(p.id);
+    const onFocus = (e) => { if (e.detail?.tab === 'data_kh') { takePendingFocus('data_kh'); open(e.detail.id); } };
+    window.addEventListener('FOCUS_ITEM', onFocus);
+    return () => window.removeEventListener('FOCUS_ITEM', onFocus);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const loadOlder = useCallback(async (toYmd) => {
     const cur = winRef.current;
     if (!cur) return;
@@ -578,7 +644,7 @@ const MarketingDataPage = ({ initialView = null }) => {
     const ids = paged.map(r => r.id);
     if (!ids.length) return;
     supabase.from('marketing_activities').select('data_id, type, outcome, content, created_at, author:profiles!created_by(full_name)')
-      .in('data_id', ids).not('created_by', 'is', null).order('created_at', { ascending: false }).limit(400)
+      .in('data_id', ids).eq('type', 'exchange').order('created_at', { ascending: false }).limit(400)
       .then(({ data }) => { const m = {}; (data || []).forEach(a => { if (!m[a.data_id]) m[a.data_id] = a; }); setLastActs(prev => ({ ...prev, ...m })); });
   }, [pagedKey, actsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const CHIPS = [{ k: 'all', label: 'Tất cả' }, { k: 'can_goi', label: 'Cần gọi' }, { k: 'nong', label: 'Nóng' }, { k: 'mat', label: 'Mất' }, { k: 'da_lam_dv', label: 'Đã làm DV' }, { k: 'cskh', label: 'CSKH' }];
@@ -806,9 +872,10 @@ const MarketingDataPage = ({ initialView = null }) => {
                     // Nhật ký app mới hơn ghi chú GetFly thì hiện nhật ký app (người note + giờ)
                     const useApp = la && (!r.getfly_updated_at || new Date(la.created_at) >= new Date(r.getfly_updated_at));
                     const gfMatch = !useApp && r.last_exchange ? String(r.last_exchange).match(/^Ngày\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})(?::\d{2})?\s*-\s*(.+?)\s+đã\s+[^:]*:\s*([\s\S]*)$/) : null;
-                    const lxWho = useApp ? la.author?.full_name : gfMatch ? gfMatch[3] : (r.manager_name || '');
-                    const lxWhen = useApp ? fmtDT(la.created_at) : gfMatch ? `${gfMatch[2]} · ${gfMatch[1].slice(0, 5)}` : (r.last_contact_at ? fmtDT(r.last_contact_at) : '');
-                    const lxText = useApp ? `${la.type === 'call' ? (OUTCOMES[la.outcome]?.label || 'Gọi') + (la.content ? ' — ' : '') : ''}${la.content || ''}` : gfMatch ? gfMatch[4] : (r.last_exchange || '');
+                    // Trao đổi gần nhất = nhân viên / bộ phận nhắn, tag nhau (không phải note khách)
+                    const lxWho = useApp ? la.author?.full_name : gfMatch ? gfMatch[3] : '';
+                    const lxWhen = useApp ? fmtDT(la.created_at) : gfMatch ? `${gfMatch[2]} · ${gfMatch[1].slice(0, 5)}` : '';
+                    const lxText = useApp ? plainMentions(la.content) : gfMatch ? gfMatch[4] : '';
                     const d = lcDays(r);
                     const cells = {
                       kh: (
@@ -902,7 +969,7 @@ const MarketingDataPage = ({ initialView = null }) => {
                     <span className="font-semibold text-slate-600 tabular-nums">{phoneView(r.phone, me)}</span>
                     {r.source && <><span className="text-slate-300">·</span><span className="truncate">{r.source}</span></>}
                   </div>
-                  {r.last_exchange && <div className="text-[12px] text-slate-400 mt-1 line-clamp-1">{r.last_exchange}</div>}
+                  {(r.reached_info || '').trim() && <div className="text-[12px] text-slate-500 mt-1 line-clamp-2">{String(r.reached_info).trim().split('\n')[0]}</div>}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${STATUS[r.status]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS[r.status]?.label || r.status}</span>
                     {st && <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>}
@@ -1148,6 +1215,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
 
   const calls = acts.filter(a => a.type === 'call');
   const cares = acts.filter(a => a.type === 'care');
+  const exchanges = acts.filter(a => a.type === 'exchange');
 
   // Gom "Nhật ký tư vấn" -> điền sẵn ô tình trạng khách khi tạo lịch hẹn
   const consultSummary = (() => {
@@ -1204,7 +1272,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     if (!error) {
       await supabase.from('marketing_data').update({
         status: call.status, ...lpCall, last_contact_at: new Date().toISOString(),
-        next_call_at: nextIso, last_exchange: `${OUTCOMES[call.outcome]?.label}${call.content ? ' · ' + call.content.trim() : ''}`,
+        next_call_at: nextIso,
       }).eq('id', row.id);
     }
     setSavingCall(false);
@@ -1310,8 +1378,9 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     const arr = arrivedAt(row);
     if (arr) ev.push({ at: arr, icon: Sparkles, color: '#3FA7A2', dept: /messenger/i.test(row.source || '') ? 'messenger' : row.created_by ? 'truc_page' : 'system', title: 'Khách về hệ thống', desc: [row.source, row.customer_group].filter(Boolean).join(' · ') });
     acts.forEach(a => ev.push({
-      at: a.created_at, icon: a.type === 'call' ? PhoneCall : HeartHandshake, color: a.type === 'call' ? '#5BAE7B' : '#8B7BD8', dept: a.created_by ? deptOfProfile(a.author) : 'system',
-      title: a.type === 'call' ? `Cuộc gọi · ${OUTCOMES[a.outcome]?.label || 'Gọi'}` : 'Ghi chú / chăm sóc', desc: a.content, by: a.author?.full_name, next: a.next_at, media: a.media_urls,
+      at: a.created_at, icon: a.type === 'call' ? PhoneCall : a.type === 'exchange' ? MessageSquare : HeartHandshake, color: a.type === 'call' ? '#5BAE7B' : '#8B7BD8', dept: a.created_by ? deptOfProfile(a.author) : 'system',
+      title: a.type === 'call' ? `Cuộc gọi · ${OUTCOMES[a.outcome]?.label || 'Gọi'}` : a.type === 'exchange' ? '💬 Trao đổi nội bộ' : 'Ghi chú / chăm sóc',
+      desc: a.type === 'exchange' ? plainMentions(a.content) : a.content, by: a.author?.full_name, next: a.next_at, media: a.media_urls,
     }));
     gf.notes.forEach(n => { const p = profileByName(allStaff, n.creator_name); ev.push({
       at: n.created_at, icon: StickyNote, color: '#C9892B', dept: p ? deptOfProfile(p) : 'getfly', title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly',
@@ -1355,6 +1424,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
     { k: 'payment', label: 'Thanh toán', n: payments.length },
     { k: 'call', label: 'Cuộc gọi', n: calls.length },
     { k: 'care', label: 'Ghi chú', n: cares.length },
+    { k: 'exchange', label: 'Trao đổi nội bộ', n: exchanges.length },
     ...(row.getfly_id ? [{ k: 'getfly', label: 'Ghi chú GetFly', n: gf.notes.length }] : []),
     { k: 'info', label: 'Thông tin' },
   ];
@@ -1613,7 +1683,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
       )}
 
       {/* ===== Các tab nhập liệu ===== */}
-      {['call', 'care', 'getfly', 'appts', 'info'].includes(tab) && (
+      {['call', 'care', 'exchange', 'getfly', 'appts', 'info'].includes(tab) && (
         <div className="rounded-2xl bg-white border border-slate-200/80 shadow-soft p-4 lg:p-5">
             {/* ---- GỌI ĐIỆN ---- */}
             {tab === 'call' && (
@@ -1662,6 +1732,14 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
                   </div>
                 )}
                 <Timeline items={cares} loading={loadingActs} me={me} onDelete={delAct} kind="care" />
+              </div>
+            )}
+
+            {/* ---- TRAO ĐỔI NỘI BỘ ---- */}
+            {tab === 'exchange' && (
+              <div className="space-y-4">
+                <ExchangeComposer row={row} me={me} onSaved={() => { loadActs(); onChanged?.(); }} />
+                <ExchangeList items={exchanges} me={me} onDelete={delAct} />
               </div>
             )}
 
@@ -1778,7 +1856,7 @@ const DailyReportModal = ({ me, teleStaff, isTele, rows, onClose }) => {
       const to = new Date(day + 'T23:59:59.999').toISOString();
       let q = supabase.from('marketing_activities')
         .select('*, author:profiles!created_by(full_name), khach:marketing_data!data_id(customer_name, phone)')
-        .gte('created_at', from).lte('created_at', to).order('created_at', { ascending: true });
+        .gte('created_at', from).lte('created_at', to).neq('type', 'exchange').order('created_at', { ascending: true });
       if (who !== 'all') q = q.eq('created_by', who);
       const { data } = await q;
       setActs(data || []); setLoading(false);
@@ -2099,7 +2177,7 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
       setLoading(true);
       const g = new Date(); g.setDate(g.getDate() - 60);
       const [a, ap, gold, lost] = await Promise.all([
-        supabase.from('marketing_activities').select('data_id, type, outcome, created_by, created_at, content').gte('created_at', fromIso).not('created_by', 'is', null).limit(10000),
+        supabase.from('marketing_activities').select('data_id, type, outcome, created_by, created_at, content').gte('created_at', fromIso).not('created_by', 'is', null).neq('type', 'exchange').limit(10000),
         supabase.from('customer_appointments').select('id, telesale_id, status, created_at, deposit_amount, appointment_date, consult_received, no_show_at, confirmed_at, appointment_type, service').gte('appointment_date', dayKey(fromIso)).limit(5000),
         supabase.from('marketing_activities').select('outcome, created_at, created_by').eq('type', 'call').gte('created_at', g.toISOString()).limit(20000),
         supabase.from('marketing_stage_history').select('to_status, reason, changed_at').in('to_status', ['mat', 'chot_fail']).gte('changed_at', fromIso).limit(5000),
@@ -2253,7 +2331,7 @@ const TimeRangeSheet = ({ value, countOf, onClose, onApply }) => {
 
 // ---------- GHI CHÚ NHANH (mobile): bấm 1 chạm kết quả gọi, giai đoạn, nội dung, ảnh, hẹn gọi lại ----------
 const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
-  const [mode, setMode] = useState('call');             // 'call' = cuộc gọi | 'care' = ghi chú
+  const [mode, setMode] = useState('call');             // 'call' = cuộc gọi | 'care' = ghi chú khách | 'exchange' = trao đổi nội bộ
   const [outcome, setOutcome] = useState('nghe_may');
   const [status, setStatus] = useState(row.status || 'tiep_can');
   const [content, setContent] = useState('');
@@ -2278,8 +2356,9 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
     if (!error) {
       const upd = { last_contact_at: new Date().toISOString() };
       Object.assign(upd, lpQ);
-      if (mode === 'call') { upd.status = status; upd.next_call_at = nextIso; upd.last_exchange = `${OUTCOMES[outcome]?.label}${content.trim() ? ' · ' + content.trim() : ''}`; }
-      else { if (nextIso) upd.next_call_at = nextIso; if (status !== row.status) upd.status = status; if (content.trim()) upd.last_exchange = content.trim(); }
+      // Nội dung note tự ghi vào "Thông tin đã tiếp cận" (trigger DB) — không ghi đè "Trao đổi gần nhất"
+      if (mode === 'call') { upd.status = status; upd.next_call_at = nextIso; }
+      else { if (nextIso) upd.next_call_at = nextIso; if (status !== row.status) upd.status = status; }
       await supabase.from('marketing_data').update(upd).eq('id', row.id);
     }
     setSaving(false);
@@ -2308,11 +2387,20 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100">
-            {[['call', 'Cuộc gọi', PhoneCall], ['care', 'Ghi chú / chăm sóc', StickyNote]].map(([k, lb, Ic]) => (
-              <button key={k} onClick={() => setMode(k)} className={`h-9 rounded-lg text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 ${mode === k ? 'bg-white text-teal-700 shadow-soft' : 'text-slate-500'}`}><Ic className="w-4 h-4" />{lb}</button>
+          <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100">
+            {[['call', 'Cuộc gọi', PhoneCall], ['care', 'Ghi chú khách', StickyNote], ['exchange', 'Trao đổi nội bộ', MessageSquare]].map(([k, lb, Ic]) => (
+              <button key={k} onClick={() => setMode(k)} className={`h-9 rounded-lg text-[12.5px] font-semibold inline-flex items-center justify-center gap-1 ${mode === k ? `bg-white shadow-soft ${k === 'exchange' ? 'text-blue-700' : 'text-teal-700'}` : 'text-slate-500'}`}><Ic className="w-4 h-4 shrink-0" /><span className="truncate">{lb}</span></button>
             ))}
           </div>
+          {mode === 'exchange' ? (
+            <>
+              <ExchangeComposer row={row} me={me} onSaved={onSaved} />
+              {String(row.reached_info || '').trim() && (
+                <div><div className="text-[12px] font-semibold text-slate-500 mb-1.5">Thông tin đã tiếp cận</div>
+                  <div className="text-[12.5px] text-slate-600 whitespace-pre-line rounded-xl bg-slate-50 px-3 py-2 max-h-48 overflow-y-auto">{row.reached_info}</div></div>
+              )}
+            </>
+          ) : (<>
           {mode === 'call' && (
             <div>
               <div className="text-[12px] font-semibold text-slate-500 mb-1.5">Kết quả gọi</div>
@@ -2329,7 +2417,7 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
               <p className="text-[13px] text-amber-900 mt-1.5 leading-relaxed">{sc.text}</p>
             </details>); })()}
           <div>
-            <div className="text-[12px] font-semibold text-slate-500 mb-1.5">{mode === 'call' ? 'Nội dung trao đổi' : 'Ghi chú'}</div>
+            <div className="text-[12px] font-semibold text-slate-500 mb-1.5">{mode === 'call' ? 'Nội dung cuộc gọi' : 'Ghi chú về khách'} <span className="font-normal text-slate-400">· tự lưu vào “Thông tin đã tiếp cận”</span></div>
             <textarea value={content} onChange={e => setContent(e.target.value)} rows={4} autoFocus={mode === 'care'}
               placeholder={mode === 'call' ? 'Khách quan tâm gì, báo giá, băn khoăn…' : 'Ghi chú về khách…'}
               className="w-full px-3.5 py-3 text-[15px] rounded-2xl border border-slate-200 focus:border-teal-400 outline-none resize-none" />
@@ -2345,10 +2433,17 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
             </div>
             <input type="datetime-local" value={next} onChange={e => setNext(e.target.value)} className={inp} />
           </div>
+          {String(row.reached_info || '').trim() && (
+            <details className="rounded-xl bg-slate-50 px-3 py-2">
+              <summary className="text-[12px] font-semibold text-slate-500 cursor-pointer">Thông tin đã tiếp cận trước đó</summary>
+              <div className="text-[12.5px] text-slate-600 whitespace-pre-line mt-1.5 max-h-48 overflow-y-auto">{row.reached_info}</div>
+            </details>
+          )}
+          </>)}
         </div>
-        <div className="shrink-0 p-4 border-t bg-white" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        {mode !== 'exchange' && <div className="shrink-0 p-4 border-t bg-white" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           <button onClick={save} disabled={saving} className="w-full h-12 rounded-2xl bg-teal-600 text-white font-bold text-[15px] inline-flex items-center justify-center gap-2 disabled:opacity-60"><Save className="w-5 h-5" />{saving ? 'Đang lưu…' : mode === 'call' ? 'Lưu cuộc gọi' : 'Lưu ghi chú'}</button>
-        </div>
+        </div>}
       </div>
     </div>
   );

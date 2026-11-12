@@ -107,8 +107,8 @@ function buildTimeline(d, lead, appts, who, staff = []) {
   if (lead?.created_at) ev.push({ at: lead.getfly_created_at || lead.created_at, icon: Sparkles, tone: 'e-tone-neutral', dept: /messenger/i.test(lead.source || '') ? 'messenger' : lead.created_by ? 'truc_page' : 'system', title: 'Khách vào Data KH', sub: [lead.source, lead.telesale_id ? `Telesale ${who(lead.telesale_id)}` : null].filter(Boolean).join(' · ') });
   (d.activities || []).forEach(a => ev.push({
     at: a.created_at, icon: a.type === 'call' ? PhoneCall : MessageSquare, tone: 'e-tone-info', dept: a.created_by ? deptOfProfile(byId(a.created_by)) : 'system', by: a.created_by ? who(a.created_by) : '', media: a.media_urls,
-    title: a.type === 'call' ? `Cuộc gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : (a.type === 'care' ? 'Ghi chú / chăm sóc' : 'Ghi chú'),
-    sub: a.content || '',
+    title: a.type === 'call' ? `Cuộc gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : a.type === 'exchange' ? '💬 Trao đổi nội bộ' : (a.type === 'care' ? 'Ghi chú / chăm sóc' : 'Ghi chú'),
+    sub: String(a.content || '').replace(/@\[([^\]]+)\]\((?:staff|cust):[0-9a-fA-F-]+\)/g, '@$1'),
   }));
   appts.forEach(a => {
     ev.push({ at: a.appointment_date || a.created_at, icon: CalendarDays, tone: 'e-tone-brand', dept: isRecheck(a) ? 'dieu_duong' : 'lich_hen', title: `${isRecheck(a) ? 'Tái khám' : 'Lịch hẹn tư vấn'} · ${a.service || 'chưa rõ dịch vụ'}`, sub: [apptTone(a).label, a.sale_id ? `Sale ${who(a.sale_id)}` : null].filter(Boolean).join(' · ') });
