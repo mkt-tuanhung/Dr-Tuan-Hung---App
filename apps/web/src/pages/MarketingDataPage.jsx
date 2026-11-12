@@ -2079,7 +2079,7 @@ const TeleKpiModal = ({ me, isTele, teleStaff, rows, onClose }) => {
           <h3 className="font-bold text-slate-900 flex items-center gap-2"><Gauge className="w-5 h-5 text-teal-600" />KPI telesale & Giờ vàng</h3>
           <div className="flex items-center gap-2">
             <div className="e-seg">{[[1, 'Hôm nay'], [7, '7 ngày'], [30, '30 ngày']].map(([d, l]) => <button key={d} onClick={() => setDays(d)} className={`e-seg-item h-8 px-3 ${days === d ? 'bg-white text-teal-700 font-semibold shadow-soft' : 'text-slate-500'}`}>{l}</button>)}</div>
-            <button onClick={onClose} className="w-8 h-8 grid place-items-center text-slate-500"><X className="w-5 h-5" /></button>
+            <button onClick={onClose} aria-label="Đóng" className="w-8 h-8 grid place-items-center text-slate-500"><X className="w-5 h-5" /></button>
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5">
@@ -2155,7 +2155,7 @@ const TimeRangeSheet = ({ value, countOf, onClose, onApply }) => {
         <div className="shrink-0 px-5 pt-1 sm:pt-4 pb-3 flex items-center justify-between">
           <span className="w-8" />
           <h3 className="font-bold text-slate-900 text-[17px]">Chọn thời gian</h3>
-          <button onClick={onClose} className="w-8 h-8 grid place-items-center text-slate-500"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} aria-label="Đóng" className="w-8 h-8 grid place-items-center text-slate-500"><X className="w-5 h-5" /></button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-3 space-y-2">
           {TIME_PRESETS.map(p => { const [a, b] = p.r(); const n = countOf(a, b); const on = sel === p.k; return (
@@ -2191,6 +2191,10 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
   const [next, setNext] = useState('');
   const [saving, setSaving] = useState(false);
   const quick = [['Chiều nay', 0, 15], ['Sáng mai', 1, 9], ['3 ngày', 3, 9], ['1 tuần', 7, 9]];
+  // Đóng bảng: nút ✕, phím Esc, vuốt thanh trên cùng xuống (Back / vuốt cạnh do backNav bấm nút "Đóng")
+  const [dragY, setDragY] = useState(0);
+  const dragStart = useRef(null);
+  useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
   const save = async () => {
     if (mode === 'care' && !content.trim() && !media.length) { toast.error('Nhập nội dung hoặc thêm ảnh'); return; }
     const lpQ = await lostPatch(status, row.status, row.customer_name);
@@ -2216,14 +2220,22 @@ const QuickNoteSheet = ({ row, me, onClose, onSaved }) => {
   const pill = (on) => `shrink-0 px-3 h-9 rounded-full text-[13px] font-semibold border transition ${on ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'}`;
   return (
     <div data-back-close className="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="pt-2.5 pb-1 grid place-items-center sm:hidden"><span className="w-10 h-1.5 rounded-full bg-slate-200" /></div>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[88vh] flex flex-col overflow-hidden transition-transform" style={{ transform: dragY ? `translateY(${dragY}px)` : undefined }} onClick={e => e.stopPropagation()}>
+        <div className="sm:hidden touch-none"
+          onTouchStart={e => { dragStart.current = e.touches[0].clientY; }}
+          onTouchMove={e => { if (dragStart.current != null) setDragY(Math.max(0, e.touches[0].clientY - dragStart.current)); }}
+          onTouchEnd={() => { if (dragY > 90) onClose(); setDragY(0); dragStart.current = null; }}>
+          <div className="pt-2.5 pb-1 grid place-items-center"><span className="w-10 h-1.5 rounded-full bg-slate-300" /></div>
+        </div>
         <div className="shrink-0 px-5 pb-3 pt-1 sm:pt-4 border-b flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="font-bold text-slate-900 truncate">{row.customer_name || '(Chưa có tên)'}</div>
             <div className="text-[12.5px] text-slate-500 tabular-nums">{phoneView(row.phone, me)}</div>
           </div>
-          <a href={`tel:${row.phone}`} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center"><PhoneCall className="w-[18px] h-[18px]" /></a>
+          <div className="flex items-center gap-2 shrink-0">
+            <a href={`tel:${row.phone}`} className="w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center"><PhoneCall className="w-[18px] h-[18px]" /></a>
+            <button type="button" onClick={onClose} aria-label="Đóng" className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 grid place-items-center active:scale-95"><X className="w-5 h-5" /></button>
+          </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
           <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100">
