@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { deptOfProfile, profileByName, deptStyle } from '@/lib/departments';
+import { DeptTag, DeptCard, MediaThumbs } from '@/components/TimelineBits.jsx';
+import { useStaff } from '@/features/crm/C360Editors.jsx';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
@@ -1065,7 +1068,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   const loadActs = useCallback(async () => {
     setLoadingActs(true);
     const { data } = await supabase.from('marketing_activities')
-      .select('*, author:profiles!created_by(full_name)').eq('data_id', row.id).order('created_at', { ascending: false });
+      .select('*, author:profiles!created_by(full_name, role, role_2)').eq('data_id', row.id).order('created_at', { ascending: false });
     setActs(data || []); setLoadingActs(false);
   }, [row.id]);
   // Toàn bộ lịch hẹn của khách — khớp theo 9 số cuối SĐT (bỏ qua +84/84/0)
@@ -1230,35 +1233,36 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
   // Dòng thời gian hợp nhất mọi tương tác
   const [stageHist, setStageHist] = useState([]);
   useEffect(() => {
-    supabase.from('marketing_stage_history').select('from_status, to_status, reason, changed_at, by:profiles!changed_by(full_name)')
+    supabase.from('marketing_stage_history').select('from_status, to_status, reason, changed_at, by:profiles!changed_by(full_name, role, role_2)')
       .eq('data_id', row.id).order('changed_at', { ascending: false }).limit(50)
       .then(({ data }) => setStageHist(data || []));
   }, [row.id, row.status]);
+  const allStaff = useStaff();
   const events = (() => {
     const ev = [];
     stageHist.filter(h => h.from_status).forEach(h => ev.push({
-      at: h.changed_at, icon: Columns3, color: LOST_STATUSES.includes(h.to_status) ? '#D9635C' : '#64748b',
+      at: h.changed_at, icon: Columns3, color: LOST_STATUSES.includes(h.to_status) ? '#D9635C' : '#64748b', dept: deptOfProfile(h.by),
       title: `Chuyển giai đoạn: ${STATUS[h.from_status]?.label || h.from_status} → ${STATUS[h.to_status]?.label || h.to_status}`,
       desc: h.reason ? `Lý do: ${h.reason}` : '', by: h.by?.full_name,
     }));
     const arr = arrivedAt(row);
-    if (arr) ev.push({ at: arr, icon: Sparkles, color: '#3FA7A2', title: 'Khách về hệ thống', desc: [row.source, row.customer_group].filter(Boolean).join(' · ') });
+    if (arr) ev.push({ at: arr, icon: Sparkles, color: '#3FA7A2', dept: /messenger/i.test(row.source || '') ? 'messenger' : row.created_by ? 'truc_page' : 'system', title: 'Khách về hệ thống', desc: [row.source, row.customer_group].filter(Boolean).join(' · ') });
     acts.forEach(a => ev.push({
-      at: a.created_at, icon: a.type === 'call' ? PhoneCall : HeartHandshake, color: a.type === 'call' ? '#5BAE7B' : '#8B7BD8',
-      title: a.type === 'call' ? `Cuộc gọi · ${OUTCOMES[a.outcome]?.label || 'Gọi'}` : 'Chăm sóc', desc: a.content, by: a.author?.full_name, next: a.next_at,
+      at: a.created_at, icon: a.type === 'call' ? PhoneCall : HeartHandshake, color: a.type === 'call' ? '#5BAE7B' : '#8B7BD8', dept: a.created_by ? deptOfProfile(a.author) : 'system',
+      title: a.type === 'call' ? `Cuộc gọi · ${OUTCOMES[a.outcome]?.label || 'Gọi'}` : 'Ghi chú / chăm sóc', desc: a.content, by: a.author?.full_name, next: a.next_at, media: a.media_urls,
     }));
-    gf.notes.forEach(n => ev.push({
-      at: n.created_at, icon: StickyNote, color: '#C9892B', title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly',
+    gf.notes.forEach(n => { const p = profileByName(allStaff, n.creator_name); ev.push({
+      at: n.created_at, icon: StickyNote, color: '#C9892B', dept: p ? deptOfProfile(p) : 'getfly', title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly',
       desc: [n.title, n.content].filter(Boolean).join(' — '), by: n.creator_name,
-    }));
+    }); });
     appts.forEach(a => {
       const re = isRecheckAppt(a);
-      ev.push({ at: `${a.appointment_date}T${String(a.appointment_time || '09:00').slice(0, 5)}:00`, icon: re ? Stethoscope : CalendarDays, color: re ? '#8B7BD8' : '#5B8DD6',
+      ev.push({ at: `${a.appointment_date}T${String(a.appointment_time || '09:00').slice(0, 5)}:00`, icon: re ? Stethoscope : CalendarDays, color: re ? '#8B7BD8' : '#5B8DD6', dept: re ? 'dieu_duong' : 'lich_hen',
         title: re ? 'Lịch tái khám' : 'Lịch hẹn tư vấn', desc: [String(a.service || '').replace('[Tái khám] ', ''), a.sale?.full_name && `Sale: ${a.sale.full_name}`].filter(Boolean).join(' · '), pill: APPT_PILL[a.status] });
-      if (a.deposit_date && Number(a.deposit_amount) > 0) ev.push({ at: `${a.deposit_date}T12:00:00`, icon: Wallet, color: '#5B8DD6', title: `Đặt cọc ${fmtMoney(a.deposit_amount)}`, desc: a.service });
-      if (a.status === 'phau_thuat' && a.surgery_date) ev.push({ at: `${a.surgery_date}T12:00:00`, icon: Activity, color: '#067B7F', title: 'Phẫu thuật', desc: [a.service, Number(a.revenue) > 0 && `Doanh thu ${fmtMoney(Number(a.revenue) + Number(a.upsale_revenue || 0))}`].filter(Boolean).join(' · ') });
-      if (a.post_op_status) ev.push({ at: `${a.surgery_date || a.appointment_date}T13:00:00`, icon: HeartHandshake, color: '#3FA7A2', title: 'Hậu phẫu / CSKH', desc: a.post_op_status });
-      if (a.bong_date) ev.push({ at: `${a.bong_date}T12:00:00`, icon: UserX, color: '#D9635C', title: 'Khách bong lịch', desc: a.service });
+      if (a.deposit_date && Number(a.deposit_amount) > 0) ev.push({ at: `${a.deposit_date}T12:00:00`, icon: Wallet, color: '#5B8DD6', dept: 'sale_offline', title: `Đặt cọc ${fmtMoney(a.deposit_amount)}`, desc: a.service });
+      if (a.status === 'phau_thuat' && a.surgery_date) ev.push({ at: `${a.surgery_date}T12:00:00`, icon: Activity, color: '#067B7F', dept: 'bac_si', title: 'Phẫu thuật', desc: [a.service, Number(a.revenue) > 0 && `Doanh thu ${fmtMoney(Number(a.revenue) + Number(a.upsale_revenue || 0))}`].filter(Boolean).join(' · ') });
+      if (a.post_op_status) ev.push({ at: `${a.surgery_date || a.appointment_date}T13:00:00`, icon: HeartHandshake, color: '#3FA7A2', dept: 'dieu_duong', title: 'Hậu phẫu / CSKH', desc: a.post_op_status });
+      if (a.bong_date) ev.push({ at: `${a.bong_date}T12:00:00`, icon: UserX, color: '#D9635C', dept: 'sale_offline', title: 'Khách bong lịch', desc: [a.bong_reason && `Lý do: ${a.bong_reason}`, a.service].filter(Boolean).join(' · ') });
     });
     return ev.filter(e => e.at).sort((x, y) => new Date(y.at) - new Date(x.at));
   })();
@@ -1425,25 +1429,29 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
             </PCard>
             <PCard title="Dòng thời gian hợp nhất" sub="Cuộc gọi · ghi chú · ghi chú GetFly · lịch hẹn · đặt cọc · phẫu thuật · hậu phẫu">
               {loadingActs ? <div className="py-8 grid place-items-center"><div className="w-6 h-6 border-[3px] border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div> : events.length === 0 ? <PEmpty icon={Activity} title="Chưa có hoạt động" sub="Mọi cuộc gọi, ghi chú và lịch hẹn sẽ hiện ở đây." /> : (
-                <ol className="relative">
+                <>
+                <div className="flex flex-wrap gap-1.5 mb-3">{[...new Set(events.map(e => e.dept || 'system'))].map(k => <DeptTag key={k} dept={k} />)}</div>
+                <ol className="relative space-y-2.5">
                   {events.map((e, i) => (
-                    <li key={i} className="relative flex gap-3 pb-4 last:pb-0">
-                      {i < events.length - 1 && <span className="absolute left-[13px] top-7 bottom-0 w-px bg-slate-100" />}
-                      <span className="w-7 h-7 rounded-full grid place-items-center shrink-0 relative" style={evStyle(e.color)}><e.icon className="w-3.5 h-3.5" /></span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
+                    <li key={i} className="relative flex gap-2.5">
+                      <span className="w-7 h-7 rounded-full grid place-items-center shrink-0 mt-1.5" style={{ background: deptStyle(e.dept).bg, color: deptStyle(e.dept).c, border: `1px solid ${deptStyle(e.dept).bd}` }}><e.icon className="w-3.5 h-3.5" /></span>
+                      <DeptCard dept={e.dept} className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                            <DeptTag dept={e.dept} name={e.by} />
                             <span className="text-[13px] font-semibold text-slate-900">{e.title}</span>
-                            {e.pill && <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full align-middle ${e.pill.cls}`}>{e.pill.label}</span>}
+                            {e.pill && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${e.pill.cls}`}>{e.pill.label}</span>}
                           </div>
-                          <span className="text-[11px] text-slate-400 tabular-nums shrink-0">{new Date(e.at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="text-[11px] text-slate-500 tabular-nums shrink-0">{new Date(e.at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                        {(e.desc || e.by) && <div className="text-[12px] text-slate-500 mt-0.5 break-words line-clamp-3">{[e.desc, e.by].filter(Boolean).join(' · ')}</div>}
-                        {e.next && <span className="mt-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(e.next)}</span>}
-                      </div>
+                        {e.desc && <div className="text-[13px] text-slate-700 mt-1 break-words whitespace-pre-line">{e.desc}</div>}
+                        <MediaThumbs urls={e.media} />
+                        {e.next && <span className="mt-1.5 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-white text-blue-600 inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />Hẹn: {fmtDT(e.next)}</span>}
+                      </DeptCard>
                     </li>
                   ))}
                 </ol>
+                </>
               )}
             </PCard>
           </div>

@@ -8,6 +8,8 @@
 //   <CustomerName phone name /> — tên khách bấm được, mở hồ sơ ở bất kỳ màn nào
 // ============================================================
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { deptOfProfile, profileByName, deptStyle } from '@/lib/departments';
+import { DeptTag, DeptCard, MediaThumbs } from '@/components/TimelineBits.jsx';
 import {
   Phone, CalendarDays, Wallet, Stethoscope, Image as ImageIcon, Mic, Smile, History, PhoneCall,
   MessageSquare, HandCoins, Activity, UserX, Check, ExternalLink, Sparkles, StickyNote, Route, Pencil,
@@ -99,24 +101,25 @@ function journeyIndex(lead, appts) {
   return lead ? 0 : -1;
 }
 
-function buildTimeline(d, lead, appts, who) {
+function buildTimeline(d, lead, appts, who, staff = []) {
   const ev = [];
-  if (lead?.created_at) ev.push({ at: lead.getfly_created_at || lead.created_at, icon: Sparkles, tone: 'e-tone-neutral', title: 'Khách vào Data KH', sub: [lead.source, lead.telesale_id ? `Telesale ${who(lead.telesale_id)}` : null].filter(Boolean).join(' · ') });
+  const byId = (id) => staff.find(s => s.id === id);
+  if (lead?.created_at) ev.push({ at: lead.getfly_created_at || lead.created_at, icon: Sparkles, tone: 'e-tone-neutral', dept: /messenger/i.test(lead.source || '') ? 'messenger' : lead.created_by ? 'truc_page' : 'system', title: 'Khách vào Data KH', sub: [lead.source, lead.telesale_id ? `Telesale ${who(lead.telesale_id)}` : null].filter(Boolean).join(' · ') });
   (d.activities || []).forEach(a => ev.push({
-    at: a.created_at, icon: a.type === 'call' ? PhoneCall : MessageSquare, tone: 'e-tone-info',
-    title: a.type === 'call' ? `Cuộc gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : (a.type === 'care' ? 'Chăm sóc' : 'Ghi chú'),
-    sub: [a.content, a.created_by ? who(a.created_by) : null].filter(Boolean).join(' · '),
+    at: a.created_at, icon: a.type === 'call' ? PhoneCall : MessageSquare, tone: 'e-tone-info', dept: a.created_by ? deptOfProfile(byId(a.created_by)) : 'system', by: a.created_by ? who(a.created_by) : '', media: a.media_urls,
+    title: a.type === 'call' ? `Cuộc gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : (a.type === 'care' ? 'Ghi chú / chăm sóc' : 'Ghi chú'),
+    sub: a.content || '',
   }));
   appts.forEach(a => {
-    ev.push({ at: a.appointment_date || a.created_at, icon: CalendarDays, tone: 'e-tone-brand', title: `${isRecheck(a) ? 'Tái khám' : 'Lịch hẹn tư vấn'} · ${a.service || 'chưa rõ dịch vụ'}`, sub: [apptTone(a).label, a.sale_id ? `Sale ${who(a.sale_id)}` : null].filter(Boolean).join(' · ') });
-    if (a.deposit_date || Number(a.deposit_amount) > 0) ev.push({ at: a.deposit_date || a.appointment_date, icon: HandCoins, tone: 'e-tone-lavender', title: `Đặt cọc ${money(a.deposit_amount)}`, sub: a.service });
-    if (a.bong_date) ev.push({ at: a.bong_date, icon: UserX, tone: 'e-tone-danger', title: 'Khách bong', sub: a.service });
-    if (a.status === 'phau_thuat') ev.push({ at: a.surgery_date || a.appointment_date, icon: Activity, tone: 'e-tone-success', title: `Phẫu thuật · ${a.surgery_type || a.service || ''}`, sub: [a.bac_si_id ? `BS ${who(a.bac_si_id)}` : null, Number(a.revenue) ? money(Number(a.revenue) + Number(a.upsale_revenue || 0)) : null].filter(Boolean).join(' · ') });
+    ev.push({ at: a.appointment_date || a.created_at, icon: CalendarDays, tone: 'e-tone-brand', dept: isRecheck(a) ? 'dieu_duong' : 'lich_hen', title: `${isRecheck(a) ? 'Tái khám' : 'Lịch hẹn tư vấn'} · ${a.service || 'chưa rõ dịch vụ'}`, sub: [apptTone(a).label, a.sale_id ? `Sale ${who(a.sale_id)}` : null].filter(Boolean).join(' · ') });
+    if (a.deposit_date || Number(a.deposit_amount) > 0) ev.push({ at: a.deposit_date || a.appointment_date, icon: HandCoins, tone: 'e-tone-lavender', dept: 'sale_offline', title: `Đặt cọc ${money(a.deposit_amount)}`, sub: a.service });
+    if (a.bong_date) ev.push({ at: a.bong_date, icon: UserX, tone: 'e-tone-danger', dept: 'sale_offline', title: 'Khách bong', sub: [a.bong_reason && `Lý do: ${a.bong_reason}`, a.service].filter(Boolean).join(' · ') });
+    if (a.status === 'phau_thuat') ev.push({ at: a.surgery_date || a.appointment_date, icon: Activity, tone: 'e-tone-success', dept: 'bac_si', title: `Phẫu thuật · ${a.surgery_type || a.service || ''}`, sub: [a.bac_si_id ? `BS ${who(a.bac_si_id)}` : null, Number(a.revenue) ? money(Number(a.revenue) + Number(a.upsale_revenue || 0)) : null].filter(Boolean).join(' · ') });
   });
-  (d.recordings || []).forEach(r => ev.push({ at: r.created_at, icon: Mic, tone: 'e-tone-sky', title: `Ghi âm tư vấn${r.ai_score != null ? ` · AI chấm ${r.ai_score}` : ''}`, sub: r.summary }));
-  (d.reviews || []).forEach(r => ev.push({ at: r.submitted_at, icon: Smile, tone: 'e-tone-peach', title: `Đánh giá ${r.milestone || ''}${r.csat_score != null ? ` · CSAT ${r.csat_score}` : ''}${r.nps_score != null ? ` · NPS ${r.nps_score}` : ''}`, sub: r.comment }));
-  (d.getfly_notes || []).forEach(n => ev.push({ at: n.created_at, icon: StickyNote, tone: 'e-tone-peach', title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly', sub: [n.title, n.content, n.creator_name].filter(Boolean).join(' · ') }));
-  (d.messages || []).forEach(m => m.last_time && ev.push({ at: m.last_time, icon: MessageSquare, tone: 'e-tone-info', title: 'Tin nhắn Messenger', sub: m.last_message }));
+  (d.recordings || []).forEach(r => ev.push({ at: r.created_at, icon: Mic, tone: 'e-tone-sky', dept: 'sale_offline', title: `Ghi âm tư vấn${r.ai_score != null ? ` · AI chấm ${r.ai_score}` : ''}`, sub: r.summary }));
+  (d.reviews || []).forEach(r => ev.push({ at: r.submitted_at, icon: Smile, tone: 'e-tone-peach', dept: 'cskh', title: `Đánh giá ${r.milestone || ''}${r.csat_score != null ? ` · CSAT ${r.csat_score}` : ''}${r.nps_score != null ? ` · NPS ${r.nps_score}` : ''}`, sub: r.comment }));
+  (d.getfly_notes || []).forEach(n => { const p = profileByName(staff, n.creator_name); ev.push({ at: n.created_at, icon: StickyNote, tone: 'e-tone-peach', dept: p ? deptOfProfile(p) : 'getfly', by: n.creator_name, title: n.is_feedback ? 'Phản hồi (GetFly)' : 'Ghi chú GetFly', sub: [n.title, n.content].filter(Boolean).join(' — ') }); });
+  (d.messages || []).forEach(m => m.last_time && ev.push({ at: m.last_time, icon: MessageSquare, tone: 'e-tone-info', dept: 'messenger', title: 'Tin nhắn Messenger', sub: m.last_message }));
   return ev.filter(e => e.at).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 
@@ -162,7 +165,7 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
   const jIdx = journeyIndex(lead, appts);
   const missingRpc = !!state.error && (state.error.code === 'PGRST202' || /get_customer_360/.test(state.error.message || ''));
 
-  const timeline = useMemo(() => (d?.found ? buildTimeline(d, lead, appts, who) : []), [d, lead, appts, who]);
+  const timeline = useMemo(() => (d?.found ? buildTimeline(d, lead, appts, who, staff) : []), [d, lead, appts, who, staff]);
   const images = useMemo(() => appts.flatMap(a => [['consult_image_urls', 'Ảnh tư vấn'], ['note_image_urls', 'Ảnh ghi chú'], ['deposit_bill_url', 'Bill cọc'], ['hospital_fee_proof', 'Chứng từ viện phí']]
     .flatMap(([k, label]) => urlsOf(a[k]).map(url => ({ url, label, service: a.service })))), [appts]);
   const mediaLinks = useMemo(() => (d?.media || []).flatMap(m => urlsOf(m.source_links).map(url => ({ url, m }))), [d]);
@@ -241,7 +244,7 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
         </div>
 
         {tab === 'pipeline' && (
-          <C360Pipeline d={d} appts={appts} lead={lead} who={who} jIdx={jIdx} canEdit={isAdmin}
+          <C360Pipeline d={d} appts={appts} lead={lead} who={who} staff={staff} jIdx={jIdx} canEdit={isAdmin}
             canSeeConsult={!isSaleOffline(profile)}
             onEditAppt={(a) => setEdit({ kind: 'appt', row: { ...a, customer_name: a.customer_name || name } })}
             onEditLead={() => setEdit({ kind: 'lead', row: { ...lead, customer_name: lead?.customer_name || name } })}
@@ -252,10 +255,15 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
           <ol className="relative ml-4 border-l-[1.5px] border-slate-200 space-y-3.5 py-1">
             {timeline.map((e, i) => (
               <li key={i} className="relative pl-6">
-                <span className={`absolute -left-[15px] top-0.5 w-7 h-7 rounded-full grid place-items-center ring-4 ring-white ${e.tone}`}><e.icon className="w-3.5 h-3.5" /></span>
-                <div className="text-[13.5px] font-semibold text-slate-800">{e.title}</div>
-                {e.sub && <div className="text-[12.5px] text-slate-500 line-clamp-2">{e.sub}</div>}
-                <div className="text-[11.5px] text-slate-400 mt-0.5">{String(e.at).length <= 10 ? day(e.at) : dt(e.at)}</div>
+                <span className="absolute -left-[15px] top-2 w-7 h-7 rounded-full grid place-items-center ring-4 ring-white" style={{ background: deptStyle(e.dept).bg, color: deptStyle(e.dept).c, border: `1px solid ${deptStyle(e.dept).bd}` }}><e.icon className="w-3.5 h-3.5" /></span>
+                <DeptCard dept={e.dept}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex flex-wrap items-center gap-1.5"><DeptTag dept={e.dept} name={e.by} /><span className="text-[13.5px] font-semibold text-slate-800">{e.title}</span></div>
+                    <span className="text-[11px] text-slate-500 shrink-0 tabular-nums">{String(e.at).length <= 10 ? day(e.at) : dt(e.at)}</span>
+                  </div>
+                  {e.sub && <div className="text-[13px] text-slate-700 mt-1 whitespace-pre-line break-words">{e.sub}</div>}
+                  <MediaThumbs urls={e.media} />
+                </DeptCard>
               </li>
             ))}
           </ol>

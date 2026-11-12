@@ -8,6 +8,8 @@
 // Admin: nút "Sửa" ở từng khối (onEditAppt / onEditLead).
 // ============================================================
 import React, { useState } from 'react';
+import { deptOfProfile, profileByName } from '@/lib/departments';
+import { DeptTag, DeptCard, MediaThumbs } from '@/components/TimelineBits.jsx';
 import {
   Sparkles, PhoneCall, MessageSquare, StickyNote, CalendarDays, FileText, Mic, UserX, HandCoins,
   Activity, HeartPulse, Smile, Pencil, ChevronDown, Stethoscope, AlertTriangle, Link as LinkIcon, Check,
@@ -148,7 +150,7 @@ function Stage({ no, title, icon: Icon, state, count, defaultOpen, children, emp
   );
 }
 
-export default function C360Pipeline({ d, appts, lead, who, jIdx, canEdit, canSeeConsult, onEditAppt, onEditLead, onOpenImages }) {
+export default function C360Pipeline({ d, appts, lead, who, staff = [], jIdx, canEdit, canSeeConsult, onEditAppt, onEditLead, onOpenImages }) {
   const consults = appts.filter(a => !isRecheck(a));
   const deposits = appts.filter(a => a.status === 'coc' || Number(a.deposit_amount) > 0 || a.deposit_date);
   const surgeries = appts.filter(a => a.status === 'phau_thuat');
@@ -192,16 +194,20 @@ export default function C360Pipeline({ d, appts, lead, who, jIdx, canEdit, canSe
             <div className="e-card-flat px-4 py-3">
               <div className="text-[12.5px] font-semibold text-slate-600 mb-1.5">Cuộc gọi & chăm sóc · {activities.length}</div>
               <ul className="space-y-1.5">
-                {(moreAct ? activities : activities.slice(0, 5)).map(a => (
-                  <li key={a.id} className="flex items-start gap-2 text-[13px]">
-                    {a.type === 'call' ? <PhoneCall className="w-3.5 h-3.5 mt-0.5 text-sky-600 shrink-0" /> : <MessageSquare className="w-3.5 h-3.5 mt-0.5 text-teal-600 shrink-0" />}
-                    <div className="min-w-0">
-                      <span className="font-medium text-slate-800">{a.type === 'call' ? `Gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : a.type === 'care' ? 'Chăm sóc' : 'Ghi chú'}</span>
-                      {a.content && <span className="text-slate-600"> — {a.content}</span>}
-                      <div className="text-[11.5px] text-slate-400">{dt(a.created_at)}{a.created_by ? ` · ${who(a.created_by)}` : ''}</div>
-                    </div>
-                  </li>
-                ))}
+                {(moreAct ? activities : activities.slice(0, 5)).map(a => { const dp = a.created_by ? deptOfProfile(staff.find(s => s.id === a.created_by)) : 'system'; return (
+                  <li key={a.id}>
+                    <DeptCard dept={dp}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-[13px]">
+                          <DeptTag dept={dp} name={a.created_by ? who(a.created_by) : ''} />
+                          <span className="font-semibold text-slate-800 inline-flex items-center gap-1">{a.type === 'call' ? <PhoneCall className="w-3.5 h-3.5" /> : <MessageSquare className="w-3.5 h-3.5" />}{a.type === 'call' ? `Gọi${a.outcome ? ` · ${OUTCOME[a.outcome] || a.outcome}` : ''}` : a.type === 'care' ? 'Ghi chú / chăm sóc' : 'Ghi chú'}</span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 shrink-0">{dt(a.created_at)}</span>
+                      </div>
+                      {a.content && <div className="text-[13px] text-slate-700 mt-1 whitespace-pre-line break-words">{a.content}</div>}
+                      <MediaThumbs urls={a.media_urls} />
+                    </DeptCard>
+                  </li>); })}
               </ul>
               {activities.length > 5 && <button type="button" onClick={() => setMoreAct(v => !v)} className="mt-1.5 text-[12.5px] font-semibold text-teal-700 hover:underline">{moreAct ? 'Thu gọn' : `Xem thêm ${activities.length - 5}`}</button>}
             </div>
@@ -210,12 +216,13 @@ export default function C360Pipeline({ d, appts, lead, who, jIdx, canEdit, canSe
             <div className="e-card-flat px-4 py-3">
               <div className="text-[12.5px] font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5"><StickyNote className="w-3.5 h-3.5 text-peach-600" /> Ghi chú GetFly · {getfly.length}</div>
               <ul className="space-y-1.5">
-                {getfly.slice(0, 5).map(n => (
-                  <li key={n.id} className="text-[13px] text-slate-700">
-                    {[n.title, n.content].filter(Boolean).join(' — ')}
-                    <div className="text-[11.5px] text-slate-400">{dt(n.created_at)}{n.creator_name ? ` · ${n.creator_name}` : ''}</div>
-                  </li>
-                ))}
+                {getfly.slice(0, 5).map(n => { const p = profileByName(staff, n.creator_name); const dp = p ? deptOfProfile(p) : 'getfly'; return (
+                  <li key={n.id}>
+                    <DeptCard dept={dp}>
+                      <div className="flex items-start justify-between gap-2"><DeptTag dept={dp} name={n.creator_name} /><span className="text-[11px] text-slate-500 shrink-0">{dt(n.created_at)}</span></div>
+                      <div className="text-[13px] text-slate-700 mt-1 break-words">{[n.title, n.content].filter(Boolean).join(' — ')}</div>
+                    </DeptCard>
+                  </li>); })}
               </ul>
             </div>
           )}
