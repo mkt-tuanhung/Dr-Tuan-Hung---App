@@ -6,7 +6,7 @@ import { deptStyle } from '@/lib/departments';
 export const DeptTag = ({ dept, name }) => {
   const d = deptStyle(dept);
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ color: d.c, background: '#fff', border: `1px solid ${d.bd}` }}>
+    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ color: d.t || d.c, background: '#fff', border: `1px solid ${d.bd}` }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: d.c }} />{d.label}{name ? <span className="font-semibold opacity-80">· {name}</span> : null}
     </span>
   );
@@ -39,5 +39,5 @@ export const MediaThumbs = ({ urls = [], size = 64 }) => {
 // Thẻ 1 mục dòng thời gian theo màu bộ phận
 export const DeptCard = ({ dept, children, className = '' }) => {
   const d = deptStyle(dept);
-  return <div className={`rounded-xl px-3 py-2.5 border ${className}`} style={{ background: d.bg, borderColor: d.bd, borderLeft: `4px solid ${d.c}` }}>{children}</div>;
+  return <div className={`rounded-xl px-3 py-2.5 border ${className}`} style={{ background: d.bg, borderColor: d.bd, borderLeft: `3px solid ${d.c}` }}>{children}</div>;
 };

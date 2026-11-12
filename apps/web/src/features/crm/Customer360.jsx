@@ -255,7 +255,7 @@ function Customer360Drawer({ target, onClose, onRetarget }) {
           <ol className="relative ml-4 border-l-[1.5px] border-slate-200 space-y-3.5 py-1">
             {timeline.map((e, i) => (
               <li key={i} className="relative pl-6">
-                <span className="absolute -left-[15px] top-2 w-7 h-7 rounded-full grid place-items-center ring-4 ring-white" style={{ background: deptStyle(e.dept).bg, color: deptStyle(e.dept).c, border: `1px solid ${deptStyle(e.dept).bd}` }}><e.icon className="w-3.5 h-3.5" /></span>
+                <span className="absolute -left-[15px] top-2 w-7 h-7 rounded-full grid place-items-center ring-4 ring-white" style={{ background: deptStyle(e.dept).bg, color: deptStyle(e.dept).t || deptStyle(e.dept).c, border: `1px solid ${deptStyle(e.dept).bd}` }}><e.icon className="w-3.5 h-3.5" /></span>
                 <DeptCard dept={e.dept}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex flex-wrap items-center gap-1.5"><DeptTag dept={e.dept} name={e.by} /><span className="text-[13.5px] font-semibold text-slate-800">{e.title}</span></div>
