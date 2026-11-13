@@ -354,10 +354,18 @@ Deno.serve(async (req) => {
       }
       const [creator, truc, tele] = await Promise.all([person(k.created_by), person(k.truc_page_id), person(k.telesale_id)]);
       const media: string[] = (Array.isArray(k.media_urls) ? k.media_urls : []).filter((u: unknown) => typeof u === 'string');
+      // Số thứ tự trong ngày (giờ VN): khách mới thứ mấy về hôm nay
+      const at = new Date(k.created_at || Date.now()).getTime();
+      const vnD = new Date(at + 7 * 3600_000);
+      const dayStart = new Date(Date.UTC(vnD.getUTCFullYear(), vnD.getUTCMonth(), vnD.getUTCDate()) - 7 * 3600_000).toISOString();
+      const { count: seq } = await db.from('marketing_data').select('id', { count: 'exact', head: true })
+        .is('getfly_id', null).gte('created_at', dayStart).lte('created_at', new Date(at).toISOString());
+      const ddmm = `${String(vnD.getUTCDate()).padStart(2, '0')}/${String(vnD.getUTCMonth() + 1).padStart(2, '0')}`;
       await send(
-        `🆕 <b>KHÁCH MỚI</b>${creator ? ` — ${esc(ROLE[creator.role] || '')} ${esc(creator.full_name)}`.replace(' —  ', ' — ') : ''}` +
+        `🆕 <b>KHÁCH MỚI #${seq || 1}</b> <i>(số thứ ${seq || 1} trong ngày ${ddmm})</i>${creator ? ` — ${esc(ROLE[creator.role] || '')} ${esc(creator.full_name)}`.replace(' —  ', ' — ') : ''}` +
         line('Tên khách', `<b>${esc(k.customer_name || '(chưa có tên)')}</b>`) +
         line('SĐT', esc(k.phone)) +
+        line('Mã KH', esc(k.customer_code)) +
         line('Giới tính / năm sinh', esc([k.gender, k.birthday].filter(Boolean).join(' · '))) +
         line('Địa chỉ', esc(k.address)) +
         line('Nguồn', esc(k.source)) +
