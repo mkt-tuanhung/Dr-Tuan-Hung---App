@@ -130,8 +130,34 @@ async function handoverNotify(id: string) {
 }
 
 // ===== (1) THỜI HẠN GỌI LEAD MỚI 15' (cron mỗi 2 phút): nhắc còn 5 phút + báo QUÁ HẠN =====
+// Giờ nghỉ của telesale (giờ VN): nghỉ trưa 12:00–13:30, di chuyển 18:00–19:30 -> KHÔNG nhắc gọi.
+// Hạn gọi của số về trong / sát giờ nghỉ được dời sang 13:45 / 19:45 (trigger md_set_sla),
+// đúng 13:30 / 19:30 gửi 1 tin gom các khách cần gọi ngay (mode 'sla_resume').
+const QUIET = [{ from: 12 * 60, to: 13 * 60 + 30, end: 'nghỉ trưa', icon: '☀️' }, { from: 18 * 60, to: 19 * 60 + 30, end: 'giờ di chuyển', icon: '🏠' }];
+const vnMinutes = (t = Date.now()) => { const d = new Date(t + 7 * 3600_000); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+const inQuiet = (t = Date.now()) => QUIET.some(q => vnMinutes(t) >= q.from && vnMinutes(t) < q.to);
+async function slaResume() {
+  const now = Date.now();
+  const m = vnMinutes(now);
+  const q = QUIET.find(x => Math.abs(m - x.to) <= 10) || QUIET[m < 16 * 60 ? 0 : 1];
+  const { data } = await db.from('marketing_data')
+    .select('id, customer_name, phone, source, description, sla_due_at, status, telesale:profiles!telesale_id(full_name)')
+    .is('first_contact_at', null).not('sla_due_at', 'is', null)
+    .gte('sla_due_at', new Date(now - 10 * 3600_000).toISOString()).lte('sla_due_at', new Date(now + 30 * 60_000).toISOString())
+    .not('status', 'in', '(mat,da_lam_dv,chot_fail)').order('sla_due_at', { ascending: true }).limit(60);
+  const list = data || [];
+  if (!list.length) return { ok: true, n: 0 };
+  const who = [...new Set(list.map((k: any) => k.telesale?.full_name).filter(Boolean))].join(', ') || 'Telesale';
+  const rows = list.map((k: any, i: number) => `\n${i + 1}. <b>${esc(k.customer_name || '(chưa có tên)')}</b> ${esc(k.phone)}${k.source ? ' · ' + esc(k.source) : ''}${k.description ? ' · ' + esc(String(k.description).slice(0, 60)) : ''}`).join('');
+  await send(`${q.icon} <b>HẾT ${q.end.toUpperCase()} — GỌI NGAY ${list.length} KHÁCH MỚI</b>${rows}\n\n👉 ${esc(who)} gọi / note ngay (hạn gọi ${q.to === 13 * 60 + 30 ? '13:45' : '19:45'}).`);
+  // đã gom thông báo -> không nhắc "còn 5 phút" từng khách nữa
+  await db.from('marketing_data').update({ sla_warned_at: new Date().toISOString() }).in('id', list.map((k: any) => k.id)).is('sla_warned_at', null);
+  return { ok: true, n: list.length };
+}
+
 async function slaCheck() {
   const now = Date.now();
+  if (inQuiet(now)) return { ok: true, quiet: true };   // giờ nghỉ: không nhắc
   const { data } = await db.from('marketing_data')
     .select('id, customer_name, phone, source, description, sla_due_at, sla_warned_at, sla_breached_at, status, telesale:profiles!telesale_id(full_name)')
     .is('first_contact_at', null).not('sla_due_at', 'is', null)
@@ -310,6 +336,7 @@ Deno.serve(async (req) => {
     if (body.mode === 'postop_daily') { const r = await postopDaily(); return new Response(JSON.stringify(r)); }
     if (body.table === 'handover' && body.id) { const r = await handoverNotify(String(body.id)); return new Response(JSON.stringify(r)); }
     if (body.mode === 'sla') { const r = await slaCheck(); return new Response(JSON.stringify(r)); }
+    if (body.mode === 'sla_resume') { const r = await slaResume(); return new Response(JSON.stringify(r)); }
     if (body.mode === 'appt_remind') { const r = await apptRemind(); return new Response(JSON.stringify(r)); }
     if (body.mode === 'daily_report') { const r = await dailyReport(body.day); return new Response(JSON.stringify(r)); }
     const table = String(body.table || '');
