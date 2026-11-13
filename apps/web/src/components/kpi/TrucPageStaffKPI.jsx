@@ -31,6 +31,8 @@ const Card = ({ icon: Icon, label, value, sub, accent = 'emerald' }) => (
   </div>
 );
 
+// Từ 13/11/2026 SĐT xin được do hệ thống tự đếm từ Data khách (trực page chỉ nhập SĐT quan tâm, tin nhắn, spam)
+const AUTO_FROM = '2026-11-13';
 const EMPTY = { date: todayStr(), total_phones: '', total_interested_phones: '', total_messages: '', total_spam_messages: '', telesale_id: '' };
 
 const TrucPageStaffKPI = () => {
@@ -68,6 +70,13 @@ const TrucPageStaffKPI = () => {
   }, [profile?.id, month, year]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  // SĐT xin được của ngày đang chọn (hệ thống đếm: khách trực page tạo / Messenger tự tạo / gộp vào khách cũ)
+  const isAuto = form.date >= AUTO_FROM;
+  const [autoCount, setAutoCount] = useState(null);
+  useEffect(() => {
+    if (!profile?.id || !isAuto) { setAutoCount(null); return; }
+    supabase.rpc('page_phones_count', { p_staff: profile.id, p_day: form.date }).then(({ data }) => setAutoCount(typeof data === 'number' ? data : null));
+  }, [profile?.id, form.date, isAuto]);
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -82,7 +91,7 @@ const TrucPageStaffKPI = () => {
     try {
       const payload = {
         staff_id: profile.id, date: form.date,
-        total_phones: Number(form.total_phones) || 0,
+        total_phones: isAuto ? (autoCount ?? 0) : (Number(form.total_phones) || 0),
         total_interested_phones: Number(form.total_interested_phones) || 0,
         total_messages: Number(form.total_messages) || 0,
         total_spam_messages: Number(form.total_spam_messages) || 0,
@@ -279,9 +288,11 @@ const TrucPageStaffKPI = () => {
                   className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px]" />
               </div>
               <div className="min-w-0">
-                <label className="e-label">Tổng SĐT xin được</label>
-                <input type="number" min="0" value={form.total_phones} onChange={e => setForm(f => ({ ...f, total_phones: e.target.value }))}
-                  className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums" />
+                <label className="e-label">SĐT xin được {isAuto && <span className="ml-1 text-[10.5px] font-bold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700">tự động</span>}</label>
+                {isAuto
+                  ? <div className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums bg-slate-50 text-slate-700 flex items-center" title="Hệ thống tự đếm từ Data khách: khách trực page tạo, khách Messenger tự tạo và khách cũ được cập nhật trong ngày">{autoCount ?? '…'}<span className="ml-2 text-[11.5px] text-slate-400 truncate">hệ thống đếm từ Data khách</span></div>
+                  : <input type="number" min="0" value={form.total_phones} onChange={e => setForm(f => ({ ...f, total_phones: e.target.value }))}
+                      className="e-input h-12 lg:h-10 text-[16px] lg:text-[14px] tabular-nums" />}
               </div>
               <div className="min-w-0">
                 <label className="e-label">SĐT quan tâm (tính HH)</label>
@@ -334,7 +345,7 @@ const TrucPageStaffKPI = () => {
                     <button onClick={() => deleteReport(r.id)} className="w-10 h-10 rounded-xl bg-danger-50 grid place-items-center text-danger-600 active:brightness-95 shrink-0" title="Xoá" aria-label="Xoá"><Trash2 className="w-[18px] h-[18px]" /></button>
                   </div>
                   <div className="grid grid-cols-4 gap-2 mt-3">
-                    <div className="rounded-xl bg-teal-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-teal-700 tabular-nums leading-tight">{fmt(r.total_phones)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">SĐT</div></div>
+                    <div className="rounded-xl bg-teal-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-teal-700 tabular-nums leading-tight">{fmt(r.total_phones)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">SĐT{r.auto_updated_at ? ' · tự động' : ''}</div></div>
                     <div className="rounded-xl bg-lavender-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-lavender-600 tabular-nums leading-tight">{fmt(r.total_interested_phones)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">Quan tâm</div></div>
                     <div className="rounded-xl bg-slate-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-slate-800 tabular-nums leading-tight">{fmt(r.total_messages)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">Tin nhắn</div></div>
                     <div className="rounded-xl bg-slate-50 px-1 py-2 text-center"><div className="text-[16px] font-bold text-slate-400 tabular-nums leading-tight">{fmt(r.total_spam_messages)}</div><div className="text-[11.5px] text-slate-500 mt-0.5">Spam</div></div>
@@ -347,7 +358,7 @@ const TrucPageStaffKPI = () => {
                 <thead>
                   <tr>
                     <th className="text-left">Ngày</th>
-                    <th className="text-center">SĐT xin được</th>
+                    <th className="text-center">SĐT xin được <span className="text-[10.5px] font-semibold text-teal-700">(tự động)</span></th>
                     <th className="text-center">Quan tâm</th>
                     <th className="text-center">Tin nhắn</th>
                     <th className="text-center">Spam</th>
@@ -361,7 +372,7 @@ const TrucPageStaffKPI = () => {
                   ) : reports.map(r => (
                     <tr key={r.id}>
                       <td className="text-slate-700">{r.date}</td>
-                      <td className="text-center font-semibold text-teal-700">{fmt(r.total_phones)}</td>
+                      <td className="text-center font-semibold text-teal-700" title={r.auto_updated_at ? `Hệ thống tự đếm · cập nhật ${new Date(r.auto_updated_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}` : 'Trực page tự báo'}>{fmt(r.total_phones)}{!r.auto_updated_at && <span className="ml-1 text-[10.5px] font-normal text-slate-400">tự báo</span>}</td>
                       <td className="text-center text-lavender-600">{fmt(r.total_interested_phones)}</td>
                       <td className="text-center">{fmt(r.total_messages)}</td>
                       <td className="text-center text-slate-400">{fmt(r.total_spam_messages)}</td>
