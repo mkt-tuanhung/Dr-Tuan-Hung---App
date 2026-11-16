@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { askReason, BONG_REASONS } from '@/components/ReasonPrompt.jsx';
 import ConsultUpdateFields, { uploadConsultFiles } from '@/components/ConsultUpdateFields.jsx';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { uploadToR2 } from '@/lib/r2Client';
@@ -662,7 +663,7 @@ const KhachCocPage = ({ isNested = false }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="e-label">Tên khách hàng *</label>
-                  <input value={createForm.customer_name} onChange={e => setCreateForm(f => ({ ...f, customer_name: e.target.value }))} className="e-input" />
+                  <input value={createForm.customer_name} onChange={e => setCreateForm(f => ({ ...f, customer_name: e.target.value }))} onBlur={e => setCreateForm(f => ({ ...f, customer_name: formatPersonName(e.target.value) }))} className="e-input" />
                 </div>
                 <div>
                   <label className="e-label">Số điện thoại *</label>

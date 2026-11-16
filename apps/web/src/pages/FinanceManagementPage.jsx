@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -936,7 +937,7 @@ const FinanceManagementPage = () => {
                     </div>
                     <div>
                       <label className="e-label">Họ tên khách hàng <span className="text-danger-500">*</span></label>
-                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className="e-input max-lg:h-12 max-lg:text-[16px]" placeholder="Nhập tên..." />
+                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} onBlur={e => setCreateForm(f => ({ ...f, customer_name: formatPersonName(e.target.value) }))} className="e-input max-lg:h-12 max-lg:text-[16px]" placeholder="Nhập tên..." />
                     </div>
                     <div>
                       <label className="e-label">Số điện thoại <span className="text-danger-500">*</span></label>

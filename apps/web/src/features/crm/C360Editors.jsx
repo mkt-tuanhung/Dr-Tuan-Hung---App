@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import { X, Save, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { SERVICE_GROUPS } from '@/features/crm/customerFilters.jsx';
 import { JOURNEY as SURGERY_JOURNEY } from '@/features/appointments/journey.jsx';
 
@@ -332,7 +333,7 @@ export function EditCustomerModal({ name, phone, appts, lead, onClose, onSaved }
       </>}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block"><span className="e-label">Tên khách hàng <span className="text-danger-500">*</span></span>
-          <input className="e-input max-lg:!h-11 max-lg:!text-[16px]" value={f.name} onChange={e => setF(p => ({ ...p, name: e.target.value }))} /></label>
+          <input className="e-input max-lg:!h-11 max-lg:!text-[16px]" value={f.name} onChange={e => setF(p => ({ ...p, name: e.target.value }))} onBlur={e => setF(p => ({ ...p, name: formatPersonName(e.target.value) }))} /></label>
         <label className="block"><span className="e-label">Số điện thoại <span className="text-danger-500">*</span></span>
           <input className="e-input max-lg:!h-11 max-lg:!text-[16px]" inputMode="tel" value={f.phone} onChange={e => setF(p => ({ ...p, phone: e.target.value }))} /></label>
       </div>
