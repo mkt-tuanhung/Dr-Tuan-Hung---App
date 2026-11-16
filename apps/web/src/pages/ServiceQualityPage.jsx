@@ -80,7 +80,7 @@ export default function ServiceQualityPage() {
   };
 
   const load = useCallback(async () => {
-    const [{ data: iv }, { data: rp }, { data: tk }, { data: st }] = await Promise.all([
+    const [{ data: iv, error: ivErr }, { data: rp, error: rpErr }, { data: tk, error: tkErr }, { data: st }] = await Promise.all([
       supabase.from('service_review_invitations').select('id, status, created_at, milestone').order('created_at', { ascending: false }).limit(5000),
       supabase.from('service_review_responses')
         .select('id, overall_score, csat_score, nps_score, staff_ratings, answers, selected_topics, wants_contact, comment, risk_level, fraud_status, fraud_score, verification_level, sentiment, ai_summary, submitted_at, invitation:service_review_invitations(customer_name, service, surgery_date, milestone, ticket_id, is_resurvey)')
@@ -90,6 +90,12 @@ export default function ServiceQualityPage() {
         .order('created_at', { ascending: false }).limit(3000),
       supabase.from('profiles').select('id, full_name, role').eq('is_active', true).order('full_name'),
     ]);
+    // Trước đây lỗi truy vấn bị nuốt im lặng → màn hình trống dù khách đã gửi đánh giá.
+    const err = rpErr || ivErr || tkErr;
+    if (err) {
+      console.error('[ServiceQuality] load error', { rpErr, ivErr, tkErr });
+      toast.error('Không tải được dữ liệu đánh giá: ' + (err.message || err), { id: 'sq-load-err', duration: 10000 });
+    }
     setInvs(iv || []); setResps(rp || []); setTickets(tk || []); setStaffList(st || []);
     setLoading(false);
   }, []);
