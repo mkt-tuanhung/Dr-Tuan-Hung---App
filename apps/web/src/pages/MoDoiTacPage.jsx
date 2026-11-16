@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { nurseOptions, pickList, hasRole } from '@/lib/staffPick';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { toast } from 'sonner';
@@ -239,7 +240,7 @@ const MoDoiTacPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="e-label">Tên khách *</label>
-                  <input value={modal.customer_name} onChange={e => setModal({ ...modal, customer_name: e.target.value })} className="e-input" placeholder="Nguyễn Văn A" />
+                  <input value={modal.customer_name} onChange={e => setModal({ ...modal, customer_name: e.target.value })} onBlur={e => setModal(m => ({ ...m, customer_name: formatPersonName(e.target.value) }))} className="e-input" placeholder="Nguyễn Văn A" />
                 </div>
                 <div>
                   <label className="e-label">Đối tác thuê mổ</label>

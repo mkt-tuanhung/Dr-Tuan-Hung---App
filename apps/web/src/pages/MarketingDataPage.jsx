@@ -3,6 +3,7 @@ import { deptOfProfile, profileByName, deptStyle } from '@/lib/departments';
 import { DeptTag, DeptCard, MediaThumbs } from '@/components/TimelineBits.jsx';
 import { useStaff } from '@/features/crm/C360Editors.jsx';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
@@ -1807,7 +1808,7 @@ const CustomerProfile = ({ row, me, staff, teleStaff = [], canWrite, canAssign, 
             {tab === 'info' && (
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
-                  <Field label="Tên khách hàng"><input value={info.customer_name} onChange={e => setInfo({ ...info, customer_name: e.target.value })} disabled={!canWrite} className={inp} /></Field>
+                  <Field label="Tên khách hàng"><input value={info.customer_name} onChange={e => setInfo({ ...info, customer_name: e.target.value })} onBlur={e => setInfo(p => ({ ...p, customer_name: formatPersonName(e.target.value) }))} disabled={!canWrite} className={inp} /></Field>
                   <Field label="Telesale phụ trách"><select value={info.telesale_id} onChange={e => setInfo({ ...info, telesale_id: e.target.value })} disabled={!canAssign} className={inp}><option value="">— Chưa phân công —</option>{teleStaff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
                   <Field label="Trực page phụ trách"><select value={info.truc_page_id} onChange={e => setInfo({ ...info, truc_page_id: e.target.value })} disabled={!canWrite} className={inp}><option value="">— Chọn —</option>{staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></Field>
                 </div>
@@ -2635,7 +2636,7 @@ const EditModal = ({ row, me, staff, teleStaff = [], canAssign = false, onClose,
       {isNew && <p className="text-[12.5px] text-slate-500 -mt-1 mb-3">Trực page tư vấn xin được số thì tạo khách tại đây, điền đủ thông tin để telesale tiếp nhận và gọi.</p>}
       <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider border-b pb-1.5 mb-3">Thông tin khách hàng</div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} className={inp} /></Field>
+        <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} onBlur={e => set('customer_name', formatPersonName(e.target.value))} className={inp} /></Field>
         <Field label="Số điện thoại *"><input value={f.phone} inputMode="tel" onChange={e => { set('phone', e.target.value); setDup(null); }} onBlur={e => { checkDup(e.target.value); if (isNew && !f.customer_code) set('customer_code', suggestCode(e.target.value)); }} className={inp} /></Field>
       </div>
       <Field label="Mã khách hàng (Mã KH)">
@@ -2926,7 +2927,7 @@ const CreateApptModal = ({ row, me, defaultNotes = '', onClose, onCreated }) => 
             <Field label="Giờ hẹn *"><input type="time" value={f.appointment_time} onChange={e => set('appointment_time', e.target.value)} className={inp} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} className={inp} /></Field>
+            <Field label="Tên khách hàng *"><input value={f.customer_name} onChange={e => set('customer_name', e.target.value)} onBlur={e => set('customer_name', formatPersonName(e.target.value))} className={inp} /></Field>
             <Field label="Số điện thoại">
               {phoneView(row.phone, me) !== String(row.phone ?? '')
                 ? <input value={phoneView(row.phone, me)} readOnly title="Đã ẩn theo phân quyền" className={`${inp} bg-slate-50 text-slate-400`} />

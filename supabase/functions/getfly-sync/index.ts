@@ -14,6 +14,24 @@
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Viết hoa chữ cái đầu tên khách — GIỐNG HỆT public.vn_name_case (supabase/customer_name_case.sql)
+// và apps/web/src/lib/nameCase.js. Phải chuẩn hoá TRƯỚC khi so với DB, nếu không mọi khách
+// có tên viết thường trên GetFly sẽ bị coi là "đổi tên" và ghi lại ở mỗi lần đồng bộ.
+const NAME_ACRONYMS = new Set(["KH", "ADS", "FB", "VIP", "DS", "CTV", "KOL", "KOC", "MC", "BS", "SĐT", "TT", "ID", "IG", "TK", "TEST"]);
+function formatPersonName(input: unknown): string {
+  if (input == null) return "";
+  const s = String(input).normalize("NFC").replace(/\s+/g, " ").trim();
+  if (!s) return s;
+  return s.split(" ").map((tok) => {
+    if (/[0-9_@]/.test(tok)) return tok;
+    return tok.replace(/\p{L}+/gu, (run) => {
+      const up = run.toUpperCase();
+      if (NAME_ACRONYMS.has(up)) return up;
+      return run.charAt(0).toUpperCase() + run.slice(1).toLowerCase();
+    });
+  }).join(" ");
+}
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -142,7 +160,7 @@ function rowFrom(c: Record<string, any>, phone: string): { row: Record<string, u
   const manager = pick(c, ["mgr_display_name"]) || (mgrRaw && !/^\d+$/.test(mgrRaw) ? mgrRaw : "") || mgrRaw || null;
   const row: Record<string, unknown> = {
     phone,
-    customer_name: pick(c, ["account_name", "client_name", "name", "full_name"]) || null,
+    customer_name: formatPersonName(pick(c, ["account_name", "client_name", "name", "full_name"])) || null,
     description: stripHtml(String(c.description ?? "")) || null,
     reached_info: customFieldsText(c.detail_custom_fields_display_value) || null,   // THÔNG TIN ĐÃ TIẾP CẬN
     last_exchange: stripHtml(String(c.last_active_desc ?? "")) || null,             // Trao đổi gần nhất

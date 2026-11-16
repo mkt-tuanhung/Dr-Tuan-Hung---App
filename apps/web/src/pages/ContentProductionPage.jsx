@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
@@ -2574,7 +2575,7 @@ const AddMediaModal = ({ me, stores = [], onClose, onSaved }) => {
         )
       ) : (
         <>
-          <Field label="Tên khách hàng"><input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="VD: Nguyễn Thị Dung" className={inpCls} /></Field>
+          <Field label="Tên khách hàng"><input autoFocus value={name} onChange={e => setName(e.target.value)} onBlur={e => setName(formatPersonName(e.target.value))} placeholder="VD: Nguyễn Thị Dung" className={inpCls} /></Field>
           <Field label="Số điện thoại"><input value={phone} onChange={e => setPhone(e.target.value)} className={inpCls} /></Field>
           <Field label="Dịch vụ (chọn nhiều)">
             <div className="flex flex-wrap gap-1.5">
@@ -3236,7 +3237,7 @@ const AddVideoModal = ({ me, onClose, onSaved }) => {
         )}
       </Field>
 
-      <Field label="Tên khách hàng *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Tên khách" className={inpCls} /></Field>
+      <Field label="Tên khách hàng *"><input value={name} onChange={e => setName(e.target.value)} onBlur={e => setName(formatPersonName(e.target.value))} placeholder="Tên khách" className={inpCls} /></Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
         <Field label="Nguồn Source (link)"><input value={sourceLink} onChange={e => setSourceLink(e.target.value)} placeholder="https://drive.google.com/..." className={inpCls} /></Field>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { askReason, BONG_REASONS, NO_SHOW_REASONS, RESCHEDULE_REASONS } from '@/components/ReasonPrompt.jsx';
 import { supabase } from '@/lib/supabaseClient';
+import { formatPersonName } from '@/lib/nameCase';
 import { useRealtimeReload } from '@/hooks/useRealtimeReload';
 import { uploadToR2 } from '@/lib/r2Client';
 import { toast } from 'sonner';
@@ -1073,7 +1074,7 @@ const AppointmentManagementPage = () => {
                     </div>
                     <div>
                       <label className={FLD_LBL}>Tên khách hàng <span className="text-danger-500">*</span></label>
-                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} className={FLD_INP} placeholder="Nhập tên..." />
+                      <input required value={createForm.customer_name} onChange={e => setCreateForm({...createForm, customer_name: e.target.value})} onBlur={e => setCreateForm(f => ({ ...f, customer_name: formatPersonName(e.target.value) }))} className={FLD_INP} placeholder="Nhập tên..." />
                     </div>
                     <div>
                       <label className={FLD_LBL}>Số điện thoại <span className="text-danger-500">*</span></label>
@@ -1464,7 +1465,7 @@ const AppointmentManagementPage = () => {
             <div className="e-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="e-label">Tên khách <span className="text-danger-500">*</span></label>
-                <input value={custForm.customer_name} onChange={e => setCustForm(f => ({ ...f, customer_name: e.target.value }))}
+                <input value={custForm.customer_name} onChange={e => setCustForm(f => ({ ...f, customer_name: e.target.value }))} onBlur={e => setCustForm(f => ({ ...f, customer_name: formatPersonName(e.target.value) }))}
                   className="e-input" placeholder="Tên khách hàng" />
               </div>
               <div>
