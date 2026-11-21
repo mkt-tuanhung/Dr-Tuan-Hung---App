@@ -911,7 +911,7 @@ const HauPhauPage = () => {
         )}
         <MediaCustomerButton appointment={careApp} me={profile}
           canAdd={['media', 'dieu_duong', 'cskh', 'marketing', 'admin'].some(r => [profile?.role, profile?.role_2].includes(r))} />
-        {profile?.role === 'admin' && (
+        {(isAdmin || isCskh) && (
           <button type="button" onClick={() => createReview(careApp)} disabled={creatingReview}
             className="e-btn e-btn-primary e-btn-sm w-full">
             {creatingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Tạo phiếu đánh giá
