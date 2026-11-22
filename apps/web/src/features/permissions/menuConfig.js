@@ -40,7 +40,7 @@ export const FULL_MENU = [
 
   // Event (sự kiện nội bộ) — mặc định mọi nhân sự đều thấy
   { id: 'event_hub',      label: 'Tất cả Event', icon: PartyPopper, roles: ['all'] },
-  { id: 'event_van_nghe', label: 'Thi Văn Nghệ mừng SN Dr Tuấn Hùng', icon: Music2, roles: ['all'] },
+  { id: 'event_van_nghe', label: 'Thi Văn Nghệ', icon: Music2, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },

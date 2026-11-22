@@ -88,6 +88,12 @@ export default function GalaAdmin({ g, userId }) {
   // Admin tự tham gia ban giám khảo (cấp quyền cho chính mình qua cùng RPC)
   const myJudge = judges.find((j) => j.user_id === userId);
   const iAmJudge = !!myJudge?.active;
+  const myScoreCount = scores.filter((s) => s.judge_id === userId).length;
+  const tabCount = (id) => ({
+    performances: performances.length,
+    judges: activeJudges.length,
+    score: iAmJudge ? `${myScoreCount}/${performances.length}` : null,
+  }[id] ?? null);
   const joinAsJudge = () => actions.setJudge(userId, true, byId[userId]?.full_name || 'bạn');
   const matches = q.trim().length < 1 ? [] : staff
     .filter((s) => !judgeIds.has(s.id))
@@ -103,15 +109,37 @@ export default function GalaAdmin({ g, userId }) {
 
   return (
     <div className="space-y-4">
-      <div className="e-tabs">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} type="button" onClick={() => setTab(id)} className={`e-tab ${tab === id ? 'e-tab-active' : ''}`}>
-            <Icon /> {label}
-            {id === 'performances' && <span className="e-tab-count">{performances.length}</span>}
-            {id === 'judges' && <span className="e-tab-count">{activeJudges.length}</span>}
-            {id === 'score' && iAmJudge && <span className="e-tab-count">{scores.filter((s) => s.judge_id === userId).length}/{performances.length}</span>}
-          </button>
-        ))}
+      {/* Điện thoại: 5 ô đều nhau (icon trên, chữ dưới) — thấy đủ mọi tab, không phải vuốt ngang */}
+      <div className="sm:hidden grid grid-cols-5 gap-1 p-1 rounded-2xl bg-white border border-slate-200/80 shadow-soft">
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const n = tabCount(id);
+          const active = tab === id;
+          return (
+            <button key={id} type="button" onClick={() => setTab(id)} aria-pressed={active}
+              className={`relative flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 rounded-xl text-[11px] font-semibold leading-tight transition ${
+                active ? 'bg-teal-50 text-teal-800' : 'text-slate-500'}`}>
+              <span className="relative">
+                <Icon className="w-5 h-5" />
+                {n != null && (
+                  <span className={`absolute -top-2 left-[calc(100%-4px)] min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold grid place-items-center tabular-nums whitespace-nowrap ring-2 ring-white ${
+                    active ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-700'}`}>{n}</span>
+                )}
+              </span>
+              <span className="text-center">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="e-tabs hidden sm:flex">
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const n = tabCount(id);
+          return (
+            <button key={id} type="button" onClick={() => setTab(id)} className={`e-tab ${tab === id ? 'e-tab-active' : ''}`}>
+              <Icon /> {label}
+              {n != null && <span className="e-tab-count">{n}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* ===== TỔNG QUAN ===== */}
@@ -283,14 +311,17 @@ export default function GalaAdmin({ g, userId }) {
                   const p = byId[j.user_id];
                   const done = scores.filter((s) => s.judge_id === j.user_id).length;
                   return (
-                    <li key={j.user_id} className="flex items-center gap-3 py-3 flex-wrap sm:flex-nowrap">
+                    <li key={j.user_id} className="flex items-start gap-3 py-3">
                       <Avatar person={p} />
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-800 truncate">{nameOf(j.user_id)}{j.user_id === userId && <span className="text-teal-600 font-medium"> (bạn)</span>}</div>
-                        <div className="text-[12px] text-slate-500 truncate">{p?.position || roleText(p) || '—'} · đã chấm {done}/{performances.length}</div>
+                        <div className="font-semibold text-slate-800 leading-snug break-words">{nameOf(j.user_id)}{j.user_id === userId && <span className="text-teal-600 font-medium"> (bạn)</span>}</div>
+                        <div className="text-[12.5px] text-slate-500 leading-snug break-words">{p?.position || roleText(p) || '—'}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className={`e-badge e-badge-sm ${j.active ? 'e-tone-success' : 'e-tone-neutral'}`}>{j.active ? 'Được phép chấm' : 'Đã thu hồi'}</span>
+                          <span className="e-badge e-badge-sm e-tone-neutral">Đã chấm {done}/{performances.length}</span>
+                        </div>
                       </div>
-                      <span className={`e-badge e-badge-sm ${j.active ? 'e-tone-success' : 'e-tone-neutral'}`}>{j.active ? 'Được phép chấm' : 'Đã thu hồi'}</span>
-                      <button type="button" className={`e-btn e-btn-sm ${j.active ? 'e-btn-danger-soft' : 'e-btn-outline'}`} disabled={working}
+                      <button type="button" className={`e-btn e-btn-sm shrink-0 ${j.active ? 'e-btn-danger-soft' : 'e-btn-outline'}`} disabled={working}
                         onClick={() => actions.setJudge(j.user_id, !j.active, nameOf(j.user_id))}>
                         {j.active ? <><UserMinus /> Thu hồi</> : <><RotateCcw /> Cấp lại</>}
                       </button>
@@ -321,10 +352,10 @@ export default function GalaAdmin({ g, userId }) {
                 <li key={s.id} className="flex items-center gap-3 py-2.5">
                   <Avatar person={s} size="w-9 h-9" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-semibold text-slate-800 truncate">{s.full_name}</div>
-                    <div className="text-[12px] text-slate-500 truncate">{s.position || roleText(s)}{s.employee_id ? ` · ${s.employee_id}` : ''}</div>
+                    <div className="text-[14px] font-semibold text-slate-800 leading-snug break-words">{s.full_name}</div>
+                    <div className="text-[12px] text-slate-500 leading-snug break-words">{s.position || roleText(s)}{s.employee_id ? ` · ${s.employee_id}` : ''}</div>
                   </div>
-                  <button type="button" className="e-btn e-btn-outline e-btn-sm" disabled={working}
+                  <button type="button" className="e-btn e-btn-outline e-btn-sm shrink-0" disabled={working}
                     onClick={async () => { if (await actions.setJudge(s.id, true, s.full_name)) setQ(''); }}>
                     <UserPlus /> Cấp quyền
                   </button>

@@ -118,7 +118,7 @@ const MENU_GROUPS = [
   { title: 'SỰ KIỆN', color: 'rose', items: [
     { id: 'grp_event', label: 'Event', icon: PartyPopper, children: [
       { id: 'event_hub', label: 'Tất cả Event', icon: PartyPopper },
-      { id: 'event_van_nghe', label: 'Thi Văn Nghệ mừng SN Dr Tuấn Hùng', shortLabel: 'Thi Văn Nghệ', icon: Music2 },
+      { id: 'event_van_nghe', label: 'Thi Văn Nghệ', icon: Music2 },
     ] },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [

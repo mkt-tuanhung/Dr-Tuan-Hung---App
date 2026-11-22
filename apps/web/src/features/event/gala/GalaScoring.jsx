@@ -61,29 +61,31 @@ export default function GalaScoring() {
 
   return (
     <div className="space-y-4">
-      {/* Thanh chương trình */}
-      <div className="e-toolbar">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
+      {/* Thanh chương trình: tên đầy đủ ở hàng trên, trạng thái + nút ở hàng dưới (không cắt chữ) */}
+      <div className="e-card e-card-pad space-y-3">
+        <div className="flex items-start gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-teal-500 shrink-0 mt-2" />
           {g.events.length > 1 ? (
-            <select aria-label="Chọn chương trình" className="e-input h-9 max-w-[320px] font-semibold"
+            <select aria-label="Chọn chương trình" className="e-input font-semibold"
               value={g.eventId || ''} onChange={(e) => g.setEventId(e.target.value)}>
               {g.events.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
             </select>
           ) : (
-            <span className="font-semibold text-slate-800 truncate">{g.selectedEvent?.title}</span>
+            <div className="text-[15px] sm:text-[16px] font-semibold text-slate-900 leading-snug break-words">{g.selectedEvent?.title}</div>
           )}
-          <span className={`e-badge e-badge-sm ${ph.tone}`}>{ph.label}</span>
         </div>
-        <span className="text-[12.5px] text-slate-500 hidden sm:inline">
-          {g.performances.length} tiết mục · {g.activeJudges.length} giám khảo
-        </span>
-        {isAdmin && (
-          <button type="button" className="e-btn e-btn-ghost e-btn-sm" onClick={() => setShowCreate((v) => !v)}>
-            <Plus /> Chương trình mới
-          </button>
-        )}
-        <button type="button" className="e-icon-btn w-9 h-9" title="Làm mới" onClick={g.refresh}><RefreshCw className="w-4 h-4" /></button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`e-badge e-badge-sm ${ph.tone}`}>{ph.label}</span>
+          <span className="text-[12.5px] text-slate-500">{g.performances.length} tiết mục · {g.activeJudges.length} giám khảo</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            {isAdmin && (
+              <button type="button" className="e-btn e-btn-ghost e-btn-sm" onClick={() => setShowCreate((v) => !v)}>
+                <Plus /> Chương trình mới
+              </button>
+            )}
+            <button type="button" className="e-icon-btn w-9 h-9" title="Làm mới" aria-label="Làm mới" onClick={g.refresh}><RefreshCw className="w-4 h-4" /></button>
+          </div>
+        </div>
       </div>
 
       {isAdmin && showCreate && <div className="e-card e-card-pad">{createForm}</div>}

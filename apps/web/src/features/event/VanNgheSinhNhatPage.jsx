@@ -11,7 +11,7 @@ import GalaScoring from './gala/GalaScoring.jsx';
 const EVENT = EVENTS.find((e) => e.id === 'event_van_nghe');
 
 export default function VanNgheSinhNhatPage({ onNavigate }) {
-  usePageTitle(EVENT.title);
+  usePageTitle(EVENT.shortTitle);
 
   return (
     <div className="space-y-4">

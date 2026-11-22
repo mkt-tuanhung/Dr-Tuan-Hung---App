@@ -6,7 +6,7 @@
 -- 2) Chương trình MỚI tạo sau này: tự có 8 tiêu chí chi tiết.
 -- 3) Chương trình mới nhất CHƯA có điểm & CHƯA công bố:
 --      - thay 4 tiêu chí cũ bằng 8 tiêu chí chi tiết
---      - thêm 3 tiết mục (bỏ qua tiết mục đã có cùng tên)
+--      - thêm 3 tiết mục mẫu CHỈ KHI chương trình chưa có tiết mục nào
 --    Chương trình đã có điểm -> giữ nguyên (không đổi thang điểm giữa chừng).
 -- ============================================================
 begin;
@@ -60,7 +60,12 @@ begin
     perform public.gala_apply_default_criteria(v_event);
   end if;
 
-  -- 3 tiết mục
+  -- 3 tiết mục: CHỈ thêm khi chương trình chưa có tiết mục nào (Admin đã tự nhập thì giữ nguyên)
+  if exists (select 1 from public.gala_performances where event_id = v_event) then
+    raise notice 'Chương trình đã có tiết mục — giữ nguyên, không thêm tiết mục mẫu.';
+    raise notice 'Đã cập nhật bộ tiêu chí cho chương trình %', v_event;
+    return;
+  end if;
   insert into public.gala_performances(event_id, title, team_name, description, order_no)
   select v_event, t.title, t.team, t.descr,
          coalesce((select max(order_no) from public.gala_performances where event_id = v_event), 0)

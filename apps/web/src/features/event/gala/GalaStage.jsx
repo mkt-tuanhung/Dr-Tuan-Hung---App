@@ -23,8 +23,8 @@ export function RankingList({ ranking, showVotes = false }) {
             {r.mean_total == null ? '—' : pad2(r.placement)}
           </span>
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-slate-800 truncate">{r.performance_title}</div>
-            <div className="text-[12px] text-slate-500 truncate">
+            <div className="font-semibold text-slate-800 leading-snug break-words">{r.performance_title}</div>
+            <div className="text-[12px] text-slate-500 leading-snug">
               {r.team_name}{showVotes && <> · {r.received}/{r.expected} phiếu</>}
             </div>
           </div>
