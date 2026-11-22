@@ -183,12 +183,22 @@ export default function GalaAdmin({ g, userId }) {
           </div>
 
           <section className="e-card e-card-pad">
-            <div className="e-card-title mb-3">Thang điểm (tổng 100)</div>
-            <div className="flex flex-wrap gap-2">
-              {criteria.map((c) => (
-                <span key={c.id} className="e-badge e-tone-brand">{c.label} · {Number(c.max_points)}đ</span>
-              ))}
+            <div className="e-card-header">
+              <div className="e-card-title">Tiêu chí chấm điểm</div>
+              <span className="e-badge e-badge-sm e-tone-brand">{criteria.length} tiêu chí · {criteria.reduce((a, c) => a + Number(c.max_points), 0)} điểm</span>
             </div>
+            <ol className="grid gap-x-6 sm:grid-cols-2">
+              {criteria.map((c, i) => (
+                <li key={c.id} className="flex items-start gap-3 py-2.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-teal-600 mt-1 w-5 shrink-0">{pad2(i + 1)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-800 leading-snug">{c.label}</div>
+                    {c.description && <div className="text-[12px] text-slate-500 leading-snug">{c.description}</div>}
+                  </div>
+                  <span className="text-[15px] font-bold text-teal-700 tabular-nums shrink-0">{Number(c.max_points)}đ</span>
+                </li>
+              ))}
+            </ol>
           </section>
         </>
       )}

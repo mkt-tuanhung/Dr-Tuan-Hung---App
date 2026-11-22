@@ -128,10 +128,13 @@ export default function GalaJudge({ g, userId, onJoin }) {
                 const val = Number(raw) || 0;
                 return (
                   <div key={c.id} className="py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[11px] font-bold text-teal-600">{pad2(i + 1)}</span>
-                        <span className="font-semibold text-slate-800 truncate">{c.label}</span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <span className="text-[11px] font-bold text-teal-600 mt-1">{pad2(i + 1)}</span>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-800 leading-snug">{c.label}</div>
+                          {c.description && <div className="text-[12px] text-slate-500 leading-snug mt-0.5">{c.description}</div>}
+                        </div>
                       </div>
                       <div className="flex items-baseline gap-1 shrink-0">
                         <input type="number" inputMode="decimal" min="0" max={max} step="0.5"

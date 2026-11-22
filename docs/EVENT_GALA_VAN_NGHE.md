@@ -4,7 +4,7 @@ Menu: **SỰ KIỆN → Event → Thi Văn Nghệ mừng SN Dr Tuấn Hùng**
 
 ## Cài đặt (1 lần)
 
-1. Supabase → **SQL Editor** → dán toàn bộ `supabase/event_gala_van_nghe.sql` → **Run**.
+1. Supabase → **SQL Editor** → chạy `supabase/event_gala_van_nghe.sql`, sau đó `supabase/event_gala_tieu_chi_chi_tiet.sql`.
    - Chỉ tạo mới bảng/hàm tiền tố `gala_*`, không đụng bảng cũ. Chạy lại được.
 2. Tải lại app. Chưa chạy SQL thì trang hiện thông báo "Chưa cài đặt dữ liệu chấm điểm".
 
@@ -20,7 +20,11 @@ Quyền kiểm ở **database** (RLS + RPC), không dựa vào giao diện.
 
 ## Quy trình
 
-1. Admin tạo chương trình → bộ tiêu chí 100 điểm tự tạo: Chất lượng tiết mục 40 · Sáng tạo & ý tưởng 25 · Phong cách biểu diễn 20 · Tinh thần tập thể 15.
+1. Admin tạo chương trình → tự có 8 tiêu chí (tổng 100, kèm gợi ý chấm):
+   Nội dung & thông điệp 15 · Kỹ năng biểu diễn 20 · Sáng tạo & dàn dựng 15 · Phong cách & thần thái 10 ·
+   Phối hợp & đồng đều 10 · Trang phục, đạo cụ & hoá trang 10 · Cảm xúc & tương tác khán giả 10 ·
+   Tinh thần tập thể & văn hoá Dr Tuấn Hùng 10.
+   (Chương trình tạo TRƯỚC khi có bộ 8 tiêu chí: chạy `supabase/event_gala_tieu_chi_chi_tiet.sql` để đổi — chỉ áp dụng khi chưa có điểm.)
 2. Tab **Tiết mục**: thêm từng tiết mục (một đội có thể có nhiều tiết mục).
 3. Tab **Giám khảo**: tìm nhân sự → **Cấp quyền**.
 4. **Tổng quan → Mở chấm điểm**. Giám khảo mở menu Event trên điện thoại và chấm (bước 0,5).
