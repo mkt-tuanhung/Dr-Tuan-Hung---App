@@ -11,7 +11,7 @@ export const EVENTS = [
     id: 'event_van_nghe',
     title: 'Thi Văn Nghệ Mừng Sinh Nhật Dr Tuấn Hùng',
     shortTitle: 'Thi Văn Nghệ',
-    description: 'Cuộc thi văn nghệ toàn hệ thống chào mừng sinh nhật Dr Tuấn Hùng.',
+    description: 'Gala văn nghệ mừng sinh nhật 1 tuổi Dr Tuấn Hùng — giám khảo chấm điểm từng tiết mục ngay trên app.',
     icon: Music2,
     status: 'preparing', // preparing | open | ended
   },

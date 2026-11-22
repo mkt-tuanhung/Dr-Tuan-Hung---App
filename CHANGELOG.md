@@ -55,3 +55,8 @@ Các thay đổi của dự án "Dr Tuan Hung App" sẽ được lưu trữ tự
 ## [v1.6.0] - Gộp Module Doanh Thu và Tài Chính
 - Bổ sung trường phân loại nhóm dịch vụ, nguồn khách, tệp khách.
 - Thay thế menu Kế toán bằng Doanh thu / Tài chính tích hợp.
+
+## [Event] - Module Event + Chấm điểm Thi Văn Nghệ mừng sinh nhật 1 tuổi Dr Tuấn Hùng
+- **Thêm** nhóm menu SỰ KIỆN → Event (trang Tất cả Event + Thi Văn Nghệ).
+- **Thêm** chấm điểm Gala: Admin = Ban tổ chức (tiết mục, giám khảo, mở/khoá chấm, công bố, CSV); giám khảo chấm trên điện thoại theo 4 tiêu chí / 100 điểm.
+- **SQL:** `supabase/event_gala_van_nghe.sql` (bảng gala_*, RLS + RPC). Hướng dẫn: `docs/EVENT_GALA_VAN_NGHE.md`.
