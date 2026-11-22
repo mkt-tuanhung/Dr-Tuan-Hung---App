@@ -57,6 +57,7 @@ create table if not exists public.gala_criteria (
   unique(event_id, label)
 );
 create index if not exists gala_criteria_event_order on public.gala_criteria(event_id,sort_order);
+alter table public.gala_criteria add column if not exists description text not null default '';
 
 create table if not exists public.gala_judges (
   event_id uuid not null references public.gala_events(id) on delete cascade,
@@ -102,14 +103,27 @@ as $$
   );
 $$;
 
+-- Bộ tiêu chí chuẩn (dùng chung cho trigger + cập nhật chương trình hiện có)
+create or replace function public.gala_apply_default_criteria(p_event uuid)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.gala_criteria(event_id, label, max_points, sort_order, description) values
+    (p_event, 'Nội dung & thông điệp',             15, 1, 'Kịch bản / bài diễn rõ ý, có câu chuyện, truyền tải được thông điệp ý nghĩa.'),
+    (p_event, 'Kỹ năng biểu diễn',                  20, 2, 'Diễn xuất, vũ đạo hoặc giọng hát: chính xác, đúng nhịp, biểu cảm tự nhiên.'),
+    (p_event, 'Sáng tạo & dàn dựng',                15, 3, 'Ý tưởng mới lạ, bố cục sân khấu, đội hình và chuyển cảnh hợp lý.'),
+    (p_event, 'Phong cách & thần thái',             10, 4, 'Tự tin, cuốn hút, làm chủ sân khấu, ánh mắt và cử chỉ.'),
+    (p_event, 'Phối hợp & đồng đều',                10, 5, 'Các thành viên ăn ý, đồng đều; không lỗi nhịp, không rời rạc.'),
+    (p_event, 'Trang phục, đạo cụ & hoá trang',     10, 6, 'Phù hợp nội dung, chỉn chu, tạo điểm nhấn thị giác.'),
+    (p_event, 'Cảm xúc & tương tác khán giả',       10, 7, 'Tạo được tiếng cười / xúc động / hào hứng; khán giả hưởng ứng.'),
+    (p_event, 'Tinh thần tập thể & văn hoá Dr Tuấn Hùng', 10, 8, 'Thể hiện tinh thần đoàn kết, giá trị và năng lượng của Dr Tuấn Hùng.')
+  on conflict (event_id, label) do nothing;
+end $$;
+revoke all on function public.gala_apply_default_criteria(uuid) from public, anon, authenticated;
+
 create or replace function public.gala_seed_criteria()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  insert into public.gala_criteria(event_id, label, max_points, sort_order) values
-    (new.id,'Chất lượng tiết mục',40,1),
-    (new.id,'Sáng tạo & ý tưởng',25,2),
-    (new.id,'Phong cách biểu diễn',20,3),
-    (new.id,'Tinh thần tập thể',15,4);
+  perform public.gala_apply_default_criteria(new.id);
   return new;
 end $$;
 drop trigger if exists gala_seed_criteria_insert on public.gala_events;

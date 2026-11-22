@@ -6,16 +6,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, Mic2, Users, Award, Play, Pause, Lock, Trophy, EyeOff, Download, Plus,
-  Pencil, Trash2, Search, UserPlus, UserMinus, RotateCcw, ListChecks, ClipboardCheck,
+  Pencil, Trash2, Search, UserPlus, UserMinus, RotateCcw, ListChecks, ClipboardCheck, ClipboardPen,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Drawer, ConfirmDialog, EmptyState } from '@/components/ds';
 import { ROLE_LABELS } from '@/features/permissions/menuConfig';
 import GalaStage, { RankingList } from './GalaStage.jsx';
+import GalaJudge from './GalaJudge.jsx';
 import { TEAM_SUGGESTIONS, exportScoresCsv, initials, norm, pad2 } from './galaUtil';
+import { genreOf, teamPalette } from './galaTheme';
 
 const TABS = [
   { id: 'overview', label: 'Tổng quan', icon: Activity },
+  { id: 'score', label: 'Chấm điểm', icon: ClipboardPen },
   { id: 'performances', label: 'Tiết mục', icon: Mic2 },
   { id: 'judges', label: 'Giám khảo', icon: Users },
   { id: 'stage', label: 'Công bố', icon: Award },
@@ -64,7 +67,7 @@ function Metric({ icon: Icon, label, value, hint, tone = '' }) {
   );
 }
 
-export default function GalaAdmin({ g }) {
+export default function GalaAdmin({ g, userId }) {
   const {
     selectedEvent, performances, criteria, judges, activeJudges, scores, ranking,
     expectedCount, receivedCount, working, actions,
@@ -83,6 +86,16 @@ export default function GalaAdmin({ g }) {
   const locked = hasScores || !!ev?.published;
   const nameOf = (id) => byId[id]?.full_name || `Tài khoản ${String(id).slice(0, 8)}…`;
   const judgeIds = new Set(judges.map((j) => j.user_id));
+  // Admin tự tham gia ban giám khảo (cấp quyền cho chính mình qua cùng RPC)
+  const myJudge = judges.find((j) => j.user_id === userId);
+  const iAmJudge = !!myJudge?.active;
+  const myScoreCount = scores.filter((s) => s.judge_id === userId).length;
+  const tabCount = (id) => ({
+    performances: performances.length,
+    judges: activeJudges.length,
+    score: iAmJudge ? `${myScoreCount}/${performances.length}` : null,
+  }[id] ?? null);
+  const joinAsJudge = () => actions.setJudge(userId, true, byId[userId]?.full_name || 'bạn');
   const matches = q.trim().length < 1 ? [] : staff
     .filter((s) => !judgeIds.has(s.id))
     .filter((s) => norm(`${s.full_name} ${s.employee_id || ''} ${s.position || ''}`).includes(norm(q)))
@@ -97,14 +110,37 @@ export default function GalaAdmin({ g }) {
 
   return (
     <div className="space-y-4">
-      <div className="e-tabs">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} type="button" onClick={() => setTab(id)} className={`e-tab ${tab === id ? 'e-tab-active' : ''}`}>
-            <Icon /> {label}
-            {id === 'performances' && <span className="e-tab-count">{performances.length}</span>}
-            {id === 'judges' && <span className="e-tab-count">{activeJudges.length}</span>}
-          </button>
-        ))}
+      {/* Điện thoại: 5 ô đều nhau (icon trên, chữ dưới) — thấy đủ mọi tab, không phải vuốt ngang */}
+      <div className="sm:hidden grid grid-cols-5 gap-1 p-1 rounded-2xl bg-white border border-slate-200/80 shadow-soft">
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const n = tabCount(id);
+          const active = tab === id;
+          return (
+            <button key={id} type="button" onClick={() => setTab(id)} aria-pressed={active}
+              className={`relative flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 rounded-xl text-[11px] font-semibold leading-tight transition ${
+                active ? 'bg-teal-50 text-teal-800' : 'text-slate-500'}`}>
+              <span className="relative">
+                <Icon className="w-5 h-5" />
+                {n != null && (
+                  <span className={`absolute -top-2 left-[calc(100%-4px)] min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold grid place-items-center tabular-nums whitespace-nowrap ring-2 ring-white ${
+                    active ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-700'}`}>{n}</span>
+                )}
+              </span>
+              <span className="text-center">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="e-tabs hidden sm:flex">
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const n = tabCount(id);
+          return (
+            <button key={id} type="button" onClick={() => setTab(id)} className={`e-tab ${tab === id ? 'e-tab-active' : ''}`}>
+              <Icon /> {label}
+              {n != null && <span className="e-tab-count">{n}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* ===== TỔNG QUAN ===== */}
@@ -176,12 +212,22 @@ export default function GalaAdmin({ g }) {
           </div>
 
           <section className="e-card e-card-pad">
-            <div className="e-card-title mb-3">Thang điểm (tổng 100)</div>
-            <div className="flex flex-wrap gap-2">
-              {criteria.map((c) => (
-                <span key={c.id} className="e-badge e-tone-brand">{c.label} · {Number(c.max_points)}đ</span>
-              ))}
+            <div className="e-card-header">
+              <div className="e-card-title">Tiêu chí chấm điểm</div>
+              <span className="e-badge e-badge-sm e-tone-brand">{criteria.length} tiêu chí · {criteria.reduce((a, c) => a + Number(c.max_points), 0)} điểm</span>
             </div>
+            <ol className="grid gap-x-6 sm:grid-cols-2">
+              {criteria.map((c, i) => (
+                <li key={c.id} className="flex items-start gap-3 py-2.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-teal-600 mt-1 w-5 shrink-0">{pad2(i + 1)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-800 leading-snug">{c.label}</div>
+                    {c.description && <div className="text-[12px] text-slate-500 leading-snug">{c.description}</div>}
+                  </div>
+                  <span className="text-[15px] font-bold text-teal-700 tabular-nums shrink-0">{Number(c.max_points)}đ</span>
+                </li>
+              ))}
+            </ol>
           </section>
         </>
       )}
@@ -201,13 +247,21 @@ export default function GalaAdmin({ g }) {
               <ul className="divide-y divide-slate-100">
                 {performances.map((p) => {
                   const scored = scores.some((s) => s.performance_id === p.id);
+                  const pal = teamPalette(p.team_name);
+                  const GenreIcon = genreOf(p).icon;
                   return (
                     <li key={p.id} className="flex items-start gap-3 py-3">
-                      <span className="w-9 text-[20px] font-bold text-teal-600 tabular-nums shrink-0">{pad2(p.order_no)}</span>
+                      <span className={`relative w-12 h-12 rounded-2xl bg-gradient-to-br ${pal.grad} text-white grid place-items-center shrink-0 shadow-md ${pal.glow}`}>
+                        <span className="text-[17px] font-black tabular-nums">{pad2(p.order_no)}</span>
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white text-slate-700 grid place-items-center shadow"><GenreIcon className="w-3 h-3" /></span>
+                      </span>
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-800">{p.title}</div>
-                        <div className="text-[12.5px] text-slate-500">{p.team_name}{p.duration_minutes ? ` · ${p.duration_minutes} phút` : ''}</div>
-                        {p.description && <div className="text-[12.5px] text-slate-400 mt-0.5">{p.description}</div>}
+                        <div className="font-bold text-slate-900 leading-snug">{p.title}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11.5px] font-semibold ${pal.soft}`}><span className={`w-1.5 h-1.5 rounded-full ${pal.dot}`} />{p.team_name}</span>
+                          {p.duration_minutes ? <span className="text-[12px] text-slate-500">{p.duration_minutes} phút</span> : null}
+                          {p.description && <span className="text-[12px] text-slate-400">· {p.description}</span>}
+                        </div>
                       </div>
                       <span className={`e-badge e-badge-sm hidden sm:inline-flex ${scored ? 'e-tone-success' : 'e-tone-neutral'}`}>{scored ? 'Đã có điểm' : 'Chưa chấm'}</span>
                       <button type="button" className="e-icon-btn w-9 h-9" title="Sửa" disabled={locked} onClick={() => setEditing({ ...p })}><Pencil className="w-4 h-4" /></button>
@@ -217,7 +271,7 @@ export default function GalaAdmin({ g }) {
                 })}
               </ul>
             ) : (
-              <EmptyState icon={Mic2} title="Chưa có tiết mục" description="Thêm tiết mục đầu tiên ở khung bên cạnh." />
+              <EmptyState icon={Mic2} title="Chưa có tiết mục" description="Thêm tiết mục ở khung « Thêm tiết mục »." />
             )}
           </section>
 
@@ -266,14 +320,17 @@ export default function GalaAdmin({ g }) {
                   const p = byId[j.user_id];
                   const done = scores.filter((s) => s.judge_id === j.user_id).length;
                   return (
-                    <li key={j.user_id} className="flex items-center gap-3 py-3 flex-wrap sm:flex-nowrap">
+                    <li key={j.user_id} className="flex items-start gap-3 py-3">
                       <Avatar person={p} />
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-800 truncate">{nameOf(j.user_id)}</div>
-                        <div className="text-[12px] text-slate-500 truncate">{p?.position || roleText(p) || '—'} · đã chấm {done}/{performances.length}</div>
+                        <div className="font-semibold text-slate-800 leading-snug break-words">{nameOf(j.user_id)}{j.user_id === userId && <span className="text-teal-600 font-medium"> (bạn)</span>}</div>
+                        <div className="text-[12.5px] text-slate-500 leading-snug break-words">{p?.position || roleText(p) || '—'}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className={`e-badge e-badge-sm ${j.active ? 'e-tone-success' : 'e-tone-neutral'}`}>{j.active ? 'Được phép chấm' : 'Đã thu hồi'}</span>
+                          <span className="e-badge e-badge-sm e-tone-neutral">Đã chấm {done}/{performances.length}</span>
+                        </div>
                       </div>
-                      <span className={`e-badge e-badge-sm ${j.active ? 'e-tone-success' : 'e-tone-neutral'}`}>{j.active ? 'Được phép chấm' : 'Đã thu hồi'}</span>
-                      <button type="button" className={`e-btn e-btn-sm ${j.active ? 'e-btn-danger-soft' : 'e-btn-outline'}`} disabled={working}
+                      <button type="button" className={`e-btn e-btn-sm shrink-0 ${j.active ? 'e-btn-danger-soft' : 'e-btn-outline'}`} disabled={working}
                         onClick={() => actions.setJudge(j.user_id, !j.active, nameOf(j.user_id))}>
                         {j.active ? <><UserMinus /> Thu hồi</> : <><RotateCcw /> Cấp lại</>}
                       </button>
@@ -282,7 +339,7 @@ export default function GalaAdmin({ g }) {
                 })}
               </ul>
             ) : (
-              <EmptyState icon={Users} title="Chưa có giám khảo" description="Tìm nhân sự ở khung bên cạnh để cấp quyền chấm." />
+              <EmptyState icon={Users} title="Chưa có giám khảo" description="Tìm nhân sự ở khung « Chỉ định giám khảo » để cấp quyền chấm." />
             )}
             <p className="mt-3 text-[12px] text-slate-400">Thu hồi quyền: phiếu cũ vẫn lưu để đối soát nhưng không tính vào xếp hạng.</p>
           </section>
@@ -290,6 +347,11 @@ export default function GalaAdmin({ g }) {
           <section className="e-card e-card-pad">
             <div className="e-card-title">Chỉ định giám khảo</div>
             <div className="e-card-sub mb-3">Tìm theo tên / mã nhân viên trong app. Quyền chỉ áp dụng cho chương trình này.</div>
+            {!iAmJudge && (
+              <button type="button" className="e-btn e-btn-outline e-btn-block mb-3" disabled={working} onClick={joinAsJudge}>
+                <UserPlus /> {myJudge ? 'Cấp lại quyền chấm cho tôi' : 'Thêm tôi vào ban giám khảo'}
+              </button>
+            )}
             <div className="e-search">
               <Search />
               <input placeholder="Tìm nhân sự…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -299,10 +361,10 @@ export default function GalaAdmin({ g }) {
                 <li key={s.id} className="flex items-center gap-3 py-2.5">
                   <Avatar person={s} size="w-9 h-9" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-semibold text-slate-800 truncate">{s.full_name}</div>
-                    <div className="text-[12px] text-slate-500 truncate">{s.position || roleText(s)}{s.employee_id ? ` · ${s.employee_id}` : ''}</div>
+                    <div className="text-[14px] font-semibold text-slate-800 leading-snug break-words">{s.full_name}</div>
+                    <div className="text-[12px] text-slate-500 leading-snug break-words">{s.position || roleText(s)}{s.employee_id ? ` · ${s.employee_id}` : ''}</div>
                   </div>
-                  <button type="button" className="e-btn e-btn-outline e-btn-sm" disabled={working}
+                  <button type="button" className="e-btn e-btn-outline e-btn-sm shrink-0" disabled={working}
                     onClick={async () => { if (await actions.setJudge(s.id, true, s.full_name)) setQ(''); }}>
                     <UserPlus /> Cấp quyền
                   </button>
@@ -313,6 +375,9 @@ export default function GalaAdmin({ g }) {
           </section>
         </div>
       )}
+
+      {/* ===== CHẤM ĐIỂM (Admin trong vai giám khảo) ===== */}
+      {tab === 'score' && <GalaJudge g={g} userId={userId} onJoin={joinAsJudge} />}
 
       {/* ===== CÔNG BỐ ===== */}
       {tab === 'stage' && <GalaStage event={ev} ranking={ranking} />}
