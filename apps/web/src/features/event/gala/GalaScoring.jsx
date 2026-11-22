@@ -88,7 +88,7 @@ export default function GalaScoring() {
 
       {isAdmin && showCreate && <div className="e-card e-card-pad">{createForm}</div>}
 
-      {isAdmin ? <GalaAdmin g={g} /> : <GalaJudge g={g} userId={profile?.id} />}
+      {isAdmin ? <GalaAdmin g={g} userId={profile?.id} /> : <GalaJudge g={g} userId={profile?.id} />}
     </div>
   );
 }

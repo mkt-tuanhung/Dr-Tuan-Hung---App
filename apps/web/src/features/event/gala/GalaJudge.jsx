@@ -4,12 +4,12 @@
 // ============================================================
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Check, Lock, Mic2, Send } from 'lucide-react';
+import { Check, Lock, Mic2, Send, UserPlus } from 'lucide-react';
 import { EmptyState } from '@/components/ds';
 import GalaStage from './GalaStage.jsx';
 import { fmtScore, pad2, validPoint } from './galaUtil';
 
-export default function GalaJudge({ g, userId }) {
+export default function GalaJudge({ g, userId, onJoin }) {
   const { selectedEvent, performances, criteria, judges, scores, ranking, working, actions } = g;
   const isJudge = judges.some((j) => j.user_id === userId && j.active);
   const ownScores = useMemo(() => scores.filter((s) => s.judge_id === userId), [scores, userId]);
@@ -59,7 +59,14 @@ export default function GalaJudge({ g, userId }) {
     return (
       <div className="e-card">
         <EmptyState icon={Lock} title="Chưa được cấp quyền chấm thi"
-          description="Tài khoản của bạn chưa được Ban tổ chức chỉ định làm giám khảo của chương trình này." />
+          description={onJoin
+            ? 'Bạn chưa có trong ban giám khảo của chương trình này. Thêm chính mình để chấm điểm như các giám khảo khác.'
+            : 'Tài khoản của bạn chưa được Ban tổ chức chỉ định làm giám khảo của chương trình này.'}
+          action={onJoin && (
+            <button type="button" className="e-btn e-btn-primary" disabled={working} onClick={onJoin}>
+              <UserPlus /> Thêm tôi vào ban giám khảo
+            </button>
+          )} />
       </div>
     );
   }

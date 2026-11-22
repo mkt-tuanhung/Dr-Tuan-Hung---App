@@ -6,16 +6,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, Mic2, Users, Award, Play, Pause, Lock, Trophy, EyeOff, Download, Plus,
-  Pencil, Trash2, Search, UserPlus, UserMinus, RotateCcw, ListChecks, ClipboardCheck,
+  Pencil, Trash2, Search, UserPlus, UserMinus, RotateCcw, ListChecks, ClipboardCheck, ClipboardPen,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Drawer, ConfirmDialog, EmptyState } from '@/components/ds';
 import { ROLE_LABELS } from '@/features/permissions/menuConfig';
 import GalaStage, { RankingList } from './GalaStage.jsx';
+import GalaJudge from './GalaJudge.jsx';
 import { TEAM_SUGGESTIONS, exportScoresCsv, initials, norm, pad2 } from './galaUtil';
 
 const TABS = [
   { id: 'overview', label: 'Tổng quan', icon: Activity },
+  { id: 'score', label: 'Chấm điểm', icon: ClipboardPen },
   { id: 'performances', label: 'Tiết mục', icon: Mic2 },
   { id: 'judges', label: 'Giám khảo', icon: Users },
   { id: 'stage', label: 'Công bố', icon: Award },
@@ -64,7 +66,7 @@ function Metric({ icon: Icon, label, value, hint, tone = '' }) {
   );
 }
 
-export default function GalaAdmin({ g }) {
+export default function GalaAdmin({ g, userId }) {
   const {
     selectedEvent, performances, criteria, judges, activeJudges, scores, ranking,
     expectedCount, receivedCount, working, actions,
@@ -83,6 +85,10 @@ export default function GalaAdmin({ g }) {
   const locked = hasScores || !!ev?.published;
   const nameOf = (id) => byId[id]?.full_name || `Tài khoản ${String(id).slice(0, 8)}…`;
   const judgeIds = new Set(judges.map((j) => j.user_id));
+  // Admin tự tham gia ban giám khảo (cấp quyền cho chính mình qua cùng RPC)
+  const myJudge = judges.find((j) => j.user_id === userId);
+  const iAmJudge = !!myJudge?.active;
+  const joinAsJudge = () => actions.setJudge(userId, true, byId[userId]?.full_name || 'bạn');
   const matches = q.trim().length < 1 ? [] : staff
     .filter((s) => !judgeIds.has(s.id))
     .filter((s) => norm(`${s.full_name} ${s.employee_id || ''} ${s.position || ''}`).includes(norm(q)))
@@ -103,6 +109,7 @@ export default function GalaAdmin({ g }) {
             <Icon /> {label}
             {id === 'performances' && <span className="e-tab-count">{performances.length}</span>}
             {id === 'judges' && <span className="e-tab-count">{activeJudges.length}</span>}
+            {id === 'score' && iAmJudge && <span className="e-tab-count">{scores.filter((s) => s.judge_id === userId).length}/{performances.length}</span>}
           </button>
         ))}
       </div>
@@ -217,7 +224,7 @@ export default function GalaAdmin({ g }) {
                 })}
               </ul>
             ) : (
-              <EmptyState icon={Mic2} title="Chưa có tiết mục" description="Thêm tiết mục đầu tiên ở khung bên cạnh." />
+              <EmptyState icon={Mic2} title="Chưa có tiết mục" description="Thêm tiết mục ở khung « Thêm tiết mục »." />
             )}
           </section>
 
@@ -269,7 +276,7 @@ export default function GalaAdmin({ g }) {
                     <li key={j.user_id} className="flex items-center gap-3 py-3 flex-wrap sm:flex-nowrap">
                       <Avatar person={p} />
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-800 truncate">{nameOf(j.user_id)}</div>
+                        <div className="font-semibold text-slate-800 truncate">{nameOf(j.user_id)}{j.user_id === userId && <span className="text-teal-600 font-medium"> (bạn)</span>}</div>
                         <div className="text-[12px] text-slate-500 truncate">{p?.position || roleText(p) || '—'} · đã chấm {done}/{performances.length}</div>
                       </div>
                       <span className={`e-badge e-badge-sm ${j.active ? 'e-tone-success' : 'e-tone-neutral'}`}>{j.active ? 'Được phép chấm' : 'Đã thu hồi'}</span>
@@ -282,7 +289,7 @@ export default function GalaAdmin({ g }) {
                 })}
               </ul>
             ) : (
-              <EmptyState icon={Users} title="Chưa có giám khảo" description="Tìm nhân sự ở khung bên cạnh để cấp quyền chấm." />
+              <EmptyState icon={Users} title="Chưa có giám khảo" description="Tìm nhân sự ở khung « Chỉ định giám khảo » để cấp quyền chấm." />
             )}
             <p className="mt-3 text-[12px] text-slate-400">Thu hồi quyền: phiếu cũ vẫn lưu để đối soát nhưng không tính vào xếp hạng.</p>
           </section>
@@ -290,6 +297,11 @@ export default function GalaAdmin({ g }) {
           <section className="e-card e-card-pad">
             <div className="e-card-title">Chỉ định giám khảo</div>
             <div className="e-card-sub mb-3">Tìm theo tên / mã nhân viên trong app. Quyền chỉ áp dụng cho chương trình này.</div>
+            {!iAmJudge && (
+              <button type="button" className="e-btn e-btn-outline e-btn-block mb-3" disabled={working} onClick={joinAsJudge}>
+                <UserPlus /> {myJudge ? 'Cấp lại quyền chấm cho tôi' : 'Thêm tôi vào ban giám khảo'}
+              </button>
+            )}
             <div className="e-search">
               <Search />
               <input placeholder="Tìm nhân sự…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -313,6 +325,9 @@ export default function GalaAdmin({ g }) {
           </section>
         </div>
       )}
+
+      {/* ===== CHẤM ĐIỂM (Admin trong vai giám khảo) ===== */}
+      {tab === 'score' && <GalaJudge g={g} userId={userId} onJoin={joinAsJudge} />}
 
       {/* ===== CÔNG BỐ ===== */}
       {tab === 'stage' && <GalaStage event={ev} ranking={ranking} />}
