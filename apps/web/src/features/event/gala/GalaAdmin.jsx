@@ -5,13 +5,14 @@
 // ============================================================
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Activity, Mic2, Users, Award, Play, Pause, Lock, Trophy, EyeOff, Download, Plus,
+  Activity, Mic2, Users, Award, Play, Pause, Lock, Trophy, EyeOff, Plus,
   Pencil, Trash2, Search, UserPlus, UserMinus, RotateCcw, ListChecks, ClipboardCheck, ClipboardPen,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Drawer, ConfirmDialog, EmptyState } from '@/components/ds';
 import { ROLE_LABELS } from '@/features/permissions/menuConfig';
-import GalaStage, { RankingList } from './GalaStage.jsx';
+import GalaStage from './GalaStage.jsx';
+import GalaSummary from './GalaSummary.jsx';
 import GalaJudge from './GalaJudge.jsx';
 import { TEAM_SUGGESTIONS, exportScoresCsv, initials, norm, pad2 } from './galaUtil';
 import { genreOf, teamPalette } from './galaTheme';
@@ -164,7 +165,7 @@ export default function GalaAdmin({ g, userId }) {
             <Metric icon={ListChecks} label="Phiếu chấm" value={`${receivedCount}/${expectedCount}`} hint="Đã nhận / cần có" tone="e-tone-peach" />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2 items-start">
+          <div>
             <section className="e-card e-card-pad">
               <div className="e-card-header">
                 <div>
@@ -172,7 +173,7 @@ export default function GalaAdmin({ g, userId }) {
                   <div className="e-card-sub">Mở / dừng / khoá chấm và công bố kết quả</div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button type="button" className="e-btn e-btn-primary" disabled={working || ev?.phase === 'scoring' || ev?.published} onClick={() => actions.eventAction('open')}>
                   <Play /> {ev?.phase === 'scoring' ? 'Đang mở chấm' : ev?.phase === 'draft' ? 'Mở chấm điểm' : 'Mở chấm lại'}
                 </button>
@@ -196,20 +197,11 @@ export default function GalaAdmin({ g, userId }) {
               </p>
             </section>
 
-            <section className="e-card e-card-pad">
-              <div className="e-card-header">
-                <div>
-                  <div className="e-card-title">Bảng xếp hạng trực tiếp</div>
-                  <div className="e-card-sub">Tự làm mới mỗi 12 giây</div>
-                </div>
-                <button type="button" className="e-btn e-btn-secondary e-btn-sm" disabled={!hasScores}
-                  onClick={() => exportScoresCsv({ eventTitle: ev?.title, scores, performances, criteria, nameOf })}>
-                  <Download /> Xuất CSV
-                </button>
-              </div>
-              <RankingList ranking={ranking} showVotes />
-            </section>
           </div>
+
+          <GalaSummary eventTitle={ev?.title} performances={performances} criteria={criteria}
+            judges={activeJudges} scores={scores} byId={byId} nameOf={nameOf}
+            onExportDetail={() => exportScoresCsv({ eventTitle: ev?.title, scores, performances, criteria, nameOf })} />
 
           <section className="e-card e-card-pad">
             <div className="e-card-header">
