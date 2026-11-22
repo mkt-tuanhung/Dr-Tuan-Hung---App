@@ -41,6 +41,7 @@ import {
   Clapperboard, FolderOpen, PlayCircle, Image as ImageIcon, ChevronDown, RefreshCw, Clock, CalendarRange,
   AlarmClock, Coins, ReceiptText, ClipboardCheck, LineChart, ScrollText,
   Inbox, PhoneCall, BarChart3, ListTodo, Settings as SettingsIcon, Columns3, BookOpen, Library, Stethoscope, Workflow, KanbanSquare,
+  PartyPopper, Music2,
 } from 'lucide-react';
 import PermissionsPage from '@/features/permissions/PermissionsPage.jsx';
 import AuditLogPage from '@/features/audit/AuditLogPage.jsx';
@@ -55,6 +56,8 @@ import CskhHandbookPage from '@/features/handbook/CskhHandbookPage.jsx';
 import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import ProcHandbookPage from '@/features/handbook/ProcHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
+import EventHubPage from '@/features/event/EventHubPage.jsx';
+import VanNgheSinhNhatPage from '@/features/event/VanNgheSinhNhatPage.jsx';
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
 
@@ -111,6 +114,12 @@ const MENU_GROUPS = [
     { id: 'pro_handbook', label: 'Sổ Tay Chuyên môn', icon: Stethoscope },
     { id: 'proc_handbook', label: 'Quy Trình Công Việc', icon: Workflow },
     { id: 'library', label: 'Tài liệu', icon: Library },
+  ]},
+  { title: 'SỰ KIỆN', color: 'rose', items: [
+    { id: 'grp_event', label: 'Event', icon: PartyPopper, children: [
+      { id: 'event_hub', label: 'Tất cả Event', icon: PartyPopper },
+      { id: 'event_van_nghe', label: 'Thi Văn Nghệ mừng SN Dr Tuấn Hùng', shortLabel: 'Thi Văn Nghệ', icon: Music2 },
+    ] },
   ]},
   { title: 'VẬN HÀNH', color: 'rose', items: [
     { id: 'tasks', label: 'Công việc & Duyệt', shortLabel: 'Công việc', icon: ListTodo },
@@ -766,6 +775,8 @@ const AdminDashboard = () => {
       case 'pro_handbook': return <ProHandbookPage />;
       case 'proc_handbook': return <ProcHandbookPage />;
       case 'library': return <LibraryPage />;
+      case 'event_hub': return <EventHubPage onNavigate={setActiveTab} />;
+      case 'event_van_nghe': return <VanNgheSinhNhatPage onNavigate={setActiveTab} />;
       case 'notifications': return <NotificationsPage />;
       case 'content_overview': return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
       case 'marketing': case 'content_kho': return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;

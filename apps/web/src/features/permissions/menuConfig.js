@@ -10,6 +10,7 @@ import {
   Database, Clapperboard, BarChart2, FolderOpen, PlayCircle, Image as ImageIcon, Sprout, PieChart,
   Activity, CalendarDays, Smile, UserCheck, ClipboardList, UserX, Handshake, CalendarRange, ScrollText,
   Inbox, PhoneCall, BarChart3, ListTodo, Columns3, BookOpen, Library, Stethoscope, Workflow, KanbanSquare,
+  PartyPopper, Music2,
 } from 'lucide-react';
 
 export const ROLE_LABELS = {
@@ -36,6 +37,10 @@ export const FULL_MENU = [
   { id: 'pro_handbook', label: 'Sổ Tay Chuyên môn', icon: Stethoscope, roles: ['all'] },
   { id: 'proc_handbook', label: 'Quy Trình Công Việc', icon: Workflow, roles: ['all'] },
   { id: 'library',    label: 'Tài liệu',        icon: Library, roles: ['all'] },
+
+  // Event (sự kiện nội bộ) — mặc định mọi nhân sự đều thấy
+  { id: 'event_hub',      label: 'Tất cả Event', icon: PartyPopper, roles: ['all'] },
+  { id: 'event_van_nghe', label: 'Thi Văn Nghệ mừng SN Dr Tuấn Hùng', icon: Music2, roles: ['all'] },
 
   // MKT / Finance / Sales
   { id: 'data_kh',    label: 'Data khách hàng',  icon: Database, roles: ['marketing', 'truc_page', 'media', 'telesale', 'admin', 'accountant', 'shareholder'] },
@@ -88,6 +93,9 @@ export const STAFF_GROUPS = [
   { title: 'MARKETING', flat: true, ids: ['marketing'] },
   { title: 'TÀI CHÍNH', ids: ['reports', 'finance', 'pl', 'cashflow', 'payroll', 'vien_phi', 'seeding_rev', 'audit_log'] },
   { title: 'ĐÀO TẠO', ids: ['cskh_handbook', 'pro_handbook', 'proc_handbook', 'library'] },
+  { title: 'SỰ KIỆN', ids: [
+    { id: 'grp_event', label: 'Event', icon: PartyPopper, ids: ['event_hub', 'event_van_nghe'] },
+  ] },
   { title: 'VẬN HÀNH', ids: ['tasks', 'community'] },
 ];
 

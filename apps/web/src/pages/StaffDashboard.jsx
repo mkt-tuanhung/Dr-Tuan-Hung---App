@@ -23,6 +23,8 @@ import CskhHandbookPage from '@/features/handbook/CskhHandbookPage.jsx';
 import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import ProcHandbookPage from '@/features/handbook/ProcHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
+import EventHubPage from '@/features/event/EventHubPage.jsx';
+import VanNgheSinhNhatPage from '@/features/event/VanNgheSinhNhatPage.jsx';
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import { EditorKpiLoader } from '@/features/marketing/EditorStatsPanel.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
@@ -454,6 +456,8 @@ const StaffDashboard = () => {
     if (activeTab === 'pro_handbook') return <ProHandbookPage />;
     if (activeTab === 'proc_handbook') return <ProcHandbookPage />;
     if (activeTab === 'library') return <LibraryPage />;
+    if (activeTab === 'event_hub') return <EventHubPage onNavigate={setActiveTab} />;
+    if (activeTab === 'event_van_nghe') return <VanNgheSinhNhatPage onNavigate={setActiveTab} />;
     return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 
