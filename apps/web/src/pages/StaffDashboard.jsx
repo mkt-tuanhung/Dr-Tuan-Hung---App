@@ -24,7 +24,7 @@ import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import ProcHandbookPage from '@/features/handbook/ProcHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
 import EventHubPage from '@/features/event/EventHubPage.jsx';
-import VanNgheSinhNhatPage from '@/features/event/VanNgheSinhNhatPage.jsx';
+const VanNgheSinhNhatPage = React.lazy(() => import('@/features/event/VanNgheSinhNhatPage.jsx'));
 import DieuDuongStaffKPI from '@/components/kpi/DieuDuongStaffKPI.jsx';
 import { EditorKpiLoader } from '@/features/marketing/EditorStatsPanel.jsx';
 import FinanceManagementPage from '@/pages/FinanceManagementPage.jsx';
@@ -457,7 +457,7 @@ const StaffDashboard = () => {
     if (activeTab === 'proc_handbook') return <ProcHandbookPage />;
     if (activeTab === 'library') return <LibraryPage />;
     if (activeTab === 'event_hub') return <EventHubPage onNavigate={setActiveTab} />;
-    if (activeTab === 'event_van_nghe') return <VanNgheSinhNhatPage onNavigate={setActiveTab} />;
+    if (activeTab === 'event_van_nghe') return <React.Suspense fallback={<div className="e-card e-card-pad text-slate-400">Đang tải…</div>}><VanNgheSinhNhatPage onNavigate={setActiveTab} /></React.Suspense>;
     return <ComingSoon label={flatMenu.find(m => m.id === activeTab)?.label || activeTab} />;
   };
 

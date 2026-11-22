@@ -57,7 +57,7 @@ import ProHandbookPage from '@/features/handbook/ProHandbookPage.jsx';
 import ProcHandbookPage from '@/features/handbook/ProcHandbookPage.jsx';
 import LibraryPage from '@/features/library/LibraryPage.jsx';
 import EventHubPage from '@/features/event/EventHubPage.jsx';
-import VanNgheSinhNhatPage from '@/features/event/VanNgheSinhNhatPage.jsx';
+const VanNgheSinhNhatPage = React.lazy(() => import('@/features/event/VanNgheSinhNhatPage.jsx'));
 import { Panel } from '@/components/overview/OverviewKit.jsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart as RPieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
 
@@ -776,7 +776,7 @@ const AdminDashboard = () => {
       case 'proc_handbook': return <ProcHandbookPage />;
       case 'library': return <LibraryPage />;
       case 'event_hub': return <EventHubPage onNavigate={setActiveTab} />;
-      case 'event_van_nghe': return <VanNgheSinhNhatPage onNavigate={setActiveTab} />;
+      case 'event_van_nghe': return <React.Suspense fallback={<div className="e-card e-card-pad text-slate-400">Đang tải…</div>}><VanNgheSinhNhatPage onNavigate={setActiveTab} /></React.Suspense>;
       case 'notifications': return <NotificationsPage />;
       case 'content_overview': return <ContentProductionPage setActiveTab={setActiveTab} view="overview" />;
       case 'marketing': case 'content_kho': return <ContentProductionPage setActiveTab={setActiveTab} view="kho" />;

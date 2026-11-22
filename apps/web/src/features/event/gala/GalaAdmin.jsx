@@ -14,6 +14,7 @@ import { ROLE_LABELS } from '@/features/permissions/menuConfig';
 import GalaStage, { RankingList } from './GalaStage.jsx';
 import GalaJudge from './GalaJudge.jsx';
 import { TEAM_SUGGESTIONS, exportScoresCsv, initials, norm, pad2 } from './galaUtil';
+import { genreOf, teamPalette } from './galaTheme';
 
 const TABS = [
   { id: 'overview', label: 'Tổng quan', icon: Activity },
@@ -246,13 +247,21 @@ export default function GalaAdmin({ g, userId }) {
               <ul className="divide-y divide-slate-100">
                 {performances.map((p) => {
                   const scored = scores.some((s) => s.performance_id === p.id);
+                  const pal = teamPalette(p.team_name);
+                  const GenreIcon = genreOf(p).icon;
                   return (
                     <li key={p.id} className="flex items-start gap-3 py-3">
-                      <span className="w-9 text-[20px] font-bold text-teal-600 tabular-nums shrink-0">{pad2(p.order_no)}</span>
+                      <span className={`relative w-12 h-12 rounded-2xl bg-gradient-to-br ${pal.grad} text-white grid place-items-center shrink-0 shadow-md ${pal.glow}`}>
+                        <span className="text-[17px] font-black tabular-nums">{pad2(p.order_no)}</span>
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white text-slate-700 grid place-items-center shadow"><GenreIcon className="w-3 h-3" /></span>
+                      </span>
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-800">{p.title}</div>
-                        <div className="text-[12.5px] text-slate-500">{p.team_name}{p.duration_minutes ? ` · ${p.duration_minutes} phút` : ''}</div>
-                        {p.description && <div className="text-[12.5px] text-slate-400 mt-0.5">{p.description}</div>}
+                        <div className="font-bold text-slate-900 leading-snug">{p.title}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11.5px] font-semibold ${pal.soft}`}><span className={`w-1.5 h-1.5 rounded-full ${pal.dot}`} />{p.team_name}</span>
+                          {p.duration_minutes ? <span className="text-[12px] text-slate-500">{p.duration_minutes} phút</span> : null}
+                          {p.description && <span className="text-[12px] text-slate-400">· {p.description}</span>}
+                        </div>
                       </div>
                       <span className={`e-badge e-badge-sm hidden sm:inline-flex ${scored ? 'e-tone-success' : 'e-tone-neutral'}`}>{scored ? 'Đã có điểm' : 'Chưa chấm'}</span>
                       <button type="button" className="e-icon-btn w-9 h-9" title="Sửa" disabled={locked} onClick={() => setEditing({ ...p })}><Pencil className="w-4 h-4" /></button>

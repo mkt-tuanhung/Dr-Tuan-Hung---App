@@ -147,11 +147,11 @@ export function useGala({ userId, isAdmin }) {
       publish: 'Đã công bố kết quả.', unpublish: 'Đã ẩn kết quả để rà soát.',
     }[name]),
 
-    submitScore: (performanceId, values, note) => run(async () => {
+    submitScore: (performanceId, values, note, { silent = false } = {}) => run(async () => {
       return must(await supabase.rpc('gala_submit_score', {
         p_event_id: eventId, p_performance_id: performanceId, p_values: values, p_note: note || '',
       }));
-    }, (total) => `Đã gửi phiếu: ${Number(total).toLocaleString('vi-VN')}/100 điểm.`),
+    }, silent ? null : (total) => `Đã gửi phiếu: ${Number(total).toLocaleString('vi-VN')}/100 điểm.`),
   };
 
   return {
