@@ -16,6 +16,127 @@ import {
   loadFaceConfig, haversineM, vnNow,
 } from '../_shared/face.ts';
 
+// ---- HIỆU ỨNG ẢNH GỬI NHÓM (profiles.tg_photo_effect) ----
+// AI sửa BẢN GỬI NHÓM (ảnh gốc lưu chấm công giữ nguyên). Lỗi/quá giờ -> null -> gửi ảnh gốc.
+// Thứ tự: OpenAI gpt-image (OPENAI_API_KEY) -> Gemini image (GEMINI_API_KEY) -> beeknoee (BEE_API_KEY, API kiểu OpenAI).
+const EFFECT_PROMPTS: Record<string, string> = {
+  horns: 'Edit this photo: add a pair of small, glossy, realistic pinkish-red devil horns on top of the person\'s head, '
+    + 'growing naturally out of the hair near the hairline, with lighting, shadows and perspective matching the photo. '
+    + 'Keep EVERYTHING else exactly the same: same face, identity, expression, skin, makeup, hair, clothing, background, '
+    + 'framing, colors and resolution. Do not beautify, slim or retouch the face. Do not add any text.',
+};
+const b64ToBlob = (b64: string, type: string) => {
+  const raw = atob(b64); const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return new Blob([out], { type });
+};
+async function withTimeout<T>(ms: number, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms);
+  try { return await fn(ac.signal); } finally { clearTimeout(t); }
+}
+// Lấy ảnh từ kết quả kiểu OpenAI / beeknoee: b64_json, url tuyệt đối, hoặc url tương đối của beeknoee
+async function pickImage(tag: string, base: string, key: string, data: any, signal: AbortSignal): Promise<Blob | null> {
+  const d0 = data?.data?.[0];
+  if (d0?.b64_json) return b64ToBlob(d0.b64_json, 'image/png');
+  if (d0?.url) {
+    const origin = new URL(base).origin;
+    const abs = /^https?:\/\//.test(d0.url) ? d0.url : (d0.url.startsWith('/v1/') ? `${origin}/api${d0.url}` : `${origin}${d0.url}`);
+    const r = await fetch(abs, { headers: abs.startsWith(origin) ? { Authorization: `Bearer ${key}` } : {}, signal });
+    if (r.ok) return await r.blob();
+    if (data?.job_id) {   // dự phòng: đường tải trực tiếp theo tài liệu beeknoee
+      const r2 = await fetch(`${base}/image/generations/${data.job_id}/download?index=0`, { headers: { Authorization: `Bearer ${key}` }, signal });
+      if (r2.ok) return await r2.blob();
+    }
+    console.error('photoEffect', tag, 'download HTTP', r.status, abs.slice(0, 120));
+    return null;
+  }
+  console.error('photoEffect', tag, 'no image', JSON.stringify(data).slice(0, 300));
+  return null;
+}
+async function pollJob(tag: string, base: string, key: string, jobId: string, signal: AbortSignal): Promise<any> {
+  for (let i = 0; i < 12; i++) {                       // tối đa ~96s
+    await new Promise((r) => setTimeout(r, 8000));
+    if (signal.aborted) break;
+    const r = await fetch(`${base}/image/generations/${jobId}`, { headers: { Authorization: `Bearer ${key}` }, signal });
+    if (!r.ok) { console.error('photoEffect', tag, 'poll HTTP', r.status); continue; }
+    const j = await r.json();
+    if (j?.status === 'COMPLETED') return j;
+    if (j?.status === 'FAILED') { console.error('photoEffect', tag, 'job FAILED', j?.error_message); return null; }
+  }
+  console.error('photoEffect', tag, 'job timeout', jobId);
+  return null;
+}
+// API kiểu OpenAI: POST {base}/images/edits (multipart) -> data[0].b64_json
+async function editOpenAIStyle(tag: string, base: string, key: string, models: string[], blob: Blob, prompt: string): Promise<Blob | null> {
+  for (const model of models) {
+    try {
+      const out = await withTimeout(120_000, async (signal) => {
+        const fd = new FormData();
+        fd.append('model', model);
+        fd.append('prompt', prompt);
+        fd.append('image', new File([blob], 'photo.jpg', { type: blob.type || 'image/jpeg' }));
+        fd.append('size', 'auto');
+        if (tag === 'openai' && model.startsWith('gpt-image')) fd.append('input_fidelity', 'high');
+        fd.append('quality', 'medium');
+        const res = await fetch(`${base}/images/edits`, { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: fd, signal });
+        if (!res.ok) { console.error('photoEffect', tag, model, 'HTTP', res.status, (await res.text()).slice(0, 200)); return null; }
+        let data = await res.json();
+        // beeknoee: chậm hơn ~15s thì trả {job_id, status:'PROCESSING'} -> hỏi lại mỗi 8s đến khi COMPLETED
+        if (data?.job_id && !data?.data?.length) data = await pollJob(tag, base, key, data.job_id, signal);
+        return await pickImage(tag, base, key, data, signal);
+      });
+      if (out) { console.log('photoEffect ok', tag, model, out.size); return out; }
+    } catch (e) { console.error('photoEffect', tag, model, 'err', (e as Error).message); }
+  }
+  return null;
+}
+async function editGemini(key: string, blob: Blob, prompt: string): Promise<Blob | null> {
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  const b64 = btoa(bin);
+  const models = [Deno.env.get('GEMINI_IMAGE_MODEL'), 'gemini-2.5-flash-image', 'gemini-3-pro-image-preview'].filter(Boolean) as string[];
+  for (const m of models) {
+    try {
+      const out = await withTimeout(90_000, async (signal) => {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: blob.type || 'image/jpeg', data: b64 } }] }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+          }),
+        });
+        if (!res.ok) { console.error('photoEffect gemini', m, 'HTTP', res.status, (await res.text()).slice(0, 200)); return null; }
+        const data = await res.json();
+        const part = (data?.candidates?.[0]?.content?.parts || []).find((p: any) => p?.inlineData?.data);
+        if (!part) { console.error('photoEffect gemini', m, 'no image'); return null; }
+        return b64ToBlob(part.inlineData.data, part.inlineData.mimeType || 'image/png');
+      });
+      if (out) { console.log('photoEffect ok gemini', m, out.size); return out; }
+    } catch (e) { console.error('photoEffect gemini', m, 'err', (e as Error).message); }
+  }
+  return null;
+}
+async function applyPhotoEffect(blob: Blob, effect: string | null | undefined): Promise<Blob | null> {
+  const prompt = effect ? EFFECT_PROMPTS[effect] : '';
+  if (!prompt) return null;
+  const okey = Deno.env.get('OPENAI_API_KEY');
+  if (okey) {
+    const models = [Deno.env.get('OPENAI_IMAGE_MODEL'), 'gpt-image-1.5', 'gpt-image-1'].filter(Boolean) as string[];
+    const r = await editOpenAIStyle('openai', 'https://api.openai.com/v1', okey, models, blob, prompt);
+    if (r) return r;
+  }
+  const gkey = Deno.env.get('GEMINI_API_KEY');
+  if (gkey) { const r = await editGemini(gkey, blob, prompt); if (r) return r; }
+  const bkey = Deno.env.get('BEE_API_KEY');
+  if (bkey) {
+    const base = (Deno.env.get('BEE_BASE_URL') || 'https://platform.beeknoee.com/v1').replace(/\/+$/, '');
+    const models = [Deno.env.get('BEE_IMAGE_MODEL'), 'gpt-image-1-mini', 'gpt-image-2'].filter(Boolean) as string[];
+    const r = await editOpenAIStyle('bee', base, bkey, models, blob, prompt);
+    if (r) return r;
+  }
+  return null;
+}
+
 const fmtHM = (t: string) => t.slice(0, 5);
 
 const ROLE_VI: Record<string, string> = {
@@ -263,7 +384,7 @@ Deno.serve(async (req) => {
     const tgToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const tgChat = Deno.env.get('TELEGRAM_ATTENDANCE_CHAT_ID');
     if (tgToken && tgChat) {
-      const { data: prof } = await db.from('profiles').select('full_name, role, role_2').eq('id', user.id).single();
+      const { data: prof } = await db.from('profiles').select('full_name, role, role_2, tg_photo_effect').eq('id', user.id).single();
       const name = prof?.full_name || 'Nhân sự';
       const roleTxt = [prof?.role, prof?.role_2].filter(Boolean).map((r) => ROLE_VI[r as string] || r).join(' · ') || '—';
       const baseCaption = attendanceCard({
@@ -401,13 +522,24 @@ Trả về DUY NHẤT JSON: {"anh_ro":true,"toc":"...","trang_phuc":"...","loi":
           const imgRes = await fetch(snapshotUrl);
           if (!imgRes.ok) throw new Error('img fetch failed');
           const blob = await imgRes.blob();
-          const funny = await genFunny(blob);
+          // Bình luận AI soi ẢNH GỐC; song song AI chỉnh BẢN GỬI NHÓM nếu nhân sự có hiệu ứng (profiles.tg_photo_effect).
+          // Ảnh gốc lưu chấm công giữ nguyên. AI lỗi / quá 150s -> gửi ảnh gốc.
+          const effect = (prof as any)?.tg_photo_effect || null;
+          const editP: Promise<Blob | null> = effect
+            ? Promise.race([applyPhotoEffect(blob, effect).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 150_000))])
+            : Promise.resolve(null);
+          const [funny, edited] = await Promise.all([genFunny(blob), editP]);
+          const sendBlob = edited || blob;
           const caption = funny ? `${baseCaption}\n💬 ${funny}` : baseCaption;
           const fd = new FormData();
           fd.append('chat_id', String(tgChat));
           fd.append('caption', caption);
-          fd.append('photo', new File([blob], 'attendance.jpg', { type: 'image/jpeg' }));
-          const r = await fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, { method: 'POST', body: fd });
+          fd.append('photo', new File([sendBlob], edited ? 'attendance.png' : 'attendance.jpg', { type: sendBlob.type || 'image/jpeg' }));
+          let r = await fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, { method: 'POST', body: fd });
+          if (!r.ok && edited) {   // ảnh đã chỉnh bị Telegram từ chối -> gửi ảnh gốc
+            fd.set('photo', new File([blob], 'attendance.jpg', { type: 'image/jpeg' }));
+            r = await fetch(`https://api.telegram.org/bot${tgToken}/sendPhoto`, { method: 'POST', body: fd });
+          }
           if (!r.ok) throw new Error('sendPhoto failed');
         } catch { await sendText(baseCaption); }
       })();
