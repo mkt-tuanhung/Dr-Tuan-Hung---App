@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
-import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download, ScanFace, ImageDown } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Search, Check, X, Clock, Users, AlertTriangle, Download, ScanFace, ImageDown, Send } from 'lucide-react';
 import LeaveManagementPage from './LeaveManagementPage.jsx';
 import FaceIdAdminPanel from '@/features/faceid/FaceIdAdminPanel.jsx';
 import { vnToday } from '@/lib/vnTime';
 import AttendanceDayView, { AttendanceDayMetrics, dayRecords } from '@/features/hr/AttendanceDayView.jsx';
+import AttendanceTgSendModal, { ROLE_VI } from '@/features/hr/AttendanceTgSendModal.jsx';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 
 const STATUS_CONFIG = {
   present:  { label: 'Có mặt',    color: 'e-tone-success' },
@@ -36,6 +38,9 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState(null);
+  const [tgSend, setTgSend] = useState(null); // gửi ảnh vào nhóm Telegram Chấm Công (admin)
+  const { profile: me } = useAuth();
+  const isAdmin = [me?.role, me?.role_2].includes('admin');
   const [timesheet, setTimesheet] = useState(null); // { html, name }
   const tsRef = React.useRef(null);
   const [saving, setSaving] = useState(false);
@@ -58,7 +63,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
     const [staffRes, attRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, employee_id, role, avatar_url, fixed_salary').eq('is_active', true).order('full_name'),
+      supabase.from('profiles').select('id, full_name, employee_id, role, role_2, avatar_url, fixed_salary').eq('is_active', true).order('full_name'),
       supabase.from('attendance').select('*').gte('date', startDate).lte('date', endDate),
     ]);
 
@@ -346,6 +351,7 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
     const s = staff.find(x => x.id === staffId);
     setEditModal({
       staffId, date, staffName: s?.full_name,
+      roleTxt: [s?.role, s?.role_2].filter(Boolean).map(r => ROLE_VI[r] || r).join(' · '),
       status: record?.status || 'present',
       check_in: record?.check_in || '',
       check_out: record?.check_out || '',
@@ -848,6 +854,8 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
         </div>
       )}
 
+      {tgSend && <AttendanceTgSendModal info={tgSend} onClose={() => setTgSend(null)} />}
+
       {editModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex items-center justify-center p-4">
           <div className="e-modal max-w-sm p-5 max-h-[92vh] overflow-y-auto">
@@ -953,6 +961,20 @@ const AttendanceManagementPage = ({ isNested = false, defaultTab = 'attendance' 
                     )}
                   </div>
                 </div>
+              )}
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setTgSend({
+                    staffName: editModal.staffName, roleTxt: editModal.roleTxt, date: editModal.date,
+                    check_in: editModal.check_in, check_out: editModal.check_out,
+                    check_in_photo: editModal.check_in_photo, check_out_photo: editModal.check_out_photo,
+                  })}
+                  className="e-btn e-btn-outline e-btn-sm w-full"
+                >
+                  <Send className="w-3.5 h-3.5" />Gửi vào nhóm Chấm Công (Telegram)
+                </button>
               )}
 
               {editModal.id && (
