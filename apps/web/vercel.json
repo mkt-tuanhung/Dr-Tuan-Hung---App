@@ -11,7 +11,7 @@
   ],
   "headers": [
     {
-      "source": "/((?!assets/).*)",
+      "source": "/((?!assets/|models/|faceid/|masoi/)(?!.*\\.(?:png|jpe?g|webp|gif|svg|ico|mp3|wav|bin)$).*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -25,6 +25,24 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(models|faceid|masoi)/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(png|jpe?g|webp|gif|svg|ico|mp3|wav)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
         }
       ]
     }
